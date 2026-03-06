@@ -1,0 +1,24 @@
+// https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'node:url'
+
+export default defineNuxtConfig({
+  compatibilityDate: '2025-07-15',
+  devtools: { enabled: true },
+  modules: ['@pinia/nuxt'],
+  alias: {
+    '~': fileURLToPath(new URL('./', import.meta.url)),
+    '@': fileURLToPath(new URL('./', import.meta.url)),
+  },
+  components: [
+    { path: fileURLToPath(new URL('./components', import.meta.url)), pathPrefix: false },
+  ],
+  typescript: {
+    strict: true,
+  },
+  app: {
+    head: {
+      title: 'Sława Vol.2',
+      meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+    },
+  },
+})

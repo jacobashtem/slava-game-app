@@ -1,0 +1,643 @@
+[
+  {
+    "id": 1,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Moc Światogora",
+    "persistence": "permanent",
+    "effect": "{stats.attack} i {stats.defense} stworzenia podwajają się, lecz jeśli ona zaatakuje i zabije, sama zginie.",
+    "enhancedEffect": "Dodatkowo, po 3 rundach wskrzesza się, z bazową wartością {stats.attack} i {stats.defense}",
+    "lore": "Alosza Popowicz podczas legendarnego starcia z smokiem Tugarynem błagał boginię Mokosz o pomoc. Wkrótce spadł deszcz tak wielki, że Żmij stracił swój największy atut - latanie. Uziemiony Tugarin chwilę później stracił głowę."
+  },
+  {
+    "id": 2,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Arena",
+    "persistence": "permanent",
+    "effect": "Rywal nie może wystawić więcej stworzeń, niż ma w polu zagrywający ARENĘ gracz",
+    "enhancedEffect": "Raz zranione stworzenie wroga może atakować tylko swego oprawcę",
+    "lore": "Coroczne igrzyska ku czci bogów i przodków, które gromadziły tysiące. Prócz rywalizacji sportowej, śpiewy ,tańce i cielesna rozpusta towarzyszyły biesiadnikom przez cały 'Rusałczy Tydzień'."
+  },
+  {
+    "id": 3,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Oblęd",
+    "persistence": "instant",
+    "effect": "Zamienia {stats.attack} z {stats.defense} u wybranego stworzenia.",
+    "enhancedEffect": "Wskazane 2 stworzenia zamieniają się wartością {stats.attack} i {stats.defense}. Obydwoje muszą walczyć po tej samej stronie.",
+    "lore": "Demon karmił i bawił się ludzkim cierpieniem. Rzadko kiedy zabijał,  powolna agonia pomyleńca, który stracił wszystko - z rozumem  włącznie- znacznie bardziej Wietrzycy odpowiadał."
+  },
+  {
+    "id": 4,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Topór Peruna",
+    "persistence": "permanent",
+    "effect": "Stworzenie może wykonać jeden atak dystansowy, zadający poczwórne obrażenia.",
+    "enhancedEffect": "Dodatkowo atak nie powoduje kontrataku i absolutnie w każdym przypadku zadaje pełne obrażenia.",
+    "lore": "Ilya Muromiec, miał bronić krajów Słowian przed wszelkimi zagrożeniami. Jego nadludzka potęŋa i długowieczność, byla darem umierającego olbrzyma, Światogora. Z tej strzały/włóczni/ miał według legend zginąć sam Solovej, mityczny demon."
+  },
+  {
+    "id": 5,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Kradzież",
+    "persistence": "instant",
+    "effect": "Odbiera aktywną kartę przygody należącą do przeciwnika i umieszcza go w talii gracza",
+    "enhancedEffect": "Zabiera dwie karty z talii rywala i umieszcza je w talii gracza zagrywającego - potem trzeba ją przetasować.",
+    "lore": "Kłobuk przynosił dobrobyt swojemu gospodarzowi pomnażając jego majątek. Zwykle, czynil to jednak kosztem swoich sąsiadów, bezczelnie ich okradając."
+  },
+  {
+    "id": 6,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Okaleczenie",
+    "persistence": "instant",
+    "effect": "Odbiera wskazanemu stworzeniu połowę {stats.attack} i {stats.defense}",
+    "enhancedEffect": "Dodatkowo, pozbawia ją premii.",
+    "lore": "Legendarna bestia, żyjąca w puszczy na Rusi. Przeraźliwy gwizd, powalał wrogów, a Sołowiej rozcinał im trzeźwia zaczynając ucztę."
+  },
+  {
+    "id": 7,
+    "idType": 2,
+    "type": "Lokacja",
+    "name": "Arkona",
+    "persistence": "permanent",
+    "effect": "Nie obowiązuje limit stworzeń w polu",
+    "enhancedEffect": "Wybrane stworzenie, raz na turę regeneruje 2 {stats.defense}",
+    "lore": "Legendarna świątynia Świętowida w Arkonie, była najważniejszym miejscem jego kultu.// Po świętych ziemiach miał spacerować sam Bóg, gdzie nocami dosiadał swojego Białego Konia.// Do świątyni przybywali wierni z całego słowiańskiego świata."
+  },
+  {
+    "id": 8,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Likantropia",
+    "persistence": "permanent",
+    "effect": "-Po każdym zabiciu, stworzenie dodaje sobie tyle {stats.attack} i {stats.defense} ile nominalnie miała zabita przez nią istota. -Jeśli stworzenie przez 2 rundy nie zada żadnych obrażeń, traci połowę {stats.attack} i {stats.defense}",
+    "enhancedEffect": "Dodatkowo umożliwa zabijanie ( bez straty ruchu) własnych potworów w polu i przejęcie ich {stats.attack} i {stats.defense}",
+    "lore": "Lykantropia/Klątwa lykantropii/Wilczy Pasterz/"
+  },
+  {
+    "id": 9,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Sobowtór",
+    "persistence": "instant",
+    "effect": "Tworzy stworzenie identyczne jak wskazane, bez artefaktów i negatywnych efektów",
+    "enhancedEffect": "Dodatkowo kopię można zabić dopiero, gdy zginie wzór",
+    "lore": ""
+  },
+  {
+    "id": 10,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Rusałczy Taniec",
+    "persistence": "instant",
+    "effect": "Odbiera 2 {stats.attack} i {stats.defense} jednemu stworzeniu i przekazuje je innemu wybranemu przez gracza.",
+    "enhancedEffect": "Odbiera wszystkim wrogim stworzeniom po 1 {stats.attack} i {stats.defense} i przekazuje sumę własnemu stworzeniu.",
+    "lore": "Mały kto oparł by się wdziękom groźnego, leśnego demona. Uwiedziony nieszczęśnik, tańczył tak długo, aż znudził się Rusałkom lub... padał trupem//padał martwy//umieral."
+  },
+  {
+    "id": 11,
+    "idType": 2,
+    "type": "Lokacja",
+    "name": "Matecznik",
+    "persistence": "permanent",
+    "effect": "Gracz może ukryć jedno stworzenie w Mateczniku, chroniąc je przed atakami, premiami i kartami przygody, lecz ten nie może w jakikolwiek sposób uczestniczyć w walce.",
+    "enhancedEffect": "Dodatkowo, całkowicie leczy z ran i niekorzystnych efektów w ciągu 3 rund",
+    "lore": "Miejsce poświęcone bogom, otoczone kultem. Najczęściej znajdowało się w ukrytym, trudno dostępnym miejscu, w którym można było odnaleźć spokój."
+  },
+  {
+    "id": 12,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Sztandar",
+    "persistence": "permanent",
+    "effect": "Stworzenie musi stać w 1. linii w pozycji ofensywnej i nie może atakować. Wszyscy sojusznicy dostają +2 {stats.attack}",
+    "enhancedEffect": "Ataki wymierzone w sztandarowego może przejmować jego dowolny sojusznik",
+    "lore": "Wizerunkiem Jarowita zdobiono sztandary, bo od błogosławieństwa Boga Wojny, często zależał jej wynik.  Bóstwo miało dodawać swym wiernym odwagi, mocy i żywotności, a Jego złota tarcza, chronić przed atakami wrogów."
+  },
+  {
+    "id": 13,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Trucizna",
+    "persistence": "duration",
+    "durationRounds": 3,
+    "effect": "Wskazane stworzenie ginie po 3 rundach.",
+    "enhancedEffect": "Wszystkie wrogie stworzenia zostają sparaliżowane na 2 rundy.",
+    "lore": "Najczęściej korzystano  z tojadu - trucizna według legend miala powalić nawet Wilkolaka. Równie popularny, szczególnie wśród łuczników był jad z ciemiężycy, którym zwykle pokrywano strzaly."
+  },
+  {
+    "id": 14,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Welesa",
+    "persistence": "instant",
+    "effect": "Wskrzesza własną istotę. Może ona wrócić do talii lub być antychmiast wysawiona w pole,, nie wykorzystuje limitu wprowadzania istot.",
+    "enhancedEffect": "<piniądz> Wskrzesza istotę rywala ( zasady jak wyżej) , która walczy odtąd po stronie zagrywającego.",
+    "lore": "Nawia - kraina umarłych, której władcą jest Weles. Kraina przeznaczenia każdej śmiertelnej istoty. Mimo ludzkiej obawy przed nieznanym, Welesa obdarzano taką samą czcią jak samego Peruna. W końcu ostatecznie każdy Słowianin, mial  trafić do jego świata."
+  },
+  {
+    "id": 15,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Wygnanie",
+    "persistence": "instant",
+    "effect": "Wskazane stworzenie wraca do talii. Jeżeli należy do rywala, może zostać wystawione dopiero jako ostatnie jego stworzenie w grze.",
+    "enhancedEffect": "Wskazane stworzenie, o ile nie jest najsilniejsze w polu, trwale zmienia stronę.",
+    "lore": "Niewolnikami zostawali najczęściej jeńcy wojenni, którzy nie byli w stanie się wykupić. Po dwóch latach służby,  pojmany mógł odejść, lub zostać pełnoprawnym obywatelem grodu."
+  },
+  {
+    "id": 16,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Kwiat Paproci",
+    "persistence": "instant",
+    "effect": "Obdarowuje na stałe wybranym, spośród wymienionych atrybutem: {stats.attack}/{Slavic/zywiol-icon}/{Slavic/strzala-icon}/ {Slavic/magia-icon}",
+    "enhancedEffect": "Dodatkowo, otrzymuje odporność na wybrany rodzaj ataku",
+    "lore": "Paproć zakwitała tylko raz w roku, podczas nocy kupały. Ten kto ją znalazl i oparł się demonom, mógł liczyć na potężną moc rośliny, szczęśliwe i dostatnie życie."
+  },
+  {
+    "id": 17,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Zlot Czarownic",
+    "persistence": "duration",
+    "durationRounds": 3,
+    "durationNote": "Działa na kolejne 3 karty przygody rywala",
+    "effect": "Kolejne 3 karty przygody zagrane przez rywala nie zadzialają.",
+    "enhancedEffect": "Dodatkowo gracz zagrywający Zlot Czarownic może z puli zniszczonych kart, wziąć do swojej talii jedną z nich.",
+    "lore": "Podczas sabatu, wiedźmy miały spotykać się z demonami, świętować i przygotowywać eliksiry. Czarownice dzieliły się wiedzą,a po zlotach wracały jeszcze potężniejsze."
+  },
+  {
+    "id": 18,
+    "idType": 2,
+    "type": "Lokacja",
+    "name": "Twierdza",
+    "persistence": "permanent",
+    "effect": "Dodaje wszystkim własnym stworzeniem 3 {stats.defense}",
+    "enhancedEffect": "dodatkowo co rundę może zadawać poza kolejką ataku 1 {Slavic/strzala-icon}",
+    "lore": "Potężny gród istniał przez setki lat, będąc symbolem bogactwa i potęgi słowian. Jego upadek, był również upadkiem całego słowiańskiego świata//(...)Słowian.Arkona była azylem i jednym z ostatnich bastionów słowiańszczyzny.//Arkona była azylem i jednym z ostatnich bastionów przed najeźdzcą z zachodu/chrystianizacją."
+  },
+  {
+    "id": 19,
+    "idType": 2,
+    "type": "Lokacja",
+    "name": "Rehtra",
+    "persistence": "permanent",
+    "effect": "Pozwala podejrzeć dowolną kartę rywala. Można skorzystać 4x.",
+    "enhancedEffect": "Dopóki rywal nie zniszczy tej karty, nie może zagrywać kart w ciemno. Zaklęcie nie odkrywa nieznanych kart w chwili jego zagrania.",
+    "lore": "Święte miejsce kultu Swarożyca pod opieką wojowniczego plemienia Redarów.  Miejsce o szczególnej mocy, gdzie wróżono, składano ofiary i planowano wojny."
+  },
+  {
+    "id": 20,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Przyjaźń",
+    "persistence": "permanent",
+    "effect": "Jedna istota przejmuje wszystkie obrażenia i efekty otrzymywane przez inną istotę w polu ( w przypadku jej śmierci nadmiar przepada).",
+    "enhancedEffect": "Dodatkowo, gdy to stworzenie zginie, te połączone z nią Przyjaźnią zyskuje 3 darmowe ataki.",
+    "lore": "Symbol powszechnie używany na terenie całej słowiańszczyzny. Umieszczano go na monetach, pomnikach ozdabiano nim domy. Prócz ochrony przed demonami, Swarga była symbolem jedności wszystkich Słowian."
+  },
+  {
+    "id": 21,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Miecz Kladenet",
+    "persistence": "permanent",
+    "effect": "Stworzenie zyskuje zdolność atakowania dwoch wrogów, oraz nie otrzymuje kontrataku.",
+    "enhancedEffect": "Dodatkowo pozwala atakować dowolne linie, stworzenie latające i niesąsiadujące ze sobą.",
+    "lore": "Szał bitewny/"
+  },
+  {
+    "id": 22,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Młot Swaroga",
+    "persistence": "duration",
+    "durationRounds": 1,
+    "durationNote": "Efekt trwa 1 rundę (+ paraliż w kolejnej jeśli 3 ataki)",
+    "effect": "W jednej rundzie potwór może: -zaatakować 2 razy, -3 razy, lecz w kolejnej jest sparaliżowany, -4 razy, lecz wtedy natychmiast zginie.",
+    "enhancedEffect": "Dodatkowo od żadnego z tych ataków nie padają kontrataki",
+    "lore": "Umierający olbrzym, podzielił się swoją mocą z Ilją Murmańcem, wielkim herosem. Jednak jak udowadniają mity i historia samego Światogora, będąc potężnym łatwo zapomnieć o swojej śmiertelności."
+  },
+  {
+    "id": 23,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Swaćba",
+    "persistence": "duration",
+    "durationRounds": 3,
+    "effect": "Przez 3 rundy przeciwnik nie może atakować żadną istotą.",
+    "enhancedEffect": "<piniądz> Przeciwnik nie może wystawiać nowych istot do walki. Karta działą dopóki rywal ma istoty w polu.",
+    "lore": "Uroczystość pogrzebowa o radosnym charakterze. Prócz biesiady i zabaw, organizowano rownież igrzyska sportowe. Tryzna miala pomóc zmarłemu dostać się do Nawii i uwolnić żywych , od wpływu umarłych bliskich."
+  },
+  {
+    "id": 24,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Amulet Z Rozetą",
+    "persistence": "permanent",
+    "effect": "Istota jest odporna na ataki {Slavic/magia-icon}",
+    "enhancedEffect": "Dodatkowo, Istota jest odporna na wrogie karty zaklęć.",
+    "lore": "Władca Magii rzadko kiedy nagradzał swoje sługi. Ci jednak, którym był przychylny niestraszne były nawet najpotężniejsze zaklęcia."
+  },
+  {
+    "id": 25,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Handel",
+    "persistence": "instant",
+    "effect": "Odłóż kart do tali, przetasuj ją i pociągnij nowe karty. Jeśli chcesz, Twój przeciwnik musi zrobić to samo.",
+    "enhancedEffect": "Gracze wymieniają się wszystkimi kartami z rąk, wymiana dotyczy tylu kart ile ma gracz zagrywający HANDEL",
+    "lore": "Zamiast 'Handel' , 'Bursztynowy szlak// Calisia np. \n\"Słowianie prowadzili aktywny handel z najważniejszymi krajami ówczesnego świata głównie Rzymem i Bizancjum. Szlak handlowy mający swój początek w włoskiej Akwiwaleji, łączył morze Śródziemne z Bałtykiem. Słowiański gród Calissia, był jednym z najważnejszych punktów na trasie."
+  },
+  {
+    "id": 26,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Topór Peruna - Amulet",
+    "persistence": "duration",
+    "durationRounds": null,
+    "durationNote": "Leży do wykorzystania 2 odbić",
+    "effect": "Odbija do napastnika 2 wybrane ciosy.",
+    "enhancedEffect": "<piniądz> Dodatkowo gracz może wybrać, do której istoty zostanie odbity atak.",
+    "lore": "Bogato zdobiona, okrągła złota tarcza, miała być wykuta przez samego Swaroga i podarowana Jarowitowi, bogowi wojny. Święta relikwia, której nie wolno było dotykać - wynoszono ją ze świątyni tylko w trakcie wojen, jako symbol rychłego zwycięstwa."
+  },
+  {
+    "id": 27,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Bitwa Nad Tollense",
+    "persistence": "conditional",
+    "conditionEnd": "Jeden z graczy straci wszystkie istoty w polu",
+    "effect": "Dopóki jeden z graczy nie straci wszystkich swoich istot w polu, każda istota może atakować wroga, bez względu na linie, w których się znajdują.",
+    "enhancedEffect": "<Piniądz> Dodatkowo w turze zagrania tej karty gracz może zaatakować dodatkowymi 2 istotami.",
+    "lore": "Bitwa Morksa/Atak Chąśników/Najazd Chąśników/Morze/Władcy mórz/Bitwa o bałtyk ( część lokacji to karty wojny? :P Nie podpuszczam cię, bo zaraz znowu zmienisz core gry)/ Najazd Chąśników/ MOżna zamienić słowo \"Chąśnicy' na Wiciędze"
+  },
+  {
+    "id": 28,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Srebrna Gałąź",
+    "persistence": "permanent",
+    "effect": "Pozwala zamienić swoją przynależność, na {Slavic/perunowcy-icon} / {Slavic/Welesowcy-icon} / {Slavic/Umarli-icon} / {Slavic/zywi-icon}",
+    "enhancedEffect": "Dodatkowo, stworzenie staje się odporne na {Slavic/perunowcy-icon} / {Slavic/Welesowcy-icon} / {Slavic/Umarli-icon} / {Slavic/zywi-icon}",
+    "lore": ""
+  },
+  {
+    "id": 29,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Pióro Żar-Ptaka",
+    "persistence": "permanent",
+    "effect": "Przywraca {stats.attack} i {stats.defense} wybranego stworzenia do wartości bazowej. Usuwa wszystkie negatywne efekty, paraliże, trucizny, wybrane przez gracza zaklęcia.",
+    "enhancedEffect": "Pozbawia wybrane stworzenie wszystkich premii i atrybutów.",
+    "lore": "Słowianie słynęli z wysokiej higieny, więc  każde bogatsze gospodarstwo, musiało posiadać swoją łaźnie. Wierzono, że wizyta w saunie, to doświadczenie oczyszczające zarówno ciało jak i ducha. Banią, opiekował się  Bannik, który sprzyjał dobrym gospodarzom. Chcących demona przegonić z łaźni, potrafił również karać śmiercią."
+  },
+  {
+    "id": 30,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Tarcza Dobryni Nikiticza",
+    "persistence": "permanent",
+    "effect": "Absorbuje 8 punktów obrażeń zadanych noszącemu ją.",
+    "enhancedEffect": "Dodatkowo, w momencie wybranym przez gracza atak lub premia skierowana w właściciela tarczy nie powiedzie się.",
+    "lore": "Tur to najpotężniejsze zwierzę słowiańśkich lasów. Skórznia zrobiona z jego skóry jest nie tylko twarda, ale i posiada pewne magiczne właściwości dane przez Leszego, piastuna turów."
+  },
+  {
+    "id": 31,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Złota Baba",
+    "persistence": "permanent",
+    "effect": "Karta musi być zagrana, na zasadach kart stworzeń. Wróg, który ją zaatakuje, przechodzi na Twoją stronę.",
+    "enhancedEffect": "Aktywując podczas wojej tury, możesz przejąć aktywną wrogą lokację/artefakt i wtasować do swojej talii.",
+    "lore": "Sprawianie, by nieczyste siły w swej przewrotności zaszkodziły samym sobie, to najwspanialsza z umiejętności danych przez Peruna swoim kapłanom jako oręż przeciw ciemności."
+  },
+  {
+    "id": 32,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Nekromancja",
+    "persistence": "permanent",
+    "durationNote": "Można używać wielokrotnie poświęcając istoty",
+    "effect": "Tworzy <czaszka> istotę ( 4<topór> i <tarcza) lub o tyleż wzacnia(literówka) już wystawioną. Poświęcając własną istotę w talii lub pola zaklęcia moża używać wielokrotnie.",
+    "enhancedEffect": "<piniądz> Trwale podwaja lub obniża o połowę <topór> i <tarcza> wszystkich <czaszka> w polu",
+    "lore": "Chociaż korzystanie z tak plugawych zdolności jak narzucanie swej woli zmarłym jest obrzydliwe w oczach bogów i ludzi, zapewniają one wielką siłę jego posiadaczowi. A przecież cel uświęca środki."
+  },
+  {
+    "id": 33,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Przebudzenie Stolemów",
+    "persistence": "instant",
+    "effect": "Niszczy dowolna kartę lokacji. Przy każdym kolejnym uzyciu tracisz <Piniądz>",
+    "enhancedEffect": "<piniądz> Niszczy 3 wybrane aktywne karty wydarzeń leżące w polu.",
+    "lore": "Wiele magicznych amuletów i ziół odstrasza złe siły i przełamuje wrogie uroki. Na podobnej zasadzie działąją zaklęcia rozwiewające iluzje pokrywające obszar czy rzucone na konkretne miejsce."
+  },
+  {
+    "id": 34,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Szał Bitewny",
+    "persistence": "conditional",
+    "conditionEnd": "Przejęte stworzenie nie wykona ataku w rundzie",
+    "effect": "Pozwala zaatakować wybrane wrogie stworzenie innym wrogim stworzeniem w zasięgu jej ataku.",
+    "enhancedEffect": "Czasowo przejmuje stworzenie rywala. Wraca ona do niego, gdy w jakiejś rundzie nie wykona ataku.",
+    "lore": "Opętanie to zarówno pogrążenie się w szale bitewnym i sianie zniszczenia w zastępach wroga, jak i wejście złego ducha w ciało nieszczęśnika i przejęcie nad nim kontroli."
+  },
+  {
+    "id": 35,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Braterstwo Bogatyrów",
+    "persistence": "instant",
+    "effect": "Łączy dwie istoty leżące w polu i należące do jedneog gracza, sumując ich <topór , <tarcza>, premie, działające efekty i ich artefakty.",
+    "enhancedEffect": "<piniądz> Pozwala wystawić i natychmiast połączyć do 4 istot",
+    "lore": "Sojusze na czas wojny to częsta praktyka w przypadku nawet niezbyt przepadającymi za sobą plemionami, gdy ich wspólny wróg jest zbyt silny by go pokonać w pojeydnkę."
+  },
+  {
+    "id": 36,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Sledovik",
+    "persistence": "conditional",
+    "conditionEnd": "Enhanced: Działa dopóki gracz ma przewagę liczebną",
+    "effect": "Gracz może wystawić dodatkowe dwie istoty i zaatakować nimi, nie kończąc tury.",
+    "enhancedEffect": "Za każdym razem, gdy gracz ma więcej stworzeń w polu niż rywal, może zaatakować jednym, dodatkowym stworzeniem.",
+    "lore": "Niespodziewane pojawienie się dodatkowych wojsk i ich błyskawiczny atak może oedmienić przebieg bitwy, dzięki czemu mniejsza artmia jest w stanie pokonać znacznie liczniejsze."
+  },
+  {
+    "id": 37,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Żertwa",
+    "persistence": "instant",
+    "effect": "Niszczy własnego potwora, a dwukrotność wartości jego ataku i obrony zostaje dodana wybranemu potworowi",
+    "enhancedEffect": "Zamiast dodać, zadaje tyleż obrażeń wybranemu potworowi",
+    "lore": ""
+  },
+  {
+    "id": 38,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Boskie Wsparcie",
+    "persistence": "instant",
+    "effect": "Dodaje 2 {stats.attack} i {stats.defense} lub 4 którejś z nich wybranemu stworzeniu.",
+    "enhancedEffect": "Dodatkowo dodaje atrybut {Slavic/lata-icon}",
+    "lore": ""
+  },
+  {
+    "id": 39,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Zdrada Popiela",
+    "persistence": "instant",
+    "durationNote": "Dotyczy kart będących w polu w chwili zagrania - jednorazowo wymusza pozycję ataku",
+    "effect": "Nie pozwala stworzenim wroga być w pozycji obrony. Dotyczy kart będących w polu podczas zagrywania karty.",
+    "enhancedEffect": "Dodatkowo , gracz do końca swojej tury może dowolnie zmieniać ustawienie w polu stworzeń rywala.",
+    "lore": ""
+  },
+  {
+    "id": 40,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Bezsilność",
+    "persistence": "duration",
+    "durationRounds": 3,
+    "effect": "Przez 3 rundystworzenia rywala nie mogą korzystać z premii.",
+    "enhancedEffect": "Dodatkowo, przez ten czas ich atrybut ataku to {stats.attack}",
+    "lore": ""
+  },
+  {
+    "id": 41,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Pakt Z Inkluzem",
+    "persistence": "instant",
+    "effect": "Odbiera wszystkim wrogom wartość 1 {stats.attack} i 2 {stats.defense}, a sumę przekazuje własnemu stworzeniu.",
+    "enhancedEffect": "Gracz zamienia stronami dwa stworzenia w polu.",
+    "lore": ""
+  },
+  {
+    "id": 42,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Gwizd Sołowieja",
+    "persistence": "instant",
+    "effect": "Każdy potwór wroga posiada wyższą wartość ataku niż obrony, traci jego nadwyżkę",
+    "enhancedEffect": "Nie pozwala atakować wszystkim wrogim potworom. Dotyczy jedynie kart będących w polu podczas rzucania zaklęcia",
+    "lore": ""
+  },
+  {
+    "id": 43,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Swarożyca",
+    "persistence": "instant",
+    "effect": "Zadaje 6 obrażeń wybranym wrogom, po równo na wybraną ich ilość. Poświęcając inne karty przygody, łaski można użyć wielokrotnie.",
+    "enhancedEffect": "Dodatkowo można dowolnie rozdzielać liczbę obrażeń dla wybranych stworzeń.",
+    "lore": ""
+  },
+  {
+    "id": 44,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Morany",
+    "persistence": "duration",
+    "durationRounds": null,
+    "durationNote": "Leży do wykorzystania zabójstwa 3 istot po wystawieniu",
+    "effect": "Zabija 3 wrogie stworzenia natychmiast po ich wystawieniu",
+    "enhancedEffect": "Wybrane zgładzone stworzenie wędruje do talii gracza zagrywającego.",
+    "lore": ""
+  },
+  {
+    "id": 45,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Kataklizm",
+    "persistence": "instant",
+    "effect": "Odbiera połowę ataku i obrony wszystkim potworom w polu",
+    "enhancedEffect": "Dodatkowo niszczy wszystkie wrogie karty lokacji będące w polu",
+    "lore": ""
+  },
+  {
+    "id": 46,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Swaroga",
+    "persistence": "instant",
+    "effect": "Odtwarza zniszczony artefakt lub kartę lokacji.",
+    "enhancedEffect": "Tworzy kopię artefaktu lub karty lokacji aktywnej w polu.",
+    "lore": ""
+  },
+  {
+    "id": 47,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Misjonarze",
+    "persistence": "duration",
+    "durationRounds": 5,
+    "effect": "Przez 5 kolejnych tur przeciwnik nie może używać atakować za pomocą magii",
+    "enhancedEffect": "Możesz nią zagrać z talii podczas tury przeciwnika. Zagrywane właśnie przez rywala zaklęcie nie zadziała",
+    "lore": ""
+  },
+  {
+    "id": 48,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Tryzna",
+    "persistence": "permanent",
+    "effect": "Zmniejsza limit kart w ręku o 1 kartę.",
+    "enhancedEffect": "Dodatkowo rywal może zagrywać jedynie dwie karty w każdej rundzie",
+    "lore": ""
+  },
+  {
+    "id": 49,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Świętowida",
+    "persistence": "permanent",
+    "effect": "Wskazany potwór, za każdym razem, gdy zabija wroga, dodaje do wartości swego ataku wartość ataku pokonanego przeciwnika",
+    "enhancedEffect": "Potwory gracza, gdy atakując, zabiją wroga, nie kończą tury. Działa na potwory będące w polu podczas rzucania zaklęcia",
+    "lore": ""
+  },
+  {
+    "id": 50,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Sledovik",
+    "persistence": "instant",
+    "effect": "Wybrane stworzenie, jest niewrażliwe na ataki {Slavic/Welesowcy-icon}.",
+    "enhancedEffect": "Niszczy wybranego {Slavic/Welesowcy-icon}.",
+    "lore": ""
+  },
+  {
+    "id": 51,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Ruslan Helmet",
+    "persistence": "permanent",
+    "effect": "Stworzenie zyskuje odporność na wrogie premie",
+    "enhancedEffect": "Jeśli nie zaatakuje, w kolejnej turze nie można go zaatakować.",
+    "lore": ""
+  },
+  {
+    "id": 52,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Alatyr",
+    "persistence": "permanent",
+    "effect": "Gracz dobiera 5 kart, spośród których może natychmiast wystawić dowolną ilość stworzeń.",
+    "enhancedEffect": "Dodatkowo,Dopóki żyje stworzenie posiadające Alatyr, rywal nie może atakować nikogo innego.",
+    "lore": ""
+  },
+  {
+    "id": 53,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Kukła Marzanny",
+    "persistence": "duration",
+    "durationRounds": 3,
+    "effect": "Przez 3 kolejne rundy, stworzenia <czaszka> są sparaliżowane",
+    "enhancedEffect": "Dodatkowo, {Slavic/zywi-icon} mają x2 {stats.attack} do walki z {Slavic/Umarli-icon}, przez 3 rundy",
+    "lore": ""
+  },
+  {
+    "id": 54,
+    "idType": 1,
+    "type": "Artefakt",
+    "name": "Płaszcz Strzybóga",
+    "persistence": "permanent",
+    "effect": "Wybrane stworzenie dostaje atrybut latania",
+    "enhancedEffect": "Wszystkie wrogie stworzenia tracą atrybut latania.",
+    "lore": ""
+  },
+  {
+    "id": 55,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Perena",
+    "persistence": "instant",
+    "effect": "Wszystkie stworzenia {Slavic/Welesowcy-icon} w polu, tracą połowę {stats.attack} i {stats.defense}, oraz wszystkie premie.",
+    "enhancedEffect": "Niszczy dowolne stworzenie w polu gry.",
+    "lore": ""
+  },
+  {
+    "id": 56,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Roda",
+    "persistence": "instant",
+    "effect": "Daje wybranemu stworzeniu dowolną premię",
+    "enhancedEffect": "Zamienia dwa stworzenia w polu swoimi premiami, atrybutami, zagranymi aktywnymi kartami przygody.",
+    "lore": ""
+  },
+  {
+    "id": 57,
+    "idType": 2,
+    "type": "Lokacja",
+    "name": "Wyspa Bujan",
+    "persistence": "permanent",
+    "effect": "Zwięsza limit kart w ręku o 3 karty.",
+    "enhancedEffect": "Podejrzyj 5 losowych kart spoza obszaru gry. Wtasuj jedną z nich do twojej talii.",
+    "lore": ""
+  },
+  {
+    "id": 58,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Zorzy",
+    "persistence": "instant",
+    "effect": "jedna Wieczorna, druga Nocna, trzecia Poranna. Przywraca zużytą/zniszczoną kartę zdarzeń.",
+    "enhancedEffect": "Tworzy kopię karty zdarzeń aktywnej w polu.",
+    "lore": ""
+  },
+  {
+    "id": 59,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Poświęcenie Wandy",
+    "persistence": "duration",
+    "durationRounds": 1,
+    "effect": "Wróg nie może wykonać w kolejnej rundzie żadnej akcji. - przez rundę pozwala na wykonywanie akcji zamiast rywala (oprócz korzystania z jego talii)",
+    "enhancedEffect": "",
+    "lore": ""
+  },
+  {
+    "id": 60,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Łaska Łady",
+    "persistence": "instant",
+    "effect": "Odbiera zdolność latania zaakatowanym stworzeniom",
+    "enhancedEffect": "Istotom w 3 linii zadaje x3 obrażenia",
+    "lore": ""
+  },
+  {
+    "id": 61,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Zaćmienie Słońca",
+    "persistence": "duration",
+    "durationRounds": 1,
+    "durationNote": "Bazowy: do końca następnej tury. Enhanced: 3 rundy.",
+    "effect": "Do końca następnej tury, wszystkie stworzenia w polu są traktowane tak, jakby nie miały żadnych premii.",
+    "enhancedEffect": "Przez 3 rundy stworzenia rywala nie mogą korzystać z premii",
+    "lore": ""
+  },
+  {
+    "id": 62,
+    "idType": 0,
+    "type": "Zdarzenie",
+    "name": "Gusła",
+    "persistence": "instant",
+    "effect": "Odbiera wybranemu stworzeniu {stats.attack} i {stats.defense} i przekazuje je wybranemu stworzeniu. - Odbiera wybranemu stworzeniu wszystkie premie i przekazuje je wybranemu przez zagrywającego stworzeniu.",
+    "enhancedEffect": "- pozwala zamienić współczynniki między dwoma własnymi potworami",
+    "lore": ""
+  }
+]

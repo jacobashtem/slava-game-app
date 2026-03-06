@@ -1,0 +1,681 @@
+
+t Started
+Views
+
+Copy page
+
+Nuxt provides several component layers to implement the user interface of your application.
+app.vue
+The app.vue file is the entry point of your application
+
+By default, Nuxt will treat this file as the entrypoint and render its content for every route of the application.
+
+app/app.vue
+
+<template>
+  <div>
+    <h1>Welcome to the homepage</h1>
+  </div>
+</template>
+If you are familiar with Vue, you might wonder where main.js is (the file that normally creates a Vue app). Nuxt does this behind the scene.
+Components
+Components are reusable pieces of UI
+
+Most components are reusable pieces of the user interface, like buttons and menus. In Nuxt, you can create these components in the app/components/ directory, and they will be automatically available across your application without having to explicitly import them.
+
+
+app/app.vue
+
+app/components/AppAlert.vue
+
+<template>
+  <div>
+    <h1>Welcome to the homepage</h1>
+    <AppAlert>
+      This is an auto-imported component.
+    </AppAlert>
+  </div>
+</template>
+Pages
+Pages are views tied to a specific route
+
+Pages represent views for each specific route pattern. Every file in the app/pages/ directory represents a different route displaying its content.
+
+To use pages, create an app/pages/index.vue file and add <NuxtPage /> component to the app/app.vue (or remove app/app.vue for default entry). You can now create more pages and their corresponding routes by adding new files in the app/pages/ directory.
+
+
+app/pages/index.vue
+
+app/pages/about.vue
+
+<template>
+  <div>
+    <h1>Welcome to the homepage</h1>
+    <AppAlert>
+      This is an auto-imported component
+    </AppAlert>
+  </div>
+</template>
+ Read more in Routing Section.
+Layouts
+Layouts are wrapper around pages
+
+Layouts are wrappers around pages that contain a common User Interface for several pages, such as header and footer displays. Layouts are Vue files using <slot /> components to display the page content. The app/layouts/default.vue file will be used by default. Custom layouts can be set as part of your page metadata.
+
+If you only have a single layout in your application, we recommend using app/app.vue with <NuxtPage /> instead.
+
+app/app.vue
+
+app/layouts/default.vue
+
+app/pages/index.vue
+
+app/pages/about.vue
+
+<template>
+  <div>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
+</template>
+If you want to create more layouts and learn how to use them in your pages, find more information in the Layouts section.
+
+Advanced: Extending the HTML Template
+If you only need to modify the <head>, you can refer to the SEO and meta section.
+You can have full control over the HTML template by adding a Nitro plugin that registers a hook. The callback function of the render:html hook allows you to mutate the HTML before it is sent to the client.
+
+server/plugins/extend-html.ts
+
+export default defineNitroPlugin((nitroApp) => {
+  nitroApp.hooks.hook('render:html', (html, { event }) => {
+    // This will be an object representation of the html template.
+    console.log(html)
+    html.head.push(`<meta name="description" content="My custom description" />`)
+  })
+  // You can also intercept the response here.
+  nitroApp.hooks.hook('render:response', (response, { event }) => { console.log(response) })
+})
+ Read more in Docs > 4 X > Guide > Going Further > Hooks.
+
+Was this helpful?
+
+🤩
+
+🙂
+
+☹️
+
+😰
+Report an issue
+or
+Edit this page on GitHub
+Configuration
+
+Nuxt is configured with sensible defaults to make you productive.
+
+Assets
+
+Nuxt offers two options for your assets.
+
+On this page
+
+app.vue
+Components
+Pages
+Layouts
+Advanced: Extending the HTML Template
+Community
+
+Become a Sponsor
+Master Nuxt
+Nuxt Certification
+Nuxt on Discord
+Nuxt on Bluesky
+Nuxt on X
+Nuxt on GitHub
+ads via Carbon
+Check out the latest remote job listings from the leading job board for designers, developers, and creative pros.
+ads via Carbon
+Community
+Nuxters
+Team
+Design Kit
+Explore
+Templates
+Showcase
+AI Evals
+Enterprise
+Agencies
+Sponsors
+Subscribe to our newsletter
+Stay updated on new releases and features, guides, and community updates.
+
+you@domain.com
+
+Subscribe
+
+
+Get Started
+Routing
+
+Copy page
+
+Nuxt file-system routing creates a route for every file in the pages/ directory.
+One core feature of Nuxt is the file system router. Every Vue file inside the app/pages/ directory creates a corresponding URL (or route) that displays the contents of the file. By using dynamic imports for each page, Nuxt leverages code-splitting to ship the minimum amount of JavaScript for the requested route.
+
+Pages
+Nuxt routing is based on vue-router and generates the routes from every component created in the app/pages/ directory, based on their filename.
+
+This file system routing uses naming conventions to create dynamic and nested routes:
+
+
+Directory Structure
+
+Generated Router File
+
+-| pages/
+---| about.vue
+---| index.vue
+---| posts/
+-----| [id].vue
+ Read more in Docs > 4 X > Directory Structure > App > Pages.
+Navigation
+The <NuxtLink> component links pages between them. It renders an <a> tag with the href attribute set to the route of the page. Once the application is hydrated, page transitions are performed in JavaScript by updating the browser URL. This prevents full-page refreshes and allows for animated transitions.
+
+When a <NuxtLink> enters the viewport on the client side, Nuxt will automatically prefetch components and payload (generated pages) of the linked pages ahead of time, resulting in faster navigation.
+
+app/pages/index.vue
+
+<template>
+  <header>
+    <nav>
+      <ul>
+        <li><NuxtLink to="/about">About</NuxtLink></li>
+        <li><NuxtLink to="/posts/1">Post 1</NuxtLink></li>
+        <li><NuxtLink to="/posts/2">Post 2</NuxtLink></li>
+      </ul>
+    </nav>
+  </header>
+</template>
+ Read more in Docs > 4 X > API > Components > Nuxt Link.
+Route Parameters
+The useRoute() composable can be used in a <script setup> block or a setup() method of a Vue component to access the current route details.
+
+pages/posts/[id].vue
+
+<script setup lang="ts">
+const route = useRoute()
+
+// When accessing /posts/1, route.params.id will be 1
+console.log(route.params.id)
+</script>
+ Read more in Docs > 4 X > API > Composables > Use Route.
+Route Middleware
+Nuxt provides a customizable route middleware framework you can use throughout your application, ideal for extracting code that you want to run before navigating to a particular route.
+
+Route middleware runs within the Vue part of your Nuxt app. Despite the similar name, they are completely different from server middleware, which are run in the Nitro server part of your app.
+Route middleware does not run for server routes (e.g. /api/*) or other server requests. To apply middleware to these requests, use server middleware instead.
+There are three kinds of route middleware:
+
+Anonymous (or inline) route middleware, which are defined directly in the pages where they are used.
+Named route middleware, which are placed in the app/middleware/ directory and will be automatically loaded via asynchronous import when used on a page. (Note: The route middleware name is normalized to kebab-case, so someMiddleware becomes some-middleware.)
+Global route middleware, which are placed in the app/middleware/ directory (with a .global suffix) and will be automatically run on every route change.
+Example of an auth middleware protecting the /dashboard page:
+
+
+middleware/auth.ts
+
+pages/dashboard.vue
+
+function isAuthenticated (): boolean { return false }
+// ---cut---
+export default defineNuxtRouteMiddleware((to, from) => {
+  // isAuthenticated() is an example method verifying if a user is authenticated
+  if (isAuthenticated() === false) {
+    return navigateTo('/login')
+  }
+})
+ Read more in Docs > 4 X > Directory Structure > App > Middleware.
+Route Validation
+Nuxt offers route validation via the validate property in definePageMeta() in each page you wish to validate.
+
+The validate property accepts the route as an argument. You can return a boolean value to determine whether or not this is a valid route to be rendered with this page. If you return false, this will cause a 404 error. You can also directly return an object with status/statusText to customize the error returned.
+
+If you have a more complex use case, then you can use anonymous route middleware instead.
+
+pages/posts/[id].vue
+
+<script setup lang="ts">
+definePageMeta({
+  validate (route) {
+    // Check if the id is made up of digits
+    return typeof route.params.id === 'string' && /^\d+$/.test(route.params.id)
+  },
+})
+</script>
+ Read more in Docs > 4 X > API > Utils > Define Page Meta.
+
+Was this helpful?
+
+🤩
+
+🙂
+
+☹️
+
+😰
+Report an issue
+or
+Edit this page on GitHub
+Styling
+
+Learn how to style your Nuxt application.
+
+SEO and Meta
+
+Improve your Nuxt app's SEO with powerful head config, composables and components.
+
+On this page
+
+Pages
+Navigation
+Route Parameters
+Route Middleware
+Route Validation
+Community
+
+Become a Sponsor
+Master Nuxt
+Nuxt Certification
+Nuxt on Discord
+Nuxt on Bluesky
+Nuxt on X
+Nuxt on GitHub
+ads via Carbon
+Trenuj swoje modele AI w chmurze z GPU Nvidia H100 i A100. Zyskaj moc w przystępnej cenie >>
+ads via Carbon
+Community
+Nuxters
+Team
+Design Kit
+Explore
+Templates
+Showcase
+
+
+CONFIGURATION
+
+Get Started
+Configuration
+
+Copy page
+
+Nuxt is configured with sensible defaults to make you productive.
+By default, Nuxt is configured to cover most use cases. The nuxt.config.ts file can override or extend this default configuration.
+
+Nuxt Configuration
+The nuxt.config.ts file is located at the root of a Nuxt project and can override or extend the application's behavior.
+
+A minimal configuration file exports the defineNuxtConfig function containing an object with your configuration. The defineNuxtConfig helper is globally available without import.
+
+nuxt.config.ts
+
+export default defineNuxtConfig({
+  // My Nuxt config
+})
+This file will often be mentioned in the documentation, for example to add custom scripts, register modules or change rendering modes.
+
+Every option is described in the Configuration Reference.
+You don't have to use TypeScript to build an application with Nuxt. However, it is strongly recommended to use the .ts extension for the nuxt.config file. This way you can benefit from hints in your IDE to avoid typos and mistakes while editing your configuration.
+Environment Overrides
+You can configure fully typed, per-environment overrides in your nuxt.config
+
+nuxt.config.ts
+
+export default defineNuxtConfig({
+  $production: {
+    routeRules: {
+      '/**': { isr: true },
+    },
+  },
+  $development: {
+    //
+  },
+  $env: {
+    staging: {
+      //
+    },
+  },
+})
+To select an environment when running a Nuxt CLI command, simply pass the name to the --envName flag, like so: nuxt build --envName staging.
+
+To learn more about the mechanism behind these overrides, please refer to the c12 documentation on environment-specific configuration.
+
+
+Watch a video from Alexander Lichter about the env-aware nuxt.config.ts
+If you're authoring layers, you can also use the $meta key to provide metadata that you or the consumers of your layer might use.
+Environment Variables and Private Tokens
+The runtimeConfig API exposes values like environment variables to the rest of your application. By default, these keys are only available server-side. The keys within runtimeConfig.public and runtimeConfig.app (which is used by Nuxt internally) are also available client-side.
+
+Those values should be defined in nuxt.config and can be overridden using environment variables.
+
+
+nuxt.config.ts
+
+.env
+
+export default defineNuxtConfig({
+  runtimeConfig: {
+    // The private keys which are only available server-side
+    apiSecret: '123',
+    // Keys within public are also exposed client-side
+    public: {
+      apiBase: '/api',
+    },
+  },
+})
+These variables are exposed to the rest of your application using the useRuntimeConfig() composable.
+
+app/pages/index.vue
+
+<script setup lang="ts">
+const runtimeConfig = useRuntimeConfig()
+</script>
+ Read more in Docs > 4 X > Guide > Going Further > Runtime Config.
+App Configuration
+The app.config.ts file, located in the source directory (by default app/), is used to expose public variables that can be determined at build time. Contrary to the runtimeConfig option, these cannot be overridden using environment variables.
+
+A minimal configuration file exports the defineAppConfig function containing an object with your configuration. The defineAppConfig helper is globally available without import.
+
+app/app.config.ts
+
+export default defineAppConfig({
+  title: 'Hello Nuxt',
+  theme: {
+    dark: true,
+    colors: {
+      primary: '#ff0000',
+    },
+  },
+})
+These variables are exposed to the rest of your application using the useAppConfig composable.
+
+app/pages/index.vue
+
+<script setup lang="ts">
+const appConfig = useAppConfig()
+</script>
+ Read more in Docs > 4 X > Directory Structure > App > App Config.
+runtimeConfig vs. app.config
+As stated above, runtimeConfig and app.config are both used to expose variables to the rest of your application. To determine whether you should use one or the other, here are some guidelines:
+
+runtimeConfig: Private or public tokens that need to be specified after build using environment variables.
+app.config: Public tokens that are determined at build time, website configuration such as theme variant, title and any project config that are not sensitive.
+Feature	runtimeConfig	app.config
+Client-side	Hydrated	Bundled
+Environment variables	✅ Yes	❌ No
+Reactive	✅ Yes	✅ Yes
+Types support	✅ Partial	✅ Yes
+Configuration per request	❌ No	✅ Yes
+Hot module replacement	❌ No	✅ Yes
+Non-primitive JS types	❌ No	✅ Yes
+External Configuration Files
+Nuxt uses nuxt.config.ts file as the single source of truth for configurations and skips reading external configuration files. During the course of building your project, you may have a need to configure those. The following table highlights common configurations and, where applicable, how they can be configured with Nuxt.
+
+Name	Config File	How To Configure
+Nitro	nitro.config.ts	Use nitro key in nuxt.config
+PostCSS	postcss.config.js	Use postcss key in nuxt.config
+Vite	vite.config.ts	Use vite key in nuxt.config
+webpack	webpack.config.ts	Use webpack key in nuxt.config
+Here is a list of other common config files:
+
+Name	Config File	How To Configure
+TypeScript	tsconfig.json	More Info
+ESLint	eslint.config.js	More Info
+Prettier	prettier.config.js	More Info
+Stylelint	stylelint.config.js	More Info
+TailwindCSS	tailwind.config.js	More Info
+Vitest	vitest.config.ts	More Info
+Vue Configuration
+With Vite
+If you need to pass options to @vitejs/plugin-vue or @vitejs/plugin-vue-jsx, you can do this in your nuxt.config file.
+
+vite.vue for @vitejs/plugin-vue. Check available options.
+vite.vueJsx for @vitejs/plugin-vue-jsx. Check available options.
+nuxt.config.ts
+
+export default defineNuxtConfig({
+  vite: {
+    vue: {
+      customElement: true,
+    },
+    vueJsx: {
+      mergeProps: true,
+    },
+  },
+})
+ Read more in Docs > 4 X > API > Configuration > Nuxt Config#vue.
+With webpack
+If you use webpack and need to configure vue-loader, you can do this using webpack.loaders.vue key inside your nuxt.config file. The available options are defined here.
+
+nuxt.config.ts
+
+export default defineNuxtConfig({
+  webpack: {
+    loaders: {
+      vue: {
+        hotReload: true,
+      },
+    },
+  },
+})
+ Read more in Docs > 4 X > API > Configuration > Nuxt Config#loaders.
+Enabling Experimental Vue Features
+You may need to enable experimental features in Vue, such as propsDestructure. Nuxt provides an easy way to do that in nuxt.config.ts, no matter which builder you are using:
+
+nuxt.config.ts
+
+export default defineNuxtConfig({
+  vue: {
+    propsDestructure: true,
+  },
+})
+experimental reactivityTransform migration from Vue 3.4 and Nuxt 3.9
+Since Nuxt 3.9 and Vue 3.4, reactivityTransform has been moved from Vue to Vue Macros which has a Nuxt integration.
+
+ Read more in Docs > 4 X > API > Configuration > Nuxt Config#vue 1.
+
+Was this helpful?
+
+🤩
+
+🙂
+
+☹️
+
+😰
+Report an issue
+or
+Edit this page on GitHub
+Installation
+
+Get started with Nuxt quickly with our online starters or start locally with your terminal.
+
+# Views
+
+> Nuxt provides several component layers to implement the user interface of your application.
+
+## `app.vue`
+
+![The app.vue file is the entry point of your application](/assets/docs/getting-started/views/app.svg)
+
+By default, Nuxt will treat this file as the **entrypoint** and render its content for every route of the application.
+
+```vue [app/app.vue]
+<template>
+  <div>
+    <h1>Welcome to the homepage</h1>
+  </div>
+</template>
+```
+
+<tip>
+
+If you are familiar with Vue, you might wonder where `main.js` is (the file that normally creates a Vue app). Nuxt does this behind the scene.
+
+</tip>
+
+## Components
+
+![Components are reusable pieces of UI](/assets/docs/getting-started/views/components.svg)
+
+Most components are reusable pieces of the user interface, like buttons and menus. In Nuxt, you can create these components in the [`app/components/`](/docs/4.x/directory-structure/app/components) directory, and they will be automatically available across your application without having to explicitly import them.
+
+<code-group>
+
+```vue [app/app.vue]
+<template>
+  <div>
+    <h1>Welcome to the homepage</h1>
+    <AppAlert>
+      This is an auto-imported component.
+    </AppAlert>
+  </div>
+</template>
+```
+
+```vue [app/components/AppAlert.vue]
+<template>
+  <span>
+    <slot />
+  </span>
+</template>
+```
+
+</code-group>
+
+## Pages
+
+![Pages are views tied to a specific route](/assets/docs/getting-started/views/pages.svg)
+
+Pages represent views for each specific route pattern. Every file in the [`app/pages/`](/docs/4.x/directory-structure/app/pages) directory represents a different route displaying its content.
+
+To use pages, create an `app/pages/index.vue` file and add `<NuxtPage />` component to the [`app/app.vue`](/docs/4.x/directory-structure/app/app) (or remove `app/app.vue` for default entry). You can now create more pages and their corresponding routes by adding new files in the [`app/pages/`](/docs/4.x/directory-structure/app/pages) directory.
+
+<code-group>
+
+```vue [app/pages/index.vue]
+<template>
+  <div>
+    <h1>Welcome to the homepage</h1>
+    <AppAlert>
+      This is an auto-imported component
+    </AppAlert>
+  </div>
+</template>
+```
+
+```vue [app/pages/about.vue]
+<template>
+  <section>
+    <p>This page will be displayed at the /about route.</p>
+  </section>
+</template>
+```
+
+</code-group>
+
+<read-more to="/docs/4.x/getting-started/routing" title="Routing Section">
+
+
+
+</read-more>
+
+## Layouts
+
+![Layouts are wrapper around pages](/assets/docs/getting-started/views/layouts.svg)
+
+Layouts are wrappers around pages that contain a common User Interface for several pages, such as header and footer displays. Layouts are Vue files using `<slot />` components to display the **page** content. The `app/layouts/default.vue` file will be used by default. Custom layouts can be set as part of your page metadata.
+
+<note>
+
+If you only have a single layout in your application, we recommend using [`app/app.vue`](/docs/4.x/directory-structure/app/app) with [`<NuxtPage />`](/docs/4.x/api/components/nuxt-page) instead.
+
+</note>
+
+<code-group>
+
+```vue [app/app.vue]
+<template>
+  <div>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </div>
+</template>
+```
+
+```vue [app/layouts/default.vue]
+<template>
+  <div>
+    <AppHeader />
+    <slot />
+    <AppFooter />
+  </div>
+</template>
+```
+
+```vue [app/pages/index.vue]
+<template>
+  <div>
+    <h1>Welcome to the homepage</h1>
+    <AppAlert>
+      This is an auto-imported component
+    </AppAlert>
+  </div>
+</template>
+```
+
+```vue [app/pages/about.vue]
+<template>
+  <section>
+    <p>This page will be displayed at the /about route.</p>
+  </section>
+</template>
+```
+
+</code-group>
+
+If you want to create more layouts and learn how to use them in your pages, find more information in the [Layouts section](/docs/4.x/directory-structure/app/layouts).
+
+## Advanced: Extending the HTML Template
+
+<note>
+
+If you only need to modify the `<head>`, you can refer to the [SEO and meta section](/docs/4.x/getting-started/seo-meta).
+
+</note>
+
+You can have full control over the HTML template by adding a Nitro plugin that registers a hook.
+The callback function of the `render:html` hook allows you to mutate the HTML before it is sent to the client.
+
+```ts [server/plugins/extend-html.ts]
+export default defineNitroPlugin((nitroApp) => {
+  nitroApp.hooks.hook('render:html', (html, { event }) => {
+    // This will be an object representation of the html template.
+    console.log(html)
+    html.head.push(`<meta name="description" content="My custom description" />`)
+  })
+  // You can also intercept the response here.
+  nitroApp.hooks.hook('render:response', (response, { event }) => { console.log(response) })
+})
+```
+
+<read-more to="/docs/4.x/guide/going-further/hooks">
+
+
+
+</read-more>
+
+ 

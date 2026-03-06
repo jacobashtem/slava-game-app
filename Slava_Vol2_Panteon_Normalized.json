@@ -1,0 +1,164 @@
+{
+  "seasons": [
+    {
+      "seasonID": 0,
+      "name": "Zima",
+      "holidayID": 100,
+      "holidayName": "Szczodre Gody",
+      "passiveBonusID": "EFF_P_001",
+      "onSeasonChangeEffectID": "EFF_C_001",
+      "gods": [
+        {
+          "id": 1,
+          "name": "Weles",
+          "powerID": "EFF_G_001",
+          "enhancedPowerID": "EFF_G_002",
+          "cost": 1
+        },
+        {
+          "id": 2,
+          "name": "Swarozyc",
+          "powerID": "EFF_G_003",
+          "enhancedPowerID": "EFF_G_004",
+          "cost": 1
+        }
+      ]
+    },
+    {
+      "seasonID": 1,
+      "name": "Wiosna",
+      "holidayID": 101,
+      "holidayName": "Jare Gody",
+      "passiveBonusID": "EFF_P_002",
+      "onSeasonChangeEffectID": "EFF_C_002",
+      "gods": [
+        {
+          "id": 3,
+          "name": "Marzanna",
+          "powerID": "EFF_G_005",
+          "enhancedPowerID": "EFF_G_006",
+          "cost": 1
+        },
+        {
+          "id": 4,
+          "name": "Jarylo",
+          "powerID": "EFF_G_007",
+          "enhancedPowerID": "EFF_G_008",
+          "cost": 1
+        }
+      ]
+    },
+    {
+      "seasonID": 2,
+      "name": "Lato",
+      "holidayID": 102,
+      "holidayName": "Swieto Kupaly",
+      "passiveBonusID": "EFF_P_003",
+      "onSeasonChangeEffectID": "EFF_C_003",
+      "gods": [
+        {
+          "id": 5,
+          "name": "Mokosz",
+          "powerID": "EFF_G_009",
+          "enhancedPowerID": "EFF_G_010",
+          "cost": 1
+        },
+        {
+          "id": 6,
+          "name": "Perun",
+          "powerID": "EFF_G_011",
+          "enhancedPowerID": "EFF_G_012",
+          "cost": 1
+        }
+      ]
+    },
+    {
+      "seasonID": 3,
+      "name": "Jesien",
+      "holidayID": 103,
+      "holidayName": "Dziady",
+      "passiveBonusID": "EFF_P_004",
+      "onSeasonChangeEffectID": "EFF_C_004",
+      "gods": [
+        {
+          "id": 7,
+          "name": "Swarog",
+          "powerID": "EFF_G_013",
+          "enhancedPowerID": "EFF_G_014",
+          "cost": 1
+        },
+        {
+          "id": 8,
+          "name": "Rod",
+          "powerID": "EFF_G_015",
+          "enhancedPowerID": "EFF_G_016",
+          "cost": 1
+        }
+      ]
+    }
+  ],
+  "effects_catalog": {
+    "EFF_P_001": {
+      "desc": "Nieumarli (👻) otrzymują +1 do Obrony (stats.defense).",
+      "type": "PASSIVE_BUFF",
+      "target": 3,
+      "val": 1
+    },
+    "EFF_P_002": {
+      "desc": "Perunowcy (👽) otrzymują +1 do Ataku (stats.attack).",
+      "type": "PASSIVE_BUFF",
+      "target": 1,
+      "val": 1
+    },
+    "EFF_P_003": {
+      "desc": "Żywi (👌) mogą atakować dwa razy w turze.",
+      "type": "PASSIVE_BUFF",
+      "target": 2,
+      "val": 2
+    },
+    "EFF_P_004": {
+      "desc": "Welesowcy (😈) kosztują 0 Sławy przy ulepszaniu Kart Przygody.",
+      "type": "PASSIVE_BUFF",
+      "target": 4,
+      "val": 0
+    },
+    "EFF_C_001": {
+      "desc": "Paraliżuje wszystkie jednostki Peruna (👽) na 1 rundę.",
+      "type": "PARALYZE_DOMAIN",
+      "target": 1
+    },
+    "EFF_C_002": {
+      "desc": "Paraliżuje wszystkie jednostki Welesa (😈) na 1 rundę.",
+      "type": "PARALYZE_DOMAIN",
+      "target": 4
+    },
+    "EFF_C_003": {
+      "desc": "Paraliżuje wszystkie jednostki Nieumarłych (👻) na 1 rundę.",
+      "type": "PARALYZE_DOMAIN",
+      "target": 3
+    },
+    "EFF_C_004": {
+      "desc": "Paraliżuje wszystkie jednostki Żywych (👌) na 1 rundę.",
+      "type": "PARALYZE_DOMAIN",
+      "target": 2
+    },
+    "EFF_G_001": {
+      "desc": "Weles: Wskrzesza własną istotę (rany/cmentarz).",
+      "type": "RESURRECT_OWN"
+    },
+    "EFF_G_002": {
+      "desc": "Weles Enhanced: Wskrzesza istotę rywala, która walczy dla Ciebie.",
+      "type": "RESURRECT_ENEMY"
+    },
+    "EFF_G_003": {
+      "desc": "Swarozyc: Zadaje 15 obrażeń wrogom (podział dowolny).",
+      "type": "DIRECT_DAMAGE",
+      "val": 15
+    },
+    "EFF_G_004": {
+      "desc": "Swarozyc Enhanced: Niszczy/Paraliżuje/Odbiera premię jednostce Welesa.",
+      "type": "ANTI_DOMAIN_ACTION",
+      "target": 4
+    }
+  }
+}

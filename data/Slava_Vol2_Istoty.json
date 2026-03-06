@@ -1,0 +1,2402 @@
+[
+  {
+    "id": 1,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Aitwar",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 ZŁ.",
+    "lore": "Skrzydlaty wąż z głową ptaka. Udomowiony przez gospodarza, w zamian za opiekę i schronienie, każdej nocy przynosi mu drobne przedmioty wyszabrowane u sąsiadów.",
+    "effectId": "aitwar_steal_hand",
+    "effectDescription": "Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 ZŁ."
+  },
+  {
+    "id": 2,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Alkonost",
+    "stats": {
+      "attack": 2,
+      "defense": 5
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Zaatakowana istota, dodatkowo atakuje wybranego przez Alkonosta sojusznika.",
+    "lore": "<i>\"Jej narodzinom zwykle towarzyszyły potężne sztormy. Mityczny ptak, o kobiecej twarzy. Jej śpiew hipnotyzował, a słuchacze robili wszystko, czego Alkonost by sobie zażyczyła.\"</i>",
+    "effectId": "alkonost_redirect_counterattack",
+    "effectDescription": "Zaatakowana istota, dodatkowo atakuje wybranego przez Alkonosta sojusznika."
+  },
+  {
+    "id": 3,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Barstuk",
+    "stats": {
+      "attack": 1,
+      "defense": 4
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "<i>\"Niewielkie skrzaty, żyjące w mazurskich puszczach. Mimo, że unikali ludzi, wspierali ich, gdy ci potrzebowali pomocy.\"</i>",
+    "lore": "Wybrany {Slavic/zywi-icon}  regeneruje swoją {Slavic/obrona-ikona}",
+    "effectId": "barstuk_ally_regen",
+    "effectDescription": "<i>\"Niewielkie skrzaty, żyjące w mazurskich puszczach. Mimo, że unikali ludzi, wspierali ich, gdy ci potrzebowali pomocy.\"</i>"
+  },
+  {
+    "id": 4,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Bałwan",
+    "stats": {
+      "attack": 0,
+      "defense": 5
+    },
+    "oldStats": "0/2500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Możesz raz skorzystać z wybranej, nawet niedostępnej Bożej Łaski, nie płacąc za nią.",
+    "lore": "Budowany ku czci bogów jest świadectwem ich obecności, dowodem czci i szacunku całego ludu. Zdarza się, że przemawiają przez niego sami bogowie, obwieszczając swą wolę. Świadectwo namacalnej obecności bogów. Obiekt kultu i cel pielgrzymek wiernych chcących przebłagać bóstwo. Zdarza się, że przemawiają przez niego bogowie i  obwieszczają swą wolę.",
+    "effectId": "balwan_free_divine_favor",
+    "effectDescription": "Możesz raz skorzystać z wybranej, nawet niedostępnej Bożej Łaski, nie płacąc za nią."
+  },
+  {
+    "id": 5,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Biali ludzie",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Każda istota, którą BIali Ludzie zranią, traci zdolność ataku.",
+    "lore": "Małe demony roznoszące śmiertelne choroby. Czekają, aż ofiara zaśnie by przez nos czy usta, wejść do ludzkich trzewi. Męczony w ten sposób nieszczęśnik, często kończył żywot.",
+    "effectId": "biali_ludzie_wound_disarm",
+    "effectDescription": "Każda istota, którą BIali Ludzie zranią, traci zdolność ataku."
+  },
+  {
+    "id": 6,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Brzegina",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Za każdy poświęcony <ZŁ> jedna sojusznicza istota nie otrzymuje obrażeń podczas wymierzonego w nią ataku. Pierwsze użycie tej premii jest darmowe.",
+    "lore": "Piękna, dobra i przyjazna ludziom zielonowłosa nimfa, zamieszkująca górskie rzeki i strumienie. Podobno strzeże wspaniałego skarbu, ale każdy kto spotkał Brzeginę, już nie był nim zainteresowany.",
+    "effectId": "brzegina_shield_for_gold",
+    "effectDescription": "Za każdy poświęcony <ZŁ> jedna sojusznicza istota nie otrzymuje obrażeń podczas wymierzonego w nią ataku. Pierwsze użycie tej premii jest darmowe."
+  },
+  {
+    "id": 7,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Bugaj",
+    "stats": {
+      "attack": 0,
+      "defense": 10
+    },
+    "oldStats": "0/5000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Zyskuje tyle {stats.attack} ile straci {stats.defense}.",
+    "lore": "Duch lasu, będący jego strażnikiem. Pozostaje niewidoczny i spokojny, postacią przypominając prastare drzewo. Rozgniewany, brutalnie miażdży każdego, kto postanowi zaszkodzić puszczy.",
+    "effectId": "bugaj_def_to_atk",
+    "effectDescription": "Zyskuje tyle {stats.attack} ile straci {stats.defense}."
+  },
+  {
+    "id": 8,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Błotnik",
+    "stats": {
+      "attack": 3,
+      "defense": 4
+    },
+    "oldStats": "1500/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Każda istota przeciwnika, która w zasięgu swojego ataku ma błotnika, nie może atakować nikogo innego.",
+    "lore": "Owadopodobny stwór zamieszkujący bagna i trzęsawiska. WYdziela słabe światło, które wabi zbłąkanych podróżników, by wprowadzić ich w pułapkę i żerowąć na ich truchłach.",
+    "effectId": "blotnik_taunt",
+    "effectDescription": "Każda istota przeciwnika, która w zasięgu swojego ataku ma błotnika, nie może atakować nikogo innego."
+  },
+  {
+    "id": 9,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Chmurnik",
+    "stats": {
+      "attack": 7,
+      "defense": 6
+    },
+    "oldStats": "3500/3000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": true
+    },
+    "effect": "Uziemia wszystkie wrogie latające istoty.",
+    "lore": "Powietrzny duch, dpowiadający za pogodę. Przypomina potężnie zbudowanego mężczyzne. Całymi dniami przesuwa chmury, zsyła grad i ulewy. Jego charakter jest nieprzewidywalny.",
+    "effectId": "chmurnik_ground_flying",
+    "effectDescription": "Uziemia wszystkie wrogie latające istoty."
+  },
+  {
+    "id": 10,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Chowaniec",
+    "stats": {
+      "attack": 2,
+      "defense": 1
+    },
+    "oldStats": "1000/500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Może przyjąć na siebie coś wymierzony w sojusznika.",
+    "lore": "Pomniejszy demon, który w zamian za schronienie za piecem i skromny pokarm opiekuje się domostwem, znosi do niego różne drobiazgi i pomaga gospodarzowi w niektórych pracach.",
+    "effectId": "chowaniec_intercept",
+    "effectDescription": "Może przyjąć na siebie coś wymierzony w sojusznika."
+  },
+  {
+    "id": 11,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Dobroochoczy",
+    "stats": {
+      "attack": 1,
+      "defense": 10
+    },
+    "oldStats": "500/5000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Nie kontratakuje.",
+    "lore": "Olbrzymi opiekun lasu, sprawiedliwie osądzający każdego intruza: pokrzywdzonego ochrania, na złego sprowadza pomstę. By pozostał niezauważony, przybiera postać podobną drzewu.",
+    "effectId": "dobroochoczy_no_counter",
+    "effectDescription": "Nie kontratakuje."
+  },
+  {
+    "id": 12,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Dziewiątko",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Kiedy zrani wrogą istotę i pozostanie jej 3 lub mniej  {stats.defense}, rywal musi zapłacić 1 <ZŁ> , w przeciwnym wypadku ta istota zginie.",
+    "lore": "Niepozorny owad żyjący pod ziemią, którego ugryzienie powoduje groźną chorobę. Nawet jeśli ofiarą jest rosly chłop, bez pomocy Guślarki czy Znachora, w kilka dni padnie trupem.",
+    "effectId": "dziewiatko_deathmark",
+    "effectDescription": "Kiedy zrani wrogą istotę i pozostanie jej 3 lub mniej  {stats.defense}, rywal musi zapłacić 1 <ZŁ> , w przeciwnym wypadku ta istota zginie."
+  },
+  {
+    "id": 13,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Dziki Myśliwy",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Za każdym razem, gdy zabije wrogą istotę, może wrócić do talii (zachowując wszystkie działające na niego efekty i artefakty).",
+    "lore": "Pradawny demon, którego tożsamości nikt nie zna. Od wieków przemierza bezdroża wraz z hordą psów-upiorów. Poluje nocą i morduje tych, którzy zawędrowali za daleko.",
+    "effectId": "dziki_mysliwy_return_on_kill",
+    "effectDescription": "Za każdym razem, gdy zabije wrogą istotę, może wrócić do talii (zachowując wszystkie działające na niego efekty i artefakty)."
+  },
+  {
+    "id": 14,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Gryf",
+    "stats": {
+      "attack": 4,
+      "defense": 4
+    },
+    "oldStats": "2000/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Jeśli atakuje w tej samej rundzie, w której go wystawiono, zadaje podwójne obrażenia",
+    "lore": "Magiczna istota, posiadająca łeb i skrzydła orła, zaś korpus lwa. Zakłada gniazdo wysoko w górach, gdzie zaciekle broni zarówno swych piskląt, jak i latami gromadzonych skarbów.",
+    "effectId": "gryf_double_dmg_on_play_turn",
+    "effectDescription": "Jeśli atakuje w tej samej rundzie, w której go wystawiono, zadaje podwójne obrażenia"
+  },
+  {
+    "id": 15,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Król wężów",
+    "stats": {
+      "attack": 3,
+      "defense": 6
+    },
+    "oldStats": "1500/3000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Nawet w ataku kontratakuje.",
+    "lore": "Majestatyczny gadzi władca, zawsze otoczony kłębowiskiem swoich poddanych. Pomimo swej grozy, jest celem licznych polowań. Myśliwi liczą na cenne trofea i członki o mogicznych mocach.",
+    "effectId": "krol_wezow_always_counter",
+    "effectDescription": "Nawet w ataku kontratakuje."
+  },
+  {
+    "id": 16,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Leszy",
+    "stats": {
+      "attack": 5,
+      "defense": 8
+    },
+    "oldStats": "2500/4000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Sojusznicy Leszego, po wykonaniu ataku, mogą przejść natychmiast w pozycję obrony.",
+    "lore": "Potężny duch opiekjący się lasem, władca wszystkich leśnych istot. Przybiera różne formy - najczęściej staruszka, drzewa lub zwierzęcia. Mimo, że nieufny, dla szanujących przyrodę bywa życzliwy.",
+    "effectId": "leszy_post_attack_defend",
+    "effectDescription": "Sojusznicy Leszego, po wykonaniu ataku, mogą przejść natychmiast w pozycję obrony."
+  },
+  {
+    "id": 17,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Matoha",
+    "stats": {
+      "attack": 5,
+      "defense": 5
+    },
+    "oldStats": "2500/2500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Tak dlugo jak jest w polu, czarujące istoty wroga nie mogą atakować.",
+    "lore": "Demon sprawujący nadzór nad ludźmi władającymi magią. Bierze udział we wszystkich sabatach. Okrutnie karze każdego, kto używa magii, by szkodzić ludziom.",
+    "effectId": "matoha_effect",
+    "effectDescription": "Tak dlugo jak jest w polu, czarujące istoty wroga nie mogą atakować."
+  },
+  {
+    "id": 18,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Mróz",
+    "stats": {
+      "attack": 8,
+      "defense": 8
+    },
+    "oldStats": "4000/4000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Odporny na wrogie premie.",
+    "lore": "Demon podróżujący po świecie pod postacią starego, siwego, lecz postawnego człowieka szukającego schronienia. Jego przybycie zwiastuje nadejście siarczystych mrozów i długiej zimy.",
+    "effectId": "mroz_immunity_buffs",
+    "effectDescription": "Odporny na wrogie premie."
+  },
+  {
+    "id": 19,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Rodzanice",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Duchy losu i przeznaczenia, którym Słowianie składali ofiary, by wybłagać sobie lepszą przyszłość. Nie tylko znały przyszłość - mogły też na nia wpływać",
+    "lore": "<i>\"Duchy losu i przeznaczenia, którym Słowianie składali ofiary, by wpłynąć na swoje przeznaczenie. Nie tylko znały przyszłość - mogły też na nia wpływać.\"</i>",
+    "effectId": "rodzanice_lore_only",
+    "effectDescription": "Duchy losu i przeznaczenia, którym Słowianie składali ofiary, by wybłagać sobie lepszą przyszłość. Nie tylko znały przyszłość - mogły też na nia wpływać"
+  },
+  {
+    "id": 20,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Rusałka",
+    "stats": {
+      "attack": "->",
+      "defense": 3
+    },
+    "oldStats": "? / 1500",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Atakuje za tyle {stats.attack}, ile {stats.attack} ma atakowana istota. Rodzaj tego ataku także jest taki, jakim dysponuje atakowana istota.",
+    "lore": "Żeński demon zamieszkujący lasy. Przybiera postać niezwykle urodziwej niewiasty. Uwodzi młodzieńców, by igrać z nimi, wciągać w otchłań jeziora lub nakłaniać do własnej zguby.",
+    "effectId": "rusalka_mirror_attack",
+    "effectDescription": "Atakuje za tyle {stats.attack}, ile {stats.attack} ma atakowana istota. Rodzaj tego ataku także jest taki, jakim dysponuje atakowana istota."
+  },
+  {
+    "id": 21,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Rybi król",
+    "stats": {
+      "attack": 2,
+      "defense": 3
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Dopóki żyje, wybrany sojusznik rani wybranego przeciwnika, negując ograniczenia i odporności.",
+    "lore": "Rybi władca, obdrzaony magiczną mocą. Mieszkal nad jeziorem Śniardwy. Władca podwodnego królestwa.",
+    "effectId": "rybi_krol_pierce_immunity",
+    "effectDescription": "Dopóki żyje, wybrany sojusznik rani wybranego przeciwnika, negując ograniczenia i odporności."
+  },
+  {
+    "id": 22,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Strela",
+    "stats": {
+      "attack": 0,
+      "defense": 4
+    },
+    "oldStats": "0/2000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": true
+    },
+    "effect": "Możesz wystawić Strelę podczas tury przeciwnika, gdy zagrywa dowolną kartę - nie zostaje ona użyta, lecz jest umieszczona na spodzie jego talii.",
+    "lore": "Niegroźny demon powietrzny o wielkim poczuciu humoru. Ciągle psoci się i kocha płatać figle, jak rozrzucanie po okolicy niewielkich przedmiotów  czy podwiewanie kobietom spódnic.",
+    "effectId": "strela_flash_counter",
+    "effectDescription": "Możesz wystawić Strelę podczas tury przeciwnika, gdy zagrywa dowolną kartę - nie zostaje ona użyta, lecz jest umieszczona na spodzie jego talii."
+  },
+  {
+    "id": 23,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Szalińc",
+    "stats": {
+      "attack": 4,
+      "defense": 5
+    },
+    "oldStats": "2000/2500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Neguje premie odporności na jego atak.",
+    "lore": "Mieszka na dnie morza, gdyż nie lubi być przez nikogo niepokojony. Intruzów nie ominie jego gniew: sprowadza sztorm, niszczy okręty i topi nieroztropnych żeglarzy.",
+    "effectId": "szalinc_negate_immunity",
+    "effectDescription": "Neguje premie odporności na jego atak."
+  },
+  {
+    "id": 24,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Wiła",
+    "stats": {
+      "attack": 2,
+      "defense": 4
+    },
+    "oldStats": "1000/2000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Przeciaga na swoją stronę wszystkie istoty o mniejszym lub równym jej {stats.attack}. Wszystie istoty w polu o mniejszym lub równym {stats.attack} od Wiły walczą po jej stronie.",
+    "lore": "Wiły to niesamowicie piękne nimfy leśne. Tańczą w zwiewnych strojach w ustronnych miejscach puszczy. Wciągają do swego kręgu i omotują każdego, kto nazbyt się do nich zbliży.",
+    "effectId": "wila_convert_weak_enemies",
+    "effectDescription": "Przeciaga na swoją stronę wszystkie istoty o mniejszym lub równym jej {stats.attack}. Wszystie istoty w polu o mniejszym lub równym {stats.attack} od Wiły walczą po jej stronie."
+  },
+  {
+    "id": 25,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Wodnik",
+    "stats": {
+      "attack": 4,
+      "defense": 2
+    },
+    "oldStats": "2000/1000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Po skończeniu każdej swojej rundy, którą przeżyje, może wrócić do talii.",
+    "lore": "Mieszka w jeziorach, rzekach lub stawach. Karze za brak szacunku dla podwodnego świata. Mimo, że lud zbyt wiele o nim nie wiedział, darzogo go wielkim szacunkiem, składając różnorakie dary.",
+    "effectId": "wodnik_return_on_round_end",
+    "effectDescription": "Po skończeniu każdej swojej rundy, którą przeżyje, może wrócić do talii."
+  },
+  {
+    "id": 26,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "korgorusze",
+    "stats": {
+      "attack": 1,
+      "defense": 1
+    },
+    "oldStats": "500/500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Rezygnując z akcji ataku w tej turze, możesz przywrócić wydany wcześniej {Slavic/slawa-icon}.",
+    "lore": "<i>\"Przyjazne zjawy, zmarłych przed laty  zwierząt domowych, wspierających Domowika w codziennych obowiązkach.\"</i>",
+    "effectId": "korgorusze_recover_glory",
+    "effectDescription": "Rezygnując z akcji ataku w tej turze, możesz przywrócić wydany wcześniej {Slavic/slawa-icon}."
+  },
+  {
+    "id": 27,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Łapiduch",
+    "stats": {
+      "attack": 7,
+      "defense": 5
+    },
+    "oldStats": "3500/2500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Może atakować jedynie <demon>. Gdy jest w polu, nikt nie może wystawić< demon>.",
+    "lore": "Demon o niezgrabnym ciele polujący nocą na inne demony i zjawy. Jest nieszkodliwy dla żywych, a nawet ich unika. Błąka się po świecie, polując na napotkane duchy.",
+    "effectId": "lapiduch_demon_hunter",
+    "effectDescription": "Może atakować jedynie <demon>. Gdy jest w polu, nikt nie może wystawić< demon>."
+  },
+  {
+    "id": 28,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Świetle",
+    "stats": {
+      "attack": 2,
+      "defense": 4
+    },
+    "oldStats": "1000/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Co rundę odkrywa wybraną nieznaną kartę rywala.",
+    "lore": "Dobre duszki pod postacią małych, świecących, zmiennokształtnych obłoków. Bezinteresownie pomagają potrzebującym, prowadzą w nocy do celu i przepędzają mrok z traktów.",
+    "effectId": "swietle_reveal_card",
+    "effectDescription": "Co rundę odkrywa wybraną nieznaną kartę rywala."
+  },
+  {
+    "id": 29,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Żar-ptak",
+    "stats": {
+      "attack": 10,
+      "defense": 10
+    },
+    "oldStats": "5000/5000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": true
+    },
+    "effect": "W chwili śmierci wszystkie istoty w polu tracą 4 {stats.defense}.",
+    "lore": "Wielki duch ognia, wysłannik boga Swaroga. Pojawia się pod postacią smoka, ognistego wichru.lub płonącego ptaka o piórach posiadających niesamowitą moc magiczną.",
+    "effectId": "zar_ptak_death_explosion",
+    "effectDescription": "W chwili śmierci wszystkie istoty w polu tracą 4 {stats.defense}."
+  },
+  {
+    "id": 30,
+    "idDomain": 1,
+    "domain": "Perun",
+    "name": "Żmije",
+    "stats": {
+      "attack": 9,
+      "defense": 9
+    },
+    "oldStats": "4500/4500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Gdy przeciwnik nie ma istot w polu, może atakować wrogą talię: rywal musi wtedy odrzucić wybraną przez gracza atakującego kartę.",
+    "lore": "Gdy przeciwnik nie ma istot w polu, może atakować wrogą talię: rywal musi wtedy odrzucić wybraną przez gracza atakującego kartę.",
+    "effectId": "zmije_attack_deck",
+    "effectDescription": "Gdy przeciwnik nie ma istot w polu, może atakować wrogą talię: rywal musi wtedy odrzucić wybraną przez gracza atakującego kartę."
+  },
+  {
+    "id": 31,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Baba",
+    "stats": {
+      "attack": 2,
+      "defense": 4
+    },
+    "oldStats": "1000/2000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "+4 {stats.attack} do walki z każdym, kto nie jest demonem/człowiekiem (wybór przy wystawieniu).",
+    "lore": "Stara wiedźma, żyjąca głęboko w puszczy. Jednym pomaga i służy radą, innych brutalnie morduje. Nikt do końca nie wie, kim Baba tak naprawdę jest: człowiekiem, czy groźnym demonem?",
+    "effectId": "baba_bonus_vs_nonhuman",
+    "effectDescription": "+4 {stats.attack} do walki z każdym, kto nie jest demonem/człowiekiem (wybór przy wystawieniu)."
+  },
+  {
+    "id": 32,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Chały / Ały",
+    "stats": {
+      "attack": 6,
+      "defense": 6
+    },
+    "oldStats": "3000/3000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Można atakować karty lokacji. Zadając im 12 obrażeń, niszczy je.",
+    "lore": "\"Powietrzne smocze istoty żyjące wysoko w burzowych chmurach, dysponujące niszczycielską siłą. Mimo, że wzbudzały przerażenie, warto bylo je mieć po swojej stronie.\"",
+    "effectId": "chaly_attack_locations",
+    "effectDescription": "Można atakować karty lokacji. Zadając im 12 obrażeń, niszczy je."
+  },
+  {
+    "id": 33,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Chąśnik",
+    "stats": {
+      "attack": 6,
+      "defense": 3
+    },
+    "oldStats": "3000/1500",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Gracz, dla którego walczy Chąśnik, otrzymuje 1 <ZŁ> za każde dwie istoty przez niego zabite.",
+    "lore": "Słowiański grabieżcy, (błąd) władcy morskich wód. O sławę walczą z wikingami, łupiąc ich statki handlowe i grabiąc ziemie. Wśród wrogów budzą powszechny strach, lecz dla swoich plemion są żywicielami  i bohaterami.Słowiański grabieżca, zaprawiony wojownik i wilk morski. Łupieżcze wyprawy chąśników za cel obierały nadbałtyckie osady i statki handlowe. Toczyli zaciekłą rywalizację z wikingami.",
+    "effectId": "chasnik_gold_on_kill",
+    "effectDescription": "Gracz, dla którego walczy Chąśnik, otrzymuje 1 <ZŁ> za każde dwie istoty przez niego zabite."
+  },
+  {
+    "id": 34,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Chłop",
+    "stats": {
+      "attack": 1,
+      "defense": 1
+    },
+    "oldStats": "500/500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Pozwala na atak dodatkową istotą.",
+    "lore": "Na najniższej klasie społecznej od zawsze ciążyło największe brzemię. Podczas wojny plebs ma jeszcze gorzej -nie tylko dba o zaopatrzenie armii, ale też często jest do niej wcielany.",
+    "effectId": "chlop_extra_attack",
+    "effectDescription": "Pozwala na atak dodatkową istotą."
+  },
+  {
+    "id": 35,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Czarnoksiężnik",
+    "stats": {
+      "attack": 7,
+      "defense": 2
+    },
+    "oldStats": "3500/1000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Przejmuje premie zabitych przez siebie istot.",
+    "lore": "Człowiek, który poświęcił swe życie, a często i duszę, by mocą być równym bogom. Korzysta z magii, by nienaturalnie wydłużyć swe życie. Stroni od śmiertelników, budząc w nich jedynie strach.",
+    "effectId": "czarnoksieznik_steal_buffs",
+    "effectDescription": "Przejmuje premie zabitych przez siebie istot."
+  },
+  {
+    "id": 36,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Czarownica",
+    "stats": {
+      "attack": 4,
+      "defense": 4
+    },
+    "oldStats": "2000/2000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Może zmienić adresata właśnie zagranego zaklęcia. Pierwszy raz za darmo, każdy kolejny za 1 <ZŁ>.",
+    "lore": "Kobieta, która zaprzedała swą duszę siłom nieczystym, by posiąść moc magiczną. Wykorzystuje ją głównie do szkodzenia ludziom -z rządzy zemsty lub wrodzonej złośliwości.",
+    "effectId": "czarownica_redirect_spell",
+    "effectDescription": "Może zmienić adresata właśnie zagranego zaklęcia. Pierwszy raz za darmo, każdy kolejny za 1 <ZŁ>."
+  },
+  {
+    "id": 37,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Dzicy ludzie",
+    "stats": {
+      "attack": 4,
+      "defense": 3
+    },
+    "oldStats": "2000/1500",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Każda zabita przez nich istota trafia do rąk gracza posiadającego Dzikich ludzi.",
+    "lore": "Mało znane, prymitywne plemię zamieszkujące jaskinie i najbardziej niedostępne rejony puszczy. Słynie z tego, że lubuje się w ludzkim mięsie i usilnie nika cywilizacji.",
+    "effectId": "dzicy_ludzie_steal_killed",
+    "effectDescription": "Każda zabita przez nich istota trafia do rąk gracza posiadającego Dzikich ludzi."
+  },
+  {
+    "id": 38,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Guślarka",
+    "stats": {
+      "attack": 3,
+      "defense": 2
+    },
+    "oldStats": "1500/1000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Dodaje sojusznikom +2 {stats.attack} do walki z <demon>.",
+    "lore": "Kobieta zajmująca się gusłami i czarami. Kontaktuje się z duchami przodków, by zasięgnąć ich rady, oraz odpędza złe mary. Przewodniczy uroczystościom Dziady.",
+    "effectId": "guslarka_bonus_vs_demon",
+    "effectDescription": "Dodaje sojusznikom +2 {stats.attack} do walki z <demon>."
+  },
+  {
+    "id": 39,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Julki",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Odporne na wszelkie zaklęcia. / Niewrażliwość na karty przygody",
+    "lore": "Małe, przyjazne skrzaty nieszukające z nikim zwady. Żyją gdzieś nieopodal ludzkich wiosek. Mimo, że wolą być niewidoczne, chętnie służą pomocą wszystkim potrzebującym.",
+    "effectId": "julki_adventure_immunity",
+    "effectDescription": "Odporne na wszelkie zaklęcia. / Niewrażliwość na karty przygody"
+  },
+  {
+    "id": 40,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Junak",
+    "stats": {
+      "attack": 7,
+      "defense": 6
+    },
+    "oldStats": "3500/3000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Jeśli zrani kogoś dwa razy natychmiast go zabija. Jego kontratak pada przed  wrogim atakiem.",
+    "lore": "Miano to noszą wielcy bohaterowie, wpływający na losy świata. Mimo, że każdy Junak walczy ze złem i dba o przyszłość plemion, sami Junacy rywalizują ze sobą owpływy, dominację i nieśmiertelną chwałę.",
+    "effectId": "junak_double_hit_kill",
+    "effectDescription": "Jeśli zrani kogoś dwa razy natychmiast go zabija. Jego kontratak pada przed  wrogim atakiem."
+  },
+  {
+    "id": 41,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Jędza",
+    "stats": {
+      "attack": 5,
+      "defense": 3
+    },
+    "oldStats": "2500/1500",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Raz na turę może pozbawić wybraną istotę jednej premii.",
+    "lore": "Kobieta praktykująca czarną magię. Z powodu konszachtów ze złymi siłami, które obdarzyły ją niezwykłymi umiejętnościami, została wyklęta i wypędzona z osad ludzkich.",
+    "effectId": "jedza_remove_buff",
+    "effectDescription": "Raz na turę może pozbawić wybraną istotę jednej premii."
+  },
+  {
+    "id": 42,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Konny",
+    "stats": {
+      "attack": 7,
+      "defense": 6
+    },
+    "oldStats": "3500/3000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Jeśli zabije wroga, który miał mniej {stats.defense} niż Konny {stats.attack}, to niewykorzystane obrażenia otrzymuje inna, wskazana istota w zasięgu ataku Konnego.",
+    "lore": "Elitarny wojownik w służbie księcia wywodzący się z wyższych sfer społecznych. Trudni się przede wszystkim wojaczką i zaprowadzaniem porządku na podbitych ziemiach.",
+    "effectId": "konny_cleave",
+    "effectDescription": "Jeśli zabije wroga, który miał mniej {stats.defense} niż Konny {stats.attack}, to niewykorzystane obrażenia otrzymuje inna, wskazana istota w zasięgu ataku Konnego."
+  },
+  {
+    "id": 43,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Kościej",
+    "stats": {
+      "attack": 6,
+      "defense": 5
+    },
+    "oldStats": "3000/2500",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Gdy zginie od ciosu wręcz wskrzesza się: pierwszy raz za darmo, każdy następny raz za <ZŁ>. Wskrzesić go można w dowolnej swojej rundzie podczas gry.",
+    "lore": "Zły, plugawy czarownik, mieszkajacy gdzieś na mroźnej Syberii. Przechowuje swe serce poza ciałem, co pozwala mu na długowieczność. Dopóki ono ciągle bije, nie można go zabić.",
+    "effectId": "kosciej_melee_resurrection",
+    "effectDescription": "Gdy zginie od ciosu wręcz wskrzesza się: pierwszy raz za darmo, każdy następny raz za <ZŁ>. Wskrzesić go można w dowolnej swojej rundzie podczas gry."
+  },
+  {
+    "id": 44,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Naczelnik Plemienia",
+    "stats": {
+      "attack": 6,
+      "defense": 5
+    },
+    "oldStats": "3000/2500",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Gdy atakuje, wszyscy sojusznicy <ludź> również mogą wykonać atak.",
+    "lore": "Sprawuje władzę zarówno w czasie wojny jak i pokoju. Wybierany na wiecach, cieszy się poparciem większośći Słowian. Wykazuje się ponadprzecietną dzielnością i hartem ducha.",
+    "effectId": "naczelnik_human_rally",
+    "effectDescription": "Gdy atakuje, wszyscy sojusznicy <ludź> również mogą wykonać atak."
+  },
+  {
+    "id": 45,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Najemnik",
+    "stats": {
+      "attack": 5,
+      "defense": 4
+    },
+    "oldStats": "2500/2000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Może zaatakować za każdym razem, gdy gracz korzysta ze swoich <ZŁ>. Jeżeli rywal zapłaci <ZŁ> najemnik przechodzi na jego stronę.",
+    "lore": "Część plemion, szczególnie w spokojnych czasach wysyła swoich porywczych i rządnych przygod młodzieńców do slużby dla innego władcy. Należy pamiętać, że ich lojalność ma swoją cenę.",
+    "effectId": "najemnik_effect",
+    "effectDescription": "Może zaatakować za każdym razem, gdy gracz korzysta ze swoich <ZŁ>. Jeżeli rywal zapłaci <ZŁ> najemnik przechodzi na jego stronę."
+  },
+  {
+    "id": 46,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Rumak",
+    "stats": {
+      "attack": 0,
+      "defense": 4
+    },
+    "oldStats": "0/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Łączy się z 1 <ludź>, dodając mu premię \"może atakować kilku wrogów w jednej linii\".",
+    "lore": "Konie to tak wspaniałe i przydatne w bitwie zwierzęta, że nawet sam Świętowit nigdy nie ruszał w bój bez swego białego wierzchowca. Choć nie każdego na niego stać, są warte swojej ceny.",
+    "effectId": "rumak_effect",
+    "effectDescription": "Łączy się z 1 <ludź>, dodając mu premię \"może atakować kilku wrogów w jednej linii\"."
+  },
+  {
+    "id": 47,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Starszyzna Plemienna",
+    "stats": {
+      "attack": 2,
+      "defense": 4
+    },
+    "oldStats": "1000/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Dopóki Starszyzna Plemienna jest w polu, gracz może podglądać swoje 3 kolejne karty w talii.",
+    "lore": "Najczcigodniejsi członkowie plemienia wybierani z wielkich i bogatych rodów. Na wiecach, opierając się na ich doświadczeniu i mądrości, decydowano o najważniejszych dla plemienia kwestiach.",
+    "effectId": "starszyzna_plemienna_effect",
+    "effectDescription": "Dopóki Starszyzna Plemienna jest w polu, gracz może podglądać swoje 3 kolejne karty w talii."
+  },
+  {
+    "id": 48,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Szeptunka",
+    "stats": {
+      "attack": 1,
+      "defense": 4
+    },
+    "oldStats": "500/2000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Zmniejsza o 1 każdą ranę, jaką otrzymują sojusznicy.",
+    "lore": "Jej formuły magiczne wypowiadane szeptem do ucha chorego, potrafią wyleczyć najcięższe przypadki. Szeptunki budzą lęk, ale cieszą się dużym szacunkiem, więc nikt nie pyta, skąd czerpią moc.",
+    "effectId": "szeptunka_effect",
+    "effectDescription": "Zmniejsza o 1 każdą ranę, jaką otrzymują sojusznicy."
+  },
+  {
+    "id": 49,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Wielkolud",
+    "stats": {
+      "attack": 8,
+      "defense": 8
+    },
+    "oldStats": "4000/4000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Kontratakuje wybraną istotę rywala w zasięgu swego ataku.",
+    "lore": "Gatunek ludzi olbrzymiego wzrostu. Są silni, lecz powolni i łatwi do wytropienia, dlatego większość wyginęła w zamierzchłych czasach. Ostatnich Wiekoludów można spotkać wysoko w górach.",
+    "effectId": "wielkolud_effect",
+    "effectDescription": "Kontratakuje wybraną istotę rywala w zasięgu swego ataku."
+  },
+  {
+    "id": 50,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Woj",
+    "stats": {
+      "attack": 4,
+      "defense": 3
+    },
+    "oldStats": "2000/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Wszyscy wojowie mogą być wystawieni jednocześnie i razem atakować.",
+    "lore": "Dzielny wojownik powoływany do walki z wolnego ludu podlegającego księciu. Choć najczęściej nie jest zawodowym żołnierzem, w obronie rodziny potrafi udowodnić swą wartość.",
+    "effectId": "woj_effect",
+    "effectDescription": "Wszyscy wojowie mogą być wystawieni jednocześnie i razem atakować."
+  },
+  {
+    "id": 51,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Wołch",
+    "stats": {
+      "attack": 3,
+      "defense": 4
+    },
+    "oldStats": "1500/2000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Leczy (odnawia Obronę do wartości początkowej) wybraną jednostkę w tej samej linii. Koszt: 1 Sława.",
+    "lore": "Wróżbita i mag, kapłan samego Welesa cieszący się ogromnym społecznym poważaniem. Chronił czystości wiary przodków przed groźnym pogaństwem. Służył też radą naczelnikom i księciom, przed każdą wyprawa wojenną.",
+    "effectId": "woch_effect",
+    "effectDescription": "Leczy (odnawia Obronę do wartości początkowej) wybraną jednostkę w tej samej linii. Koszt: 1 Sława."
+  },
+  {
+    "id": 52,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Znachor",
+    "stats": {
+      "attack": 2,
+      "defense": 3
+    },
+    "oldStats": "1000/1500",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Jeżeli sojusznik otrzymuje obrażenia, w wyniku których nie ginie, Znachor zmniejsza je o wartość swojego {stats.attack}.",
+    "lore": "Człowiek uprawiający zielarstwo i medycynę. Wiedzę czerpie nie ze szkoły czy ksiąg, lecz z ludowych doświadczeń. Korzysta również z alchemii i białej magii, by pomagać ludziom.",
+    "effectId": "znachor_effect",
+    "effectDescription": "Jeżeli sojusznik otrzymuje obrażenia, w wyniku których nie ginie, Znachor zmniejsza je o wartość swojego {stats.attack}."
+  },
+  {
+    "id": 53,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "leśnica",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Atakuje 2 razy. W jednej rundzie może zaatakować dwa razy.",
+    "lore": "Leśny lud stroniący od ludzi, żyjący glęboko w puszczy w zgodzie ze zwierzętami i Duchami Lasu. Mimo nieśmiałości, niepozornej postury i zielonych włosów porastających ciało są śmiertelnie niebezpieczni.",
+    "effectId": "lesnica_effect",
+    "effectDescription": "Atakuje 2 razy. W jednej rundzie może zaatakować dwa razy."
+  },
+  {
+    "id": 54,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "polewik",
+    "stats": {
+      "attack": "",
+      "defense": ""
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "",
+    "lore": "",
+    "effectId": "polewik_effect",
+    "effectDescription": ""
+  },
+  {
+    "id": 55,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "tur",
+    "stats": {
+      "attack": 3,
+      "defense": 6
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "<i>\"Legendarny król puszczy, żyjący głęboko w leśnym mateczniku. Symbol siły i żywotności, szczególnie ukochany przez samego Welesa. \"</i>",
+    "lore": "Odporny na ataki {Slavic/strzala-icon} i  {Slavic/magia-icon}",
+    "effectId": "tur_effect",
+    "effectDescription": "<i>\"Legendarny król puszczy, żyjący głęboko w leśnym mateczniku. Symbol siły i żywotności, szczególnie ukochany przez samego Welesa. \"</i>"
+  },
+  {
+    "id": 56,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Łucznik",
+    "stats": {
+      "attack": 4,
+      "defense": 2
+    },
+    "oldStats": "2000/1000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Zraniona przez niego istota nie może zmieniać swego ustawienia.",
+    "lore": "Myśliwi, leśniczy, kłusownicy i co zdolniejsi wojowie zostają łucznikami. Niedoskonałości łuku nadrabiają dobrym wyszkoleniem i znajomością wszechogarniających puszczy.",
+    "effectId": "ucznik_effect",
+    "effectDescription": "Zraniona przez niego istota nie może zmieniać swego ustawienia."
+  },
+  {
+    "id": 57,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Światogor",
+    "stats": {
+      "attack": 5,
+      "defense": 5
+    },
+    "oldStats": "2500/2500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Rani kilku wrogów w jednej linii",
+    "lore": "<i>\"Mityczny olbrzym o wielkiej sile -  tak ogromny, że zapadała się pod nim ziemia. Od wieków przemierza szczyty gór, oddając cześć bogom.\"</i>",
+    "effectId": "swiatogor_effect",
+    "effectDescription": "Rani kilku wrogów w jednej linii"
+  },
+  {
+    "id": 58,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "ŻUPAN",
+    "stats": {
+      "attack": "",
+      "defense": ""
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Zezwala na posiadanie w polu więcej niz 5 kart",
+    "lore": "<i>\"Zaufany i szanowany zarządca, który zasłużył się słowiańskiej społeczności mądrością i odwagą.\"</i>",
+    "effectId": "zupan_effect",
+    "effectDescription": "Zezwala na posiadanie w polu więcej niz 5 kart"
+  },
+  {
+    "id": 59,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Żerca",
+    "stats": {
+      "attack": 2,
+      "defense": 5
+    },
+    "oldStats": "1000/2500",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Daje sojusznikom jednorazową odporność na wszelkie zaklęcia.",
+    "lore": "Najwyższy kapłan, będący pośrednikiem pomiędyz światem ludzi i bogów. Próćz funkcji religijnej, pełni też ważne funkcje polityczne. Skłąda ofiary, przewodniczy Żertwom, chroni przed heretykami.",
+    "effectId": "zerca_effect",
+    "effectDescription": "Daje sojusznikom jednorazową odporność na wszelkie zaklęcia."
+  },
+  {
+    "id": 60,
+    "idDomain": 2,
+    "domain": "Żywi",
+    "name": "Żerca Welesa",
+    "stats": {
+      "attack": 7,
+      "defense": 3
+    },
+    "oldStats": "3500/1500",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "+1 {stats.attack} sojuszniczym <demon> w polu.",
+    "lore": "Kapłan mrocznego boga, który w zamian za zaprzedanie własnej duszy, otrzymał magiczne moce i długie życie, stając się narzędziem w rękach Welesa",
+    "effectId": "zerca_welesa_effect",
+    "effectDescription": "+1 {stats.attack} sojuszniczym <demon> w polu."
+  },
+  {
+    "id": 61,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Ażdacha",
+    "stats": {
+      "attack": 9,
+      "defense": 8
+    },
+    "oldStats": "4500/4000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "<i>\"Wielki smok, żyjący wysoko w chmurach. Jako wróg Swaroga, wielokrotnie próbował połknąć słońce, powodując zaćmienia.",
+    "lore": "<i>\"Wielki smok, żyjący wysoko w chmurach. Jako wróg Swaroga, wielokrotnie próbował połknąć słońce, powodując zaćmienia.\nRuch skrzydłami, zsyłał wichury, a ogonem - grady i deszcze. Jakby było tego mało, lubował się też w ludzkim mięsie.\"</i>",
+    "effectId": "azdacha_effect",
+    "effectDescription": "<i>\"Wielki smok, żyjący wysoko w chmurach. Jako wróg Swaroga, wielokrotnie próbował połknąć słońce, powodując zaćmienia."
+  },
+  {
+    "id": 62,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Bagiennik",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Usuwając negatywny efekt z wybranej karty, podwaja swój {Slavic/atak-ikona} i  {Slavic/obrona-ikona}",
+    "lore": "<i>\"Wygrzebując się z bagien, karmi się chorobami i trucizną, lecząc tych, dla których spotkanie z Bagiennikiem jest ostatnią deską ratunku.\"</i>",
+    "effectId": "bagiennik_effect",
+    "effectDescription": "Usuwając negatywny efekt z wybranej karty, podwaja swój {Slavic/atak-ikona} i  {Slavic/obrona-ikona}"
+  },
+  {
+    "id": 63,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Bezkost",
+    "stats": {
+      "attack": 7,
+      "defense": 7
+    },
+    "oldStats": "3500/3500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Gdy rani wroga, odbiera mu {stats.attack} zamiast {stats.defense}, a gdy ten spadnie do zera, przeciwnik ginie.",
+    "lore": "Podgatunek wampira niższego rzędu, całkowicie pozbawiony kości i chrząstek. Worek skóry, który go okala, napełnia wyssaną krwią. Jest to pośmiertna kara za szczególnie niegodziwe życie.",
+    "effectId": "bezkost_effect",
+    "effectDescription": "Gdy rani wroga, odbiera mu {stats.attack} zamiast {stats.defense}, a gdy ten spadnie do zera, przeciwnik ginie."
+  },
+  {
+    "id": 64,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Bzionek",
+    "stats": {
+      "attack": 1,
+      "defense": 1
+    },
+    "oldStats": "500/500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Może przyjąć na siebie wrogie zaklęcie, które jest wymierzone w jego sojusznika.",
+    "lore": "Duch opiekuńczy niewielkich rozmiarów, chroniący gospodarza przed wrogimi czarami. Żyje nieopodal ludzkich wiosek, chętnie dzieląc się wiedzą i oferując pomoc jej mieszkańcom.",
+    "effectId": "bzionek_effect",
+    "effectDescription": "Może przyjąć na siebie wrogie zaklęcie, które jest wymierzone w jego sojusznika."
+  },
+  {
+    "id": 65,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Błędny ognik",
+    "stats": {
+      "attack": 0,
+      "defense": 3
+    },
+    "oldStats": "0/1500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": true
+    },
+    "effect": "Po wystawieniu go w pole wskazana istota wraca na szczyt talii, zachowując wszysktie modyfikatory zdobyte podczas gry.",
+    "lore": "Dusza zmarłego, pokutująca swe winy jako bezkształtna zjawa. Choć nie atakuje ludzi, zwodzi swym światłem wędrowców na torfowiska i bagna. Gdy całkowicie stracą orientację, porzuca ich.",
+    "effectId": "bedny_ognik_effect",
+    "effectDescription": "Po wystawieniu go w pole wskazana istota wraca na szczyt talii, zachowując wszysktie modyfikatory zdobyte podczas gry."
+  },
+  {
+    "id": 66,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Cmentarna baba",
+    "stats": {
+      "attack": 7,
+      "defense": 2
+    },
+    "oldStats": "3500/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Przywołuje <trup> z cmentarza. Suma {stats.attack} przywołanych istot nie może przekroczyć {stats.attack} Cmentarnej baby.",
+    "lore": "Demon krążący nocą po cmentarzach, rozgrzebujący mogiły i rozrzucający ludzkie szczątki. Atakuje każdego nieroztropnego wędrowca, dlatego nikt nie zna jej prawdziwych zamiarów.",
+    "effectId": "cmentarna_baba_effect",
+    "effectDescription": "Przywołuje <trup> z cmentarza. Suma {stats.attack} przywołanych istot nie może przekroczyć {stats.attack} Cmentarnej baby."
+  },
+  {
+    "id": 67,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Domowik",
+    "stats": {
+      "attack": 1,
+      "defense": 2
+    },
+    "oldStats": "500/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Dopóki jest w polu, gracz może mieć w rękach tyle dodatkowych kart, ile Domowik ma {stats.attack}.",
+    "lore": "Dusza poprzedniego gospodarza domu, przyjmująca postać małego, brodatego starca. W zamian za strawę zapewnia nowym lokatorom dobrobyt i strzeże od nieszczęść.",
+    "effectId": "domowik_effect",
+    "effectDescription": "Dopóki jest w polu, gracz może mieć w rękach tyle dodatkowych kart, ile Domowik ma {stats.attack}."
+  },
+  {
+    "id": 68,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Dziad",
+    "stats": {
+      "attack": 3,
+      "defense": 1
+    },
+    "oldStats": "1500/500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Odsłania wszystkie zakryte istoty wroga w polu. Dopóki Dziad żyje, żadna wroga istota nie może być zagrana w ciemno.",
+    "lore": "Dusza przodka, która nie może odnaleźć drogi do Nawii. Podczas świąt dzieli się z nią strawą, pomagając w dalszej wędrówce. Często w zamian dzieli się ona nieznaną lub dawno zapomnianą wiedzą.",
+    "effectId": "dziad_effect",
+    "effectDescription": "Odsłania wszystkie zakryte istoty wroga w polu. Dopóki Dziad żyje, żadna wroga istota nie może być zagrana w ciemno."
+  },
+  {
+    "id": 69,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Homen",
+    "stats": {
+      "attack": 4,
+      "defense": 4
+    },
+    "oldStats": "2000/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Kto zostanie zraniony przez Homen, po śmierci przechodzi na jego stronę i sam staje się Homenem.",
+    "lore": "Śpiewająca i tańcząca armia potępieńców. Sprowadza śmierć i zgniliznę w każde odwiedzane miejsce. Każdy kolejny zmarły poszerza szeregi tego przeklętego pochodu.",
+    "effectId": "homen_effect",
+    "effectDescription": "Kto zostanie zraniony przez Homen, po śmierci przechodzi na jego stronę i sam staje się Homenem."
+  },
+  {
+    "id": 70,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Jaroszek",
+    "stats": {
+      "attack": 3,
+      "defense": 2
+    },
+    "oldStats": "1500/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Wybrany wrogi potwór jest unieruchomiony(ent)",
+    "lore": "Sprowokowani, rzucali się za nim w szaleńczą pogoń, z której często nie wracali. Temu, co udalo się Jaroszka złapać, ten wiernie i lojalnie służył.",
+    "effectId": "jaroszek_effect",
+    "effectDescription": "Wybrany wrogi potwór jest unieruchomiony(ent)"
+  },
+  {
+    "id": 71,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Kikimora",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Co rundę może wykonać atak nie kończący tury gracza.",
+    "lore": "Szkodliwy duch domowy, żona przyjaznego ludziom Domowika. Potrafi być uciążliwa poprzez psoty, takie jak budzenie dzieci i straszenie zwierząt. Choć zwykle niegroźna, jak każda żona, sprowokowana jest groźna.",
+    "effectId": "kikimora_effect",
+    "effectDescription": "Co rundę może wykonać atak nie kończący tury gracza."
+  },
+  {
+    "id": 72,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Kresnik",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Posiada jedną wybraną premię ( wybór przy wystawieniu).",
+    "lore": "Kapłan, którego dusza opuszcza w nocy cialo i przyjmuje postać wybranego zwierzęcia. Wędruje po świecie polując na złe istoty, przede wszystkim swojego największego wroga, Kudlaka.",
+    "effectId": "kresnik_effect",
+    "effectDescription": "Posiada jedną wybraną premię ( wybór przy wystawieniu)."
+  },
+  {
+    "id": 73,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Kudlak",
+    "stats": {
+      "attack": 7,
+      "defense": 6
+    },
+    "oldStats": "3500/3000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Zranić można go jedynie w rundzie, w której nie zadał żadnych obrażeń.",
+    "lore": "Szaman potępiony na wieku, który w nocy opuszcza cialo i grasuje jako wilkołak. Pożera wszystko, co zdoła upolować, nawet jeśli będzie to inny Kudlak. Śmiertelny wróg Kresnika.",
+    "effectId": "kudlak_effect",
+    "effectDescription": "Zranić można go jedynie w rundzie, w której nie zadał żadnych obrażeń."
+  },
+  {
+    "id": 74,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Latawica",
+    "stats": {
+      "attack": 1,
+      "defense": 2
+    },
+    "oldStats": "500/1000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Raz na rundę może przejąć od sojuszniczej istoty dowolną liczbę {stats.attack} i {stats.defense}, nawet jeśli spowoduje to śmierć dawcy.",
+    "lore": "Przybiera postać pięknej, uwodzicielskiej kobiety. Zjawia się co noc w domu ofiary, rozkochując ją  do szaleństwa. Rozkosze kończą się dla kochanka obłędem. Wypalony pożądaniem, szybko umiera.",
+    "effectId": "latawica_effect",
+    "effectDescription": "Raz na rundę może przejąć od sojuszniczej istoty dowolną liczbę {stats.attack} i {stats.defense}, nawet jeśli spowoduje to śmierć dawcy."
+  },
+  {
+    "id": 75,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Latawiec",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Kto go zabije, ginie.",
+    "lore": "Demon pojawiający się podczas wichur i gwałtownych burz. Ściągał na siebie błyskawice, a chcąc przed nim uciec często sprowadzał je również na przypadkowych ludzi i budynki.",
+    "effectId": "latawiec_effect",
+    "effectDescription": "Kto go zabije, ginie."
+  },
+  {
+    "id": 76,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Morowa dziewica",
+    "stats": {
+      "attack": 3,
+      "defense": 8
+    },
+    "oldStats": "1500/4000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Atakuje wszystkich w polu, nawet sojuszników.",
+    "lore": "Uosobienie śmierci i zarazy. Gdy tylko się pojawia, ludzie chorują i umierają w męczarniach. Często wpadają w szał i zabijają siebie nawzajem. Nie można przed nią uciec.",
+    "effectId": "morowa_dziewica_effect",
+    "effectDescription": "Atakuje wszystkich w polu, nawet sojuszników."
+  },
+  {
+    "id": 77,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Niedźwiedźiołak",
+    "stats": {
+      "attack": 8,
+      "defense": 7
+    },
+    "oldStats": "4000/3500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Za każdym razem, gdy wroga istota atakuje sojusznika Niedźwiedziołaka, może on ją skontatakować (o ile ta jest w jego zasięgu).",
+    "lore": "Jest potężnym i siejącym grozę obrońcą swego plemienia. Mogą nim zostać tylko najlepsi i najmężniejsi wojownicy. Przemiany dokonują za pomocą potężnych zaklęć kapłani Peruna.",
+    "effectId": "niedzwiedzioak_effect",
+    "effectDescription": "Za każdym razem, gdy wroga istota atakuje sojusznika Niedźwiedziołaka, może on ją skontatakować (o ile ta jest w jego zasięgu)."
+  },
+  {
+    "id": 78,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Poroniec",
+    "stats": {
+      "attack": 1,
+      "defense": 2
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "<i>\"Istota powstała z duszy niechcianego dziecka. Niezwykle potężny i nieobliczalny, z uwagi na klątwę niezrealizowanego życia\"</i>",
+    "lore": "Każdorazowo podczas ataku, może skorzystać z umiejętności dowolnej istoty w polu.",
+    "effectId": "poroniec_effect",
+    "effectDescription": "<i>\"Istota powstała z duszy niechcianego dziecka. Niezwykle potężny i nieobliczalny, z uwagi na klątwę niezrealizowanego życia\"</i>"
+  },
+  {
+    "id": 79,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Południca",
+    "stats": {
+      "attack": 4,
+      "defense": 3
+    },
+    "oldStats": "2000/1500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Co turę: najsłabsza w {stats.attack} istota w polu ginie.",
+    "lore": "Panna młoda,  która zmarła przed weselem, powraca jako upiór. Urodziwa, choć niezwykle chuda niewiasta z cierpem w dłoni błąka się po polach w pełnym południowym słońcu. Porywa nieostrożne dzieci, dusi odpoczywających żniwiarzy, łamie ręce i nogi podróżniokom oraz okalecza zwierzęta.",
+    "effectId": "poudnica_effect",
+    "effectDescription": "Co turę: najsłabsza w {stats.attack} istota w polu ginie."
+  },
+  {
+    "id": 80,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Północnica",
+    "stats": {
+      "attack": 3,
+      "defense": 5
+    },
+    "oldStats": "1500/2500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": true
+    },
+    "effect": "Może sparaliżować na rundę wszystkie wrogie istoty. Pierwsze użycie jest darmowe, każde następne kosztuje 1 <ZŁ>.",
+    "lore": "Zamordowana kobieta, po śmierci mogła wrócić jako niebezpieczne noce straszydło. Zgorzkniała i nieszczęśliwa, szuka zemsty. Przeraża, a następnie atakuje napotkanych podróżników.",
+    "effectId": "ponocnica_effect",
+    "effectDescription": "Może sparaliżować na rundę wszystkie wrogie istoty. Pierwsze użycie jest darmowe, każde następne kosztuje 1 <ZŁ>."
+  },
+  {
+    "id": 81,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Siemiargł",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "W chwili wystawienia, usuwa wszystkie negatywne efekty i zaklęcia sojusznikom//",
+    "lore": "Skrzydlaty ogar chroniący zasiewów i drzewa życia. W mroczniejszej formie strzeże bram zaświatów.",
+    "effectId": "siemiarg_effect",
+    "effectDescription": "W chwili wystawienia, usuwa wszystkie negatywne efekty i zaklęcia sojusznikom//"
+  },
+  {
+    "id": 82,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Strzyga",
+    "stats": {
+      "attack": 2,
+      "defense": 8
+    },
+    "oldStats": "1000/4000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Gdy zrani wrogą istotę, odzyskuje straconą {stats.defense}.",
+    "lore": "Niewiasta, na którą rzucono urok, zmienia się w polującą na ludzi kreaturę. Dzień spędza w krypcie, a w nocy spija krew swych ofiar. Dwa serca w jej piersi sprawiają, że jest niezwykle trudna do zabicia.",
+    "effectId": "strzyga_effect",
+    "effectDescription": "Gdy zrani wrogą istotę, odzyskuje straconą {stats.defense}."
+  },
+  {
+    "id": 83,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Stukacz",
+    "stats": {
+      "attack": 2,
+      "defense": 3
+    },
+    "oldStats": "1000/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Istoty o {stats.attack} większym niż Stukacz nie mogą go zranić.",
+    "lore": "Mały, psotny demon, z okrągłą głową i czerwonymi ślepiami. Mieszka w ludzkich domach, wydając w nocy niepokojące dźwięki nie pozwalające zasnąć. Z powodu rozmiaru trudno go złapać i się go pozbyć.",
+    "effectId": "stukacz_effect",
+    "effectDescription": "Istoty o {stats.attack} większym niż Stukacz nie mogą go zranić."
+  },
+  {
+    "id": 84,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Tęsknica",
+    "stats": {
+      "attack": 1,
+      "defense": 4
+    },
+    "oldStats": "500/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Tak długo jak żyje, przeciwnik nie może ulepszać żadnych zaklęć ani korzystać z Bożych Łask.",
+    "lore": "Duch o postaci chudej kobiety. Sprowadza na ofiary przejmujący, bezzasadny smutek, żal i cierpienie. W krótkim czasie ofiara traci apetyt i ochotę do życia.",
+    "effectId": "tesknica_effect",
+    "effectDescription": "Tak długo jak żyje, przeciwnik nie może ulepszać żadnych zaklęć ani korzystać z Bożych Łask."
+  },
+  {
+    "id": 85,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Utopiec",
+    "stats": {
+      "attack": 4,
+      "defense": 4
+    },
+    "oldStats": "2000/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Otrzymuje tylko połowę wszelkich obrażeń.",
+    "lore": "Nieszczęśnik, który postanowił zakończyć swe zycie w głębinach, powraca do życia jako utopiec. Nawiedza miejsce swej śmierci, wciągając w toń duże zwierzęta i nieostrożnych ludzi.",
+    "effectId": "utopiec_effect",
+    "effectDescription": "Otrzymuje tylko połowę wszelkich obrażeń."
+  },
+  {
+    "id": 86,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Wieszczy",
+    "stats": {
+      "attack": 4,
+      "defense": 4
+    },
+    "oldStats": "2000/2000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Wystaw go po stronie wroga. Jeśli na koniec każdej jego rundy Wieszczy nadal żyje, rywal musi odrzucić na cmentarz własną, wybraną przez siebie kartę z tali lub pola.",
+    "lore": "Upiór, który po złożeniu w grobie nie może zaznać spokoju. Z najwyższych wież donośnie krzyczy, zapowiadając katastrofy i sprowadzając rychłą zgubę na krewnych i znajomych.",
+    "effectId": "wieszczy_effect",
+    "effectDescription": "Wystaw go po stronie wroga. Jeśli na koniec każdej jego rundy Wieszczy nadal żyje, rywal musi odrzucić na cmentarz własną, wybraną przez siebie kartę z tali lub pola."
+  },
+  {
+    "id": 87,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Wilkołak",
+    "stats": {
+      "attack": 7,
+      "defense": 4
+    },
+    "oldStats": "3500./2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Nie otrzymuje obrażeń od ciosów wręcz słabszych niż 7.",
+    "lore": "Nieszczęśnik, który wskutek klątwy zmienił się w dziką bestię, odporną na ataki zwykłym orężem. Jest nadludzko silny i szybki, dlatego obchodzono się brutalnie z każdym podejrzanym o likantropię.",
+    "effectId": "wilkoak_effect",
+    "effectDescription": "Nie otrzymuje obrażeń od ciosów wręcz słabszych niż 7."
+  },
+  {
+    "id": 88,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Wisielec",
+    "stats": {
+      "attack": 3,
+      "defense": 4
+    },
+    "oldStats": "1500/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Kogo zrani, a także kto zrani Wisielca, wraca na spód talii.",
+    "lore": "Człowiek, który zginął tak haniebną śmiercią jak powieszenie nie mógł liczyć na godny pochówek, dlatego wraca by się zemścić. Kto go dotknął, sam stawał się nieczysty i godny pogardy.",
+    "effectId": "wisielec_effect",
+    "effectDescription": "Kogo zrani, a także kto zrani Wisielca, wraca na spód talii."
+  },
+  {
+    "id": 89,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Wąpierz",
+    "stats": {
+      "attack": 4,
+      "defense": 4
+    },
+    "oldStats": "2000/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Odporny na wszelkie obrażenia. Ginie, gdy przez 2 rundy nie zada żadnych obrażeń. Może atakować sojuszników.",
+    "lore": "Potworny niegodziwiec po śmierci mógł zostać wąpierzem -istotą silną i odporną na zwykłą broń, lecz wiecznie żądną ludzkiej krwi. Bez niej jego ciało ulega szybkiemu rozkładowi.",
+    "effectId": "wapierz_effect",
+    "effectDescription": "Odporny na wszelkie obrażenia. Ginie, gdy przez 2 rundy nie zada żadnych obrażeń. Może atakować sojuszników."
+  },
+  {
+    "id": 90,
+    "idDomain": 3,
+    "domain": "Nieumarli",
+    "name": "Zmora",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Ile zada obrażeń, tyle dodaje sobie {stats.attack} lub < O>. Może poswięcic się, przejmujac istotę rywala o {stats.attack} do dwoch razy większym niż jej.",
+    "lore": "Dusza żywej osoby, która podczas snu opuszcza ciało, by wysysać krew i siły witalne innych istot, najczęściej najbliższych. Osoba będąca zmorą nawet o tym nie wie.",
+    "effectId": "zmora_effect",
+    "effectDescription": "Ile zada obrażeń, tyle dodaje sobie {stats.attack} lub < O>. Może poswięcic się, przejmujac istotę rywala o {stats.attack} do dwoch razy większym niż jej."
+  },
+  {
+    "id": 91,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Baba Jaga",
+    "stats": {
+      "attack": "",
+      "defense": ""
+    },
+    "oldStats": "500/500",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "plus 1 ataku i obrony za każdego poległego podczas gry",
+    "lore": "<i>\"Pradawny słowiański demon, pożerający ludzi, głęboko powiązany z światem zmarłych. Przemierza puszczę, w drewnianej chacie który stoi na kurzych nóżkach.\"</i>",
+    "effectId": "baba_jaga_effect",
+    "effectDescription": "plus 1 ataku i obrony za każdego poległego podczas gry"
+  },
+  {
+    "id": 92,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Bazyliszek",
+    "stats": {
+      "attack": 2,
+      "defense": 4
+    },
+    "oldStats": "1000/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Dopóki żyje, zranione przez niego istoty są sparaliżowane.",
+    "lore": "Niecny stwór zamieszkujący piwnice i kanały ludnych miast. Dzieło czarnej magii -powstaje z koguciego jaja wysiadywanego przez ropuchę. Obezwładnia samym spojrzeniem.",
+    "effectId": "bazyliszek_effect",
+    "effectDescription": "Dopóki żyje, zranione przez niego istoty są sparaliżowane."
+  },
+  {
+    "id": 93,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Bełt",
+    "stats": {
+      "attack": 3,
+      "defense": 2
+    },
+    "oldStats": "1500/1000",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "Może dowolnie zmienić ustawienie istot rywala w polu. Pierwsze użycie jest darmowe, każde kolejne kosztuje 1 <ZŁ>.",
+    "lore": "Niewidzialny, złośliwy duch dręczący podróżnych. Mąci ludziom w głowach, utrudniając powrót do domu. Szczególnie dokucza nietrzeźwym, którzy odnajdują się zwykle dopiero następnego ranka.",
+    "effectId": "bet_effect",
+    "effectDescription": "Może dowolnie zmienić ustawienie istot rywala w polu. Pierwsze użycie jest darmowe, każde kolejne kosztuje 1 <ZŁ>."
+  },
+  {
+    "id": 94,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Bieda",
+    "stats": {
+      "attack": 0,
+      "defense": 8
+    },
+    "oldStats": "0/4000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Możesz, choć nie musisz, wystawić Biedę po stronie rywala. Gracz posiadający w polu Biedę nie może dociągać nowych kart.",
+    "lore": "Istota, która przylgnąwszy do jakiegos nieszczęśnika, powoduje lawinę nieszczęść. Jedynym sposobem na pozbycie się jej jest przekazanie jej komuś innemu.",
+    "effectId": "bieda_effect",
+    "effectDescription": "Możesz, choć nie musisz, wystawić Biedę po stronie rywala. Gracz posiadający w polu Biedę nie może dociągać nowych kart."
+  },
+  {
+    "id": 95,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Bies",
+    "stats": {
+      "attack": 8,
+      "defense": 2
+    },
+    "oldStats": "4000/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Raniony, najpierw traci {stats.attack}, dopiero potem {stats.defense}.",
+    "lore": "Przedwieczne ucieleśnienie wszelkiego zła. Istnieje jedynie po to,  by trapić ludzi i siać zniszczenie. Żaden śmiertelnik nie jest w stanie przeciwstawić się jego nadnaturalnej sile.",
+    "effectId": "bies_effect",
+    "effectDescription": "Raniony, najpierw traci {stats.attack}, dopiero potem {stats.defense}."
+  },
+  {
+    "id": 96,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Bogunka",
+    "stats": {
+      "attack": 4,
+      "defense": 4
+    },
+    "oldStats": "2000/2000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Każdy zaatakowany przez nią <ludź> natychmiast ginie.",
+    "lore": "Żeński demony wodny, zawsze wrogi wobec ludzi. Przybiera wygląd nagiej, pięknej, młodej kobiety. Prowokuje śmiałków do igraszek, by po chwili topić ich w odmętach rzek i jezior.",
+    "effectId": "bogunka_effect",
+    "effectDescription": "Każdy zaatakowany przez nią <ludź> natychmiast ginie."
+  },
+  {
+    "id": 97,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Buka",
+    "stats": {
+      "attack": 5,
+      "defense": 5
+    },
+    "oldStats": "2500/2500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Gdy jest w polu, wszystkie wrogie istoty o mniejszym {stats.attack} niż ona muszą być w obronie.",
+    "lore": "Demon zamieszkujący ciemne, mrozcne miejsca niedostępne dla zwykłych śmiertelników. Mimo, iż niewielu ją widziało, samo jej imię wywołuje powszechne przerażenie.",
+    "effectId": "buka_effect",
+    "effectDescription": "Gdy jest w polu, wszystkie wrogie istoty o mniejszym {stats.attack} niż ona muszą być w obronie."
+  },
+  {
+    "id": 98,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Cicha",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Tak długo, jak jest w polu, wszystkie istoty mające mniej {stats.defense} niż ona {stats.attack} giną.",
+    "lore": "Niepozorna dziewczynka o trupiobladej cerze. Gdziekolwiek się pojawia, przynosi śmierć i zgniliznę. Szczególnie lubuje się w zabijaniu najsłabszych - robi to samym dotykiem.",
+    "effectId": "cicha_effect",
+    "effectDescription": "Tak długo, jak jest w polu, wszystkie istoty mające mniej {stats.defense} niż ona {stats.attack} giną."
+  },
+  {
+    "id": 99,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Czart",
+    "stats": {
+      "attack": 6,
+      "defense": 6
+    },
+    "oldStats": "3000/3000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Może zwiększyć swój {stats.attack} o tyle zmniejszajc swoją {stats.defense}. Jeśli wskutek tego {stats.defense} wyniesie 0, Czart  może wykonać atak, lecz po nim ginie.",
+    "lore": "Potężny demon, karykaturalne połączenie kozła i człowieka. Przez większość czasu kiryje się przed ludźmi, lecz czasami ujawnia się, by niszczyć ludzkie osiedla, a ich mieszkańców deprawować.",
+    "effectId": "czart_effect",
+    "effectDescription": "Może zwiększyć swój {stats.attack} o tyle zmniejszajc swoją {stats.defense}. Jeśli wskutek tego {stats.defense} wyniesie 0, Czart  może wykonać atak, lecz po nim ginie."
+  },
+  {
+    "id": 100,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Darmopych",
+    "stats": {
+      "attack": 5,
+      "defense": 4
+    },
+    "oldStats": "2500/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Wybrany wróg, atakuje swojego sojusznika.",
+    "lore": "Demon, czerpiący siłę z ludzkiej dumy. Zatruwał umysły, łechtał ego, popychając nieszczęśników do destruktywnych działań. Pyszałek, zniewolony przez Darmoopycha niszczyl życia wszystkim dookola, by ostatecznie zginąć w samotności.",
+    "effectId": "darmopych_effect",
+    "effectDescription": "Wybrany wróg, atakuje swojego sojusznika."
+  },
+  {
+    "id": 101,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Dydko",
+    "stats": {
+      "attack": 3,
+      "defense": 3
+    },
+    "oldStats": "1500/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "silniejsze lub rowne nie mogą go zaatakować",
+    "lore": "Dydko - duch opiekuńczy domu, zwykle poprzedni zmarły mieszkaniec. Dbał o harmonię i pomyślność wszystkich domowników. //fantasy digital art, magical realism - Dydko -",
+    "effectId": "dydko_effect",
+    "effectDescription": "silniejsze lub rowne nie mogą go zaatakować"
+  },
+  {
+    "id": 102,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Dziwożona",
+    "stats": {
+      "attack": 5,
+      "defense": 3
+    },
+    "oldStats": "2500/1500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Za każdym razem, gdy zabije istotę, obaj gracze wymieniają się jedną kartą z ręki- obie wskazuje gracz, który ma Dziwożonę",
+    "lore": "Szkaradny demon o postaci garbatej kobiety z długimi, splątanymi włosami i obwisłymi piersiami. Mieszka w jaskiniach i na bagnach. Kradnie dzieci z kołysek, podkładając własne, brzydkie potomstwo.",
+    "effectId": "dziwozona_effect",
+    "effectDescription": "Za każdym razem, gdy zabije istotę, obaj gracze wymieniają się jedną kartą z ręki- obie wskazuje gracz, który ma Dziwożonę"
+  },
+  {
+    "id": 103,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Gorynych",
+    "stats": {
+      "attack": 10,
+      "defense": 10
+    },
+    "oldStats": "5000/5000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": true
+    },
+    "effect": "Łączy się z innymi smokami.",
+    "lore": "Potężny kilkugłowy smok, który w boju zdoła bez trudu zabić dziesiątki doświadczonych wojów. Inteligencją i dumą dorównuje samym bogom -potrafi oszukać i zwieść najmądrzejszych z ludu.",
+    "effectId": "gorynych_effect",
+    "effectDescription": "Łączy się z innymi smokami."
+  },
+  {
+    "id": 104,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Grad",
+    "stats": {
+      "attack": 1,
+      "defense": 1
+    },
+    "oldStats": "500/500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Odporny na obrażenia istot, które nie walczą  {Slavic/magia-icon} albo {Slavic/zywiol-icon},",
+    "lore": "<i>\"Duch powietrzny, nie znając dokładnie jego mocy, winiono go za niebezpieczne zjawiska atmosferyczne i pogodowe anomalie.\"</i>",
+    "effectId": "grad_effect",
+    "effectDescription": "Odporny na obrażenia istot, które nie walczą  {Slavic/magia-icon} albo {Slavic/zywiol-icon},"
+  },
+  {
+    "id": 105,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Inkluz",
+    "stats": {
+      "attack": 4,
+      "defense": 5
+    },
+    "oldStats": "2000/2500",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Za każdy poświęcony <ZŁ> odbiera wybranej istocie premię i przekazuje ją dowolnej wskazanej istocie.",
+    "lore": "Duch zaklęty w przedmiot. Właścicielowi przynosi szczęście, często jednak za pomoc żąda zapłaty. Inkluz bardziej zachanny, mógl sobie zapragnąć nawet duszy swojego właściciela.",
+    "effectId": "inkluz_effect",
+    "effectDescription": "Za każdy poświęcony <ZŁ> odbiera wybranej istocie premię i przekazuje ją dowolnej wskazanej istocie."
+  },
+  {
+    "id": 106,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Kania",
+    "stats": {
+      "attack": 5,
+      "defense": 5
+    },
+    "oldStats": "2500/2500",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": true
+    },
+    "effect": "Gdy zabija istotę słabszą w {stats.attack} runda się nie kończy.",
+    "lore": "Zły, skrzydlaty demon o anielskim  licu. Dzięki niebywałej urodzie zdobywa zaufanie ofiary, po czym nieoczekiwanie ją porywa w przestworza dla sobie tylko znanych celów.",
+    "effectId": "kania_effect",
+    "effectDescription": "Gdy zabija istotę słabszą w {stats.attack} runda się nie kończy."
+  },
+  {
+    "id": 107,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Lamia",
+    "stats": {
+      "attack": 5,
+      "defense": 4
+    },
+    "oldStats": "2500/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Gdy ginie, jego posiadacz otrzymuje 1 <ZŁ> lub dociąga 5 kart.",
+    "lore": "Krwiożerczy, skrzydlaty demon o korpusie węża. Sprowadza susze i kataklizmy, by zdesperowana ludność składała mu ofiary z ludzi. Po śmierci z jego ciała wytryskują niesamowite skarby.",
+    "effectId": "lamia_effect",
+    "effectDescription": "Gdy ginie, jego posiadacz otrzymuje 1 <ZŁ> lub dociąga 5 kart."
+  },
+  {
+    "id": 108,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Licho",
+    "stats": {
+      "attack": 2,
+      "defense": 2
+    },
+    "oldStats": "1000/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Dopóki Licho żyję, rywal nie może dobierać nowych kart (gdy nie ma ich wcale, może wziąć jedną).",
+    "lore": "Mały, psotliwy demon, który czerpie przyjemność z utrudniania ludziom życia. Prócz chowania rzeczy, robienia bałaganu i niszczenia dobytku, Licho potrafi również mieszać ludziom w głowach.",
+    "effectId": "licho_effect",
+    "effectDescription": "Dopóki Licho żyję, rywal nie może dobierać nowych kart (gdy nie ma ich wcale, może wziąć jedną)."
+  },
+  {
+    "id": 109,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Liczyrzepa",
+    "stats": {
+      "attack": 3,
+      "defense": 5
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "<i>\"Zmiennokształtny demon, strażnik Karkonoszy. Mimo, że niezwykle groźny, zamiast krzywdzić ludzi, wolał płatać im figle. \"</i>",
+    "lore": "Każdorazowo, Liczyrzepa wybiera rodzaj ataku: {Slavic/zywiol-icon}/{Slavic/magia-icon}/{Slavic/strzala-icon}/{Slavic/atak-ikona}",
+    "effectId": "liczyrzepa_effect",
+    "effectDescription": "<i>\"Zmiennokształtny demon, strażnik Karkonoszy. Mimo, że niezwykle groźny, zamiast krzywdzić ludzi, wolał płatać im figle. \"</i>"
+  },
+  {
+    "id": 110,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Mara",
+    "stats": {
+      "attack": 3,
+      "defense": 2
+    },
+    "oldStats": "1500/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Odrzucając Marę na cmentarz, możesz przejąć kontrolę nad istotą mającą nie więcej niż dwukrotność aktualnego {Slavic/atak-ikona} Mary",
+    "lore": "Mroczny demon snu. Wysysa siły witalne śpiących i zsyła paraliżujące koszmary, z których nie można się wybudzić.",
+    "effectId": "mara_effect",
+    "effectDescription": "Odrzucając Marę na cmentarz, możesz przejąć kontrolę nad istotą mającą nie więcej niż dwukrotność aktualnego {Slavic/atak-ikona} Mary"
+  },
+  {
+    "id": 111,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Mavka",
+    "stats": {
+      "attack": "",
+      "defense": ""
+    },
+    "oldStats": "",
+    "combat": {
+      "attackType": 3,
+      "attackTypeString": "Wręcz/Dystans",
+      "isFlying": false
+    },
+    "effect": "<i>\"Leśny demon, do żywych podchodzących wrogo. Skuszonych jej wdziękami mężczyzn każe wyjątkowo okrutnie - gilgotając ich na śmierć.\"</i>",
+    "lore": "Tak długo gdy jest w polu, sojuszników w linii Mavki nie można zaatakować.",
+    "effectId": "mavka_effect",
+    "effectDescription": "<i>\"Leśny demon, do żywych podchodzących wrogo. Skuszonych jej wdziękami mężczyzn każe wyjątkowo okrutnie - gilgotając ich na śmierć.\"</i>"
+  },
+  {
+    "id": 112,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Przyłóżnik",
+    "stats": {
+      "attack": 4,
+      "defense": 6
+    },
+    "oldStats": "2000/3000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Zabicie {Slavic/zywi-icon} całkowicie go leczy.",
+    "lore": "<i>\"Pod postacią atrakcyjnego młodzieńca, uwodził kobiety i sprowadzał je na złą drogę. Nawet najcnotliwszym z kobiet, ciężko było mu się oprzeć.\"</i>",
+    "effectId": "przyoznik_effect",
+    "effectDescription": "Zabicie {Slavic/zywi-icon} całkowicie go leczy."
+  },
+  {
+    "id": 113,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Smocze jajo",
+    "stats": {
+      "attack": 0,
+      "defense": 10
+    },
+    "oldStats": "0/5000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Nie kontratakuje. Dopóki jest w polu, żaden wrogi <ogień> nie może atakować; Nie kontratakuje. Po 5 rundach od wystawienia ginie, a gracz posiadający Jajo dobiera dodatkowe 3 karty spoza talii.",
+    "lore": "Mimo, że niepozorne, wykluć się z niego może bestia pokroju samego Wija czy Gorynycha. Znalezienie takiego jaja nie wróżyło nic dobego - w końcu nieopodal musiał być jego ogromny rodzic.",
+    "effectId": "smocze_jajo_effect",
+    "effectDescription": "Nie kontratakuje. Dopóki jest w polu, żaden wrogi <ogień> nie może atakować; Nie kontratakuje. Po 5 rundach od wystawienia ginie, a gracz posiadający Jajo dobiera dodatkowe 3 karty spoza talii."
+  },
+  {
+    "id": 114,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Szątopierz",
+    "stats": {
+      "attack": 3,
+      "defense": 4
+    },
+    "oldStats": "1500/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Gdy Szątopierz jest w polu, możesz odrzucać karty z rąk, za każde dwie otrzymując <ZŁ>.",
+    "lore": "Przewrotny i zły duch wyglądem przypominający nietoperza. W odróżnieniu od innych demonow, nie uprzykrza ludziom życia, lecz oferuje im wielkie bogactwa. Ceną za nie najczęściej jest dusza.",
+    "effectId": "szatopierz_effect",
+    "effectDescription": "Gdy Szątopierz jest w polu, możesz odrzucać karty z rąk, za każde dwie otrzymując <ZŁ>."
+  },
+  {
+    "id": 115,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Wietrzyca",
+    "stats": {
+      "attack": 6,
+      "defense": 6
+    },
+    "oldStats": "3000/3000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": true
+    },
+    "effect": "Gracz mający Wietrzycę może dowolnie zmienić ustawienie w polu istot przeciwnika.",
+    "lore": "Gracz mający Wietrzycę może dowolnie zmienić ustawienie w polu istot przeciwnika.",
+    "effectId": "wietrzyca_effect",
+    "effectDescription": "Gracz mający Wietrzycę może dowolnie zmienić ustawienie w polu istot przeciwnika."
+  },
+  {
+    "id": 116,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Wij",
+    "stats": {
+      "attack": 9,
+      "defense": 9
+    },
+    "oldStats": "4500/4500",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": true
+    },
+    "effect": "Wskrzesza się na jedną turę, w wybranym przez gracza momencie gry.",
+    "lore": "Ogromna i zła bestia, praojciec większości smoków Zamieszkuje podziemia, będąc dowódcą welesowej armii. Gromadzi też kohorty demonów do ostatecznej bitwy z samym Perunem.",
+    "effectId": "wij_effect",
+    "effectDescription": "Wskrzesza się na jedną turę, w wybranym przez gracza momencie gry."
+  },
+  {
+    "id": 117,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Wąż Tugaryn",
+    "stats": {
+      "attack": 8,
+      "defense": 8
+    },
+    "oldStats": "4000/4000",
+    "combat": {
+      "attackType": 1,
+      "attackTypeString": "Żywioł",
+      "isFlying": false
+    },
+    "effect": "Gdy kogoś zabije, niewykorzystane obrażenia otrzymuje inny wrogi potwór",
+    "lore": "<i>\"Mityczny stwór, który dla czystej rozrywki terroryzował słowian od setek lat. Spopielił niezliczoną ilość osad - ucieleśnienie zła, przemocy i nienawiści do żywych.  \"</i>",
+    "effectId": "waz_tugaryn_effect",
+    "effectDescription": "Gdy kogoś zabije, niewykorzystane obrażenia otrzymuje inny wrogi potwór"
+  },
+  {
+    "id": 118,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Zagorkinia",
+    "stats": {
+      "attack": 3,
+      "defense": 2
+    },
+    "oldStats": "1500/1000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": false
+    },
+    "effect": "Kogo zrani, co turę traci 1 {Slavic/atak-ikona} i {Slavic/obrona-ikona}",
+    "lore": "Tajemniczy demon, stroniący od ludzi. Przybrawszy kobiecą postać, żyła gdzieś w górach. Mimo, że Zagorkinia za nikim nie przepadała, strudzonym, szukającym i szukającym jej, udzielał wszelkiej pomocy.",
+    "effectId": "zagorkinia_effect",
+    "effectDescription": "Kogo zrani, co turę traci 1 {Slavic/atak-ikona} i {Slavic/obrona-ikona}"
+  },
+  {
+    "id": 119,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Ćmuch",
+    "stats": {
+      "attack": 3,
+      "defense": 4
+    },
+    "oldStats": "1500/2000",
+    "combat": {
+      "attackType": 0,
+      "attackTypeString": "Wręcz",
+      "isFlying": true
+    },
+    "effect": "Nie otrzymuje kontrataków.",
+    "lore": "Bagienny demon, unikający kontaktów z ludźmi. Z wyglądu przypomina olbrzymią, tłustą ropuchę z długimi zębami i nietoperzymi skrzydłami. Podobnie jak ona, jest oślizgły i odstręczający.",
+    "effectId": "cmuch_effect",
+    "effectDescription": "Nie otrzymuje kontrataków."
+  },
+  {
+    "id": 120,
+    "idDomain": 4,
+    "domain": "Weles",
+    "name": "Śmierć",
+    "stats": {
+      "attack": 6,
+      "defense": 4
+    },
+    "oldStats": "3000/2000",
+    "combat": {
+      "attackType": 2,
+      "attackTypeString": "Magia",
+      "isFlying": false
+    },
+    "effect": "Gdy jest w polu, każdy z graczy może zapłacić 1<ZŁ>, by ginąca istota wróciła do talii właściciela (jako bazowa karta), zamiast na cmentarz.  // Jej {Slavic/atak-ikona} i {Slavic/obrona-ikona} rośnie o 1, za każdą śmierć której jej świadkiem",
+    "lore": "Złowieszcza istota towarzysząca ludzkości od początku dziejów. Odbiera ludziom zycie i przenosi ich dusze w zaświaty. Nie można jej oszukać, choć podobno można się z nią dogadać.",
+    "effectId": "smierc_effect",
+    "effectDescription": "Gdy jest w polu, każdy z graczy może zapłacić 1<ZŁ>, by ginąca istota wróciła do talii właściciela (jako bazowa karta), zamiast na cmentarz.  // Jej {Slavic/atak-ikona} i {Slavic/obrona-ikona} rośnie o 1, za każdą śmierć której jej świadkiem"
+  }
+]

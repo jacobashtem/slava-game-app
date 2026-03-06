@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx nuxi@latest:*)",
+      "Bash(CI=true npx nuxi@latest:*)",
+      "Bash(yes:*)",
+      "Bash(pnpm install:*)",
+      "Bash(node:*)",
+      "Bash(rm:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm nuxt:*)",
+      "Bash(npm info:*)",
+      "Bash(npm install:*)",
+      "Bash(npm pack:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx nuxt:*)",
+      "Bash(npm test:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(/tmp/test-page.vue:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc:*)",
+      "Bash(ls:*)",
+      "Bash(npx nuxi:*)",
+      "Bash(npm run:*)",
+      "Bash(npx skills:*)"
+    ]
+  }
+}
