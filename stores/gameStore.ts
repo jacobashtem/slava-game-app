@@ -169,7 +169,6 @@ export const useGameStore = defineStore('game', () => {
 
       // Kontratak — DEF atakującego spadła = kontratak nastąpił
       if (dmgToAttacker > 0) {
-        console.log('[KONTRATAK] gracz atakuje, obrońca kontratakuje:', defenderInstanceId, 'dmgToAttacker:', dmgToAttacker)
         ui.counterAttackCardId = defenderInstanceId
         await delay(1000)
         ui.counterAttackCardId = null
@@ -545,7 +544,6 @@ export const useGameStore = defineStore('game', () => {
 
                 // Kontratak gracza — DEF atakującego AI spadła = gracz kontratakował
                 if (dmgToAi > 0) {
-                  console.log('[KONTRATAK] AI atakuje, gracz kontratakuje:', decision.targetInstanceId, 'dmgToAi:', dmgToAi)
                   ui.counterAttackCardId = decision.targetInstanceId
                   await delay(1000)
                   ui.counterAttackCardId = null
