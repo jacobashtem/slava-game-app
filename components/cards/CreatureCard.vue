@@ -320,6 +320,7 @@ const attackIcon = computed(() => ({
 const cardClass = computed(() => [
   'creature-card',
   {
+    'in-hand':         props.inHand,
     'card-attack':     !props.inHand && !isDefense.value,
     'card-defense':    isDefense.value,
     'is-selected':     props.selected,
@@ -562,6 +563,11 @@ function onClick() {
 .creature-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 6px 1px var(--domain-color, #334155);
+}
+
+/* W ręce: parent (.hand-card-wrap) obsługuje hover — tu wyłączamy */
+.creature-card.in-hand:hover {
+  transform: none;
 }
 
 /* ===== ATAK: rotacja 90° (poziomo = szarża) ===== */

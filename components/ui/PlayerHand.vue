@@ -200,17 +200,16 @@ const adventureTypeColor = (card: CardInstance) => {
 
 .hand-card-wrap {
   cursor: pointer;
-  transition: transform 0.15s ease, margin-top 0.15s ease;
+  transition: transform 0.15s ease;
   flex-shrink: 0;
-  margin-top: 0;
 }
 
 .hand-card-wrap:hover {
-  margin-top: -14px;
+  transform: translateY(-10px);
 }
 
 .hand-card-wrap.selected {
-  margin-top: -20px;
+  transform: translateY(-16px);
 }
 
 /* Adventure card */
