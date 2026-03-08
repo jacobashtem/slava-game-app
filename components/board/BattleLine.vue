@@ -205,7 +205,7 @@ function onLineDrop(e: DragEvent) {
 
 <template>
   <div
-    :class="['battle-line', `line-${line}`, { highlighted: isDropTarget || isDragOver, 'enemy-targeting': isEnemyAttackTarget }]"
+    :class="['battle-line', `line-${line}`, { highlighted: isDropTarget || isDragOver, 'enemy-targeting': isEnemyAttackTarget, 'enemy-line': !isPlayerSide, 'player-line': isPlayerSide }]"
     @click="onLineClick"
     @dragover="onDragOver"
     @dragleave="onDragLeave"
@@ -250,12 +250,14 @@ function onLineDrop(e: DragEvent) {
         />
       </div>
 
-      <!-- Ghost slots: empty card outlines showing available space -->
-      <div
-        v-for="i in ghostSlots"
-        :key="`ghost-${i}`"
-        :class="['ghost-slot', { 'ghost-active': isDropTarget }]"
-      />
+      <!-- Ghost slots: only on player side -->
+      <template v-if="isPlayerSide">
+        <div
+          v-for="i in ghostSlots"
+          :key="`ghost-${i}`"
+          :class="['ghost-slot', { 'ghost-active': isDropTarget }]"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -297,6 +299,24 @@ function onLineDrop(e: DragEvent) {
   background: rgba(99, 102, 241, 0.08);
   cursor: pointer;
   box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.08);
+}
+
+/* Strona wroga — ciemniejsze, czerwonawe tło */
+.battle-line.enemy-line {
+  background: rgba(239, 68, 68, 0.03);
+  border-color: rgba(239, 68, 68, 0.08);
+}
+.battle-line.enemy-line.line-1 {
+  background: rgba(239, 68, 68, 0.04);
+  border-color: rgba(239, 68, 68, 0.10);
+}
+.battle-line.enemy-line.line-2 {
+  background: rgba(200, 50, 50, 0.03);
+  border-color: rgba(200, 50, 50, 0.08);
+}
+.battle-line.enemy-line.line-3 {
+  background: rgba(160, 30, 60, 0.03);
+  border-color: rgba(160, 30, 60, 0.08);
 }
 
 .battle-line.enemy-targeting {

@@ -32,7 +32,11 @@ function ownerLabel(event: any): string {
        AI (left side): flex-direction row → SUPPORT|RANGED|FRONT — FRONT rightmost (nearest center divider)
        Player (right side): flex-direction row-reverse → renders as FRONT|RANGED|SUPPORT — FRONT leftmost (nearest center divider)
   -->
-  <div :class="['player-field', { 'player-field--player': isPlayerSide }]">
+  <div :class="['player-field', { 'player-field--player': isPlayerSide, 'player-field--enemy': !isPlayerSide }]">
+    <!-- Label: TY / WRÓG -->
+    <div :class="['field-label', isPlayerSide ? 'field-label--player' : 'field-label--enemy']">
+      {{ isPlayerSide ? 'TY' : 'WRÓG' }}
+    </div>
     <BattleLine
       :cards="playerState.field.lines[BL.SUPPORT]"
       :line="BL.SUPPORT"
@@ -84,6 +88,41 @@ function ownerLabel(event: any): string {
 
 .player-field--player {
   flex-direction: row-reverse;  /* Player: renders as L1 | L2 | L3, FRONT leftmost (nearest divider) */
+  border-bottom: 1px solid rgba(34, 197, 94, 0.12);
+}
+
+.player-field--enemy {
+  border-bottom: 1px solid rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.02);
+}
+
+/* ===== LABEL TY / WRÓG ===== */
+.field-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+  flex-shrink: 0;
+  user-select: none;
+  opacity: 0.5;
+}
+
+.field-label--player {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.04);
+  border-right: 1px solid rgba(34, 197, 94, 0.15);
+}
+
+.field-label--enemy {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.04);
+  border-left: 1px solid rgba(239, 68, 68, 0.15);
 }
 
 /* ===== STREFA AKTYWNYCH ZDARZEŃ ===== */

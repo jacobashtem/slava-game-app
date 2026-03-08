@@ -329,8 +329,8 @@ const onPlayDescription = computed(() => {
     );
 }
 
-/* All direct children above the ::before/::after pseudo-elements */
-.game-board > *:not(.board-overlays) { position: relative; z-index: 1; }
+/* Layout children above the ::before/::after pseudo-elements */
+.top-bar, .board-main, .player-hand { position: relative; z-index: 1; }
 
 /* ====== PASEK GÓRNY ====== */
 .top-bar {
