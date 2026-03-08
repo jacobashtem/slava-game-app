@@ -9,7 +9,7 @@ const game = useGameStore()
 
 // ===== USTAWIENIA GRY =====
 const difficulty = ref<AIDifficulty>(game.selectedDifficulty)
-const selectedDomains = ref<number[]>([...game.selectedDomains])
+const selectedDomains = ref<number[]>([...(game.selectedDomains ?? [])])
 
 function toggleDomain(domain: number) {
   const idx = selectedDomains.value.indexOf(domain)

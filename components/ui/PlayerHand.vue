@@ -6,14 +6,14 @@ import type { CardInstance } from '../../game-engine/types'
 import { BattleLine, GamePhase, GOLD_EDITION_RULES } from '../../game-engine/constants'
 import lokacjaImg from '~/assets/cards/lokacja.png'
 import artefaktImg from '~/assets/cards/artefakt.png'
+import { useUIStore } from '../../stores/uiStore'
+import { useGameStore } from '../../stores/gameStore'
+import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 
 const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaImg }
 
 const canPlayEnhanced = (card: CardInstance) =>
   (game.player?.gold ?? 0) >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST
-import { useUIStore } from '../../stores/uiStore'
-import { useGameStore } from '../../stores/gameStore'
-import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 
 const HAND_SIZE = GOLD_EDITION_RULES.STARTING_HAND
 
@@ -22,13 +22,12 @@ const game = useGameStore()
 
 const hand = computed(() => game.getHand())
 
-const emptySlots = computed(() => {
-  const canDraw = game.isPlayerTurn
-    && (game.currentPhase === GamePhase.PLAY || game.currentPhase === GamePhase.COMBAT)
-    && (game.player?.deck.length ?? 0) > 0
-  if (!canDraw) return 0
-  return Math.max(0, HAND_SIZE - hand.value.length)
-})
+const canDraw = computed(() =>
+  game.isPlayerTurn
+  && (game.currentPhase === GamePhase.PLAY || game.currentPhase === GamePhase.COMBAT)
+  && (game.player?.deck.length ?? 0) > 0
+  && hand.value.length < HAND_SIZE
+)
 
 function onCardClick(card: CardInstance) {
   if (!game.isPlayerTurn) return
@@ -63,7 +62,6 @@ function onPlayAdventure(card: CardInstance, useEnhanced: boolean) {
 
   const adventureType = (card.cardData as any).adventureType
   if (adventureType === 1) {
-    // Artefakt — wymaga wybrania istoty na polu
     const hasOwnCreatures = game.state
       ? getAllCreaturesOnField(game.state, 'player1').length > 0
       : false
@@ -98,72 +96,68 @@ const adventureTypeColor = (card: CardInstance) => {
     </div>
 
     <div class="hand-cards">
-      <TransitionGroup name="card-slide">
-        <div
-          v-for="card in hand"
-          :key="card.instanceId"
-          :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId }]"
-          @click="onCardClick(card)"
-          @mouseenter="ui.showTooltip(card.instanceId)"
-          @mouseleave="ui.hideTooltip()"
-        >
-          <!-- Istota -->
-          <CreatureCard
-            v-if="card.cardData.cardType === 'creature'"
-            :card="card"
-            :selected="ui.selectedCardId === card.instanceId"
-            :in-hand="true"
-          />
+      <!-- Karty na ręce -->
+      <div
+        v-for="card in hand"
+        :key="card.instanceId"
+        :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId }]"
+        @click="onCardClick(card)"
+        @mouseenter="ui.showTooltip(card.instanceId)"
+        @mouseleave="ui.hideTooltip()"
+      >
+        <!-- Istota -->
+        <CreatureCard
+          v-if="card.cardData.cardType === 'creature'"
+          :card="card"
+          :selected="ui.selectedCardId === card.instanceId"
+          :in-hand="true"
+        />
 
-          <!-- Karta Przygody -->
-          <div
-            v-else
-            class="adventure-card"
-            :style="{ '--adv-color': adventureTypeColor(card) }"
-          >
-            <div class="adv-type">
-              <img v-if="adventureTypeImgs[(card.cardData as any).adventureType]" :src="adventureTypeImgs[(card.cardData as any).adventureType]" class="adv-type-img" />
-              {{ adventureTypeLabel(card) }}
+        <!-- Karta Przygody -->
+        <div
+          v-else
+          class="adventure-card"
+          :style="{ '--adv-color': adventureTypeColor(card) }"
+        >
+          <div class="adv-type">
+            <img v-if="adventureTypeImgs[(card.cardData as any).adventureType]" :src="adventureTypeImgs[(card.cardData as any).adventureType]" class="adv-type-img" />
+            {{ adventureTypeLabel(card) }}
+          </div>
+          <div class="adv-name">{{ card.cardData.name }}</div>
+          <div class="adv-effects">
+            <div class="adv-effect-desc basic">
+              <span class="effect-label">Bazowy</span>
+              <span class="effect-text">{{ (card.cardData as any).effectDescription?.slice(0, 42) }}…</span>
             </div>
-            <div class="adv-name">{{ card.cardData.name }}</div>
-            <div class="adv-effects">
-              <div class="adv-effect-desc basic">
-                <span class="effect-label">Bazowy</span>
-                <span class="effect-text">{{ (card.cardData as any).effectDescription?.slice(0, 42) }}…</span>
-              </div>
-              <div class="adv-effect-desc enhanced">
-                <span class="effect-label">Ulepszony</span>
-                <span class="effect-text">{{ (card.cardData as any).enhancedEffectDescription?.slice(0, 42) }}…</span>
-              </div>
-            </div>
-            <div class="adv-ability-row">
-              <button
-                class="adv-btn-basic"
-                :disabled="!game.isPlayerTurn || game.currentPhase !== GamePhase.PLAY || (game.player?.adventuresPlayedThisTurn ?? 0) >= GOLD_EDITION_RULES.PLAY_LIMIT_ADVENTURES"
-                @click.stop="onPlayAdventure(card, false)"
-              >⚡ ZAGRAJ</button>
-              <button
-                class="adv-btn-enhanced"
-                :disabled="!game.isPlayerTurn || game.currentPhase !== GamePhase.PLAY || !canPlayEnhanced(card) || (game.player?.adventuresPlayedThisTurn ?? 0) >= GOLD_EDITION_RULES.PLAY_LIMIT_ADVENTURES"
-                @click.stop="onPlayAdventure(card, true)"
-              >🪙{{ GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST }} ZŁ</button>
+            <div class="adv-effect-desc enhanced">
+              <span class="effect-label">Ulepszony</span>
+              <span class="effect-text">{{ (card.cardData as any).enhancedEffectDescription?.slice(0, 42) }}…</span>
             </div>
           </div>
+          <div class="adv-ability-row">
+            <button
+              class="adv-btn-basic"
+              :disabled="!game.isPlayerTurn || game.currentPhase !== GamePhase.PLAY || (game.player?.adventuresPlayedThisTurn ?? 0) >= GOLD_EDITION_RULES.PLAY_LIMIT_ADVENTURES"
+              @click.stop="onPlayAdventure(card, false)"
+            >⚡ ZAGRAJ</button>
+            <button
+              class="adv-btn-enhanced"
+              :disabled="!game.isPlayerTurn || game.currentPhase !== GamePhase.PLAY || !canPlayEnhanced(card) || (game.player?.adventuresPlayedThisTurn ?? 0) >= GOLD_EDITION_RULES.PLAY_LIMIT_ADVENTURES"
+              @click.stop="onPlayAdventure(card, true)"
+            >🪙{{ GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST }} ZŁ</button>
+          </div>
         </div>
-      </TransitionGroup>
+      </div>
 
-      <!-- Puste sloty do dobierania -->
-      <div
-        v-for="i in emptySlots"
-        :key="`draw-slot-${i}`"
-        class="draw-slot"
-        @click="game.drawCard()"
-      >
+      <div v-if="hand.length === 0" class="hand-empty">Pusta ręka</div>
+    </div>
+
+    <!-- Dobieranie: osobna sekcja po prawej, nie wpływa na układ kart -->
+    <div v-if="canDraw" class="draw-section">
+      <div class="draw-slot" @click="game.drawCard()">
         <Icon icon="game-icons:card-draw" class="draw-slot-icon" />
         <span class="draw-slot-label">Dobierz</span>
       </div>
-
-      <div v-if="hand.length === 0 && emptySlots === 0" class="hand-empty">Pusta ręka</div>
     </div>
   </div>
 </template>
@@ -176,8 +170,9 @@ const adventureTypeColor = (card: CardInstance) => {
   padding: 8px 12px;
   background: rgba(0,0,0,0.3);
   border-top: 1px solid var(--border-default);
-  min-height: 140px;
-  overflow-x: auto;
+  height: 150px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .hand-label {
@@ -189,27 +184,33 @@ const adventureTypeColor = (card: CardInstance) => {
   color: var(--text-muted);
   white-space: nowrap;
   min-width: 44px;
+  flex-shrink: 0;
 }
 
 .hand-cards {
   display: flex;
   gap: 6px;
-  align-items: flex-end;
+  align-items: center;
   flex: 1;
   padding: 0 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 100%;
 }
 
 .hand-card-wrap {
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, margin-top 0.15s ease;
+  flex-shrink: 0;
+  margin-top: 0;
 }
 
 .hand-card-wrap:hover {
-  transform: translateY(-8px);
+  margin-top: -14px;
 }
 
 .hand-card-wrap.selected {
-  transform: translateY(-12px);
+  margin-top: -20px;
 }
 
 /* Adventure card */
@@ -339,6 +340,15 @@ const adventureTypeColor = (card: CardInstance) => {
   margin: auto;
 }
 
+/* Dobieranie — osobna sekcja, nie przesuwa kart */
+.draw-section {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  padding-left: 10px;
+}
+
 .draw-slot {
   width: 80px;
   height: 112px;
@@ -372,10 +382,4 @@ const adventureTypeColor = (card: CardInstance) => {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-
-/* Animacje wchodzenia kart */
-.card-slide-enter-active { transition: all 0.3s ease; }
-.card-slide-enter-from { opacity: 0; transform: translateY(30px); }
-.card-slide-leave-active { transition: all 0.2s ease; }
-.card-slide-leave-to { opacity: 0; transform: scale(0.8); }
 </style>

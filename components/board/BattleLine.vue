@@ -35,6 +35,15 @@ const lineLabel = computed(() => ({
   [BL.SUPPORT]: 'L3',
 }[props.line]))
 
+const lineName = computed(() => ({
+  [BL.FRONT]: 'Jawia',
+  [BL.RANGED]: 'Prawia',
+  [BL.SUPPORT]: 'Nawia',
+}[props.line]))
+
+const MAX_SLOTS = 5
+const ghostSlots = computed(() => Math.max(0, MAX_SLOTS - props.cards.length))
+
 // ===== KLIK NA LINIĘ (wystawianie z ręki) =====
 function onLineClick() {
   if (!props.isPlayerSide) return
@@ -200,7 +209,10 @@ function onLineDrop(e: DragEvent) {
     @dragleave="onDragLeave"
     @drop="onLineDrop"
   >
-    <span class="line-label">{{ lineLabel }}</span>
+    <div class="line-header">
+      <span class="line-label">{{ lineLabel }}</span>
+      <span class="line-name">{{ lineName }}</span>
+    </div>
 
     <div class="cards-col">
       <div
@@ -236,15 +248,22 @@ function onLineDrop(e: DragEvent) {
         />
       </div>
 
-      <!-- Drop zone: visible when placing (regardless of cards already in line) -->
+      <!-- Ghost slots: empty card outlines showing available space -->
       <div
-        v-if="isPlayerSide && isDropTarget"
+        v-for="i in ghostSlots"
+        :key="`ghost-${i}`"
+        :class="['ghost-slot', { 'ghost-active': isDropTarget }]"
+        @click.stop="isDropTarget ? onLineClick() : undefined"
+      />
+
+      <!-- Drop zone: visible when placing -->
+      <div
+        v-if="isPlayerSide && isDropTarget && cards.length >= MAX_SLOTS"
         class="empty-slot active"
         @click.stop="onLineClick"
       >
         <span>+</span>
       </div>
-      <div v-else-if="cards.length === 0" class="empty-slot" @click="onLineClick" />
     </div>
   </div>
 </template>
@@ -294,19 +313,37 @@ function onLineDrop(e: DragEvent) {
   cursor: crosshair;
 }
 
+.line-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px 0;
+}
+
 .line-label {
   font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
   text-align: center;
   font-family: monospace;
-  flex-shrink: 0;
-  padding: 2px 0;
+}
+
+.line-name {
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 .line-1 .line-label { color: rgba(200, 160, 70, 0.6); }
+.line-1 .line-name  { color: rgba(200, 160, 70, 0.4); }
 .line-2 .line-label { color: rgba(99, 102, 241, 0.5); }
+.line-2 .line-name  { color: rgba(99, 102, 241, 0.35); }
 .line-3 .line-label { color: rgba(168, 85, 247, 0.5); }
+.line-3 .line-name  { color: rgba(168, 85, 247, 0.35); }
 
 .cards-col {
   display: flex;
@@ -319,6 +356,13 @@ function onLineDrop(e: DragEvent) {
 
 .card-wrap {
   position: relative;
+  /* Fixed outer box to prevent layout jump when card rotates (attack=90deg) */
+  width: 96px;
+  min-height: 134px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* ===== FLOATING DAMAGE NUMBER ===== */
@@ -344,6 +388,29 @@ function onLineDrop(e: DragEvent) {
   100% { opacity: 0; transform: translateX(-50%) translateY(-55px) scale(0.9); }
 }
 
+
+/* Ghost slot: faint card outline showing available space */
+.ghost-slot {
+  width: 80px;
+  height: 112px;
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.01);
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ghost-slot.ghost-active {
+  border-color: rgba(99, 102, 241, 0.4);
+  background: rgba(99, 102, 241, 0.04);
+  cursor: pointer;
+  animation: slot-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
+  50% { border-color: rgba(99, 102, 241, 0.7); }
+}
 
 .empty-slot {
   width: 80px;
