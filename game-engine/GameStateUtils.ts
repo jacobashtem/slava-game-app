@@ -54,7 +54,7 @@ export function removeCardFromField(state: GameState, instanceId: string): CardI
     for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
       const idx = player.field.lines[line].findIndex(c => c.instanceId === instanceId)
       if (idx !== -1) {
-        const [removed] = player.field.lines[line].splice(idx, 1)
+        const removed = player.field.lines[line].splice(idx, 1)[0]!
         return removed
       }
     }

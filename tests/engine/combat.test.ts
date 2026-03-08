@@ -69,9 +69,9 @@ describe('CombatResolver — podstawy', () => {
 
     const { result } = resolveAttack(state, attacker.instanceId, defender.instanceId)
 
-    // Defender ma 6-3=3 DEF po ataku, kontratak = 3
+    // Kontratak jednoczesny — obrońca bije pełną mocą (DEF=6 SPRZED ciosu)
     expect(result.counterattackOccurred).toBe(true)
-    expect(result.damageToAttacker).toBe(3)
+    expect(result.damageToAttacker).toBe(6)
   })
 
   it('brak kontrataku gdy obrońca w pozycji ATTACK', () => {

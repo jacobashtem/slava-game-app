@@ -49,6 +49,8 @@ export const useUIStore = defineStore('ui', () => {
     cost: number
     cardName: string
     effectName: string
+    requiresTarget?: boolean
+    availableTargetIds?: string[]
   } | null>(null)
 
   // ===== COMPUTED =====

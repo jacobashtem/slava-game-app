@@ -58,20 +58,44 @@ function onCardClick(card: CardInstance) {
 
     if (game.currentPhase === GamePhase.COMBAT) {
       // W COMBAT: karta w obronie nie może atakować — zmiana pozycji przez badge
-      if (card.position === CardPosition.DEFENSE) return
+      if (card.position === CardPosition.DEFENSE) {
+        ui.showPlayLimitToast('Istota jest w obronie — zmień pozycję na atak.')
+        return
+      }
       if (card.cannotAttack) {
         ui.showPlayLimitToast('Ta istota nie może atakować (efekt statusu).')
         return
       }
-      if (card.hasAttackedThisTurn) {
+      // Leśnica: może atakować 2 razy
+      const isLesnica = (card.cardData as any).effectId === 'lesnica_double_attack'
+      const attacksThisTurn = (card.metadata.attacksThisTurn as number) ?? 0
+      if (isLesnica && attacksThisTurn >= 2) {
+        ui.showPlayLimitToast('Leśnica już atakowała dwa razy w tej turze.')
+        return
+      }
+      if (!isLesnica && card.hasAttackedThisTurn && !((card.metadata.freeAttacksLeft as number) > 0)) {
         ui.showPlayLimitToast('Ta istota już atakowała w tej turze.')
         return
       }
-      // Limit: tylko jeden atak na turę
-      const alreadyAttacked = game.state ? getAllCreaturesOnField(game.state, 'player1').some(c => c.hasAttackedThisTurn) : false
-      if (alreadyAttacked) {
-        ui.showPlayLimitToast('Możesz wykonać tylko jeden atak na turę.')
-        return
+      // Kikimora: jej atak NIE liczy się do limitu
+      const isKikimora = (card.cardData as any).effectId === 'kikimora_free_attack'
+      if (!isKikimora && !((card.metadata.freeAttacksLeft as number) > 0)) {
+        // Limit: atak na turę (z wyjątkami)
+        const p1Creatures = game.state ? getAllCreaturesOnField(game.state, 'player1') : []
+        const normalAttacksUsed = p1Creatures
+          .filter(c => (c.cardData as any).effectId !== 'kikimora_free_attack')
+          .filter(c => {
+            if ((c.cardData as any).effectId === 'lesnica_double_attack') {
+              return ((c.metadata.attacksThisTurn as number) ?? 0) >= 2
+            }
+            return c.hasAttackedThisTurn
+          }).length
+        const hasChlop = p1Creatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
+        const maxAttacks = hasChlop ? 2 : 1
+        if (normalAttacksUsed >= maxAttacks) {
+          ui.showPlayLimitToast(`Możesz wykonać tylko ${maxAttacks} atak${maxAttacks > 1 ? 'i' : ''} na turę.`)
+          return
+        }
       }
       ui.selectAttacker(card.instanceId)
       const targets = getValidTargets(card)

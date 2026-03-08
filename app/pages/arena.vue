@@ -27,6 +27,10 @@ function selectCard(entry: ArenaCardEntry) {
   searchOpen.value = false
 }
 
+function delayCloseSearch() {
+  setTimeout(() => { searchOpen.value = false }, 150)
+}
+
 function clearCard() {
   game.isArenaMode = false
   arena.isReady = false
@@ -50,7 +54,7 @@ function clearCard() {
       </div>
 
       <!-- Wyszukiwarka karty -->
-      <div class="arena-search" @focusout.capture="() => window.setTimeout(() => searchOpen = false, 150)">
+      <div class="arena-search" @focusout.capture="delayCloseSearch">
         <Icon icon="game-icons:magnifying-glass" class="search-icon" />
         <input
           v-model="searchQuery"

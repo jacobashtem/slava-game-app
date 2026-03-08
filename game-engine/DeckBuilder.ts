@@ -12,7 +12,7 @@ import { GOLD_EDITION_RULES } from './constants'
 export function shuffle<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    ;[arr[i], arr[j]] = [arr[j]!, arr[i]!]
   }
   return arr
 }
@@ -69,6 +69,8 @@ export const ALPHA_CREATURE_EFFECT_IDS = new Set([
   'jedza_remove_buff',
   'wolch_heal',
   'swietle_reveal_card',
+  'barstuk_ally_regen',
+  'lapiduch_demon_hunter',
   'siemiargl_cleanse',
   'zmije_glory_on_empty_field',
   'chlop_extra_attack',
@@ -184,6 +186,46 @@ export const ALPHA_ADVENTURE_EFFECT_IDS = new Set([
   // === Batch 9 ===
   'adventure_matecznik',
   'adventure_przyjazn',
+  // === Batch 10 — nowe przygody ===
+  'adventure_boskie_wsparcie',
+  'adventure_pioro_zarptaka',
+  'adventure_amulet_z_rozeta',
+  'adventure_paszcz_strzyboga',
+  'adventure_tarcza_dobryni_nikiticza',
+  'adventure_wyspa_bujan',
+  'adventure_tryzna',
+  'adventure_kuka_marzanny',
+  'adventure_zdrada_popiela',
+  'adventure_gwizd_soowieja',
+  'adventure_kataklizm',
+  'adventure_pakt_z_inkluzem',
+  'adventure_sza_bitewny',
+  'adventure_zertwa',
+  'adventure_nekromancja',
+  'adventure_bezsilnosc',
+  'adventure_handel',
+  'adventure_swacba',
+  'adventure_misjonarze',
+  'adventure_zacmienie_sonca',
+  // === Batch 11 — finalne przygody ===
+  'adventure_topor_peruna_amulet',
+  'adventure_srebrna_gaaz',
+  'adventure_zota_baba',
+  'adventure_przebudzenie_stolemow',
+  'adventure_braterstwo_bogatyrow',
+  'adventure_sledovik',
+  'adventure_ruslan_helmet',
+  'adventure_alatyr',
+  'adventure_aska_perena',
+  'adventure_aska_roda',
+  'adventure_aska_zorzy',
+  'adventure_aska_swarozyca',
+  'adventure_aska_morany',
+  'adventure_aska_swaroga',
+  'adventure_aska_swietowida',
+  'adventure_poswiecenie_wandy',
+  'adventure_aska_ady',
+  'adventure_gusa',
 ])
 
 /**
@@ -198,8 +240,11 @@ export function buildAlphaDeck(
   const creatureCount = Math.round(config.deckSize * config.creatureRatio)
   const adventureCount = config.deckSize - creatureCount
 
-  const alphaCreatures = factory.getAllCreatures()
+  const allAlphaCreatures = factory.getAllCreatures()
     .filter(c => ALPHA_CREATURE_EFFECT_IDS.has(c.effectId))
+  const alphaCreatures = config.domainFilter
+    ? allAlphaCreatures.filter(c => config.domainFilter!.includes(c.domain))
+    : allAlphaCreatures
   const alphaAdventures = factory.getAllAdventures()
     .filter(a => ALPHA_ADVENTURE_EFFECT_IDS.has(a.effectId))
 
@@ -210,13 +255,13 @@ export function buildAlphaDeck(
 
   for (let i = 0; i < creatureCount; i++) {
     if (shuffledCreatures.length === 0) break
-    const cardData = shuffledCreatures[i % shuffledCreatures.length]
+    const cardData = shuffledCreatures[i % shuffledCreatures.length]!
     deck.push(createCreatureInstance(cardData, owner))
   }
 
   for (let i = 0; i < adventureCount; i++) {
     if (shuffledAdventures.length === 0) break
-    const cardData = shuffledAdventures[i % shuffledAdventures.length]
+    const cardData = shuffledAdventures[i % shuffledAdventures.length]!
     deck.push(createAdventureInstance(cardData, owner))
   }
 
@@ -252,12 +297,12 @@ export function buildRandomDeck(
   const shuffledAdventures = shuffle([...availableAdventures])
 
   for (let i = 0; i < creatureCount; i++) {
-    const cardData = shuffledCreatures[i % shuffledCreatures.length]
+    const cardData = shuffledCreatures[i % shuffledCreatures.length]!
     deck.push(createCreatureInstance(cardData, owner))
   }
 
   for (let i = 0; i < adventureCount; i++) {
-    const cardData = shuffledAdventures[i % shuffledAdventures.length]
+    const cardData = shuffledAdventures[i % shuffledAdventures.length]!
     deck.push(createAdventureInstance(cardData, owner))
   }
 
@@ -300,7 +345,7 @@ export function discardFromHand(player: PlayerState, instanceId: string): CardIn
   const idx = player.hand.findIndex(c => c.instanceId === instanceId)
   if (idx === -1) return null
 
-  const [card] = player.hand.splice(idx, 1)
+  const card = player.hand.splice(idx, 1)[0]!
   card.line = null
   player.graveyard.push(card)
   return card

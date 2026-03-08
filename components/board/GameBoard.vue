@@ -23,6 +23,53 @@ const ui = useUIStore()
 const player = computed(() => game.state?.players.player1)
 const ai = computed(() => game.state?.players.player2)
 
+// ===== ACTIVE AURAS INFO BAR =====
+const passiveAuraMap: Record<string, { icon: string; label: string; desc: string }> = {
+  'matoha_anti_magic':       { icon: '🚫', label: 'Anty-Magia',   desc: 'Blokuje ataki typu Magia na sojuszników.' },
+  'chmurnik_ground_flying':  { icon: '⬇',  label: 'Uziemienie',   desc: 'Wrogie latające istoty tracą latanie.' },
+  'guslarka_bonus_vs_demon': { icon: '✝',  label: 'vs Demony',    desc: 'Sojusznicy +2 ATK vs demony.' },
+  'zerca_welesa_demon_buff': { icon: '🔥', label: 'Demoniczny',   desc: 'Sojusznicze demony +1 ATK.' },
+  'polewik_buff_neighbors':  { icon: '🌾', label: 'Wsparcie',     desc: 'Sąsiedzi w L1 +1 ATK.' },
+  'szeptunka_damage_reduction':{ icon: '🤫',label: 'Szept',       desc: 'Sojusznicy -1 obrażeń.' },
+  'chlop_extra_attack':      { icon: '⚔',  label: '+1 Atak',     desc: 'Sojusznicy +1 atak na turę.' },
+  'tesknica_block_enhance':  { icon: '🔒', label: 'Blokada',      desc: 'Blokuje ulepszanie przygód wroga.' },
+  'bieda_spy_block_draw':    { icon: '💀', label: 'Bieda',        desc: 'Właściciel nie dobiera kart.' },
+  'licho_block_draw':        { icon: '👁',  label: 'Licho',       desc: 'Wróg nie dobiera kart.' },
+  'bzionek_spell_intercept': { icon: '🛡',  label: 'Anty-Czar',   desc: 'Przechwytuje zaklęcia.' },
+  'czarownica_redirect_spell':{ icon: '🔄',label: 'Odwrót',       desc: 'Przekierowuje zaklęcia wroga.' },
+  'lapiduch_demon_hunter':   { icon: '⚔',  label: 'Łowca',       desc: 'Blokuje wystawianie demonów.' },
+  'zupan_no_field_limit':    { icon: '👑', label: 'Bez limitu',   desc: 'Znosi limit istot na polu.' },
+}
+
+interface ActiveAuraEntry {
+  icon: string
+  label: string
+  desc: string
+  cardName: string
+  side: 'player1' | 'player2'
+}
+
+const activeAuras = computed<ActiveAuraEntry[]>(() => {
+  if (!game.state) return []
+  const result: ActiveAuraEntry[] = []
+  for (const side of ['player1', 'player2'] as const) {
+    for (const line of Object.values(game.state.players[side].field.lines)) {
+      for (const card of line as any[]) {
+        if (card.isSilenced) continue
+        const effectId = card.cardData?.effectId
+        const aura = passiveAuraMap[effectId]
+        if (aura) {
+          result.push({ ...aura, cardName: card.cardData.name, side })
+        }
+      }
+    }
+  }
+  return result
+})
+
+// Active event cards (Zlot Czarownic, Twierdza, etc.)
+const activeEventCards = computed(() => game.state?.activeEvents ?? [])
+
 const onPlayDescription = computed(() => {
   const cardId = game.state?.awaitingOnPlayConfirmation
   if (!cardId || !game.state) return ''
@@ -108,6 +155,28 @@ const onPlayDescription = computed(() => {
     <!-- ===== WSKAZÓWKA KONTEKSTOWA ===== -->
     <GameHint />
 
+    <!-- ===== PASEK AKTYWNYCH AUR (nad ręką) ===== -->
+    <div v-if="activeAuras.length || activeEventCards.length" class="aura-bar">
+      <span
+        v-for="(a, i) in activeAuras"
+        :key="'aura-' + i"
+        class="aura-chip"
+        :class="a.side === 'player1' ? 'aura-ally' : 'aura-enemy'"
+        :title="`${a.cardName}: ${a.desc}`"
+      >
+        {{ a.icon }} {{ a.label }}
+      </span>
+      <span
+        v-for="ev in activeEventCards"
+        :key="'ev-' + ev.instanceId"
+        class="aura-chip aura-event"
+        :title="`${ev.cardData.name} (${ev.roundsRemaining != null ? ev.roundsRemaining + ' rund' : 'permanentna'})`"
+      >
+        📜 {{ ev.cardData.name }}
+        <span v-if="ev.roundsRemaining != null" class="aura-rounds">{{ ev.roundsRemaining }}</span>
+      </span>
+    </div>
+
     <!-- ===== RĘKA GRACZA (dolny pasek) ===== -->
     <PlayerHand />
 
@@ -156,7 +225,26 @@ const onPlayDescription = computed(() => {
             <strong>{{ ui.pendingActivation.cardName }}</strong>?
           </div>
           <div class="onplay-btns">
-            <button class="onplay-yes" @click="() => { const id = ui.pendingActivation!.cardInstanceId; ui.pendingActivation = null; game.activateCreatureEffect(id) }">TAK — Aktywuj</button>
+            <button class="onplay-yes" @click="() => {
+              const pa = ui.pendingActivation!
+              ui.pendingActivation = null
+              if (pa.requiresTarget && pa.availableTargetIds?.length) {
+                // Płatna + wymaga cel → pendingInteraction do wyboru celu
+                if (game.state) {
+                  const newState = JSON.parse(JSON.stringify(game.state))
+                  newState.pendingInteraction = {
+                    type: 'on_play_target',
+                    sourceInstanceId: pa.cardInstanceId,
+                    respondingPlayer: 'player1',
+                    availableTargetIds: pa.availableTargetIds,
+                    metadata: { isActivation: true, paidCost: pa.cost },
+                  }
+                  game.state = newState
+                }
+              } else {
+                game.activateCreatureEffect(pa.cardInstanceId)
+              }
+            }">TAK — Aktywuj</button>
             <button class="onplay-no" @click="ui.pendingActivation = null">NIE — Anuluj</button>
           </div>
         </div>
@@ -419,4 +507,56 @@ const onPlayDescription = computed(() => {
 
 .onplay-fade-enter-active, .onplay-fade-leave-active { transition: opacity 0.2s; }
 .onplay-fade-enter-from, .onplay-fade-leave-to { opacity: 0; }
+
+/* ===== AURA BAR ===== */
+.aura-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-top: 1px solid var(--border-default);
+  background: rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+  min-height: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.aura-bar::-webkit-scrollbar { display: none; }
+
+.aura-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  cursor: help;
+  flex-shrink: 0;
+}
+
+.aura-ally {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+}
+.aura-enemy {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+.aura-event {
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+}
+.aura-rounds {
+  font-size: 8px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0 3px;
+  border-radius: 3px;
+  margin-left: 2px;
+}
 </style>

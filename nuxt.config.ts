@@ -1,4 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+// @ts-expect-error -- nuxt.config runs in Node; @types/node not in devDeps
 import { fileURLToPath } from 'node:url'
 
 export default defineNuxtConfig({

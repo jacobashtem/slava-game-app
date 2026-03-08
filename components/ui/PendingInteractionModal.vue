@@ -53,6 +53,9 @@ const title = computed(() => {
   if (t === 'inkluz_recipient') return 'Inkluz — Komu dać premię?'
   if (t === 'wielkolud_counter') return 'Wielkolud — Kontratak'
   if (t === 'liczyrzepa_type') return 'Liczyrzepa — Typ ataku'
+  if (t === 'on_play_target') return `${(sourceCard.value?.cardData as any)?.name ?? 'Karta'} — Wybierz cel`
+  if (t === 'brzegina_shield') return 'Brzegina — Tarcza ochronna'
+  if (t === 'kosciej_resurrect') return 'Kościej — Wskrzeszenie'
   return 'Wybierz'
 })
 
@@ -67,9 +70,28 @@ const description = computed(() => {
   if (t === 'kresnik_buff') return 'Wybierz jedną premię dla Kresnika (trwałą na całą grę).'
   if (t === 'baba_domain') return 'Wybierz domenę chronioną — Baba zyska +4 ATK vs wszystkich POZOSTAŁYCH.'
   if (t === 'cmentarna_baba_resurrect') return 'Wybierz Nieumarłego z cmentarza do wskrzeszenia w Linii 1.'
-  if (t === 'inkluz_recipient') return 'Inkluz ukradł premię. Wybierz sojusznika który ją dostanie.'
+  if (t === 'inkluz_recipient') {
+    const stolenRaw = interaction.value?.metadata?.stolenEffect as string | undefined
+    let stolenName = 'premię'
+    if (stolenRaw) {
+      try { stolenName = `"${JSON.parse(stolenRaw).effectId}"` } catch {}
+    }
+    return `Inkluz ukradł ${stolenName}. Wybierz sojusznika który ją dostanie.`
+  }
   if (t === 'wielkolud_counter') return 'Wielkolud kontratakuje! Wybierz wroga w zasięgu.'
   if (t === 'liczyrzepa_type') return 'Wybierz typ ataku Liczyrepy przed uderzeniem.'
+  if (t === 'on_play_target') return `Wybierz cel efektu ${(sourceCard.value?.cardData as any)?.name ?? 'karty'}.`
+  if (t === 'brzegina_shield') {
+    const cost = (interaction.value?.metadata?.cost as number) ?? 1
+    const targetName = (() => {
+      const tId = interaction.value?.targetInstanceId
+      if (!tId) return 'sojusznika'
+      const tc = findCard(tId)
+      return (tc?.cardData as any)?.name ?? 'sojusznika'
+    })()
+    return `Brzegina może ochronić ${targetName} przed obrażeniami. Koszt: ${cost === 0 ? 'GRATIS (pierwsze użycie)' : `${cost} ZŁ`}.`
+  }
+  if (t === 'kosciej_resurrect') return 'Kościej zginął od Wręcz — jego serce wciąż bije! Wydaj 1 ZŁ, by wskrzesić go na L1.'
   return 'Wybierz opcję.'
 })
 
@@ -115,7 +137,7 @@ function pickTarget(choice: string) {
 
         <!-- Wybór z listy kart (alkonost, wielkolud, inkluz, cmentarna baba) -->
         <div
-          v-if="['alkonost_target', 'wielkolud_counter', 'inkluz_recipient', 'cmentarna_baba_resurrect'].includes(interaction?.type ?? '')"
+          v-if="['alkonost_target', 'wielkolud_counter', 'inkluz_recipient', 'cmentarna_baba_resurrect', 'on_play_target'].includes(interaction?.type ?? '')"
           class="pi-targets"
         >
           <button
@@ -160,6 +182,32 @@ function pickTarget(choice: string) {
           </button>
           <button class="pi-yn-no" @click="pickTarget('no')">
             <Icon icon="game-icons:cancel" /> Nie, pomiń
+          </button>
+        </div>
+
+        <!-- Brzegina: Tak / Nie z kosztami -->
+        <div
+          v-if="interaction?.type === 'brzegina_shield'"
+          class="pi-yn"
+        >
+          <button class="pi-yn-yes" @click="pickTarget('yes')">
+            <Icon icon="game-icons:shield" /> {{ (interaction?.metadata?.cost as number) === 0 ? 'Tak, osłoń (gratis)' : `Tak, osłoń (-${interaction?.metadata?.cost} ZŁ)` }}
+          </button>
+          <button class="pi-yn-no" @click="pickTarget('no')">
+            <Icon icon="game-icons:cancel" /> Nie, przepuść atak
+          </button>
+        </div>
+
+        <!-- Kościej: Wskrzeszenie za ZŁ -->
+        <div
+          v-if="interaction?.type === 'kosciej_resurrect'"
+          class="pi-yn"
+        >
+          <button class="pi-yn-yes" @click="pickTarget('yes')">
+            <Icon icon="game-icons:skull-crossed-bones" /> Wskrześ za 1 ZŁ
+          </button>
+          <button class="pi-yn-no" @click="pickTarget('no')">
+            <Icon icon="game-icons:cancel" /> Niech odejdzie
           </button>
         </div>
 

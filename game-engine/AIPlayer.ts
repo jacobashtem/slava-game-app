@@ -20,6 +20,7 @@ export interface AIDecision {
   targetInstanceId?: string
   targetLine?: BattleLine
   targetPosition?: CardPosition
+  useEnhanced?: boolean
 }
 
 // ===================================================================
@@ -139,7 +140,7 @@ export class AIPlayer {
         .sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))
 
       if (creaturesInHand.length > 0) {
-        const card = creaturesInHand[0]
+        const card = creaturesInHand[0]!
         const line = this.chooseLineStrategic(currentState, card)
         if (line !== null) {
           decisions.push({ type: 'play_creature', cardInstanceId: card.instanceId, targetLine: line })
@@ -148,6 +149,44 @@ export class AIPlayer {
             currentState = newState
           } catch {}
         }
+      }
+    }
+
+    // PLAY: zagraj kartę przygody (jeśli mamy)
+    const adventuresInHand = player.hand.filter(c => c.cardData.cardType === 'adventure')
+    if (adventuresInHand.length > 0) {
+      const myField = getAllCreaturesOnField(currentState, this.side)
+      const adventure = adventuresInHand[0]
+      if (!adventure) return decisions
+      const advData = adventure.cardData as any
+      // Enhanced: zagraj wzmocnioną wersję jeśli AI stać (1 ZŁ) i ma sens
+      const canEnhance = player.gold >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId
+      const useEnhanced = canEnhance && Math.random() > 0.4 // 60% szans na enhanced
+
+      if (advData.adventureType === 1 && myField.length > 0) {
+        // Artefakt — cel: najsilniejszy sojusznik (który jest na polu)
+        const strongest = myField.reduce((a, b) =>
+          (a.currentStats.attack + a.currentStats.defense) > (b.currentStats.attack + b.currentStats.defense) ? a : b
+        )
+        decisions.push({
+          type: 'play_adventure',
+          cardInstanceId: adventure.instanceId,
+          targetInstanceId: strongest.instanceId,
+          useEnhanced,
+        })
+      } else {
+        // Zdarzenie/Lokacja — bez celu, lub cel: najsilniejszy wróg (dla debuffów)
+        const enemySide = this.side === 'player1' ? 'player2' : 'player1'
+        const enemies = getAllCreaturesOnField(currentState, enemySide)
+        const targetId = enemies.length > 0
+          ? enemies.reduce((a, b) => (a.currentStats.attack + a.currentStats.defense) > (b.currentStats.attack + b.currentStats.defense) ? a : b).instanceId
+          : (myField.length > 0 ? myField.reduce((a, b) => (a.currentStats.attack + a.currentStats.defense) > (b.currentStats.attack + b.currentStats.defense) ? a : b).instanceId : undefined)
+        decisions.push({
+          type: 'play_adventure',
+          cardInstanceId: adventure.instanceId,
+          targetInstanceId: targetId,
+          useEnhanced,
+        })
       }
     }
 
@@ -225,5 +264,5 @@ export class AIPlayer {
 }
 
 function randomChoice<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
+  return arr[Math.floor(Math.random() * arr.length)]!
 }

@@ -38,6 +38,8 @@ export function processStartPhase(state: GameState): { newState: GameState; log:
       delete card.metadata.canReturnToDeck
       delete card.metadata.canDefendAfterAttack
       delete card.metadata.attacksThisTurn
+      delete card.metadata.justGrew
+      delete card.metadata.justResurrected
     }
   }
 
@@ -103,7 +105,7 @@ export function processDrawPhase(state: GameState): { newState: GameState; log: 
       .map(c => { c.isRevealed = false; c.currentStats = { ...(c.cardData as any).stats }; c.poisonRoundsLeft = null; c.isSilenced = false; c.activeEffects = []; c.hasAttackedThisTurn = false; return c })
     for (let i = reshuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [reshuffled[i], reshuffled[j]] = [reshuffled[j], reshuffled[i]]
+      [reshuffled[i], reshuffled[j]] = [reshuffled[j]!, reshuffled[i]!]
     }
     currentPlayer.deck.push(...reshuffled)
     currentPlayer.graveyard = currentPlayer.graveyard.filter(c => c.cardData.cardType !== 'creature')
@@ -160,7 +162,7 @@ export function playCreature(
   const handIdx = currentPlayer.hand.findIndex(c => c.instanceId === cardInstanceId)
   if (handIdx === -1) throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest w ręce.`)
 
-  const card = currentPlayer.hand[handIdx]
+  const card = currentPlayer.hand[handIdx]!
 
   if (card.cardData.cardType !== 'creature') {
     throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest istotą.`)
@@ -172,6 +174,15 @@ export function playCreature(
 
   if (!canPlaceInLine(newState, newState.currentTurn, targetLine)) {
     throw new Error(`[TurnManager] Linia ${targetLine} jest pełna.`)
+  }
+
+  // Łapiduch: gdy wróg ma Łapiducha na polu, nie można wystawiać demonów (Weles, idDomain=4)
+  const opponentSide: PlayerSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+  const opponentHasLapiduch = getAllCreaturesOnField(newState, opponentSide)
+    .some(c => (c.cardData as any).effectId === 'lapiduch_demon_hunter')
+  if (opponentHasLapiduch && (card.cardData as any).idDomain === 4) {
+    addLog(newState, `Łapiduch wroga blokuje wystawienie ${card.cardData.name} — demony nie mogą wejść na pole!`, 'effect')
+    throw new Error(`[TurnManager] Łapiduch wroga blokuje wystawianie demonów (Weles).`)
   }
 
   placeCreatureOnField(newState, card, targetLine, newState.roundNumber)
@@ -186,9 +197,33 @@ export function playCreature(
       if (effect.activatable) {
         // Activatable ON_PLAY — czekamy na potwierdzenie gracza (gratis przy wystawieniu)
         newState.awaitingOnPlayConfirmation = card.instanceId
+      } else if (effect.activationRequiresTarget && !card.owner.startsWith('player2')) {
+        // ON_PLAY z wymaganym celem (np. Jaroszek) — pokaż modal wyboru celu
+        const enemySide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+        const enemies = getAllCreaturesOnField(newState, enemySide)
+          .filter(c => c.currentStats.defense > 0)
+        if (enemies.length > 0) {
+          newState.pendingInteraction = {
+            type: 'on_play_target',
+            sourceInstanceId: card.instanceId,
+            respondingPlayer: newState.currentTurn,
+            availableTargetIds: enemies.map(c => c.instanceId),
+          }
+          log.push(addLog(newState, `${card.cardData.name}: Wybierz cel efektu!`, 'effect'))
+        }
       } else {
+        // ON_PLAY z wymaganym celem dla AI — auto-wybór najsilniejszego wroga
+        let target: any = undefined
+        if (effect.activationRequiresTarget) {
+          const enemySide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+          const enemies = getAllCreaturesOnField(newState, enemySide)
+            .filter(c => c.currentStats.defense > 0)
+          if (enemies.length > 0) {
+            target = enemies.reduce((a, b) => a.currentStats.attack > b.currentStats.attack ? a : b)
+          }
+        }
         try {
-          const effectResult = effect.execute({ state: newState, source: card, trigger: EffectTrigger.ON_PLAY })
+          const effectResult = effect.execute({ state: newState, source: card, trigger: EffectTrigger.ON_PLAY, target })
           newState = effectResult.newState
           log.push(...effectResult.log)
         } catch (err) {
@@ -218,7 +253,7 @@ export function playAdventure(
   const handIdx = currentPlayer.hand.findIndex(c => c.instanceId === cardInstanceId)
   if (handIdx === -1) throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest w ręce.`)
 
-  const card = currentPlayer.hand[handIdx]
+  const card = currentPlayer.hand[handIdx]!
 
   if (card.cardData.cardType !== 'adventure') {
     throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest przygodą.`)
@@ -233,17 +268,13 @@ export function playAdventure(
     const hasTesknica = getAllCreaturesForPlayer(newState, opponentSide)
       .some(c => (c.cardData as any).effectId === 'tesknica_block_enhance')
     if (hasTesknica) {
+      addLog(newState, `Tęsknica wroga blokuje ulepszenie zaklęcia!`, 'effect')
       throw new Error(`[TurnManager] Tęsknica blokuje ulepszanie zaklęć!`)
     }
   }
 
   if (adventureCost > 0 && currentPlayer.gold < adventureCost) {
     throw new Error(`[TurnManager] Brak Złocisza. Potrzebujesz ${adventureCost} ZŁ na ulepszony efekt.`)
-  }
-
-  // Sprawdź limit przygód na turę
-  if (currentPlayer.adventuresPlayedThisTurn >= GOLD_EDITION_RULES.PLAY_LIMIT_ADVENTURES) {
-    throw new Error(`[TurnManager] Możesz zagrać tylko ${GOLD_EDITION_RULES.PLAY_LIMIT_ADVENTURES} przygodę na turę.`)
   }
 
   currentPlayer.gold -= adventureCost
@@ -291,7 +322,7 @@ export function playAdventure(
         const casterSide = newState.currentTurn as PlayerSide
         const casterCreatures = getAllCreaturesForPlayer(newState, casterSide)
         if (casterCreatures.length > 0) {
-          const newTarget = casterCreatures[Math.floor(Math.random() * casterCreatures.length)]
+          const newTarget = casterCreatures[Math.floor(Math.random() * casterCreatures.length)]!
           log.push(addLog(newState,
             `Czarownica przekierowuje zaklęcie z ${targetCard.cardData.name} na ${newTarget.cardData.name}!`,
             'effect'
@@ -352,6 +383,10 @@ export function playAdventure(
     const targetOnField = findCardOnField(newState, targetInstanceId!)
     if (targetOnField) {
       targetOnField.equippedArtifacts.push(adventureData)
+    } else {
+      // Cel zniknął z pola — artefakt trafia na cmentarz (nie ginie w próżnię)
+      currentPlayer.graveyard.push(card)
+      log.push(addLog(newState, `${card.cardData.name}: Cel artefaktu zniknął z pola — karta odrzucona.`, 'effect'))
     }
   } else if (adventureType === 2) {
     // Lokacja: staje się activeLocation gracza
@@ -518,7 +553,7 @@ export function performAttack(
   state: GameState,
   attackerInstanceId: string,
   defenderInstanceId: string,
-  options?: { skipChowaniecCheck?: boolean }
+  options?: { skipChowaniecCheck?: boolean; skipBrzeginaCheck?: boolean; forceBrzeginaSkip?: boolean }
 ): { newState: GameState; log: LogEntry[] } {
   if (state.currentPhase !== GamePhase.COMBAT) {
     throw new Error(`[TurnManager] Nie jesteś w fazie COMBAT (jesteś w ${state.currentPhase}).`)
@@ -528,7 +563,7 @@ export function performAttack(
   if (!options?.skipChowaniecCheck) {
     const defCard = (() => {
       for (const side of ['player1', 'player2'] as const) {
-        for (const line of [0, 1, 2] as const) {
+        for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
           const found = state.players[side].field.lines[line].find(c => c.instanceId === defenderInstanceId)
           if (found) return found
         }
@@ -560,7 +595,66 @@ export function performAttack(
     }
   }
 
-  const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId)
+  // Brzegina: pytanie gracza czy użyć tarczy za ZŁ (AI auto-używa)
+  if (!options?.skipBrzeginaCheck && !options?.forceBrzeginaSkip) {
+    const defCard = (() => {
+      for (const side of ['player1', 'player2'] as const) {
+        for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+          const found = state.players[side].field.lines[line].find(c => c.instanceId === defenderInstanceId)
+          if (found) return found
+        }
+      }
+      return null
+    })()
+
+    if (defCard && !state.players[defCard.owner as 'player1' | 'player2'].isAI) {
+      const defOwner = defCard.owner as 'player1' | 'player2'
+      const brzegina = getAllCreaturesOnField(state, defOwner).find(c =>
+        (c.cardData as any).effectId === 'brzegina_shield_for_gold' &&
+        !c.isSilenced &&
+        c.currentStats.defense > 0
+      )
+      if (brzegina) {
+        const effect = getEffect('brzegina_shield_for_gold')
+        if (effect?.canActivate?.({ state, source: brzegina, target: defCard, trigger: EffectTrigger.ON_DAMAGE_RECEIVED })) {
+          const firstUseFree = !(brzegina.metadata.brzeginaUsedFree as boolean)
+          const pendingState = cloneGameState(state)
+          pendingState.pendingInteraction = {
+            type: 'brzegina_shield',
+            sourceInstanceId: brzegina.instanceId,
+            respondingPlayer: defOwner,
+            attackerInstanceId,
+            targetInstanceId: defenderInstanceId,
+            metadata: { cost: firstUseFree ? 0 : 1 },
+          }
+          const costLabel = firstUseFree ? 'GRATIS' : '1 ZŁ'
+          addLog(pendingState, `${brzegina.cardData.name}: Może ochronić ${defCard.cardData.name}! (${costLabel})`, 'effect')
+          return { newState: pendingState, log: [] }
+        }
+      }
+    }
+  }
+
+  const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId, { forceBrzeginaSkip: options?.forceBrzeginaSkip })
+
+  // Kościej: po walce sprawdź czy w cmentarzu gracza jest Kościej z flagą kosciejCanPaidResurrect
+  for (const side of ['player1', 'player2'] as const) {
+    if (newState.players[side].isAI) continue  // AI auto-decyduje (nie wskrzesza za ZŁ)
+    const grave = newState.players[side].graveyard
+    const kosciej = grave.find(c => c.metadata.kosciejCanPaidResurrect)
+    if (kosciej && newState.players[side].gold >= 1) {
+      delete kosciej.metadata.kosciejCanPaidResurrect
+      newState.pendingInteraction = {
+        type: 'kosciej_resurrect',
+        sourceInstanceId: kosciej.instanceId,
+        respondingPlayer: side,
+        metadata: { cost: 1 },
+      }
+      addLog(newState, `${kosciej.cardData.name}: Serce wciąż bije! Wskrzesić za 1 ZŁ?`, 'effect')
+      return { newState, log: result.log }
+    }
+  }
+
   return { newState, log: result.log }
 }
 
@@ -608,7 +702,7 @@ export function moveCreatureLine(
   for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
     const idx = currentPlayer.field.lines[line].findIndex(c => c.instanceId === cardInstanceId)
     if (idx !== -1) {
-      foundCard = currentPlayer.field.lines[line][idx]
+      foundCard = currentPlayer.field.lines[line][idx]!
       foundLine = line
       break
     }
@@ -680,7 +774,7 @@ export function advancePhase(state: GameState): { newState: GameState; log: LogE
 
   const phases = [GamePhase.START, GamePhase.DRAW, GamePhase.PLAY, GamePhase.COMBAT, GamePhase.END]
   const currentIdx = phases.indexOf(newState.currentPhase)
-  const nextPhase = phases[(currentIdx + 1) % phases.length]
+  const nextPhase = phases[(currentIdx + 1) % phases.length]!
 
   newState.currentPhase = nextPhase
   log.push(addLog(newState, `Faza: ${nextPhase}`, 'system'))
@@ -695,13 +789,18 @@ export function advancePhase(state: GameState): { newState: GameState; log: LogE
 function processTurnStartEffects(state: GameState, log: LogEntry[]): GameState {
   let newState = cloneGameState(state)
 
-  // Wyczyść tymczasowe paraliże (Północnica) dla obu stron
-  for (const side of ['player1', 'player2'] as PlayerSide[]) {
-    for (const card of getAllCreaturesForPlayer(newState, side)) {
-      if ((card.metadata.temporaryParalyzeRound as number) !== undefined
-          && (card.metadata.temporaryParalyzeRound as number) < newState.roundNumber) {
-        delete card.metadata.cannotAttack
-        delete card.metadata.temporaryParalyzeRound
+  // Tick paraliżu: odliczaj co rundę (player1 start = nowa runda)
+  if (newState.currentTurn === 'player1') {
+    for (const side of ['player1', 'player2'] as PlayerSide[]) {
+      for (const card of getAllCreaturesForPlayer(newState, side)) {
+        if (card.paralyzeRoundsLeft !== null && card.paralyzeRoundsLeft > 0) {
+          card.paralyzeRoundsLeft -= 1
+          if (card.paralyzeRoundsLeft <= 0) {
+            card.paralyzeRoundsLeft = null
+            card.cannotAttack = false
+            log.push(addLog(newState, `${card.cardData.name}: Paraliż mija!`, 'effect'))
+          }
+        }
       }
     }
   }
@@ -844,6 +943,7 @@ function processActiveEvents(state: GameState, log: LogEntry[]): GameState {
       hasAttackedThisTurn: false,
       hasMovedThisTurn: false,
       poisonRoundsLeft: null,
+      paralyzeRoundsLeft: null,
       metadata: {},
     })
     log.push(addLog(newState, `${expired.cardData.name} wygasa i trafia na cmentarz — zdarzenie dobiegło końca (czas trwania wyczerpany).`, 'effect'))

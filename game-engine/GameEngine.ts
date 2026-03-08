@@ -9,7 +9,7 @@ import { GamePhase, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
 import { createInitialGameState, cloneGameState, addLog } from './GameStateUtils'
 import { CardFactory } from './CardFactory'
-import { buildRandomDeck, drawCards } from './DeckBuilder'
+import { buildRandomDeck, drawCards, GOLD_EDITION_DECK_CONFIG } from './DeckBuilder'
 import { checkWinCondition, getAllCreaturesOnField, canAttack } from './LineManager'
 import {
   processStartPhase,
@@ -46,11 +46,14 @@ export class GameEngine {
 
   // ===== SETUP =====
 
-  startAlphaGame(): GameState {
+  startAlphaGame(playerDomainFilter?: number[]): GameState {
     this.arenaMode = false
     this.state = createInitialGameState('gold')
 
-    const deck1 = buildAlphaDeck(this.factory, 'player1')
+    const playerConfig = playerDomainFilter
+      ? { ...GOLD_EDITION_DECK_CONFIG, domainFilter: playerDomainFilter }
+      : undefined
+    const deck1 = buildAlphaDeck(this.factory, 'player1', playerConfig)
     const deck2 = buildAlphaDeck(this.factory, 'player2')
 
     this.state.players.player1.deck = deck1
@@ -72,12 +75,15 @@ export class GameEngine {
     return cloneGameState(this.state)
   }
 
-  startGame(gameMode: 'gold' | 'slava' = 'gold'): GameState {
+  startGame(gameMode: 'gold' | 'slava' = 'gold', playerDomainFilter?: number[]): GameState {
     this.arenaMode = false
     this.state = createInitialGameState(gameMode)
 
     // Zbuduj talie
-    const deck1 = buildRandomDeck(this.factory, 'player1')
+    const playerConfig = playerDomainFilter
+      ? { ...GOLD_EDITION_DECK_CONFIG, domainFilter: playerDomainFilter }
+      : undefined
+    const deck1 = buildRandomDeck(this.factory, 'player1', playerConfig)
     const deck2 = buildRandomDeck(this.factory, 'player2')
 
     this.state.players.player1.deck = deck1
@@ -306,7 +312,9 @@ export class GameEngine {
    */
   playerDrawCard(): GameState {
     this.assertPlayerTurn()
-    this.assertPhase(GamePhase.PLAY)
+    if (this.state.currentPhase !== GamePhase.PLAY && this.state.currentPhase !== GamePhase.COMBAT) {
+      throw new Error('Możesz dobierać karty tylko w fazie wystawiania lub walki.')
+    }
     const { newState, log } = drawCardManually(this.state)
     this.applyStateAndLog(newState, log)
     return cloneGameState(this.state)
@@ -549,7 +557,7 @@ export class GameEngine {
       const owner = newState.players[ownerSide]
       const gravIdx = owner.graveyard.findIndex(c => c.instanceId === choice)
       if (gravIdx !== -1) {
-        const toResurrect = owner.graveyard.splice(gravIdx, 1)[0]
+        const toResurrect = owner.graveyard.splice(gravIdx, 1)[0]!
         toResurrect.currentStats.defense = (toResurrect.cardData as any).stats.defense
         toResurrect.line = BattleLine.FRONT
         toResurrect.turnsInPlay = 0
@@ -581,7 +589,7 @@ export class GameEngine {
             for (const dc of dead) {
               newState.players[side].field.lines[line] = newState.players[side].field.lines[line].filter(c => c.instanceId !== dc.instanceId)
               newState.players[side].graveyard.push(dc)
-              addLog(newState, `${dc.cardData.name} ginie od kontrataku Wielkoluda!`, 'combat')
+              addLog(newState, `${dc.cardData.name} ginie od kontrataku Wielkoluda!`, 'death')
             }
           }
         }
@@ -640,6 +648,50 @@ export class GameEngine {
       return cloneGameState(this.state)
     }
 
+    // ON_PLAY / ON_ACTIVATE z wymaganym celem (np. Jaroszek, Jędza)
+    if (interaction.type === 'on_play_target') {
+      const sourceCard = this.findCardInState(newState, interaction.sourceInstanceId)
+      const targetCard = this.findCardInState(newState, choice)
+      const isActivation = !!(interaction.metadata?.isActivation)
+      const paidCost = interaction.metadata?.paidCost as number | undefined
+      if (sourceCard && targetCard) {
+        // Odlicz koszt aktywacji (płatna + target)
+        if (isActivation && paidCost && paidCost > 0) {
+          const owner = newState.players[interaction.respondingPlayer]
+          if (owner.gold < paidCost) {
+            throw new Error('Za mało złota na aktywację zdolności.')
+          }
+          owner.gold -= paidCost
+        }
+        const effect = getEffect((sourceCard.cardData as any).effectId)
+        if (effect) {
+          const trigger = isActivation ? EffectTrigger.ON_ACTIVATE : EffectTrigger.ON_PLAY
+          const result = effect.execute({
+            state: newState,
+            source: sourceCard,
+            trigger,
+            target: targetCard,
+          })
+          // Zaktualizuj cooldown metadane dla aktywacji
+          if (isActivation && effect.activatable) {
+            const cardAfter = this.findCardInState(result.newState, interaction.sourceInstanceId)
+            if (cardAfter) {
+              const cooldown = effect.activationCooldown ?? 'unlimited'
+              if (cooldown === 'per_round') cardAfter.metadata.lastActivatedRound = result.newState.roundNumber
+              if (cooldown === 'per_turn') cardAfter.metadata.lastActivatedTurn = result.newState.turnNumber
+              cardAfter.metadata.activationCount = ((cardAfter.metadata.activationCount as number) ?? 0) + 1
+            }
+          }
+          this.applyStateAndLog(result.newState, result.log)
+        } else {
+          this.applyStateAndLog(newState, [])
+        }
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      return cloneGameState(this.state)
+    }
+
     // Strela: przerwanie AI zagrania karty
     if (interaction.type === 'strela_intercept') {
       const strelaId = interaction.sourceInstanceId
@@ -676,6 +728,55 @@ export class GameEngine {
           return this.aiPlayAdventure(meta.aiCardInstanceId as string, meta.aiTargetInstanceId as string | undefined, !!meta.aiUseEnhanced, true)
         }
       }
+    }
+
+    // Brzegina: gracz decyduje czy użyć tarczy
+    if (interaction.type === 'brzegina_shield') {
+      const attackerId = interaction.attackerInstanceId!
+      const targetId = interaction.targetInstanceId!
+
+      if (choice === 'yes') {
+        // Użyj tarczy — walka z ochroną Brzeginy (auto-fire)
+        const { newState: afterAtk, log: atkLog } = performAttack(newState, attackerId, targetId, { skipChowaniecCheck: true, skipBrzeginaCheck: true })
+        this.applyStateAndLog(afterAtk, atkLog)
+      } else {
+        // Odrzuć tarczę — walka bez Brzeginy
+        const { newState: afterAtk, log: atkLog } = performAttack(newState, attackerId, targetId, { skipChowaniecCheck: true, skipBrzeginaCheck: true, forceBrzeginaSkip: true })
+        this.applyStateAndLog(afterAtk, atkLog)
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Kościej: gracz decyduje czy wskrzesić za ZŁ
+    if (interaction.type === 'kosciej_resurrect') {
+      if (choice === 'yes') {
+        const side = interaction.respondingPlayer
+        const owner = newState.players[side]
+        const gravIdx = owner.graveyard.findIndex(c => c.instanceId === interaction.sourceInstanceId)
+        if (gravIdx !== -1 && owner.gold >= 1) {
+          owner.gold -= 1
+          const kosciej = owner.graveyard.splice(gravIdx, 1)[0]!
+          kosciej.currentStats.defense = (kosciej.cardData as any).stats.defense
+          kosciej.line = BattleLine.FRONT
+          kosciej.metadata.justResurrected = true
+          owner.field.lines[BattleLine.FRONT].push(kosciej)
+          // Usuń z trofeów wroga
+          const enemySide = side === 'player1' ? 'player2' : 'player1'
+          const trophyIdx = newState.players[enemySide].trophies.findIndex(c => c.instanceId === interaction.sourceInstanceId)
+          if (trophyIdx !== -1) newState.players[enemySide].trophies.splice(trophyIdx, 1)
+          const log = addLog(newState, `${kosciej.cardData.name}: Wskrzeszony za 1 ZŁ! Wraca na L1!`, 'effect')
+          this.applyStateAndLog(newState, [log])
+        } else {
+          addLog(newState, `${interaction.sourceInstanceId}: Nie można wskrzesić — brak ZŁ lub karty!`, 'system')
+          this.applyStateAndLog(newState, [])
+        }
+      } else {
+        addLog(newState, `Kościej: Gracz rezygnuje z wskrzeszenia.`, 'effect')
+        this.applyStateAndLog(newState, [])
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
     }
 
     // Pozostałe typy — fallback

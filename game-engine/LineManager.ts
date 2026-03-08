@@ -207,6 +207,12 @@ export function canAttack(
     }
   }
 
+  // Łapiduch (#27): może atakować TYLKO demony (Weles, idDomain=4)
+  const attackerEffectId = (attacker.cardData as any).effectId
+  if (attackerEffectId === 'lapiduch_demon_hunter' && (target.cardData as any).idDomain !== 4) {
+    return { valid: false, reason: `${attacker.cardData.name}: Łapiduch może atakować jedynie demony (Weles).` }
+  }
+
   // Tur (#55): odporny na Dystans i Magię
   if (targetEffectId === 'tur_ranged_magic_immune'
       && (attackType === AttackType.RANGED || attackType === AttackType.MAGIC)) {
@@ -351,7 +357,7 @@ export function removeFromField(state: GameState, instanceId: string): CardInsta
     for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
       const idx = player.field.lines[line].findIndex(c => c.instanceId === instanceId)
       if (idx !== -1) {
-        const [card] = player.field.lines[line].splice(idx, 1)
+        const card = player.field.lines[line].splice(idx, 1)[0]!
         card.line = null
         return card
       }

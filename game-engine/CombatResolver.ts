@@ -17,7 +17,8 @@ import { getEffect } from './EffectRegistry'
 export function resolveAttack(
   state: GameState,
   attackerInstanceId: string,
-  defenderInstanceId: string
+  defenderInstanceId: string,
+  options?: { forceBrzeginaSkip?: boolean }
 ): { newState: GameState; result: CombatResult } {
   let newState = cloneGameState(state)
 
@@ -56,7 +57,7 @@ export function resolveAttack(
       const allies = getAllCreaturesForPlayer(newState, defOwner)
         .filter(c => c.instanceId !== defenderInstanceId && c.currentStats.defense > 0)
       if (allies.length > 0) {
-        const interceptor = allies[Math.floor(Math.random() * allies.length)]
+        const interceptor = allies[Math.floor(Math.random() * allies.length)]!
         log.push(addLog(newState,
           `Sztandar+: ${interceptor.cardData.name} staje w obronie ${potentialDefender.cardData.name}!`,
           'effect'
@@ -72,14 +73,30 @@ export function resolveAttack(
   log.push(...preAttackResult.log)
 
   // Pobierz referencje po klonowaniu
-  let currentAttacker = findCardOnField(newState, attackerInstanceId)!
-  let currentDefender = findCardOnField(newState, defenderInstanceId)!
+  let currentAttacker = findCardOnField(newState, attackerInstanceId)
+  let currentDefender = findCardOnField(newState, defenderInstanceId)
+
+  // Guard: karty mogły zniknąć z pola po efekcie ON_ATTACK
+  if (!currentAttacker || !currentDefender) {
+    return {
+      newState,
+      result: {
+        attacker: currentAttacker ?? attacker,
+        defender: currentDefender ?? defender,
+        damageToDefender: 0, damageToAttacker: 0,
+        defenderDied: false, attackerDied: false,
+        counterattackOccurred: false, effectsTriggered, log,
+      },
+    }
+  }
 
   // 3. Oblicz obrażenia atakującego
-  let damageToDefender = calculateDamage(newState, currentAttacker, currentDefender)
+  const damageCalc = calculateDamage(newState, currentAttacker, currentDefender)
+  let damageToDefender = damageCalc.damage
+  log.push(...damageCalc.bonusLog)
 
   // 4. Sprawdź prewencję obrażeń (np. Brzegina)
-  const preventionResult = checkDamagePrevention(newState, currentAttacker, currentDefender, damageToDefender)
+  const preventionResult = checkDamagePrevention(newState, currentAttacker, currentDefender, damageToDefender, options?.forceBrzeginaSkip)
   if (preventionResult.prevented) {
     newState = preventionResult.newState
     log.push(...preventionResult.log)
@@ -124,8 +141,28 @@ export function resolveAttack(
   newState = attackEffectResult.newState
   log.push(...attackEffectResult.log)
 
-  currentAttacker = findCardOnField(newState, attackerInstanceId)!
-  currentDefender = findCardOnField(newState, defenderInstanceId)!
+  currentAttacker = findCardOnField(newState, attackerInstanceId)
+  currentDefender = findCardOnField(newState, defenderInstanceId)
+
+  // Guard: karty mogły zniknąć z pola po efektach ON_DAMAGE (np. Wisielec bounce)
+  if (!currentAttacker || !currentDefender) {
+    if (currentAttacker) {
+      currentAttacker.hasAttackedThisTurn = true
+      if ((currentAttacker.cardData as any).effectId === 'lesnica_double_attack') {
+        currentAttacker.metadata.attacksThisTurn = ((currentAttacker.metadata.attacksThisTurn as number) ?? 0) + 1
+      }
+    }
+    return {
+      newState,
+      result: {
+        attacker: currentAttacker ?? attacker,
+        defender: currentDefender ?? defender,
+        damageToDefender, damageToAttacker: 0,
+        defenderDied: !currentDefender, attackerDied: !currentAttacker,
+        counterattackOccurred: false, effectsTriggered, log,
+      },
+    }
+  }
 
   // Rumak (#46): jeździec z rumakiem rani całą linię wrogów
   if (currentAttacker && currentAttacker.metadata.rumakActive && !currentAttacker.isSilenced && damageToDefender > 0) {
@@ -152,8 +189,25 @@ export function resolveAttack(
           }
         }
       }
-      currentAttacker = findCardOnField(newState, attackerInstanceId)!
-      currentDefender = findCardOnField(newState, defenderInstanceId)!
+      currentAttacker = findCardOnField(newState, attackerInstanceId)
+      currentDefender = findCardOnField(newState, defenderInstanceId)
+    }
+  }
+
+  // Guard: karty mogły zniknąć po cleave Rumaka
+  if (!currentAttacker || !currentDefender) {
+    if (currentAttacker) {
+      currentAttacker.hasAttackedThisTurn = true
+    }
+    return {
+      newState,
+      result: {
+        attacker: currentAttacker ?? attacker,
+        defender: currentDefender ?? defender,
+        damageToDefender, damageToAttacker: 0,
+        defenderDied: !currentDefender, attackerDied: !currentAttacker,
+        counterattackOccurred: false, effectsTriggered, log,
+      },
     }
   }
 
@@ -167,8 +221,8 @@ export function resolveAttack(
       log.push(...allyResult.log)
     }
     // Odśwież referencje po ewentualnych zmianach
-    currentAttacker = findCardOnField(newState, attackerInstanceId)!
-    currentDefender = findCardOnField(newState, defenderInstanceId)!
+    currentAttacker = findCardOnField(newState, attackerInstanceId)
+    currentDefender = findCardOnField(newState, defenderInstanceId)
   }
 
   // 7. KONTRATAK
@@ -198,8 +252,11 @@ export function resolveAttack(
     }
   }
 
-  const canCounter = shouldCounterattack(newState, currentAttacker, currentDefender)
-  if (canCounter) {
+  const counterCheck = shouldCounterattack(newState, currentAttacker, currentDefender)
+  if (counterCheck.reason) {
+    log.push(addLog(newState, counterCheck.reason, 'effect'))
+  }
+  if (counterCheck.canCounter) {
     // Kontratak używa DEF sprzed ciosu (walka jednoczesna — tarcza zachowuje pełną moc)
     damageToAttacker = Math.max(0, defenderDefBeforeHit)
 
@@ -230,8 +287,8 @@ export function resolveAttack(
     }
   }
 
-  currentAttacker = findCardOnField(newState, attackerInstanceId)!
-  currentDefender = findCardOnField(newState, defenderInstanceId)!
+  currentAttacker = findCardOnField(newState, attackerInstanceId)
+  currentDefender = findCardOnField(newState, defenderInstanceId)
 
   // Oznacz że atakujący już atakował
   if (currentAttacker) {
@@ -252,7 +309,9 @@ export function resolveAttack(
   let defenderDied = false
   if (currentDefender && currentDefender.currentStats.defense <= 0) {
     defenderDied = true
-    log.push(addLog(newState, `${currentAttacker.cardData.name} zabija ${currentDefender.cardData.name}! (ATK ${currentAttacker.currentStats.attack} vs DEF ${currentDefender.currentStats.defense})`, 'death', [defenderInstanceId]))
+    const attackerName = currentAttacker?.cardData.name ?? attacker.cardData.name
+    const attackerAtk = currentAttacker?.currentStats.attack ?? attacker.currentStats.attack
+    log.push(addLog(newState, `${attackerName} zabija ${currentDefender.cardData.name}! (ATK ${attackerAtk} vs DEF ${currentDefender.currentStats.defense})`, 'death', [defenderInstanceId]))
 
     // Zapamiętaj zabójcę (dla Latawca i Homena)
     currentDefender.metadata.killedBy = attackerInstanceId
@@ -263,7 +322,9 @@ export function resolveAttack(
       const homenData = currentDefender.metadata.homenCardData as any
       if (homenData && newOwner) {
         currentDefender.owner = newOwner as 'player1' | 'player2'
-        currentDefender.currentStats = { attack: homenData.stats?.attack ?? 1, defense: homenData.stats?.defense ?? 1 }
+        const hAtk = homenData.stats?.attack ?? 1
+        const hDef = homenData.stats?.defense ?? 1
+        currentDefender.currentStats = { attack: hAtk, defense: hDef, maxAttack: hAtk, maxDefense: hDef }
         currentDefender.position = CardPosition.ATTACK
         currentDefender.metadata = {}
         delete currentDefender.metadata.homenCurseOwner
@@ -278,7 +339,7 @@ export function resolveAttack(
     log.push(...deathResult.log)
 
     // Trigger ON_KILL atakującego (np. Dziki Myśliwy, Czarnoksiężnik)
-    currentAttacker = findCardOnField(newState, attackerInstanceId)!
+    currentAttacker = findCardOnField(newState, attackerInstanceId)
     if (currentAttacker) {
       const killResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_KILL, currentDefender)
       newState = killResult.newState
@@ -286,7 +347,7 @@ export function resolveAttack(
     }
 
     // Sprawdź efekt Moc Światogora: karta ginie po zabiciu
-    currentAttacker = findCardOnField(newState, attackerInstanceId)!
+    currentAttacker = findCardOnField(newState, attackerInstanceId)
     if (currentAttacker?.metadata?.diesOnKill) {
       currentAttacker.currentStats.defense = 0
       log.push(addLog(newState, `${currentAttacker.cardData.name} ginie zgodnie z efektem Mocy Światogora!`, 'death'))
@@ -415,7 +476,7 @@ export function resolveAttack(
     const otherEnemies = getAllCreaturesForPlayer(newState, enemySide)
       .filter(c => c.instanceId !== defenderInstanceId && c.currentStats.defense > 0)
     if (otherEnemies.length > 0) {
-      const secondTarget = otherEnemies[Math.floor(Math.random() * otherEnemies.length)]
+      const secondTarget = otherEnemies[Math.floor(Math.random() * otherEnemies.length)]!
       const miecz2Dmg = currentAttacker.currentStats.attack
       secondTarget.currentStats.defense -= miecz2Dmg
       log.push(addLog(newState,
@@ -509,8 +570,9 @@ export function resolveAttack(
 // POMOCNICZE
 // ===================================================================
 
-function calculateDamage(state: GameState, attacker: CardInstance, defender: CardInstance): number {
+function calculateDamage(state: GameState, attacker: CardInstance, defender: CardInstance): { damage: number; bonusLog: LogEntry[] } {
   let damage = attacker.currentStats.attack
+  const bonusLog: LogEntry[] = []
 
   // Modyfikator z efektów (np. Gryf x2, Topór Peruna x4)
   const multiplier = (attacker.metadata.damageMultiplier as number) ?? 1
@@ -525,6 +587,7 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
     .some(c => (c.cardData as any).effectId === 'guslarka_bonus_vs_demon' && c.instanceId !== attacker.instanceId)
   if (hasGuslarka && (defender.cardData as any).idDomain === 4) {
     damage += 2
+    bonusLog.push(addLog(state, `Guślarka: +2 ATK dla ${attacker.cardData.name} vs demon!`, 'effect'))
   }
 
   // Żerca Welesa: sojusznicze demony (Weles, idDomain=4) zyskują +1 ATK
@@ -532,6 +595,7 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
     .some(c => (c.cardData as any).effectId === 'zerca_welesa_demon_buff' && c.instanceId !== attacker.instanceId)
   if (hasZercaWelesa && (attacker.cardData as any).idDomain === 4) {
     damage += 1
+    bonusLog.push(addLog(state, `Żerca Welesa: +1 ATK dla demona ${attacker.cardData.name}.`, 'effect'))
   }
 
   // Polewik: L1 Żywi sąsiedzi +1 ATK
@@ -541,6 +605,7 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
           && c.instanceId !== attacker.instanceId)
   if (hasPolewik && (attacker.cardData as any).idDomain === 2 && attacker.line === BattleLine.FRONT) {
     damage += 1
+    bonusLog.push(addLog(state, `Polewik: +1 ATK dla ${attacker.cardData.name} (sąsiad w L1).`, 'effect'))
   }
 
   // Baba (#31): +4 ATK vs wszystkich poza wybraną domeną
@@ -557,76 +622,96 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
     .some(c => c.equippedArtifacts.some(a => ['adventure_sztandar', 'adventure_sztandar_enhanced'].includes((a as any).effectId)))
   if (hasSztandar) {
     damage += 2
+    bonusLog.push(addLog(state, `Sztandar: +2 ATK dla ${attacker.cardData.name}!`, 'effect'))
   }
 
-  return Math.max(0, damage)
+  return { damage: Math.max(0, damage), bonusLog }
 }
 
 function shouldCounterattack(
   state: GameState,
   attacker: CardInstance,
   defender: CardInstance
-): boolean {
+): { canCounter: boolean; reason?: string } {
+  // Paraliż: sparaliżowana istota nie kontratakuje
+  if (defender.paralyzeRoundsLeft !== null && defender.paralyzeRoundsLeft !== 0) {
+    return { canCounter: false, reason: `${defender.cardData.name}: Sparaliżowany — nie może kontratakować!` }
+  }
+
   // Dobroochoczy: nigdy nie kontratakuje
-  if (defender.cardData.name === 'Dobroochoczy') return false
-  if (defender.activeEffects.some(e => e.effectId === 'dobroochoczy_no_counter')) return false
+  if (defender.cardData.name === 'Dobroochoczy') return { canCounter: false, reason: `${defender.cardData.name}: Dobroochoczy nigdy nie kontratakuje.` }
+  if (defender.activeEffects.some(e => e.effectId === 'dobroochoczy_no_counter')) return { canCounter: false, reason: `${defender.cardData.name}: Dobroochoczy nigdy nie kontratakuje.` }
 
   // Smocze Jajo: nie kontratakuje
-  if ((defender.cardData as any).effectId === 'smocze_jajo_hatch') return false
+  if ((defender.cardData as any).effectId === 'smocze_jajo_hatch') return { canCounter: false }
 
   // Cmuch (#119): atakujący nie otrzymuje kontrataku
-  if ((attacker.cardData as any).effectId === 'cmuch_no_counter_received') return false
+  if ((attacker.cardData as any).effectId === 'cmuch_no_counter_received') return { canCounter: false, reason: `${attacker.cardData.name}: Ćmuch unika kontrataku!` }
 
   // Miecz Kladenet / Miecz Kladenet+: brak kontrataku dla nośnika
-  if (attacker.equippedArtifacts.some(a => ['adventure_miecz_kladenet', 'adventure_miecz_kladenet_enhanced'].includes((a as any).effectId))) return false
+  if (attacker.equippedArtifacts.some(a => ['adventure_miecz_kladenet', 'adventure_miecz_kladenet_enhanced'].includes((a as any).effectId))) return { canCounter: false }
 
   // noCounterattack flag (Topór Peruna, Młot Swaroga itd.)
-  if (attacker.metadata.noCounterattack) return false
+  if (attacker.metadata.noCounterattack) return { canCounter: false }
 
   // Standardowa zasada: kontratak tylko w pozycji Obrony
   if (defender.position !== CardPosition.DEFENSE) {
     // Król Wężów: kontratakuje zawsze, niezależnie od pozycji
-    if (defender.cardData.name === 'Król wężów') return true
-    if (defender.activeEffects.some(e => e.effectId === 'krol_wezow_always_counter')) return true
-    console.log(`[KONTRATAK] BRAK: ${defender.cardData.name} jest w pozycji "${defender.position}" (potrzeba "defense")`)
-    return false
+    if (defender.cardData.name === 'Król wężów') return { canCounter: true }
+    if (defender.activeEffects.some(e => e.effectId === 'krol_wezow_always_counter')) return { canCounter: true }
+    return { canCounter: false }
   }
 
   // Sprawdź zasięg: obrońca musi móc dosięgnąć atakującego
   const reach = canReachForCounter(state, defender, attacker)
-  if (!reach) {
-    const atkType = (defender.cardData as any).attackType
-    const frontLine = getEnemyFrontLine(state, defender.owner)
-    console.log(`[KONTRATAK] BRAK zasięgu: ${defender.cardData.name} (typ ataku=${atkType}) vs ${attacker.cardData.name} na linii ${attacker.line} (front wroga=${frontLine})`)
-    return false
+  if (!reach.canReach) {
+    return { canCounter: false, reason: reach.reason }
   }
 
-  console.log(`[KONTRATAK] ODDAJE: ${defender.cardData.name} vs ${attacker.cardData.name}`)
-  return true
+  return { canCounter: true }
 }
 
 /**
  * Czy kontraatakujący (defender) może dosięgnąć pierwotnego atakującego?
- * Magia/Dystans: zawsze. Wręcz/Żywioł: tylko jeśli cel jest na froncie.
+ * Zasady zasięgu kontrataku odpowiadają normalnym zasadom ataku:
+ * - Magia: dowolna linia
+ * - Dystans: dowolna linia
+ * - Wręcz/Żywioł: tylko front wroga (najniższa zajęta linia przeciwnika)
  */
 function canReachForCounter(
   state: GameState,
   counterattacker: CardInstance,
   target: CardInstance
-): boolean {
+): { canReach: boolean; reason?: string } {
   const attackType = (counterattacker.cardData as any).attackType as AttackType
-  // Ranged/Magic can hit any line
-  if (attackType === AttackType.RANGED || attackType === AttackType.MAGIC) return true
-  // Melee/Elemental: target must be on enemy front line (lowest occupied)
+  const attackTypeName = attackType === AttackType.MELEE ? 'Wręcz'
+    : attackType === AttackType.ELEMENTAL ? 'Żywioł'
+    : attackType === AttackType.RANGED ? 'Dystans'
+    : 'Magia'
+
+  // Magia/Dystans: dowolna linia — zawsze dosięgnie
+  if (attackType === AttackType.RANGED || attackType === AttackType.MAGIC) {
+    return { canReach: true }
+  }
+
+  // Wręcz/Żywioł: cel musi być na froncie wroga (najniższa zajęta linia)
   const frontLine = getEnemyFrontLine(state, counterattacker.owner)
-  return target.line === frontLine
+  if (target.line === frontLine) {
+    return { canReach: true }
+  }
+
+  return {
+    canReach: false,
+    reason: `${counterattacker.cardData.name} (${attackTypeName}) nie może kontratakować — przeciwnik w L${target.line} jest poza zasięgiem kontrataku (front wroga: L${frontLine}).`,
+  }
 }
 
 function checkDamagePrevention(
   state: GameState,
   attacker: CardInstance,
   defender: CardInstance,
-  damage: number
+  damage: number,
+  forceBrzeginaSkip?: boolean
 ): { prevented: boolean; newState: GameState; log: LogEntry[] } {
   // Wąpierz: niezniszczalny — odporny na wszelkie obrażenia
   if ((defender.cardData as any).effectId === 'wapierz_invincible_hunger') {
@@ -634,8 +719,10 @@ function checkDamagePrevention(
     return { prevented: true, newState: cloneGameState(state), log: [log] }
   }
 
-  // Brzegina: może zablokować obrażenia dla sojusznika
-  const owner = state.players[defender.owner]
+  // Brzegina: może zablokować obrażenia dla sojusznika (pomiń jeśli gracz odmówił)
+  if (forceBrzeginaSkip) {
+    // Gracz odmówił użycia tarczy Brzeginy — pomiń
+  } else {
   const brzeginaOnField = getAllCreaturesForPlayer(state, defender.owner)
     .find(c => c.cardData.name === 'Brzegina')
 
@@ -648,6 +735,7 @@ function checkDamagePrevention(
       }
     }
   }
+  } // koniec else (forceBrzeginaSkip)
 
   // Utopiec (#85): połowa obrażeń
   if ((defender.cardData as any).effectId === 'utopiec_half_damage') {

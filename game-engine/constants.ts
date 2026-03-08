@@ -68,11 +68,13 @@ export enum EffectTrigger {
 
 // Priorytet rozwiązywania efektów (niższy = wcześniejszy)
 export enum EffectPriority {
+  IMMEDIATE = -1,   // Natychmiastowe (przed innymi)
   PREVENTION = 0,   // Zapobieganie (odporność, tarcze)
   REPLACEMENT = 1,  // Zastąpienie (np. redirect damage)
   MODIFIER = 2,     // Modyfikatory (buffy/debuffy)
   REACTION = 3,     // Reakcje (kontratak, triggers)
   CLEANUP = 4,      // Sprzątanie (death effects, remove tokens)
+  PASSIVE = 5,      // Pasywne aury i stałe efekty
 }
 
 export const GOLD_EDITION_RULES = {
@@ -81,7 +83,7 @@ export const GOLD_EDITION_RULES = {
   DECK_SIZE: 30,
   MAX_FIELD_CREATURES: 5,
   PLAY_LIMIT_CREATURES: 1,  // max istot do wystawienia na turę
-  PLAY_LIMIT_ADVENTURES: 1, // max kart przygody na turę
+  PLAY_LIMIT_ADVENTURES: 99, // effectively no limit on adventures per turn
   ADVENTURE_COST: 0,        // efekt podstawowy — DARMOWY
   ENHANCED_ADVENTURE_COST: 1, // efekt ulepszony — kosztuje 1 ZŁ
   CARDS_DRAWN_PER_TURN: 1,

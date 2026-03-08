@@ -83,6 +83,7 @@ export function createCreatureInstance(cardData: CreatureCardData, owner: Player
     hasAttackedThisTurn: false,
     hasMovedThisTurn: false,
     poisonRoundsLeft: null,
+    paralyzeRoundsLeft: null,
     metadata: {},
   }
 }
@@ -107,6 +108,7 @@ export function createAdventureInstance(cardData: AdventureCardData, owner: Play
     hasAttackedThisTurn: false,
     hasMovedThisTurn: false,
     poisonRoundsLeft: null,
+    paralyzeRoundsLeft: null,
     metadata: {},
   }
 }

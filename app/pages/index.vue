@@ -1,8 +1,24 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
+import type { AIDifficulty } from '../../game-engine/AIPlayer'
+import { Domain, DOMAIN_NAMES, DOMAIN_COLORS } from '../../game-engine/constants'
 
 const game = useGameStore()
+
+// ===== USTAWIENIA GRY =====
+const difficulty = ref<AIDifficulty>(game.selectedDifficulty)
+const selectedDomains = ref<number[]>([...game.selectedDomains])
+
+function toggleDomain(domain: number) {
+  const idx = selectedDomains.value.indexOf(domain)
+  if (idx >= 0) {
+    selectedDomains.value.splice(idx, 1)
+  } else {
+    selectedDomains.value.push(domain)
+  }
+}
 
 // ===== MUZYKA =====
 const songModules = import.meta.glob('../../assets/songs/*.mp3', { eager: true, query: '?url', import: 'default' })
@@ -29,16 +45,27 @@ function playRandomSong() {
 }
 
 function startNewGame() {
+  game.setDifficulty(difficulty.value)
+  game.setDomains(selectedDomains.value)
   playRandomSong()
   game.startGame()
   navigateTo('/game')
 }
 
 function startAlphaGame() {
+  game.setDifficulty(difficulty.value)
+  game.setDomains(selectedDomains.value)
   playRandomSong()
   game.startAlphaGame()
   navigateTo('/game')
 }
+
+const domains = [
+  { id: Domain.PERUN, name: DOMAIN_NAMES[Domain.PERUN], color: DOMAIN_COLORS[Domain.PERUN], icon: 'game-icons:lightning-storm' },
+  { id: Domain.ZYVI, name: DOMAIN_NAMES[Domain.ZYVI], color: DOMAIN_COLORS[Domain.ZYVI], icon: 'game-icons:oak-leaf' },
+  { id: Domain.UNDEAD, name: DOMAIN_NAMES[Domain.UNDEAD], color: DOMAIN_COLORS[Domain.UNDEAD], icon: 'game-icons:skull-crossed-bones' },
+  { id: Domain.WELES, name: DOMAIN_NAMES[Domain.WELES], color: DOMAIN_COLORS[Domain.WELES], icon: 'game-icons:fire-dash' },
+]
 </script>
 
 <template>
@@ -50,9 +77,43 @@ function startAlphaGame() {
         <div class="logo-emblem">
           <Icon icon="game-icons:triquetra" class="emblem-icon" />
         </div>
-        <h1 class="game-title">SŁAWA</h1>
-        <p class="game-subtitle">Vol. 2 — Złota Edycja</p>
-        <p class="game-tagline">Słowiańska gra karciana</p>
+        <h1 class="game-title">SLAWA</h1>
+        <p class="game-subtitle">Vol. 2 — Zlota Edycja</p>
+        <p class="game-tagline">Slowianska gra karciana</p>
+      </div>
+
+      <!-- USTAWIENIA -->
+      <div class="settings-section">
+        <!-- Trudnosc AI -->
+        <div class="setting-group">
+          <label class="setting-label">Trudnosc AI</label>
+          <div class="toggle-group">
+            <button
+              :class="['toggle-btn', { active: difficulty === 'easy' }]"
+              @click="difficulty = 'easy'"
+            >Latwa</button>
+            <button
+              :class="['toggle-btn', { active: difficulty === 'medium' }]"
+              @click="difficulty = 'medium'"
+            >Srednia</button>
+          </div>
+        </div>
+
+        <!-- Domena gracza -->
+        <div class="setting-group">
+          <label class="setting-label">Twoja domena <span class="hint">(brak = losowa)</span></label>
+          <div class="domain-picks">
+            <button
+              v-for="d in domains" :key="d.id"
+              :class="['domain-btn', { active: selectedDomains.includes(d.id) }]"
+              :style="selectedDomains.includes(d.id) ? `border-color: ${d.color}; color: ${d.color}; background: ${d.color}18` : ''"
+              @click="toggleDomain(d.id)"
+            >
+              <Icon :icon="d.icon" class="domain-icon" />
+              {{ d.name }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="menu-buttons">
@@ -73,19 +134,25 @@ function startAlphaGame() {
           Arena — Testuj karty
         </NuxtLink>
 
-        <button class="menu-btn secondary" disabled>
+        <NuxtLink to="/gallery" class="menu-btn gallery">
+          <Icon icon="game-icons:card-pickup" class="btn-icon" />
+          Kolekcja kart
+          <span class="game-mode-badge">182 karty</span>
+        </NuxtLink>
+
+        <NuxtLink to="/rules" class="menu-btn secondary">
           <Icon icon="game-icons:book-cover" class="btn-icon" />
-          Jak grać? <span class="soon-badge">wkrótce</span>
-        </button>
+          Jak grac?
+        </NuxtLink>
       </div>
 
       <div class="edition-info">
-        <div class="edition-badge">Złota Edycja</div>
+        <div class="edition-badge">Zlota Edycja</div>
         <div class="edition-rules">
           <span>5 startowych kart</span>
-          <span>·</span>
-          <span>5 ZŁ na start</span>
-          <span>·</span>
+          <span>&middot;</span>
+          <span>5 ZL na start</span>
+          <span>&middot;</span>
           <span>Talia 30 kart</span>
         </div>
       </div>
@@ -119,7 +186,7 @@ function startAlphaGame() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 36px;
+  gap: 28px;
   z-index: 1;
 }
 
@@ -173,11 +240,101 @@ function startAlphaGame() {
   letter-spacing: 0.05em;
 }
 
+/* ===== SETTINGS ===== */
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 340px;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setting-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.hint {
+  font-weight: 400;
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 6px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: rgba(255,255,255,0.03);
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.toggle-btn.active {
+  border-color: #6366f1;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.toggle-btn:hover:not(.active) {
+  border-color: #475569;
+  background: rgba(255,255,255,0.05);
+}
+
+.domain-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.domain-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: rgba(255,255,255,0.03);
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.domain-btn:hover:not(.active) {
+  border-color: #475569;
+  background: rgba(255,255,255,0.05);
+}
+
+.domain-icon { font-size: 16px; }
+
+/* ===== BUTTONS ===== */
+
 .menu-buttons {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 220px;
+  width: 340px;
 }
 
 .menu-btn {
@@ -193,6 +350,7 @@ function startAlphaGame() {
   transition: transform 0.15s, opacity 0.15s, box-shadow 0.15s;
   border: none;
   letter-spacing: 0.05em;
+  text-decoration: none;
 }
 
 .menu-btn.primary {
@@ -229,7 +387,6 @@ function startAlphaGame() {
   background: rgba(52, 211, 153, 0.1);
   color: #34d399;
   border: 1px solid rgba(52, 211, 153, 0.3);
-  text-decoration: none;
 }
 .menu-btn.arena:hover {
   transform: translateY(-2px);
@@ -237,24 +394,29 @@ function startAlphaGame() {
   box-shadow: 0 6px 20px rgba(52, 211, 153, 0.2);
 }
 
+.menu-btn.gallery {
+  background: rgba(168, 85, 247, 0.1);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+.menu-btn.gallery:hover {
+  transform: translateY(-2px);
+  background: rgba(168, 85, 247, 0.18);
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.2);
+}
+
 .menu-btn.secondary {
   background: rgba(255,255,255,0.05);
-  color: #64748b;
+  color: #94a3b8;
   border: 1px solid #334155;
-  cursor: not-allowed;
+}
+.menu-btn.secondary:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,0.08);
+  border-color: #475569;
 }
 
 .btn-icon { font-size: 18px; }
-
-.soon-badge {
-  font-size: 9px;
-  background: #334155;
-  color: #64748b;
-  padding: 2px 6px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 
 .edition-info {
   display: flex;

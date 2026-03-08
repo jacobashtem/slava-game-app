@@ -100,6 +100,7 @@ export interface CardInstance {
   hasAttackedThisTurn: boolean
   hasMovedThisTurn: boolean
   poisonRoundsLeft: number | null  // Trucizna: ile rund do śmierci
+  paralyzeRoundsLeft: number | null  // Paraliż: ile rund do odblokowania (null = brak / trwały)
   // Dane dla specyficznych efektów
   metadata: Record<string, unknown>  // dowolne dane dla efektów
 }
@@ -171,6 +172,9 @@ export type PendingInteractionType =
   | 'wielkolud_counter'        // Wielkolud: wybierz cel kontrataku
   | 'liczyrzepa_type'          // Liczyrzepa: wybierz typ ataku
   | 'strela_intercept'         // Strela: czy zagrać kartę? (Y/N)
+  | 'on_play_target'           // ON_PLAY z wymaganym celem (np. Jaroszek)
+  | 'brzegina_shield'          // Brzegina: czy użyć tarczy za ZŁ?
+  | 'kosciej_resurrect'        // Kościej: czy wskrzesić za ZŁ?
 
 export interface PendingInteraction {
   type: PendingInteractionType
@@ -273,6 +277,8 @@ export interface EffectDefinition {
   activationCooldown?: 'per_turn' | 'per_round' | 'once' | 'unlimited'
   // Czy aktywacja wymaga wskazania celu (target selection w UI)?
   activationRequiresTarget?: boolean
+  // Opcjonalny filtr celów — zwraca true jeśli karta jest prawidłowym celem aktywacji
+  activationTargetFilter?: (card: CardInstance, source: CardInstance, state: GameState) => boolean
 }
 
 // ===== AI =====

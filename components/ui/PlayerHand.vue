@@ -24,7 +24,7 @@ const hand = computed(() => game.getHand())
 
 const emptySlots = computed(() => {
   const canDraw = game.isPlayerTurn
-    && game.currentPhase === GamePhase.PLAY
+    && (game.currentPhase === GamePhase.PLAY || game.currentPhase === GamePhase.COMBAT)
     && (game.player?.deck.length ?? 0) > 0
   if (!canDraw) return 0
   return Math.max(0, HAND_SIZE - hand.value.length)
@@ -58,11 +58,6 @@ function onPlayAdventure(card: CardInstance, useEnhanced: boolean) {
 
   if (useEnhanced && (game.player?.gold ?? 0) < GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST) {
     ui.showPlayLimitToast(`Potrzebujesz ${GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST} ZŁ na ulepszony efekt!`)
-    return
-  }
-
-  if ((game.player?.adventuresPlayedThisTurn ?? 0) >= GOLD_EDITION_RULES.PLAY_LIMIT_ADVENTURES) {
-    ui.showPlayLimitToast('Możesz zagrać tylko 1 kartę przygody na turę!')
     return
   }
 

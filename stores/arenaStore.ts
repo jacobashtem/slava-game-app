@@ -274,12 +274,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
   'polnocnica_mass_paralyze': {
     hint: 'Północnica: ⚡ za 1 ZŁ paraliżuje WSZYSTKICH wrogów na 1 rundę. AI ma 3 stworzenia.',
   },
-  'siemiargl_cleanse': {
-    hint: 'Siemiargł: czyści sojuszników z debuffów. Wróg ma Zagorkinie (nakłada curse).',
-    aiL1: ['zagorkinia_curse_drain'],
-    aiL2: ['bazyliszek_paralyze'],
-    allyL1: ['dobroochoczy_no_counter'],
-  },
+  // siemiargl_cleanse — zdefiniowany wyżej
   'strzyga_lifesteal': {
     hint: 'Strzyga: regeneruje HP równe zadanym obrażeniom (wampiryzm). Zaatakuj wroga.',
     allyL1: ['strzyga_lifesteal'],
@@ -416,12 +411,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
   'dziwolzona_swap_cards': {
     hint: 'Dziwożona: po zabiciu dobiera po 1 karcie z obu talii.',
   },
-  'homen_convert_on_death': {
-    hint: 'Homen: przeklęty wróg po śmierci wstaje PO TWOJEJ stronie. Przeklnij i zabij!',
-    aiL1: ['licho_block_draw'],
-    aiL2: ['domowik_hand_size'],
-    aiL3: ['gryf_double_dmg_on_play_turn'],
-  },
+  // homen_convert_on_death — zdefiniowany wyżej
   'kania_chain_kill': {
     hint: 'Kania (ATK:5): po zabiciu słabszego wroga może atakować ponownie — chain kill!',
     allyL1: ['kania_chain_kill'],
@@ -553,24 +543,35 @@ export const useArenaStore = defineStore('arena', () => {
     freshState.players.player1.hand.push(selectedInstance)
 
     // ===== Extra karty w ręce gracza =====
+    const allAdventures = _factory.getAllAdventures()
     const defaultHandExtras = ['blotnik_taunt', 'rusalka_mirror_attack', 'alkonost_redirect_counterattack']
     const handExtras = scenario?.handExtras ?? defaultHandExtras
     for (const hId of handExtras) {
       if (hId === entry.effectId) continue
-      const hData = allCreatures.find(c => c.effectId === hId)
-      if (hData) {
-        const h = createCreatureInstance(hData, 'player1')
+      // Szukaj w istotach i przygodach
+      const hCreature = allCreatures.find(c => c.effectId === hId)
+      if (hCreature) {
+        const h = createCreatureInstance(hCreature, 'player1')
         h.isRevealed = true
         freshState.players.player1.hand.push(h)
+      } else {
+        const hAdv = allAdventures.find(a => a.effectId === hId)
+        if (hAdv) {
+          const h = createAdventureInstance(hAdv, 'player1')
+          h.isRevealed = true
+          freshState.players.player1.hand.push(h)
+        }
       }
     }
 
-    // ===== Jedna karta przygody w ręce gracza =====
-    const advData = _factory.getAllAdventures().find(a => a.effectId === 'adventure_trucizna')
-    if (advData) {
-      const adv = createAdventureInstance(advData, 'player1')
-      adv.isRevealed = true
-      freshState.players.player1.hand.push(adv)
+    // ===== Jedna karta przygody w ręce gracza (jeśli testujemy istotę) =====
+    if (entry.cardType === 'creature') {
+      const advData = allAdventures.find(a => a.effectId === 'adventure_trucizna')
+      if (advData) {
+        const adv = createAdventureInstance(advData, 'player1')
+        adv.isRevealed = true
+        freshState.players.player1.hand.push(adv)
+      }
     }
 
     // ===== Talia gracza: 10 losowych alpha kart (do dobierania) =====

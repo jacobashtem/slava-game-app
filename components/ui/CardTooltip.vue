@@ -26,7 +26,7 @@ const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaIm
 const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
 const creatureImgs = Object.fromEntries(
   Object.entries(_creatureImgModules)
-    .map(([key, val]) => { const m = key.match(/(\d+)\.png$/); return m ? [parseInt(m[1]), val] : null })
+    .map(([key, val]) => { const m = key.match(/(\d+)\.png$/); return m ? [parseInt(m[1]!), val] : null })
     .filter(Boolean) as [number, string][]
 ) as Record<number, string>
 
@@ -112,6 +112,62 @@ const atkDamaged = computed(() =>
   card.value &&
   card.value.currentStats.attack < card.value.currentStats.maxAttack
 )
+
+// Trigger label mapping (same as CreatureCard)
+const ttTriggerLabels: Record<string, string> = {
+  ON_PLAY: 'WEJŚCIE', ACTION: 'AKCJA', AURA: 'AURA', REACTION: 'ODWET',
+  ON_DEATH: 'POŻEGNANIE', ON_KILL: 'ZABÓJSTWO', ON_TURN_START: 'AURA',
+  ON_TURN_END: 'AURA', ON_ANY_DEATH: 'CZUJNOŚĆ', ON_ATTACK: 'CZUJNOŚĆ',
+  ON_ENEMY_PLAY: 'CZUJNOŚĆ', ENEMY_ACTION: 'CZUJNOŚĆ', PASSIVE: 'AURA',
+  ON_DAMAGE_DEALT: 'ODWET', ON_DAMAGE_RECEIVED: 'ODWET', ON_ACTIVATE: 'AKCJA',
+  ON_ALLY_ATTACKED: 'CZUJNOŚĆ',
+}
+
+const ttTriggerColors: Record<string, string> = {
+  'WEJŚCIE': '#22c55e',
+  'AKCJA': '#a855f7',
+  'AURA': '#3b82f6',
+  'ODWET': '#f97316',
+  'ZABÓJSTWO': '#ef4444',
+  'POŻEGNANIE': '#6b7280',
+  'CZUJNOŚĆ': '#eab308',
+}
+
+// Tag colors for [TAG] badges in descriptions
+const tagColors: Record<string, string> = {
+  'WEJŚCIE': '#22c55e',
+  'AKCJA': '#a855f7',
+  'AURA': '#3b82f6',
+  'ODWET': '#f97316',
+  'ZABÓJSTWO': '#ef4444',
+  'POŻEGNANIE': '#6b7280',
+  'CZUJNOŚĆ': '#eab308',
+}
+
+function parseTaggedDescription(desc: string): Array<{ type: 'tag' | 'text'; value: string; color?: string }> {
+  const parts: Array<{ type: 'tag' | 'text'; value: string; color?: string }> = []
+  const regex = /\[(WEJŚCIE|AKCJA|AURA|ODWET|ZABÓJSTWO|POŻEGNANIE|CZUJNOŚĆ)\]/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(desc)) !== null) {
+    if (match.index > lastIndex) {
+      const text = desc.slice(lastIndex, match.index).trim()
+      if (text) parts.push({ type: 'text', value: text })
+    }
+    parts.push({ type: 'tag', value: match[1]!, color: tagColors[match[1]!] })
+    lastIndex = regex.lastIndex
+  }
+  if (lastIndex < desc.length) {
+    const text = desc.slice(lastIndex).trim()
+    if (text) parts.push({ type: 'text', value: text })
+  }
+  return parts
+}
+
+const parsedEffectDescription = computed(() => {
+  if (!data.value?.effectDescription) return []
+  return parseTaggedDescription(data.value.effectDescription)
+})
 </script>
 
 <template>
@@ -172,19 +228,24 @@ const atkDamaged = computed(() =>
       <template v-if="data.abilities && data.abilities.length">
         <div class="tt-abilities">
           <div v-for="(ab, i) in data.abilities" :key="i" class="tt-ability-entry">
-            <span class="tt-ab-trigger">{{ {
-              ON_PLAY: 'WEJŚCIE', ACTION: 'AKCJA', AURA: 'AURA', REACTION: 'REAKCJA',
-              ON_DEATH: 'ŚMIERĆ', ON_KILL: 'ZABÓJSTWO', ON_TURN_START: 'START TURY',
-              ON_TURN_END: 'KONIEC TURY', ON_ANY_DEATH: 'KAŻDA ŚMIERĆ', ON_ATTACK: 'ATAK',
-              ON_ENEMY_PLAY: 'ZASADZKA', ENEMY_ACTION: 'AKCJA WROGA', PASSIVE: 'AURA',
-            }[ab.trigger] ?? ab.trigger }}</span>
+            <span
+              class="tt-ab-trigger"
+              :style="{ background: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '22', color: ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc', borderColor: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '55' }"
+            >{{ ttTriggerLabels[ab.trigger] ?? ab.trigger }}</span>
             <span class="tt-ab-text">{{ ab.text }}</span>
           </div>
         </div>
       </template>
-      <!-- Fallback: stary opis efektu -->
+      <!-- Fallback: stary opis efektu (z tagami) -->
       <div v-else-if="data.effectDescription" class="tt-effect">
-        {{ data.effectDescription }}
+        <template v-for="(part, pi) in parsedEffectDescription" :key="pi">
+          <span
+            v-if="part.type === 'tag'"
+            class="tt-effect-tag"
+            :style="{ background: part.color + '22', color: part.color, borderColor: part.color + '66' }"
+          >{{ part.value }}</span>
+          <span v-else>{{ part.value }}</span>
+        </template>
       </div>
 
       <!-- Lore -->
@@ -422,8 +483,7 @@ const atkDamaged = computed(() =>
   font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
-  background: rgba(99,102,241,0.25);
-  color: #a5b4fc;
+  border: 1px solid;
   border-radius: 3px;
   padding: 1px 4px;
   flex-shrink: 0;
@@ -445,6 +505,21 @@ const atkDamaged = computed(() =>
   font-style: italic;
   padding: 5px 10px;
   border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.tt-effect-tag {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 700;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-right: 3px;
+  vertical-align: middle;
+  line-height: 1.5;
 }
 
 /* Aktywne efekty */

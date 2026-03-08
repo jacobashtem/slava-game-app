@@ -7,9 +7,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { GameEngine } from '../game-engine/GameEngine'
 import { AIPlayer } from '../game-engine/AIPlayer'
+import type { AIDifficulty } from '../game-engine/AIPlayer'
 import type { GameState, CardInstance, LogEntry } from '../game-engine/types'
 import { GamePhase, BattleLine, CardPosition } from '../game-engine/constants'
-import { canAttack } from '../game-engine/LineManager'
+import { canAttack, getAllCreaturesOnField } from '../game-engine/LineManager'
 import { getEffect } from '../game-engine/EffectRegistry'
 import type { PlayerSide } from '../game-engine/types'
 import { useUIStore } from './uiStore'
@@ -19,7 +20,9 @@ const AI_DELAY_MS = 1300
 export const useGameStore = defineStore('game', () => {
   // ===== STATE =====
   const engine = new GameEngine()
-  const aiPlayer = new AIPlayer('player2', 'medium')
+  let aiPlayer = new AIPlayer('player2', 'medium')
+  const selectedDifficulty = ref<AIDifficulty>('medium')
+  const selectedDomains = ref<number[]>([]) // empty = all domains
 
   const state = ref<GameState | null>(null)
   const isAIThinking = ref(false)
@@ -44,12 +47,20 @@ export const useGameStore = defineStore('game', () => {
   const aiCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(aiTurnLogStart.value).slice(-6))
 
   // ===== SETUP =====
+  function setDifficulty(diff: AIDifficulty) {
+    selectedDifficulty.value = diff
+  }
+
+  function setDomains(domains: number[]) {
+    selectedDomains.value = domains
+  }
+
   function startGame() {
     isArenaMode.value = false
     arenaFocusedName.value = ''
-    // NIE rejestrujemy onStateChanged — state.value ustawiamy ręcznie po każdej akcji
-    // żeby animacje (damage numbers, tarcza) miały czas się wyświetlić przed zmianą stanu
-    state.value = engine.startGame('gold')
+    aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
+    const domainFilter = selectedDomains.value.length > 0 ? selectedDomains.value : undefined
+    state.value = engine.startGame('gold', domainFilter)
     gameStarted.value = true
     playerTurnLogStart.value = state.value.actionLog.length
 
@@ -68,7 +79,9 @@ export const useGameStore = defineStore('game', () => {
   function startAlphaGame() {
     isArenaMode.value = false
     arenaFocusedName.value = ''
-    state.value = engine.startAlphaGame()
+    aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
+    const domainFilter = selectedDomains.value.length > 0 ? selectedDomains.value : undefined
+    state.value = engine.startAlphaGame(domainFilter)
     gameStarted.value = true
     playerTurnLogStart.value = state.value.actionLog.length
 
@@ -169,8 +182,20 @@ export const useGameStore = defineStore('game', () => {
 
       // pendingInteraction: silnik czeka na decyzję gracza (np. Alkonost hipnoza)
       // UI odczyta state.value.pendingInteraction i pokaże modal
+
+      // Auto-end turn po udanym ataku (chyba że jest pendingInteraction lub gracz ma jeszcze ataki)
+      if (!newState.pendingInteraction && !winner.value) {
+        const hasMoreAttacks = hasRemainingAttacks(newState)
+        if (!hasMoreAttacks) {
+          await delay(400)
+          endTurn()
+        }
+      }
     } catch (e: any) {
       console.warn('[gameStore] attack:', e.message)
+      ui.showPlayLimitToast(e.message ?? 'Nie można zaatakować.')
+      // Cleanup reveal state on error
+      if (wasHidden) ui.revealingCardId = null
     }
   }
 
@@ -192,6 +217,11 @@ export const useGameStore = defineStore('game', () => {
       // Jeśli nadal tura AI i brak nowej interakcji — wznów turę AI
       if (state.value && state.value.players[state.value.currentTurn].isAI && !winner.value && !state.value.pendingInteraction) {
         runAITurn()
+      }
+      // Auto-end turn po interakcji bojowej (Brzegina/Kościej) — gracz w fazie COMBAT
+      else if (state.value && state.value.currentTurn === 'player1' && state.value.currentPhase === GamePhase.COMBAT && !state.value.pendingInteraction && !winner.value) {
+        await delay(400)
+        endTurn()
       }
     } catch (e: any) {
       console.warn('[gameStore] resolvePendingInteraction:', e.message)
@@ -220,6 +250,56 @@ export const useGameStore = defineStore('game', () => {
 
     const effect = getEffect((card.cardData as any).effectId)
     const cost = effect?.activationCost ?? 0
+
+    // Zdolność wymaga celu → pendingInteraction z listą celów
+    if (effect?.activationRequiresTarget) {
+      if (!state.value) return
+      // Zbierz wszystkie istoty na polu (obie strony) jako potencjalne cele
+      const allTargets: string[] = []
+      for (const side of ['player1', 'player2'] as const) {
+        for (const line of Object.values(state.value.players[side].field.lines)) {
+          for (const c of line as any[]) {
+            if (c.instanceId !== cardInstanceId && c.currentStats.defense > 0) {
+              // Jeśli efekt ma customowy filtr celów, zastosuj go
+              if (effect.activationTargetFilter) {
+                if (!effect.activationTargetFilter(c, card, state.value)) continue
+              }
+              allTargets.push(c.instanceId)
+            }
+          }
+        }
+      }
+      if (allTargets.length === 0) {
+        const ui = useUIStore()
+        ui.showPlayLimitToast('Brak dostępnych celów dla tej zdolności.')
+        return
+      }
+      // Jeśli jest koszt, najpierw potwierdź koszt
+      if (cost > 0) {
+        const ui = useUIStore()
+        ui.pendingActivation = {
+          cardInstanceId,
+          cost,
+          cardName: card.cardData.name,
+          effectName: effect?.name ?? '',
+          requiresTarget: true,
+          availableTargetIds: allTargets,
+        }
+      } else {
+        // Darmowa + wymaga cel → od razu pendingInteraction
+        const newState = JSON.parse(JSON.stringify(state.value))
+        newState.pendingInteraction = {
+          type: 'on_play_target' as const,
+          sourceInstanceId: cardInstanceId,
+          respondingPlayer: 'player1',
+          availableTargetIds: allTargets,
+          metadata: { isActivation: true },
+        }
+        state.value = newState
+      }
+      return
+    }
+
     if (cost > 0) {
       const ui = useUIStore()
       ui.pendingActivation = {
@@ -342,6 +422,16 @@ export const useGameStore = defineStore('game', () => {
       return
     }
 
+    // Safety timeout — if AI turn takes more than 15 seconds, force end it
+    const aiTimeout = setTimeout(() => {
+      if (isAIThinking.value) {
+        console.warn('[gameStore] AI turn timeout — forcing end')
+        try { state.value = engine.aiEndTurn() } catch {}
+        isAIThinking.value = false
+        playerTurnLogStart.value = state.value?.actionLog.length ?? 0
+      }
+    }, 15000)
+
     await delay(AI_DELAY_MS)
 
     const logBefore = state.value.actionLog.length
@@ -363,7 +453,7 @@ export const useGameStore = defineStore('game', () => {
             break
           case 'play_adventure':
             if (decision.cardInstanceId) {
-              state.value = engine.aiPlayAdventure(decision.cardInstanceId, decision.targetInstanceId)
+              state.value = engine.aiPlayAdventure(decision.cardInstanceId, decision.targetInstanceId, decision.useEnhanced)
             }
             break
           case 'attack':
@@ -374,6 +464,25 @@ export const useGameStore = defineStore('game', () => {
               }
               {
                 const ui = useUIStore()
+
+                // Before AI attack animation:
+                // 1. Reveal the attacker card if hidden
+                const aiAttacker = findCardOnField('player2', decision.cardInstanceId)
+                const wasAttackerHidden = aiAttacker && !aiAttacker.isRevealed
+                if (wasAttackerHidden) {
+                  ui.revealingCardId = decision.cardInstanceId
+                  await delay(600)
+                }
+
+                // 2. Ensure card is visually in ATTACK position before animation
+                if (aiAttacker && aiAttacker.position !== CardPosition.ATTACK) {
+                  try {
+                    state.value = engine.aiChangePosition(decision.cardInstanceId, CardPosition.ATTACK)
+                    await delay(400)
+                  } catch {}
+                }
+
+                // 3. Attack animation
                 ui.triggerAttackAnimation(decision.cardInstanceId, decision.targetInstanceId)
                 await delay(900)
 
@@ -462,10 +571,21 @@ export const useGameStore = defineStore('game', () => {
       aiTurnSummary.value = relevant
     }
 
+    clearTimeout(aiTimeout)
+
     // Jeśli tура przerwała się przez pendingInteraction — NIE kończymy, czekamy na gracza
     if (state.value?.pendingInteraction) {
       isAIThinking.value = false
       return
+    }
+
+    // Safety: jeśli tura nadal należy do AI (end_turn nie wykonane), wymuś zakończenie
+    if (state.value && state.value.currentTurn !== 'player1' && !winner.value) {
+      try {
+        state.value = engine.aiEndTurn()
+      } catch (e: any) {
+        console.warn('[gameStore] AI forced end_turn error:', e.message)
+      }
     }
 
     isAIThinking.value = false
@@ -507,6 +627,49 @@ export const useGameStore = defineStore('game', () => {
     return null
   }
 
+  /**
+   * Sprawdza czy gracz ma jeszcze dostępne ataki w tej turze.
+   * Replikuje logikę z BattleLine.vue + canAttack z LineManager.
+   */
+  function hasRemainingAttacks(gs: GameState): boolean {
+    const p1Creatures = getAllCreaturesOnField(gs, 'player1')
+    const p2Creatures = getAllCreaturesOnField(gs, 'player2')
+    if (p2Creatures.length === 0) return false
+
+    // Policz normalnych ataków zużytych (bez Kikimory)
+    const normalAttacksUsed = p1Creatures
+      .filter(c => (c.cardData as any).effectId !== 'kikimora_free_attack')
+      .filter(c => {
+        if ((c.cardData as any).effectId === 'lesnica_double_attack') {
+          return ((c.metadata.attacksThisTurn as number) ?? 0) >= 2
+        }
+        return c.hasAttackedThisTurn
+      }).length
+    const hasChlop = p1Creatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
+    const maxAttacks = hasChlop ? 2 : 1
+
+    for (const card of p1Creatures) {
+      if (card.position !== CardPosition.ATTACK) continue
+      if (card.cannotAttack) continue
+
+      const effectId = (card.cardData as any).effectId
+      const isLesnica = effectId === 'lesnica_double_attack'
+      const attacksThisTurn = (card.metadata.attacksThisTurn as number) ?? 0
+      if (isLesnica && attacksThisTurn >= 2) continue
+      if (!isLesnica && card.hasAttackedThisTurn && !((card.metadata.freeAttacksLeft as number) > 0)) continue
+
+      const isKikimora = effectId === 'kikimora_free_attack'
+      if (!isKikimora && !((card.metadata.freeAttacksLeft as number) > 0) && normalAttacksUsed >= maxAttacks) continue
+
+      // Czy ta karta ma przynajmniej 1 prawidłowy cel?
+      const hasTarget = p2Creatures.some(e => {
+        try { return canAttack(gs, card, e).valid } catch { return false }
+      })
+      if (hasTarget) return true
+    }
+    return false
+  }
+
   return {
     // state
     state,
@@ -516,6 +679,8 @@ export const useGameStore = defineStore('game', () => {
     playerTurnSummary,
     isArenaMode,
     arenaFocusedName,
+    selectedDifficulty,
+    selectedDomains,
     // computed
     player,
     ai,
@@ -531,6 +696,8 @@ export const useGameStore = defineStore('game', () => {
     startGame,
     startAlphaGame,
     setupArenaMode,
+    setDifficulty,
+    setDomains,
     playCreature,
     playAdventure,
     attack,

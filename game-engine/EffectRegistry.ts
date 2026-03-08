@@ -47,6 +47,7 @@ export function canActivateEffect(state: import('./types').GameState, card: impo
   const effect = registry.get((card.cardData as any).effectId ?? '')
   if (!effect?.activatable) return false
   if (card.isSilenced) return false
+  if (card.paralyzeRoundsLeft !== null && card.paralyzeRoundsLeft !== 0) return false  // Paraliż blokuje zdolności
 
   // Darmowa aktywacja oczekuje (ON_PLAY pominięty) — zezwól bez kosztu i cooldownu
   if (card.metadata.freeActivationPending) return true
@@ -65,6 +66,24 @@ export function canActivateEffect(state: import('./types').GameState, card: impo
   const cost = effect.activationCost ?? 0
   if (state.players[card.owner].gold < cost) return false
 
+  // Sprawdź czy są dostępne cele (jeśli efekt wymaga celu z filtrem)
+  if (effect.activationRequiresTarget && effect.activationTargetFilter) {
+    let hasValidTarget = false
+    for (const side of ['player1', 'player2'] as const) {
+      for (const line of Object.values(state.players[side].field.lines)) {
+        for (const c of line as CardInstance[]) {
+          if (c.instanceId !== card.instanceId && c.currentStats.defense > 0 && effect.activationTargetFilter(c, card, state)) {
+            hasValidTarget = true
+            break
+          }
+        }
+        if (hasValidTarget) break
+      }
+      if (hasValidTarget) break
+    }
+    if (!hasValidTarget) return false
+  }
+
   return true
 }
 
@@ -81,7 +100,7 @@ function noEffect(id: string, name: string): EffectDefinition {
 }
 
 // Helper: standardowy wynik efektu
-function effectResult(state: GameState, log = [], prevented = false, replaced = false): EffectResult {
+function effectResult(state: GameState, log: LogEntry[] = [], prevented = false, replaced = false): EffectResult {
   return { newState: state, log, prevented, replaced }
 }
 
@@ -93,7 +112,7 @@ function effectResult(state: GameState, log = [], prevented = false, replaced = 
 registerEffect({
   id: 'aitwar_steal_hand',
   name: 'Kradzież Aitwara',
-  description: 'Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 ZŁ.',
+  description: '[WEJŚCIE] [AKCJA] Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 ZŁ.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -130,7 +149,7 @@ registerEffect({
 registerEffect({
   id: 'alkonost_redirect_counterattack',
   name: 'Hipnoza Alkonosty',
-  description: 'Gdy Alkonost zostaje zaatakowany, właściciel wybiera sojusznika — atakujący MUSI go zaatakować.',
+  description: '[ODWET] Gdy Alkonost zostaje zaatakowany, właściciel wybiera sojusznika — atakujący MUSI go zaatakować.',
   trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -169,7 +188,7 @@ registerEffect({
 registerEffect({
   id: 'barstuk_ally_regen',
   name: 'Wsparcie Barstuka',
-  description: 'Wybrany sojusznik Żywi regeneruje swoją obronę do maksimum. Raz na turę.',
+  description: '[AKCJA] Wybrany sojusznik Żywi regeneruje swoją obronę do maksimum. Raz na turę.',
   trigger: [EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.MODIFIER,
   activatable: true,
@@ -196,7 +215,7 @@ registerEffect({
 registerEffect({
   id: 'balwan_free_divine_favor',
   name: 'Bożej Łaski Dar',
-  description: 'Możesz raz skorzystać z wybranej Bożej Łaski, nie płacąc za nią.',
+  description: '[WEJŚCIE] Możesz raz skorzystać z wybranej Bożej Łaski, nie płacąc za nią.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -211,7 +230,7 @@ registerEffect({
 registerEffect({
   id: 'biali_ludzie_wound_disarm',
   name: 'Zaraza Białych Ludzi',
-  description: 'Każda istota zraniona przez Białych Ludzi traci zdolność ataku.',
+  description: '[CZUJNOŚĆ] Każda istota zraniona przez Białych Ludzi traci zdolność ataku.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -220,9 +239,10 @@ registerEffect({
 
     const newState = cloneGameState(state)
     const targetInState = findCardInState(newState, target.instanceId)
-    if (targetInState) {
+    if (targetInState && !targetInState.isImmune) {
       targetInState.cannotAttack = true
-      const log = addLog(state, `${ctx.source.cardData.name} zaraził "${target.cardData.name}" — traci zdolność ataku!`, 'effect')
+      targetInState.paralyzeRoundsLeft = 2
+      const log = addLog(state, `${ctx.source.cardData.name} paraliżuje "${target.cardData.name}" na 2 rundy!`, 'effect')
       return effectResult(newState, [log])
     }
     return effectResult(newState)
@@ -233,7 +253,7 @@ registerEffect({
 registerEffect({
   id: 'brzegina_shield_for_gold',
   name: 'Tarcza Brzeginy',
-  description: 'Za każdy wydany ZŁ jedna sojusznicza istota nie otrzymuje obrażeń podczas ataku. Pierwsze użycie darmowe.',
+  description: '[ODWET] Za każdy wydany ZŁ jedna sojusznicza istota nie otrzymuje obrażeń podczas ataku. Pierwsze użycie darmowe.',
   trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
   priority: EffectPriority.PREVENTION,
   canActivate: (ctx) => {
@@ -263,7 +283,7 @@ registerEffect({
 registerEffect({
   id: 'bugaj_def_to_atk',
   name: 'Gniew Bugaja',
-  description: 'Za każdy punkt obrony który traci, zyskuje tyle samo ataku.',
+  description: '[ODWET] Za każdy punkt obrony który traci, zyskuje tyle samo ataku.',
   trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -285,7 +305,7 @@ registerEffect({
 registerEffect({
   id: 'blotnik_taunt',
   name: 'Pułapka Błotnika',
-  description: 'Każda istota przeciwnika, która ma Błotnika w zasięgu ataku, nie może atakować nikogo innego.',
+  description: '[AURA] Każda istota przeciwnika, która ma Błotnika w zasięgu ataku, nie może atakować nikogo innego.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -298,7 +318,7 @@ registerEffect({
 registerEffect({
   id: 'chmurnik_ground_flying',
   name: 'Uziemienie Chmurnika',
-  description: 'Tak długo jak Chmurnik jest w polu, wszystkie wrogie latające istoty tracą cechę latania.',
+  description: '[AURA] Tak długo jak Chmurnik jest w polu, wszystkie wrogie latające istoty tracą cechę latania.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -306,12 +326,14 @@ registerEffect({
     const opponent = newState.players[ctx.source.owner === 'player1' ? 'player2' : 'player1']
 
     // Ground all enemy flying creatures
+    const logs: any[] = []
     forEachCreatureOnField(opponent, (card) => {
       if ((card.cardData as any).isFlying && !card.isGrounded) {
         card.isGrounded = true
+        logs.push(addLog(newState, `Chmurnik: ${card.cardData.name} traci latanie (uziemiony)!`, 'effect'))
       }
     })
-    return effectResult(newState)
+    return effectResult(newState, logs)
   },
 })
 
@@ -321,7 +343,7 @@ registerEffect({
 registerEffect({
   id: 'chowaniec_intercept',
   name: 'Poświęcenie Chowańca',
-  description: 'Darmowe i opcjonalne: może przyjąć na siebie atak wymierzony w dowolnego sojusznika.',
+  description: '[AURA] Darmowe i opcjonalne: może przyjąć na siebie atak wymierzony w dowolnego sojusznika.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {
@@ -335,7 +357,7 @@ registerEffect({
 registerEffect({
   id: 'dobroochoczy_no_counter',
   name: 'Dobra Wola',
-  description: 'Nie kontratakuje nigdy — nawet w pozycji obrony.',
+  description: '[AURA] Nie kontratakuje nigdy — nawet w pozycji obrony.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state), [], false, false),
@@ -345,7 +367,7 @@ registerEffect({
 registerEffect({
   id: 'dziewiatko_deathmark',
   name: 'Ukąszenie Dziewiątka',
-  description: 'Gdy zrani istotę i pozostanie jej 3 lub mniej obrony, rywal musi zapłacić 1 ZŁ — inaczej ta istota zginie.',
+  description: '[CZUJNOŚĆ] Gdy zrani istotę i pozostanie jej 3 lub mniej obrony, rywal musi zapłacić 1 ZŁ — inaczej ta istota zginie.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -377,7 +399,7 @@ registerEffect({
 registerEffect({
   id: 'dziki_mysliwy_return_on_kill',
   name: 'Polowanie Dzikiego Myśliwego',
-  description: 'Za każdym razem gdy zabije wrogą istotę, może wrócić do talii (NA WIERZCH) zachowując wszystkie efekty i artefakty.',
+  description: '[ZABÓJSTWO] Za każdym razem gdy zabije wrogą istotę, może wrócić do talii (NA WIERZCH) zachowując wszystkie efekty i artefakty.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -409,7 +431,7 @@ registerEffect({
 registerEffect({
   id: 'gryf_double_dmg_on_play_turn',
   name: 'Szarża Gryfa',
-  description: 'Jeśli atakuje w tej samej rundzie w której został wystawiony, zadaje podwójne obrażenia.',
+  description: '[CZUJNOŚĆ] Jeśli atakuje w tej samej rundzie w której został wystawiony, zadaje podwójne obrażenia.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.MODIFIER,
   canActivate: (ctx) => ctx.source.roundEnteredPlay === ctx.state.roundNumber,
@@ -429,7 +451,7 @@ registerEffect({
 registerEffect({
   id: 'krol_wezow_always_counter',
   name: 'Jadowity Kontratak',
-  description: 'Kontratakuje nawet gdy jest w pozycji ataku.',
+  description: '[AURA] Kontratakuje nawet gdy jest w pozycji ataku.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -439,7 +461,7 @@ registerEffect({
 registerEffect({
   id: 'leszy_post_attack_defend',
   name: 'Komenda Leszego',
-  description: 'Sojusznicy Leszego, po wykonaniu ataku, mogą natychmiast przejść w pozycję obrony.',
+  description: '[CZUJNOŚĆ] Sojusznicy Leszego, po wykonaniu ataku, mogą natychmiast przejść w pozycję obrony.',
   trigger: EffectTrigger.ON_ALLY_ATTACK,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -462,7 +484,7 @@ registerEffect(noEffect('matoha_effect', 'Matoha'))
 registerEffect({
   id: 'mroz_immunity_buffs',
   name: 'Odporność Mrozu',
-  description: 'Odporny na wrogie premie (buffy od przeciwnika nie działają).',
+  description: '[AURA] Odporny na wrogie premie (buffy od przeciwnika nie działają).',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {
@@ -478,7 +500,7 @@ registerEffect({
 registerEffect({
   id: 'rodzanice_swap_buff',
   name: 'Wyrok Rodzanic',
-  description: 'Raz na turę: wybierz dwie sojusznicze istoty i jedną premię — zostaje przeniesiona z jednej na drugą.',
+  description: '[AURA] Raz na turę: wybierz dwie sojusznicze istoty i jedną premię — zostaje przeniesiona z jednej na drugą.',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.MODIFIER,
   canActivate: (ctx) => ctx.source.metadata.rodzaniceUsedThisTurn !== true,
@@ -496,7 +518,7 @@ registerEffect({
 registerEffect({
   id: 'rodzanice_do_swap',
   name: 'Wyrok Rodzanic (swap)',
-  description: 'Wykonuje zamianę premii między dwoma sojusznikami.',
+  description: '[WEJŚCIE] Wykonuje zamianę premii między dwoma sojusznikami.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -515,7 +537,7 @@ registerEffect({
     if (fromCard && toCard && swapEffectId) {
       const effectIdx = fromCard.activeEffects.findIndex(e => e.effectId === swapEffectId)
       if (effectIdx !== -1) {
-        const [effect] = fromCard.activeEffects.splice(effectIdx, 1)
+        const effect = fromCard.activeEffects.splice(effectIdx, 1)[0]!
         toCard.activeEffects.push(effect)
         const log = addLog(state,
           `Rodzanice przenoszą premię "${swapEffectId}" z ${fromCard.cardData.name} na ${toCard.cardData.name}.`,
@@ -533,7 +555,7 @@ registerEffect({
 registerEffect({
   id: 'rusalka_mirror_attack',
   name: 'Lustrzany Atak Rusałki',
-  description: 'Atakuje za tyle ATK ile ma atakowana istota, z tym samym typem ataku co ona. Jeśli cel ma 0 ATK, zadaje 0 obrażeń.',
+  description: '[CZUJNOŚĆ] Atakuje za tyle ATK ile ma atakowana istota, z tym samym typem ataku co ona. Jeśli cel ma 0 ATK, zadaje 0 obrażeń.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -560,7 +582,7 @@ registerEffect({
 registerEffect({
   id: 'rybi_krol_pierce_immunity',
   name: 'Wola Rybiego Króla',
-  description: 'Dopóki żyje, wybrany sojusznik rani wybranego przeciwnika negując ograniczenia i odporności.',
+  description: '[AURA] Dopóki żyje, wybrany sojusznik rani wybranego przeciwnika negując ograniczenia i odporności.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {
@@ -576,7 +598,7 @@ registerEffect({
 registerEffect({
   id: 'strela_flash_counter',
   name: 'Błyskawiczny Kontratak Streli',
-  description: 'INTERRUPT: Możesz wystawić Strelę z ręki podczas tury przeciwnika gdy zagrywa dowolną kartę. Jego karta nie zostaje użyta i trafia na spód talii.',
+  description: '[WEJŚCIE] INTERRUPT: Możesz wystawić Strelę z ręki podczas tury przeciwnika gdy zagrywa dowolną kartę. Jego karta nie zostaje użyta i trafia na spód talii.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {
@@ -606,7 +628,7 @@ registerEffect({
 registerEffect({
   id: 'szalinc_negate_immunity',
   name: 'Furia Szalińca',
-  description: 'Jego atak neguje premię odporności celu.',
+  description: '[CZUJNOŚĆ] Jego atak neguje premię odporności celu.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -624,7 +646,7 @@ registerEffect({
 registerEffect({
   id: 'wila_convert_weak_enemies',
   name: 'Taniec Wiły',
-  description: 'PASYWNE: Wszystkie wrogie istoty na polu o ataku ≤ Wiły walczą po jej stronie. Sprawdzane każdą turę — gdy Wiła zyska ATK, przejmuje nowe istoty.',
+  description: '[AURA] Wszystkie wrogie istoty na polu o ataku ≤ Wiły walczą po jej stronie. Sprawdzane każdą turę — gdy Wiła zyska ATK, przejmuje nowe istoty.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_TURN_START],
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -661,7 +683,7 @@ registerEffect({
 registerEffect({
   id: 'wodnik_return_on_round_end',
   name: 'Ucieczka Wodnika',
-  description: 'Po zakończeniu każdej rundy którą przeżyje, może wrócić do talii.',
+  description: '[AURA] Po zakończeniu każdej rundy którą przeżyje, może wrócić do talii.',
   trigger: EffectTrigger.ON_ROUND_START,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -679,7 +701,7 @@ registerEffect({
 registerEffect({
   id: 'korgorusze_recover_glory',
   name: 'Odzysk Sławy',
-  description: 'Rezygnując z ataku w tej turze, odzyskaj 1 wydany punkt Sławy.',
+  description: '[AURA] Rezygnując z ataku w tej turze, odzyskaj 1 wydany punkt Sławy.',
   trigger: EffectTrigger.ON_TURN_END,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -693,7 +715,7 @@ registerEffect({
 registerEffect({
   id: 'lapiduch_demon_hunter',
   name: 'Łowca Demonów',
-  description: 'Może atakować jedynie demony. Gdy jest w polu, nikt nie może wystawić demonów.',
+  description: '[AURA] Może atakować jedynie demony. Gdy jest w polu, nikt nie może wystawić demonów.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -725,7 +747,7 @@ registerEffect(noEffect('weles_placeholder_01', 'Weles placeholder'))
 registerEffect({
   id: 'adventure_moc_swiatogora',
   name: 'Moc Światogora',
-  description: 'ATK i DEF stworzenia podwajają się, lecz jeśli zaatakuje i zabije, sama zginie.',
+  description: '[WEJŚCIE] ATK i DEF stworzenia podwajają się, lecz jeśli zaatakuje i zabije, sama zginie.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -749,7 +771,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_moc_swiatogora_enhanced',
   name: 'Moc Światogora (wzmocniona)',
-  description: 'Jak wyżej + po 3 rundach wskrzesza się z bazowymi statystykami.',
+  description: '[WEJŚCIE] Jak wyżej + po 3 rundach wskrzesza się z bazowymi statystykami.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -775,7 +797,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_arena',
   name: 'Arena',
-  description: 'Rywal nie może wystawić więcej stworzeń niż ma w polu zagrywający Arenę.',
+  description: '[AURA] Rywal nie może wystawić więcej stworzeń niż ma w polu zagrywający Arenę.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -788,7 +810,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_arena_enhanced',
   name: 'Arena (wzmocniona)',
-  description: 'Raz zranione stworzenie wroga może atakować tylko swego oprawcę.',
+  description: '[ODWET] Raz zranione stworzenie wroga może atakować tylko swego oprawcę.',
   trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -805,11 +827,40 @@ registerEffect({
   },
 })
 
+// ✅ BITWA NAD TOLLENSE — Zdarzenie: ignoruj linie (enforcement w LineManager.canAttack)
+registerEffect({
+  id: 'adventure_bitwa_nad_tollense',
+  name: 'Bitwa Nad Tollense',
+  description: '[ZDARZENIE] Wszystkie istoty ignorują Linie — biją kogo chcą.',
+  trigger: EffectTrigger.PASSIVE,
+  priority: EffectPriority.PASSIVE,
+  execute: (ctx) => effectResult(cloneGameState(ctx.state)),
+})
+
+registerEffect({
+  id: 'adventure_bitwa_nad_tollense_enhanced',
+  name: 'Bitwa Nad Tollense (wzmocniona)',
+  description: '[ZDARZENIE+] +2 dodatkowe ataki istotami w turze zagrania.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const owner = newState.players[source.owner]
+    const creatures = getAllCreaturesOnField(newState, source.owner)
+    for (const c of creatures) {
+      c.metadata.freeAttacksLeft = ((c.metadata.freeAttacksLeft as number) ?? 0) + 2
+    }
+    const log = addLog(newState, `Bitwa Nad Tollense+: ${creatures.length} istot zyskuje 2 dodatkowe ataki!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
 // ✅ OBLĘD — Zamiana ATK z DEF wybranego stworzenia
 registerEffect({
   id: 'adventure_obled',
   name: 'Obłęd',
-  description: 'Zamienia ATK z DEF u wybranego stworzenia.',
+  description: '[WEJŚCIE] Zamienia ATK z DEF u wybranego stworzenia.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -833,7 +884,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_topor_peruna',
   name: 'Topór Peruna',
-  description: 'Stworzenie może wykonać jeden atak dystansowy zadający 4x obrażenia.',
+  description: '[CZUJNOŚĆ] Stworzenie może wykonać jeden atak dystansowy zadający 4x obrażenia.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -854,7 +905,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_trucizna',
   name: 'Trucizna',
-  description: 'Wskazane stworzenie ginie po 3 rundach.',
+  description: '[WEJŚCIE] Wskazane stworzenie ginie po 3 rundach.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -876,7 +927,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_laska_welesa',
   name: 'Łaska Welesa',
-  description: 'Wskrzesza własną istotę. Może wrócić do talii lub być wystawiona od razu (bez limitu).',
+  description: '[WEJŚCIE] Wskrzesza własną istotę. Może wrócić do talii lub być wystawiona od razu (bez limitu).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -891,7 +942,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_laska_welesa_enhanced',
   name: 'Łaska Welesa (wzmocniona)',
-  description: 'Wskrzesza istotę rywala z jego cmentarza — walczy po stronie zagrywającego.',
+  description: '[WEJŚCIE] Wskrzesza istotę rywala z jego cmentarza — walczy po stronie zagrywającego.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -910,7 +961,7 @@ registerEffect({
 registerEffect({
   id: 'buka_force_defense',
   name: 'Dominacja Buki',
-  description: 'Wrogowie ze słabszym ATK muszą być w obronie.',
+  description: '[AURA] Wrogowie ze słabszym ATK muszą być w obronie.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -920,7 +971,7 @@ registerEffect({
 registerEffect({
   id: 'licho_block_draw',
   name: 'Klątwa Licha',
-  description: 'Rywal nie dobiera kart dopóki Licho jest na polu.',
+  description: '[AURA] Rywal nie dobiera kart dopóki Licho jest na polu.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -930,7 +981,7 @@ registerEffect({
 registerEffect({
   id: 'matoha_anti_magic',
   name: 'Antymagia Matohy',
-  description: 'Wrogie istoty z typem ataku Magia nie mogą atakować.',
+  description: '[AURA] Wrogie istoty z typem ataku Magia nie mogą atakować.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -940,7 +991,7 @@ registerEffect({
 registerEffect({
   id: 'cicha_kill_weak',
   name: 'Śmiertelna Cisza',
-  description: 'Na początku każdej tury — wszystkie istoty (obu stron) z DEF mniejszą niż ATK Cichej giną.',
+  description: '[AURA] Na początku każdej tury — wszystkie istoty (obu stron) z DEF mniejszą niż ATK Cichej giną.',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.CLEANUP,
   execute: (ctx) => {
@@ -967,7 +1018,7 @@ registerEffect({
 registerEffect({
   id: 'utopiec_half_damage',
   name: 'Wodna Tarcza Utopca',
-  description: 'Wszystkie obrażenia zadawane Utopkowi są zmniejszone o połowę (zaokrąglone w dół).',
+  description: '[AURA] Wszystkie obrażenia zadawane Utopkowi są zmniejszone o połowę (zaokrąglone w dół).',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -977,7 +1028,7 @@ registerEffect({
 registerEffect({
   id: 'domowik_hand_size',
   name: 'Domowy Dorobek',
-  description: 'Zyskuje +ATK równy aktualnej liczbie kart w ręce właściciela (sprawdzane co turę).',
+  description: '[AURA] Zyskuje +ATK równy aktualnej liczbie kart w ręce właściciela (sprawdzane co turę).',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -996,7 +1047,7 @@ registerEffect({
 registerEffect({
   id: 'cmuch_no_counter_received',
   name: 'Nieuchwytność Cmucha',
-  description: 'Gdy Cmuch atakuje, obrońca nie może kontratakować.',
+  description: '[AURA] Gdy Cmuch atakuje, obrońca nie może kontratakować.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1006,7 +1057,7 @@ registerEffect({
 registerEffect({
   id: 'wilkolak_melee_immune',
   name: 'Skóra Wilkołaka',
-  description: 'Nie można zranić atakiem Wręcz jeśli napastnik ma ATK < 7.',
+  description: '[AURA] Nie można zranić atakiem Wręcz jeśli napastnik ma ATK < 7.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1016,7 +1067,7 @@ registerEffect({
 registerEffect({
   id: 'stukacz_strong_immune',
   name: 'Odporność Stukacza',
-  description: 'Wrogie istoty z wyższym ATK niż Stukacz nie mogą go atakować.',
+  description: '[AURA] Wrogie istoty z wyższym ATK niż Stukacz nie mogą go atakować.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1026,7 +1077,7 @@ registerEffect({
 registerEffect({
   id: 'dydko_strong_immune',
   name: 'Zwinność Dydko',
-  description: 'Wrogie istoty z ATK >= ATK Dydko nie mogą go atakować.',
+  description: '[AURA] Wrogie istoty z ATK >= ATK Dydko nie mogą go atakować.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1036,7 +1087,7 @@ registerEffect({
 registerEffect({
   id: 'kudlak_conditional_immunity',
   name: 'Pancerz Kudłaka',
-  description: 'Można zranić Kudłaka tylko w rundzie, w której sam nie zadał obrażeń.',
+  description: '[AURA] [ODWET] Można zranić Kudłaka tylko w rundzie, w której sam nie zadał obrażeń.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_DAMAGE_DEALT],
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {
@@ -1054,7 +1105,7 @@ registerEffect({
 registerEffect({
   id: 'szeptunka_damage_reduction',
   name: 'Szept Ochrony',
-  description: 'Wszystkie sojusznicze istoty otrzymują o 1 obrażenie mniej.',
+  description: '[AURA] Wszystkie sojusznicze istoty otrzymują o 1 obrażenie mniej.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1068,7 +1119,7 @@ registerEffect({
 registerEffect({
   id: 'zar_ptak_death_explosion',
   name: 'Ostatni Płomień',
-  description: 'Przy śmierci: zadaje 4 obrażenia WSZYSTKIM istotom na polu (obie strony).',
+  description: '[POŻEGNANIE] Przy śmierci: zadaje 4 obrażenia WSZYSTKIM istotom na polu (obie strony).',
   trigger: EffectTrigger.ON_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1089,7 +1140,7 @@ registerEffect({
 registerEffect({
   id: 'lamia_death_reward',
   name: 'Przekleństwo Lamii',
-  description: 'Przy śmierci: zdobądź 1 ZŁ (lub w trybie z wyborem: 5 kart).',
+  description: '[POŻEGNANIE] Przy śmierci: zdobądź 1 ZŁ (lub w trybie z wyborem: 5 kart).',
   trigger: EffectTrigger.ON_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1105,7 +1156,7 @@ registerEffect({
 registerEffect({
   id: 'latawiec_mutual_death',
   name: 'Zemsta Latawca',
-  description: 'Istota która zabiła Latawca ginie razem z nim.',
+  description: '[POŻEGNANIE] Istota która zabiła Latawca ginie razem z nim.',
   trigger: EffectTrigger.ON_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1132,7 +1183,7 @@ registerEffect({
 registerEffect({
   id: 'konny_cleave',
   name: 'Przelot Konnego',
-  description: 'Nadmiar obrażeń (gdy obrońca ginie) przechodzi na kolejną istotę w tej samej linii.',
+  description: '[ZABÓJSTWO] Nadmiar obrażeń (gdy obrońca ginie) przechodzi na kolejną istotę w tej samej linii.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1164,7 +1215,7 @@ registerEffect({
 registerEffect({
   id: 'waz_tugaryn_cleave',
   name: 'Zabójczy Łuk Żmii Tugarynia',
-  description: 'Nadmiar obrażeń (gdy obrońca ginie) przechodzi na kolejną istotę w tej samej linii.',
+  description: '[ZABÓJSTWO] Nadmiar obrażeń (gdy obrońca ginie) przechodzi na kolejną istotę w tej samej linii.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1192,7 +1243,7 @@ registerEffect({
 registerEffect({
   id: 'chasnik_gold_on_kill',
   name: 'Łowy Chasnika',
-  description: 'Za każdego drugiego zabitego wroga zdobywa 1 ZŁ.',
+  description: '[ZABÓJSTWO] Za każdego drugiego zabitego wroga zdobywa 1 ZŁ.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1217,7 +1268,7 @@ registerEffect({
 registerEffect({
   id: 'dzicy_ludzie_steal_killed',
   name: 'Porwanie przez Dzikich',
-  description: 'Zabita istota trafia do ręki zamiast na cmentarz.',
+  description: '[ZABÓJSTWO] Zabita istota trafia do ręki zamiast na cmentarz.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.CLEANUP,
   execute: (ctx) => {
@@ -1241,7 +1292,7 @@ registerEffect({
     if (stolenCard) {
       stolenCard.owner = ownerOfDzicy
       stolenCard.isRevealed = true
-      stolenCard.currentStats = { ...stolenCard.cardData.stats }
+      stolenCard.currentStats = { ...(stolenCard.cardData as any).stats }
       newState.players[ownerOfDzicy].hand.push(stolenCard)
       const log = addLog(newState, `${source.cardData.name}: ${target.cardData.name} trafia do ręki Dzikich!`, 'effect')
       return effectResult(newState, [log])
@@ -1254,7 +1305,7 @@ registerEffect({
 registerEffect({
   id: 'czarnoksieznik_steal_abilities',
   name: 'Przejęcie Mocy',
-  description: 'Po zabiciu wroga Czarnoksiężnik przejmuje jego zdolności (effectId).',
+  description: '[ZABÓJSTWO] Po zabiciu wroga Czarnoksiężnik przejmuje jego zdolności (effectId).',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1280,7 +1331,7 @@ registerEffect({
 registerEffect({
   id: 'kania_chain_kill',
   name: 'Polowanie Kani',
-  description: 'Jeśli Kania zabije istotę z niższym ATK, nie jest liczona jako "atak w tej turze" — może atakować ponownie.',
+  description: '[ZABÓJSTWO] Jeśli Kania zabije istotę z niższym ATK, nie jest liczona jako "atak w tej turze" — może atakować ponownie.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1303,7 +1354,7 @@ registerEffect({
 registerEffect({
   id: 'dziwolzona_swap_cards',
   name: 'Wymiana Dziwożony',
-  description: 'Po zabiciu wroga: dobierz po 1 karcie z obu talii (wybierasz którą zatrzymać — auto: bierzesz obie).',
+  description: '[ZABÓJSTWO] Po zabiciu wroga: dobierz po 1 karcie z obu talii (wybierasz którą zatrzymać — auto: bierzesz obie).',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1315,13 +1366,13 @@ registerEffect({
     const opponent = newState.players[opponentSide]
 
     if (ownerPlayer.deck.length > 0) {
-      const ownCard = ownerPlayer.deck.splice(0, 1)[0]
+      const ownCard = ownerPlayer.deck.splice(0, 1)[0]!
       ownCard.owner = source.owner
       ownerPlayer.hand.push(ownCard)
       log.push(addLog(newState, `${source.cardData.name}: Dziwożona dobiera kartę z własnej talii.`, 'effect'))
     }
     if (opponent.deck.length > 0) {
-      const enemyCard = opponent.deck.splice(0, 1)[0]
+      const enemyCard = opponent.deck.splice(0, 1)[0]!
       enemyCard.owner = source.owner
       enemyCard.isRevealed = true
       ownerPlayer.hand.push(enemyCard)
@@ -1339,7 +1390,7 @@ registerEffect({
 registerEffect({
   id: 'strzyga_lifesteal',
   name: 'Krwiopijstwo Strzygi',
-  description: 'Gdy Strzyga zadaje obrażenia, regeneruje tyle samo DEF.',
+  description: '[ODWET] Gdy Strzyga zadaje obrażenia, regeneruje tyle samo DEF.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1364,7 +1415,7 @@ registerEffect({
 registerEffect({
   id: 'bezkost_atk_drain',
   name: 'Kradnięcie Kości',
-  description: 'Bezkost zadaje obrażenia ATK celu zamiast DEF.',
+  description: '[ODWET] Bezkost zadaje obrażenia ATK celu zamiast DEF.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -1387,7 +1438,7 @@ registerEffect({
 registerEffect({
   id: 'bazyliszek_paralyze',
   name: 'Wzrok Bazyliszka',
-  description: 'Zraniona przez Bazyliszka istota traci zdolność ataku do końca tury.',
+  description: '[ODWET] Zraniona przez Bazyliszka istota jest sparaliżowana na 2 rundy (nie atakuje, nie kontratakuje, nie aktywuje zdolności).',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1397,7 +1448,8 @@ registerEffect({
     const targetCard = findCardInState(newState, target.instanceId)
     if (targetCard && !targetCard.isImmune) {
       targetCard.cannotAttack = true
-      const log = addLog(newState, `${source.cardData.name}: Paraliżuje wzrokiem ${target.cardData.name} — nie może atakować tej tury (zdolność: paraliż po otrzymaniu obrażeń).`, 'effect')
+      targetCard.paralyzeRoundsLeft = 2
+      const log = addLog(newState, `${source.cardData.name}: Paraliżuje wzrokiem ${target.cardData.name} na 2 rundy!`, 'effect')
       return effectResult(newState, [log])
     }
     return effectResult(newState)
@@ -1408,7 +1460,7 @@ registerEffect({
 registerEffect({
   id: 'homen_convert_on_death',
   name: 'Zaraza Homena',
-  description: 'Istota zraniona przez Homena, gdy ginie, wskrzesza się jako Homen po stronie atakującego.',
+  description: '[ODWET] Istota zraniona przez Homena, gdy ginie, wskrzesza się jako Homen po stronie atakującego.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1419,6 +1471,8 @@ registerEffect({
     if (targetCard && !targetCard.isImmune) {
       targetCard.metadata.homenCurseOwner = source.owner
       targetCard.metadata.homenCardData = (source.cardData as any)
+      const log = addLog(newState, `${source.cardData.name}: Nakłada klątwę na ${target.cardData.name} — po śmierci wstanie jako Homen!`, 'effect')
+      return effectResult(newState, [log])
     }
     return effectResult(newState)
   },
@@ -1428,7 +1482,7 @@ registerEffect({
 registerEffect({
   id: 'zagorkinia_curse_drain',
   name: 'Klątwa Zagorkini',
-  description: 'Zraniona przez Zagordinię istota traci -1 ATK/-1 DEF na początku każdej tury.',
+  description: '[ODWET] Zraniona przez Zagordinię istota traci -1 ATK/-1 DEF na początku każdej tury.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1454,7 +1508,7 @@ registerEffect({
 registerEffect({
   id: 'bies_reverse_damage',
   name: 'Twardy Skórzak Biesa',
-  description: 'Obrażenia najpierw redukują ATK Biesa, dopiero potem DEF.',
+  description: '[ODWET] Obrażenia najpierw redukują ATK Biesa, dopiero potem DEF.',
   trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -1484,7 +1538,7 @@ registerEffect({
 registerEffect({
   id: 'rodzanice_scry',
   name: 'Wyrok Rodzanic (Wróżba)',
-  description: 'Raz na turę: podejrzyj wierzchnią kartę talii rywala.',
+  description: '[AKCJA] Raz na turę: podejrzyj wierzchnią kartę talii rywala.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -1496,7 +1550,7 @@ registerEffect({
     if (opponent.deck.length === 0) {
       return effectResult(newState, [addLog(newState, 'Rodzanice: Talia rywala jest pusta.', 'effect')])
     }
-    const topCard = opponent.deck[0]
+    const topCard = opponent.deck[0]!
     topCard.isRevealed = true
     const log = addLog(newState, `Rodzanice podglądają wierzchnią kartę: "${topCard.cardData.name}".`, 'effect')
     return effectResult(newState, [log])
@@ -1510,7 +1564,7 @@ registerEffect({
 registerEffect({
   id: 'wolch_heal',
   name: 'Wołch (Uzdrowienie)',
-  description: 'Akcja (1 ZŁ, raz/turę): Ulecz sojusznika w tej samej linii do pełna.',
+  description: '[AKCJA] Akcja (1 ZŁ, raz/turę): Ulecz sojusznika w tej samej linii do pełna.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -1546,7 +1600,7 @@ registerEffect({
 registerEffect({
   id: 'jedza_remove_buff',
   name: 'Jędza (Usuń Premię)',
-  description: 'Akcja (darmowa, raz/turę): Usuń 1 aktywny efekt z dowolnej istoty.',
+  description: '[AKCJA] Akcja (darmowa, raz/turę): Usuń 1 aktywny efekt z dowolnej istoty.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -1584,7 +1638,7 @@ registerEffect({
 registerEffect({
   id: 'siemiargl_cleanse',
   name: 'Siemiargł (Oczyszczenie)',
-  description: 'Przy wystawieniu: Usuwa wszystkie negatywne efekty z sojuszników.',
+  description: '[WEJŚCIE] Przy wystawieniu: Usuwa wszystkie negatywne efekty z sojuszników.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.IMMEDIATE,
   execute: (ctx) => {
@@ -1616,7 +1670,7 @@ registerEffect({
 registerEffect({
   id: 'swietle_reveal_card',
   name: 'Świetle (Odkrycie)',
-  description: 'Na początku każdej tury: Odkrywa 1 zakrytą kartę wroga (ręka lub pole).',
+  description: '[AURA] Na początku każdej tury: Odkrywa 1 zakrytą kartę wroga (ręka lub pole).',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -1649,7 +1703,7 @@ registerEffect({
 registerEffect({
   id: 'jaroszek_paralyze',
   name: 'Jaroszek (Trwały Paraliż)',
-  description: 'Przy wystawieniu: Wybrany wróg jest trwale unieruchomiony (nie może atakować).',
+  description: '[WEJŚCIE] Przy wystawieniu: Wybrany wróg jest trwale unieruchomiony (nie może atakować).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.IMMEDIATE,
   activationRequiresTarget: true,
@@ -1662,8 +1716,9 @@ registerEffect({
       .find(c => c.instanceId === target.instanceId)
     if (!enemy) return effectResult(newState, [addLog(newState, 'Jaroszek: Cel musi być wrogiem.', 'effect')])
 
-    enemy.metadata.cannotAttack = true
-    const log = addLog(newState, `Jaroszek unieruchamia ${enemy.cardData.name} na stałe — jego wzrok paraliżuje wroga, uniemożliwiając atak na zawsze!`, 'effect')
+    enemy.cannotAttack = true
+    enemy.paralyzeRoundsLeft = -1  // -1 = trwały paraliż
+    const log = addLog(newState, `Jaroszek unieruchamia ${enemy.cardData.name} na stałe — paraliż permanentny!`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -1675,7 +1730,7 @@ registerEffect({
 registerEffect({
   id: 'poludnica_kill_weakest',
   name: 'Południca (Śmierć Najsłabszego)',
-  description: 'Na początku każdej tury: Najsłabsza istota na polu (obie strony) ginie.',
+  description: '[AURA] Na początku każdej tury: Najsłabsza istota na polu (obie strony) ginie.',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.CLEANUP,
   execute: (ctx) => {
@@ -1707,7 +1762,7 @@ registerEffect({
 registerEffect({
   id: 'guslarka_bonus_vs_demon',
   name: 'Guślarka (Premie vs Demony)',
-  description: 'AURA: Sojusznicy atakujący istoty z domeny Weles zyskują +2 Ataku.',
+  description: '[AURA] Sojusznicy atakujący istoty z domeny Weles zyskują +2 Ataku.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1720,7 +1775,7 @@ registerEffect({
 registerEffect({
   id: 'latawica_drain_ally',
   name: 'Latawica (Wysysanie Sił)',
-  description: 'Akcja (darmowa, raz/turę): Wysysa WSZYSTKIE Atak i Obronę od wybranego sojusznika (może go zabić).',
+  description: '[AKCJA] Akcja (darmowa, raz/turę): Wysysa WSZYSTKIE Atak i Obronę od wybranego sojusznika (może go zabić).',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -1768,7 +1823,7 @@ registerEffect({
 registerEffect({
   id: 'lucznik_pin',
   name: 'Łucznik (Unieruchomienie)',
-  description: 'Po zadaniu obrażeń: Cel nie może zmieniać Pozycji (permanentnie).',
+  description: '[ODWET] Po zadaniu obrażeń: Cel nie może zmieniać Pozycji (permanentnie).',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1793,7 +1848,7 @@ registerEffect({
 registerEffect({
   id: 'tur_ranged_magic_immune',
   name: 'Tur (Odporność na Dystans i Magię)',
-  description: 'AURA: Odporny na ataki Dystans i Magia.',
+  description: '[AURA] Odporny na ataki Dystans i Magia.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1806,7 +1861,7 @@ registerEffect({
 registerEffect({
   id: 'zupan_no_field_limit',
   name: 'Żupan (Brak Limitu Pola)',
-  description: 'AURA: Brak limitu 5 istot na polu dopóki Żupan jest w grze.',
+  description: '[AURA] Brak limitu 5 istot na polu dopóki Żupan jest w grze.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1819,7 +1874,7 @@ registerEffect({
 registerEffect({
   id: 'zerca_welesa_demon_buff',
   name: 'Żerca Welesa (Siła Demonów)',
-  description: 'AURA: Twoje Demony (domena Weles) zyskują +1 Ataku.',
+  description: '[AURA] Twoje Demony (domena Weles) zyskują +1 Ataku.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1832,7 +1887,7 @@ registerEffect({
 registerEffect({
   id: 'starszyzna_scry_deck',
   name: 'Starszyzna Plemienna (Mądrość)',
-  description: 'Na początku każdej tury: Odkrywa 3 górne karty własnej talii.',
+  description: '[AURA] Na początku każdej tury: Odkrywa 3 górne karty własnej talii.',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -1853,7 +1908,7 @@ registerEffect({
 registerEffect({
   id: 'zerca_spell_shield',
   name: 'Żerca (Tarcza Zaklęć)',
-  description: 'Przy wystawieniu: Sojusznicy zyskują jednorazową tarczę przed wrogim zaklęciem.',
+  description: '[WEJŚCIE] Przy wystawieniu: Sojusznicy zyskują jednorazową tarczę przed wrogim zaklęciem.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.IMMEDIATE,
   execute: (ctx) => {
@@ -1879,7 +1934,7 @@ registerEffect({
 registerEffect({
   id: 'polnocnica_mass_paralyze',
   name: 'Północnica (Masowy Paraliż)',
-  description: 'Akcja (1 ZŁ): Paraliżuje WSZYSTKICH wrogów na 1 rundę.',
+  description: '[AKCJA] Akcja (1 ZŁ): Paraliżuje WSZYSTKICH wrogów na 2 rundy.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -1890,11 +1945,13 @@ registerEffect({
     const enemies = getAllCreaturesOnField(newState, ctx.source.owner === 'player1' ? 'player2' : 'player1')
     let count = 0
     for (const enemy of enemies) {
-      enemy.metadata.cannotAttack = true
-      enemy.metadata.temporaryParalyzeRound = newState.roundNumber
-      count++
+      if (!enemy.isImmune) {
+        enemy.cannotAttack = true
+        enemy.paralyzeRoundsLeft = 2
+        count++
+      }
     }
-    const log = addLog(newState, `Północnica paraliżuje ${count} wrogów na 1 rundę!`, 'effect')
+    const log = addLog(newState, `Północnica paraliżuje ${count} wrogów na 2 rundy!`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -1906,7 +1963,7 @@ registerEffect({
 registerEffect({
   id: 'tesknica_block_enhance',
   name: 'Tęsknica (Blokada Ulepszeń)',
-  description: 'AURA: Wróg nie może ulepszać Zaklęć (enhanced adventure) dopóki Tęsknica żyje.',
+  description: '[AURA] Wróg nie może ulepszać Zaklęć (enhanced adventure) dopóki Tęsknica żyje.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1919,18 +1976,20 @@ registerEffect({
 registerEffect({
   id: 'dziad_reveal_all',
   name: 'Dziadowe Widzenie',
-  description: 'Przy wystawieniu: odkrywa WSZYSTKIE karty wroga (pole + ręka).',
+  description: '[WEJŚCIE] Przy wystawieniu: odkrywa WSZYSTKIE karty wroga (pole + ręka).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
     const opponentSide = ctx.source.owner === 'player1' ? 'player2' : 'player1'
     const opponent = newState.players[opponentSide]
+    let fieldCount = 0
     for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
-      opponent.field.lines[line].forEach(c => { c.isRevealed = true })
+      opponent.field.lines[line].forEach(c => { c.isRevealed = true; fieldCount++ })
     }
+    const handCount = opponent.hand.length
     opponent.hand.forEach(c => { c.isRevealed = true })
-    const log = addLog(newState, `${ctx.source.cardData.name}: Odkrywa wszystkie karty wroga!`, 'effect')
+    const log = addLog(newState, `${ctx.source.cardData.name}: Odkrywa ${fieldCount} kart na polu i ${handCount} kart z ręki wroga!`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -1942,7 +2001,7 @@ registerEffect({
 registerEffect({
   id: 'wieszczy_spy_burn',
   name: 'Przekleństwo Wieszczego',
-  description: 'Przy wystawieniu: ujawnia wszystkie karty na polu wroga. Na końcu każdej tury: niszczy 1 losową kartę z ręki wroga.',
+  description: '[WEJŚCIE] [AURA] Przy wystawieniu: ujawnia wszystkie karty na polu wroga. Na końcu każdej tury: niszczy 1 losową kartę z ręki wroga.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_TURN_END],
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1958,7 +2017,7 @@ registerEffect({
     } else if (ctx.trigger === EffectTrigger.ON_TURN_END) {
       if (opponent.hand.length > 0) {
         const idx = Math.floor(Math.random() * opponent.hand.length)
-        const burned = opponent.hand.splice(idx, 1)[0]
+        const burned = opponent.hand.splice(idx, 1)[0]!
         opponent.graveyard.push(burned)
         log.push(addLog(newState, `${ctx.source.cardData.name}: Spala ${burned.cardData.name} z ręki wroga!`, 'effect'))
       }
@@ -1974,7 +2033,7 @@ registerEffect({
 registerEffect({
   id: 'bagiennik_cleanse_buff',
   name: 'Oczyszczenie Bagiennika',
-  description: 'Akcja (gratis): Usuwa jeden efekt z dowolnej istoty na polu. Bagiennik podwaja swój ATK i DEF.',
+  description: '[AKCJA] Akcja (gratis): Usuwa jeden efekt z dowolnej istoty na polu. Bagiennik podwaja swój ATK i DEF.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -2010,7 +2069,7 @@ registerEffect({
 registerEffect({
   id: 'cmentarna_baba_resurrect',
   name: 'Wskrzeszenie Cmentarnej Baby',
-  description: 'Przy wystawieniu: wskrzesza Nieumarłego z cmentarza (ATK ≤ własny ATK) na pole L1.',
+  description: '[WEJŚCIE] Przy wystawieniu: wskrzesza Nieumarłego z cmentarza (ATK ≤ własny ATK) na pole L1.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2040,7 +2099,7 @@ registerEffect({
 
     // AI: wskrzes najsilniejszego
     candidates.sort((a, b) => b.currentStats.attack - a.currentStats.attack)
-    const toResurrect = candidates[0]
+    const toResurrect = candidates[0]!
     const gravIdx = owner.graveyard.findIndex(c => c.instanceId === toResurrect.instanceId)
     if (gravIdx !== -1) owner.graveyard.splice(gravIdx, 1)
     toResurrect.currentStats.defense = (toResurrect.cardData as any).stats.defense
@@ -2059,7 +2118,7 @@ registerEffect({
 registerEffect({
   id: 'grad_magic_element_only',
   name: 'Grad (Tarcza Żywiołów)',
-  description: 'PASYWNY: Odporny na Wręcz i Dystans — tylko Magia i Żywioł mogą go trafić.',
+  description: '[AURA] Odporny na Wręcz i Dystans — tylko Magia i Żywioł mogą go trafić.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2072,7 +2131,7 @@ registerEffect({
 registerEffect({
   id: 'mavka_line_shield',
   name: 'Mavka (Tarcza Linii)',
-  description: 'AURA: Sojusznicy w tej samej linii co Mavka nie mogą być celem ataków wrogów.',
+  description: '[AURA] Sojusznicy w tej samej linii co Mavka nie mogą być celem ataków wrogów.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2085,7 +2144,7 @@ registerEffect({
 registerEffect({
   id: 'czart_shift_stats',
   name: 'Czarcia Przemiana',
-  description: 'Akcja (gratis): Przenosi całą DEF na ATK (DEF = 0, ATK += poprzednia DEF). Raz w turze.',
+  description: '[AKCJA] Akcja (gratis): Przenosi całą DEF na ATK (DEF = 0, ATK += poprzednia DEF). Raz w turze.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -2110,7 +2169,7 @@ registerEffect({
 registerEffect({
   id: 'darmopych_friendly_fire',
   name: 'Darmopychowy Chaos',
-  description: 'Przy wystawieniu: wybrana wroga istota atakuje swego najsłabszego sojusznika (friendly fire).',
+  description: '[WEJŚCIE] Przy wystawieniu: wybrana wroga istota atakuje swego najsłabszego sojusznika (friendly fire).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   activationRequiresTarget: true,
@@ -2124,7 +2183,7 @@ registerEffect({
       .filter(c => c.instanceId !== forcedAttacker.instanceId)
     if (allies.length === 0) return effectResult(newState)
     allies.sort((a, b) => a.currentStats.defense - b.currentStats.defense)
-    const victim = allies[0]
+    const victim = allies[0]!
     const damage = forcedAttacker.currentStats.attack
     victim.currentStats.defense -= damage
     log.push(addLog(newState, `${ctx.source.cardData.name}: ${forcedAttacker.cardData.name} atakuje sojusznika ${victim.cardData.name} za ${damage}!`, 'effect'))
@@ -2143,7 +2202,7 @@ registerEffect({
 registerEffect({
   id: 'bogunka_instant_kill_human',
   name: 'Śmiertelny Pocałunek Bogunki',
-  description: 'Gdy Bogunka zaatakuje Żywi (domain 2): cel natychmiast ginie niezależnie od HP.',
+  description: '[ODWET] Gdy Bogunka zaatakuje Żywi (domain 2): cel natychmiast ginie niezależnie od HP.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2168,7 +2227,7 @@ registerEffect({
 registerEffect({
   id: 'przyloznik_heal_on_zyvi_kill',
   name: 'Przyłóżnikowa Uczta',
-  description: 'Po zabiciu Żywi (domain 2): Przyłóżnik regeneruje się do pełnego HP.',
+  description: '[ZABÓJSTWO] Po zabiciu Żywi (domain 2): Przyłóżnik regeneruje się do pełnego HP.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2194,7 +2253,7 @@ registerEffect({
 registerEffect({
   id: 'szatopierz_discard_for_gold',
   name: 'Szatopierzowy Handel',
-  description: 'Akcja (gratis): Odrzuć 2 karty z ręki → zyskaj 1 ZŁ. Raz w turze.',
+  description: '[AKCJA] Akcja (gratis): Odrzuć 2 karty z ręki → zyskaj 1 ZŁ. Raz w turze.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -2219,7 +2278,7 @@ registerEffect({
 registerEffect({
   id: 'mara_sacrifice_takeover',
   name: 'Marycyna Ofiara',
-  description: 'Akcja (raz w grze): Mara poświęca się — przejmuje wrogu istotę z ATK ≤ 2× ATK Mary.',
+  description: '[AKCJA] Akcja (raz w grze): Mara poświęca się — przejmuje wrogu istotę z ATK ≤ 2× ATK Mary.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -2259,7 +2318,7 @@ registerEffect({
 registerEffect({
   id: 'wietrzyca_rearrange_enemy',
   name: 'Wiatrowiskowy Chaos',
-  description: 'Akcja (gratis): Przetasowuje rozmieszczenie wrogich istot między liniami. Raz w turze.',
+  description: '[AKCJA] Akcja (gratis): Przetasowuje rozmieszczenie wrogich istot między liniami. Raz w turze.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -2281,11 +2340,11 @@ registerEffect({
     const lines = entries.map(e => e.line)
     for (let i = lines.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [lines[i], lines[j]] = [lines[j], lines[i]]
+      [lines[i], lines[j]] = [lines[j]!, lines[i]!]
     }
     entries.forEach((entry, idx) => {
-      entry.card.line = lines[idx]
-      opponent.field.lines[lines[idx]].push(entry.card)
+      entry.card.line = lines[idx]!
+      opponent.field.lines[lines[idx]!].push(entry.card)
     })
     const log = addLog(newState, `${ctx.source.cardData.name}: Przetasowuje pozycje ${entries.length} wrogich istot!`, 'effect')
     return effectResult(newState, [log])
@@ -2299,7 +2358,7 @@ registerEffect({
 registerEffect({
   id: 'zmije_glory_on_empty_field',
   name: 'Żmije (Próżne Pole)',
-  description: 'Na końcu Twojej tury: jeśli pole przeciwnika jest puste, zdobywasz 1 ZŁ.',
+  description: '[AURA] Na końcu Twojej tury: jeśli pole przeciwnika jest puste, zdobywasz 1 ZŁ.',
   trigger: EffectTrigger.ON_TURN_END,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2320,7 +2379,7 @@ registerEffect({
 registerEffect({
   id: 'chlop_extra_attack',
   name: 'Chłop (Masa Plebejska)',
-  description: 'AURA: Możesz wykonać 1 dodatkowy atak istotą w tej turze.',
+  description: '[AURA] Możesz wykonać 1 dodatkowy atak istotą w tej turze.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2333,7 +2392,7 @@ registerEffect({
 registerEffect({
   id: 'junak_double_hit_kill',
   name: 'Junak (Podwójny Cios)',
-  description: 'Jeśli Junak zrani kogoś dwa razy, ten cel natychmiast ginie.',
+  description: '[ODWET] Jeśli Junak zrani kogoś dwa razy, ten cel natychmiast ginie.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2367,7 +2426,7 @@ registerEffect({
 registerEffect({
   id: 'lesnica_double_attack',
   name: 'Leśnica (Podwójny Atak)',
-  description: 'AURA: Może atakować 2 razy w jednej turze.',
+  description: '[AURA] Może atakować 2 razy w jednej turze.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2380,7 +2439,7 @@ registerEffect({
 registerEffect({
   id: 'swiatogor_line_cleave',
   name: 'Światogor (Rzeź Linii)',
-  description: 'AURA: Jego atak uderza we WSZYSTKICH wrogów w tej samej linii co cel.',
+  description: '[ODWET] Jego atak uderza we WSZYSTKICH wrogów w tej samej linii co cel.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2426,7 +2485,7 @@ registerEffect({
 registerEffect({
   id: 'kikimora_free_attack',
   name: 'Kikimora (Darmowy Atak)',
-  description: 'AURA: Jej atak nie zajmuje slotu atakowego — możesz nadal atakować inną istotą.',
+  description: '[AURA] Jej atak nie zajmuje slotu atakowego — możesz nadal atakować inną istotą.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2439,7 +2498,7 @@ registerEffect({
 registerEffect({
   id: 'bledny_ognik_bounce',
   name: 'Błędny Ognik (Zauroczenie)',
-  description: 'Przy wystawieniu: wskazana istota wraca na wierzch talii swojego właściciela (zachowuje modyfikatory).',
+  description: '[WEJŚCIE] Przy wystawieniu: wskazana istota wraca na wierzch talii swojego właściciela (zachowuje modyfikatory).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2474,7 +2533,7 @@ registerEffect({
 registerEffect({
   id: 'morowa_dziewica_aoe_all',
   name: 'Morowa Dziewica (Zaraza)',
-  description: 'AURA: Jej atak uderza WSZYSTKICH na polu — łącznie z sojusznikami (z wyjątkiem niej samej i głównego celu).',
+  description: '[ODWET] Jej atak uderza WSZYSTKICH na polu — łącznie z sojusznikami (z wyjątkiem niej samej i głównego celu).',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2516,7 +2575,7 @@ registerEffect({
 registerEffect({
   id: 'wisielec_bounce_both',
   name: 'Wisielec (Dotknięcie Śmierci)',
-  description: 'Kogo Wisielec zrani — wraca na spód talii. Kto zrani Wisielca — też wraca na spód talii.',
+  description: '[ODWET] Kogo Wisielec zrani — wraca na spód talii. Kto zrani Wisielca — też wraca na spód talii.',
   trigger: [EffectTrigger.ON_DAMAGE_DEALT, EffectTrigger.ON_DAMAGE_RECEIVED],
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -2553,7 +2612,7 @@ registerEffect({
 registerEffect({
   id: 'wapierz_invincible_hunger',
   name: 'Wąpierz (Głód Krwi)',
-  description: 'Odporny na wszelkie obrażenia. Ginie, gdy przez 2 rundy nie zada żadnych obrażeń. Może atakować sojuszników.',
+  description: '[ODWET] [AURA] Odporny na wszelkie obrażenia. Ginie, gdy przez 2 rundy nie zada żadnych obrażeń. Może atakować sojuszników.',
   trigger: [EffectTrigger.ON_DAMAGE_DEALT, EffectTrigger.ON_TURN_END],
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -2592,7 +2651,7 @@ registerEffect({
 registerEffect({
   id: 'zmora_grow_sacrifice',
   name: 'Zmora (Żywienie Lękiem)',
-  description: 'Ile zadaje obrażeń, tyle dodaje sobie Ataku lub Obrony.',
+  description: '[ODWET] Ile zadaje obrażeń, tyle dodaje sobie Ataku lub Obrony.',
   trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2616,7 +2675,7 @@ registerEffect({
 registerEffect({
   id: 'baba_jaga_death_growth',
   name: 'Baba Jaga (Żniwiarka Dusz)',
-  description: 'Za każdą śmierć na polu (sojusznika lub wroga): +1 Atak i +1 Obrona.',
+  description: '[CZUJNOŚĆ] Za każdą śmierć na polu (sojusznika lub wroga): +1 Atak i +1 Obrona.',
   trigger: EffectTrigger.ON_ANY_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2630,6 +2689,7 @@ registerEffect({
     if (typeof card.currentStats.maxDefense === 'number') {
       card.currentStats.maxDefense += 1
     }
+    card.metadata.justGrew = true
     const log = addLog(newState, `${source.cardData.name}: Dusza zebrana! +1/+1 (${card.currentStats.attack}/${card.currentStats.defense}).`, 'effect')
     return effectResult(newState, [log])
   },
@@ -2642,7 +2702,7 @@ registerEffect({
 registerEffect({
   id: 'woj_mass_deploy',
   name: 'Woj (Atak Gromadą)',
-  description: 'Przy wystawieniu: wszystkie inne karty Woja z ręki wchodzą na pole za darmo.',
+  description: '[WEJŚCIE] Przy wystawieniu: wszystkie inne karty Woja z ręki wchodzą na pole za darmo.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2674,7 +2734,7 @@ registerEffect({
 registerEffect({
   id: 'znachor_absorb',
   name: 'Znachor (Uzdrowiciel)',
-  description: 'Gdy sojusznik przeżyje atak, Znachor redukuje obrażenia o swój Atak.',
+  description: '[AURA] Gdy sojusznik przeżyje atak, Znachor redukuje obrażenia o swój Atak.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2687,7 +2747,7 @@ registerEffect({
 registerEffect({
   id: 'polewik_buff_neighbors',
   name: 'Polewik (Duch Pól)',
-  description: 'Sąsiedzi w L1 będący Żywymi zyskują +1 Ataku.',
+  description: '[AURA] Sąsiedzi w L1 będący Żywymi zyskują +1 Ataku.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2700,7 +2760,7 @@ registerEffect({
 registerEffect({
   id: 'kosciej_melee_resurrection',
   name: 'Kościej (Serce Poza Ciałem)',
-  description: 'Gdy zginie od Wręcz: wskrzesza się (1. raz za darmo). Można go wskrzesić ręcznie za 1 ZŁ.',
+  description: '[POŻEGNANIE] Gdy zginie od Wręcz: wskrzesza się (1. raz za darmo). Można go wskrzesić ręcznie za 1 ZŁ.',
   trigger: EffectTrigger.ON_DEATH,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -2721,6 +2781,7 @@ registerEffect({
     if (resurrectCount === 0) {
       // Pierwsza śmierć od Wręcz: wskrzesza się za darmo
       card.metadata.kosciejResurrected = true
+      card.metadata.justResurrected = true
       card.currentStats.defense = (card.cardData as any).stats.defense
       card.metadata.kosciejResurrectCount = 1
       const log = addLog(newState, `${source.cardData.name}: Serce bije! Wstaje ze śmierci za darmo!`, 'effect')
@@ -2742,7 +2803,7 @@ registerEffect({
 registerEffect({
   id: 'baba_bonus_vs_type',
   name: 'Baba (Wiedźma Lasu)',
-  description: 'Przy wystawieniu: wybierz domenę do ochrony. Baba zyskuje +4 ATK vs wszystkich POZOSTAŁYCH domen.',
+  description: '[WEJŚCIE] [AURA] Przy wystawieniu: wybierz domenę do ochrony. Baba zyskuje +4 ATK vs wszystkich POZOSTAŁYCH domen.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.PASSIVE],
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -2799,7 +2860,7 @@ registerEffect({
 registerEffect({
   id: 'gorynych_merge_dragons',
   name: 'Gorynych (Smok Smoków)',
-  description: 'Przy wystawieniu: wchłania sojusznicze Smoki na polu, sumując ich statystyki.',
+  description: '[WEJŚCIE] Przy wystawieniu: wchłania sojusznicze Smoki na polu, sumując ich statystyki.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2833,7 +2894,7 @@ registerEffect({
 registerEffect({
   id: 'smierc_death_growth_save',
   name: 'Śmierć (Zbieraczka Dusz)',
-  description: 'Za każdą śmierć na polu: +1 ATK i +1 DEF. Można zapłacić 1 ZŁ, by ginąca istota wróciła do talii.',
+  description: '[CZUJNOŚĆ] Za każdą śmierć na polu: +1 ATK i +1 DEF. Można zapłacić 1 ZŁ, by ginąca istota wróciła do talii.',
   trigger: EffectTrigger.ON_ANY_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2845,6 +2906,7 @@ registerEffect({
     card.currentStats.attack += 1
     card.currentStats.defense += 1
     if (typeof card.currentStats.maxDefense === 'number') card.currentStats.maxDefense += 1
+    card.metadata.justGrew = true
     const log = addLog(newState, `${source.cardData.name}: Żniwa! +1/+1 (${card.currentStats.attack}/${card.currentStats.defense}).`, 'effect')
     return effectResult(newState, [log])
   },
@@ -2857,7 +2919,7 @@ registerEffect({
 registerEffect({
   id: 'bieda_spy_block_draw',
   name: 'Bieda (Klątwa Ubóstwa)',
-  description: 'Gracz mający Biedę na polu nie może dobierać kart.',
+  description: '[AURA] Gracz mający Biedę na polu nie może dobierać kart.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2870,7 +2932,7 @@ registerEffect({
 registerEffect({
   id: 'smocze_jajo_hatch',
   name: 'Smocze Jajo',
-  description: 'Nie kontratakuje. Blokuje wrogie Żywioły. Po 5 rundach od wystawienia: ginie, gracz dobiera 3 karty.',
+  description: '[AURA] Nie kontratakuje. Blokuje wrogie Żywioły. Po 5 rundach od wystawienia: ginie, gracz dobiera 3 karty.',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2898,7 +2960,7 @@ registerEffect({
 registerEffect({
   id: 'belt_rearrange',
   name: 'Belt (Zamęt)',
-  description: 'Aktywuj (1. raz gratis, kolejne 1 ZŁ): zmienia pozycję lub linię wskazanej wrogiej istoty.',
+  description: '[AURA] [AKCJA] Aktywuj (1. raz gratis, kolejne 1 ZŁ): zmienia pozycję lub linię wskazanej wrogiej istoty.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.MODIFIER,
   activatable: true,
@@ -2959,7 +3021,7 @@ registerEffect({
 registerEffect({
   id: 'julki_adventure_immunity',
   name: 'Julki (Odporność na Zaklęcia)',
-  description: 'Odporne na karty przygody i zaklęcia.',
+  description: '[AURA] Odporne na karty przygody i zaklęcia.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -2972,7 +3034,7 @@ registerEffect({
 registerEffect({
   id: 'kresnik_choose_buff',
   name: 'Kresnik (Wybrany Kapłan)',
-  description: 'Przy wystawieniu: wybierz 1 premię — +3 ATK, +3 DEF, Latanie lub Brak kontrataku.',
+  description: '[WEJŚCIE] Przy wystawieniu: wybierz 1 premię — +3 ATK, +3 DEF, Latanie lub Brak kontrataku.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3038,7 +3100,7 @@ registerEffect({
 registerEffect({
   id: 'niedzwiedzioak_guardian',
   name: 'Niedźwiedziołak (Strażnik Plemienia)',
-  description: 'Gdy wroga istota atakuje sojusznika — Niedźwiedziołak kontratakuje napastnika (jeśli w zasięgu).',
+  description: '[CZUJNOŚĆ] Gdy wroga istota atakuje sojusznika — Niedźwiedziołak kontratakuje napastnika (jeśli w zasięgu).',
   trigger: EffectTrigger.ON_ALLY_ATTACKED,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -3080,7 +3142,7 @@ registerEffect({
 registerEffect({
   id: 'wielkolud_choose_counter',
   name: 'Wielkolud (Górski Obrońca)',
-  description: 'Gdy sojusznik zostaje zaatakowany — Wielkolud kontratakuje wybranego wroga w swoim zasięgu.',
+  description: '[CZUJNOŚĆ] Gdy sojusznik zostaje zaatakowany — Wielkolud kontratakuje wybranego wroga w swoim zasięgu.',
   trigger: EffectTrigger.ON_ALLY_ATTACKED,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -3146,12 +3208,17 @@ registerEffect({
 registerEffect({
   id: 'inkluz_steal_buff',
   name: 'Inkluz (Duch Szczęścia)',
-  description: 'Aktywuj (1 ZŁ): zabiera premię (activeEffect) z wybranej istoty i przypisuje ją innej.',
+  description: '[AURA] [AKCJA] Aktywuj (1 ZŁ): zabiera premię (activeEffect) z wybranej istoty i przypisuje ją innej.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.MODIFIER,
   activatable: true,
   activationCost: 1,
   activationCooldown: 'unlimited',
+  activationRequiresTarget: true,
+  // Tylko istoty które mają co najmniej jedną premię (activeEffect)
+  activationTargetFilter: (card, source, _state) => {
+    return card.instanceId !== source.instanceId && card.activeEffects.length > 0
+  },
   execute: (ctx) => {
     const { state, source, target, trigger } = ctx
     if (trigger !== EffectTrigger.ON_ACTIVATE) return effectResult(cloneGameState(state))
@@ -3167,16 +3234,16 @@ registerEffect({
     const stolen = fromCard.activeEffects.pop()!
     const isHuman = !newState.players[source.owner].isAI
     const allySide = source.owner
-    const allies = getAllCreaturesOnField(newState, allySide)
-      .filter(c => c.instanceId !== source.instanceId)
+    // Wszyscy sojusznicy (włącznie z Inkluzem) mogą otrzymać premię
+    const recipients = getAllCreaturesOnField(newState, allySide)
 
-    // Gracz: pokaż modal wyboru odbiorcy (jeśli są sojusznicy)
-    if (isHuman && allies.length > 0) {
+    // Gracz: pokaż modal wyboru odbiorcy
+    if (isHuman && recipients.length > 0) {
       newState.pendingInteraction = {
         type: 'inkluz_recipient',
         sourceInstanceId: source.instanceId,
         respondingPlayer: source.owner as PlayerSide,
-        availableTargetIds: allies.map(a => a.instanceId),
+        availableTargetIds: recipients.map(a => a.instanceId),
         metadata: { stolenEffect: JSON.stringify(stolen) },
       }
       const log = addLog(newState,
@@ -3186,8 +3253,8 @@ registerEffect({
       return effectResult(newState, [log])
     }
 
-    // AI lub brak sojuszników: daj premię inkluzowi lub najsilniejszemu sojusznikowi
-    const recipient = allies.sort((a, b) =>
+    // AI lub brak odbiorców: daj premię najsilniejszemu sojusznikowi (lub sobie)
+    const recipient = recipients.sort((a, b) =>
       (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense)
     )[0] ?? findCardInState(newState, source.instanceId)
 
@@ -3210,7 +3277,7 @@ registerEffect({
 registerEffect({
   id: 'liczyrzepa_choose_type',
   name: 'Liczyrzepa (Zmienna Natura)',
-  description: 'Przed każdym atakiem wybiera typ: Wręcz, Żywioł, Magia lub Dystans. Może atakować dowolną linię.',
+  description: '[CZUJNOŚĆ] Przed każdym atakiem wybiera typ: Wręcz, Żywioł, Magia lub Dystans. Może atakować dowolną linię.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3254,7 +3321,7 @@ registerEffect({
 registerEffect({
   id: 'wij_revive_once',
   name: 'Wij (Nieśmiertelna Bestia)',
-  description: 'Gdy ginie: wskrzesza się raz na grę (na 1 turę). Po tej turze ginie na zawsze.',
+  description: '[POŻEGNANIE] [AURA] Gdy ginie: wskrzesza się raz na grę (na 1 turę). Po tej turze ginie na zawsze.',
   trigger: [EffectTrigger.ON_DEATH, EffectTrigger.ON_TURN_END],
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -3300,7 +3367,7 @@ registerEffect({
 registerEffect({
   id: 'poroniec_copy_ability',
   name: 'Porońiec (Duch Niespełnionego Życia)',
-  description: 'Przed atakiem kopiuje ATK najsilniejszej istoty na polu. Efekt resetuje się po turze.',
+  description: '[CZUJNOŚĆ] [AURA] Przed atakiem kopiuje ATK najsilniejszej istoty na polu. Efekt resetuje się po turze.',
   trigger: [EffectTrigger.ON_ATTACK, EffectTrigger.ON_TURN_END],
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3327,7 +3394,7 @@ registerEffect({
       .sort((a, b) => b.currentStats.attack - a.currentStats.attack)
 
     if (allCreatures.length === 0) return effectResult(newState)
-    const strongest = allCreatures[0]
+    const strongest = allCreatures[0]!
 
     card.metadata.poroniecOriginalAtk = card.currentStats.attack
     card.currentStats.attack = strongest.currentStats.attack
@@ -3345,7 +3412,7 @@ registerEffect({
 registerEffect({
   id: 'bzionek_spell_intercept',
   name: 'Bzionek (Duch Ochrony)',
-  description: 'Przechwytuje wrogie zaklęcia celujące w sojusznika — bierze je na siebie.',
+  description: '[AURA] Przechwytuje wrogie zaklęcia celujące w sojusznika — bierze je na siebie.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -3358,7 +3425,7 @@ registerEffect({
 registerEffect({
   id: 'czarownica_redirect_spell',
   name: 'Czarownica',
-  description: 'Może zmienić adresata zagranego zaklęcia. Pierwszy raz za darmo, każdy kolejny za 1 ZŁ.',
+  description: '[AURA] Może zmienić adresata zagranego zaklęcia. Pierwszy raz za darmo, każdy kolejny za 1 ZŁ.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -3371,7 +3438,7 @@ registerEffect({
 registerEffect({
   id: 'naczelnik_human_rally',
   name: 'Naczelnik Plemienia',
-  description: 'Gdy atakuje: wszyscy sojuszniczy Ludzie (Żywi) wykonują dodatkowy atak na dowolnego wroga.',
+  description: '[CZUJNOŚĆ] Gdy atakuje: wszyscy sojuszniczy Ludzie (Żywi) wykonują dodatkowy atak na dowolnego wroga.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -3398,7 +3465,7 @@ registerEffect({
       if (enemies.length === 0) break
 
       // Uderz najsłabszego wroga (lub wskazanego przez gracza)
-      const target = enemies.sort((a, b) => a.currentStats.defense - b.currentStats.defense)[0]
+      const target = enemies.sort((a, b) => a.currentStats.defense - b.currentStats.defense)[0]!
       const damage = ally.currentStats.attack
       if (damage <= 0) continue
 
@@ -3430,17 +3497,17 @@ registerEffect({
 registerEffect({
   id: 'rumak_mount',
   name: 'Rumak (Koń Bojowy)',
-  description: 'Aktywuj (darmowe, raz): łączy się z sojuszniczym Człowiekiem (Żywi) — jeździec rani całą linię.',
+  description: '[AURA] [AKCJA] Aktywuj (darmowe, raz): łączy się z sojuszniczym Człowiekiem (Żywi) — jeździec rani całą linię.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.MODIFIER,
   activatable: true,
   activationCost: 0,
   activationCooldown: 'once',
   activationRequiresTarget: true,
-  canActivate: (state, card) => {
-    const candidates = getAllCreaturesOnField(state, card.owner)
+  canActivate: (ctx: EffectContext) => {
+    const candidates = getAllCreaturesOnField(ctx.state, ctx.source.owner)
       .filter(c =>
-        c.instanceId !== card.instanceId &&
+        c.instanceId !== ctx.source.instanceId &&
         (c.cardData as any).idDomain === 2 &&
         !c.metadata.rumakActive
       )
@@ -3499,7 +3566,7 @@ for (const c of todoCreatures) {
 registerEffect({
   id: 'adventure_okaleczenie',
   name: 'Okaleczenie',
-  description: '-½ Ataku i Obrony wybranej istoty.',
+  description: '[WEJŚCIE] -½ Ataku i Obrony wybranej istoty.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3518,7 +3585,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_okaleczenie_enhanced',
   name: 'Okaleczenie (wzmocnione)',
-  description: '-½ ATK i DEF + usuwa wszystkie premie.',
+  description: '[WEJŚCIE] -½ ATK i DEF + usuwa wszystkie premie.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3542,7 +3609,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_wygnanie',
   name: 'Wygnanie',
-  description: 'Cel wraca do talii. Wroga istota trafia na spód (ostatnia do wystawienia).',
+  description: '[WEJŚCIE] Cel wraca do talii. Wroga istota trafia na spód (ostatnia do wystawienia).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -3569,7 +3636,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_wygnanie_enhanced',
   name: 'Wygnanie (wzmocnione)',
-  description: 'Cel (nie najsilniejszy wróg) trwale zmienia stronę.',
+  description: '[WEJŚCIE] Cel (nie najsilniejszy wróg) trwale zmienia stronę.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -3583,7 +3650,7 @@ registerEffect({
     const sorted = [...enemies].sort((a, b) =>
       (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense)
     )
-    const stolen = sorted.length > 1 ? sorted[1] : sorted[0]
+    const stolen = (sorted.length > 1 ? sorted[1] : sorted[0])!
 
     removeCardFromField(newState, stolen.instanceId)
     stolen.owner = source.owner as PlayerSide
@@ -3602,7 +3669,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_rusalczy_taniec',
   name: 'Rusałczy Taniec',
-  description: 'Zabierz 2 Ataku i 2 Obrony z wybranej istoty i daj innej.',
+  description: '[WEJŚCIE] Zabierz 2 Ataku i 2 Obrony z wybranej istoty i daj innej.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3643,7 +3710,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_rusalczy_taniec_enhanced',
   name: 'Rusałczy Taniec (wzmocniony)',
-  description: '-1/-1 WSZYSTKIM wrogom → suma idzie do jednej sojuszniczej istoty.',
+  description: '[WEJŚCIE] -1/-1 WSZYSTKIM wrogom → suma idzie do jednej sojuszniczej istoty.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3683,7 +3750,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_kwiat_paproci',
   name: 'Kwiat Paproci',
-  description: 'Daj istocie na stałe nowy Typ Ataku (Wręcz/Żywioł/Dystans/Magia).',
+  description: '[WEJŚCIE] Daj istocie na stałe nowy Typ Ataku (Wręcz/Żywioł/Dystans/Magia).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3708,7 +3775,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_kwiat_paproci_enhanced',
   name: 'Kwiat Paproci (wzmocniony)',
-  description: 'Nowy Typ Ataku + odporność na wybrany Typ Ataku.',
+  description: '[WEJŚCIE] Nowy Typ Ataku + odporność na wybrany Typ Ataku.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3737,7 +3804,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_sobowtór',
   name: 'Sobowtór',
-  description: 'Stwórz kopię wybranej istoty (bez artefaktów i negatywnych efektów).',
+  description: '[WEJŚCIE] Stwórz kopię wybranej istoty (bez artefaktów i negatywnych efektów).',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -3766,7 +3833,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_sobowtór_enhanced',
   name: 'Sobowtór (wzmocniony)',
-  description: 'Kopia niezniszczalna dopóki żyje oryginał.',
+  description: '[WEJŚCIE] Kopia niezniszczalna dopóki żyje oryginał.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -3803,7 +3870,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_kradzież',
   name: 'Kradzież',
-  description: 'Ukradnij aktywną Kartę Przygody rywala (lokację lub zdarzenie) do swojej talii.',
+  description: '[WEJŚCIE] Ukradnij aktywną Kartę Przygody rywala (lokację lub zdarzenie) do swojej talii.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -3826,7 +3893,7 @@ registerEffect({
       // Kradnij ostatnie zdarzenie wroga
       const idx = newState.activeEvents.findIndex(e => e.owner === enemySide)
       if (idx !== -1) {
-        const stolenEvent = newState.activeEvents.splice(idx, 1)[0]
+        const stolenEvent = newState.activeEvents.splice(idx, 1)[0]!
         log.push(addLog(newState, `Kradzież: Zdarzenie ${stolenEvent.cardData.name} wroga skradziono!`, 'effect'))
       }
     } else {
@@ -3839,7 +3906,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_kradzież_enhanced',
   name: 'Kradzież (wzmocniona)',
-  description: 'Zabierz 2 karty z wierzchu talii rywala.',
+  description: '[WEJŚCIE] Zabierz 2 karty z wierzchu talii rywala.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -3867,7 +3934,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_arkona',
   name: 'Arkona',
-  description: 'Brak limitu istot na polu.',
+  description: '[AURA] Brak limitu istot na polu.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -3876,7 +3943,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_arkona_enhanced',
   name: 'Arkona (wzmocniona)',
-  description: 'Brak limitu + wybrana istota regeneruje 2 Obrony raz na turę.',
+  description: '[AURA] Brak limitu + wybrana istota regeneruje 2 Obrony raz na turę.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_TURN_START],
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -3903,7 +3970,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_twierdza',
   name: 'Twierdza',
-  description: 'Twoje istoty +3 Obrony (redukcja obrażeń).',
+  description: '[AURA] Twoje istoty +3 Obrony (redukcja obrażeń).',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -3912,7 +3979,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_twierdza_enhanced',
   name: 'Twierdza (wzmocniona)',
-  description: 'Twoje istoty +3 Obrony + co rundę mury oddają 2 obrażenia losowemu wrogowi.',
+  description: '[AURA] Twoje istoty +3 Obrony + co rundę mury oddają 2 obrażenia losowemu wrogowi.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_TURN_START],
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -3922,7 +3989,7 @@ registerEffect({
     const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
     const enemies = getAllCreaturesOnField(newState, enemySide)
     if (enemies.length === 0) return effectResult(newState)
-    const target = enemies[Math.floor(Math.random() * enemies.length)]
+    const target = enemies[Math.floor(Math.random() * enemies.length)]!
     target.currentStats.defense -= 2
     const log = addLog(newState, `Twierdza+: Mury ostrzeliwują ${target.cardData.name} za 2 obrażenia!`, 'effect')
     return effectResult(newState, [log])
@@ -3936,14 +4003,14 @@ registerEffect({
 registerEffect({
   id: 'adventure_rehtra',
   name: 'Rehtra',
-  description: 'Podejrzyj dowolną kartę rywala (4 użycia darmowe).',
+  description: '[AURA] [AKCJA] Podejrzyj dowolną kartę rywala (4 użycia darmowe).',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.PASSIVE,
   activatable: true,
   activationCost: 0,
   activationCooldown: 'per_turn',
-  canActivate: (state, card) => {
-    const uses = (card.metadata.rehtraUsesLeft as number) ?? 4
+  canActivate: (ctx: EffectContext) => {
+    const uses = (ctx.source.metadata.rehtraUsesLeft as number) ?? 4
     return uses > 0
   },
   execute: (ctx) => {
@@ -3963,7 +4030,7 @@ registerEffect({
     const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
     const hiddenCards = newState.players[enemySide].hand.filter(c => !c.isRevealed)
     if (hiddenCards.length > 0) {
-      const toReveal = hiddenCards[Math.floor(Math.random() * hiddenCards.length)]
+      const toReveal = hiddenCards[Math.floor(Math.random() * hiddenCards.length)]!
       toReveal.isRevealed = true
       const log = addLog(newState, `Rehtra: Ujawnia ${toReveal.cardData.name} z ręki wroga! (zostało ${uses - 1} użyć)`, 'effect')
       return effectResult(newState, [log])
@@ -3976,7 +4043,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_rehtra_enhanced',
   name: 'Rehtra (wzmocniona)',
-  description: 'Ujawnia wszystkie karty na ręce wroga. Nowo dobierane karty wroga są widoczne.',
+  description: '[WEJŚCIE] Ujawnia wszystkie karty na ręce wroga. Nowo dobierane karty wroga są widoczne.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -4002,7 +4069,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_zlot_czarownic',
   name: 'Zlot Czarownic',
-  description: '3 kolejne Karty Przygody rywala nie zadziałają.',
+  description: '[WEJŚCIE] 3 kolejne Karty Przygody rywala nie zadziałają.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -4018,7 +4085,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_zlot_czarownic_enhanced',
   name: 'Zlot Czarownic (wzmocniony)',
-  description: '3 blokady + weź 1 kartę ze stosu zniszczonych do talii.',
+  description: '[WEJŚCIE] 3 blokady + weź 1 kartę ze stosu zniszczonych do talii.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => {
@@ -4048,7 +4115,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_likantropia',
   name: 'Likantropia',
-  description: 'Istota po zabiciu przejmuje ATK i DEF ofiary. 2 rundy bez walki = -½ statów.',
+  description: '[WEJŚCIE] Istota po zabiciu przejmuje ATK i DEF ofiary. 2 rundy bez walki = -½ statów.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4071,7 +4138,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_likantropia_enhanced',
   name: 'Likantropia (wzmocniona)',
-  description: 'Może zabijać własne istoty i przejmować ich statsy.',
+  description: '[WEJŚCIE] Może zabijać własne istoty i przejmować ich statsy.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4099,7 +4166,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_sztandar',
   name: 'Sztandar',
-  description: 'Nośnik stoi w L1 i nie atakuje. Sojusznicy +2 Ataku.',
+  description: '[AURA] Nośnik stoi w L1 i nie atakuje. Sojusznicy +2 Ataku.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -4108,7 +4175,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_sztandar_enhanced',
   name: 'Sztandar (wzmocniony)',
-  description: 'Nośnik nie atakuje. Sojusznicy +2 Ataku. Gdy nośnik jest atakowany, losowy sojusznik przejmuje atak.',
+  description: '[AURA] Nośnik nie atakuje. Sojusznicy +2 Ataku. Gdy nośnik jest atakowany, losowy sojusznik przejmuje atak.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -4122,7 +4189,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_miecz_kladenet',
   name: 'Miecz Kladenet',
-  description: 'Nośnik atakuje 2 wrogów jednocześnie. Brak kontrataku.',
+  description: '[AURA] Nośnik atakuje 2 wrogów jednocześnie. Brak kontrataku.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -4131,7 +4198,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_miecz_kladenet_enhanced',
   name: 'Miecz Kladenet (wzmocniony)',
-  description: 'Nośnik atakuje 2 wrogów. Brak kontrataku. Może celować w dowolną linię wroga.',
+  description: '[AURA] Nośnik atakuje 2 wrogów. Brak kontrataku. Może celować w dowolną linię wroga.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -4144,7 +4211,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_mlot_swaroga',
   name: 'Młot Swaroga',
-  description: 'Istota dostaje szał: 3 ataki z losowym efektem: ×2 (OK), ×3 (paraliż turę), ×4 (ginie po ataku).',
+  description: '[WEJŚCIE] [CZUJNOŚĆ] Istota dostaje szał: 3 ataki z losowym efektem: ×2 (OK), ×3 (paraliż turę), ×4 (ginie po ataku).',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_ATTACK],
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4181,7 +4248,7 @@ registerEffect({
       } else if (roll < 0.83) {
         // ×3 — paraliż
         card.metadata.damageMultiplier = 3
-        card.isParalyzed = true
+        card.paralyzeRoundsLeft = 1
         card.metadata.mlotSwarogaParalyzedTurn = newState.turnNumber
         log.push(addLog(newState, `${card.cardData.name}: Szał Swaroga ×3! Ale paraliż na turę! (${left - 1} pozostało)`, 'effect'))
       } else {
@@ -4205,7 +4272,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_mlot_swaroga_enhanced',
   name: 'Młot Swaroga (wzmocniony)',
-  description: 'Szał ×2/×3/×4 + żaden z ataków nie wywołuje kontrataku.',
+  description: '[WEJŚCIE] [CZUJNOŚĆ] Szał ×2/×3/×4 + żaden z ataków nie wywołuje kontrataku.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_ATTACK],
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4242,7 +4309,7 @@ registerEffect({
         log.push(addLog(newState, `${card.cardData.name}: Szał+ ×2! Bez kontrataku!`, 'effect'))
       } else if (roll < 0.83) {
         card.metadata.damageMultiplier = 3
-        card.isParalyzed = true
+        card.paralyzeRoundsLeft = 1
         log.push(addLog(newState, `${card.cardData.name}: Szał+ ×3! Paraliż ale bez kontrataku!`, 'effect'))
       } else {
         card.metadata.damageMultiplier = 4
@@ -4264,7 +4331,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_matecznik',
   name: 'Matecznik',
-  description: 'Ukryj sojuszniczą istotę — chroniona przed wszystkim, ale nie walczy.',
+  description: '[WEJŚCIE] Ukryj sojuszniczą istotę — chroniona przed wszystkim, ale nie walczy.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4286,7 +4353,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_matecznik_enhanced',
   name: 'Matecznik (wzmocniony)',
-  description: 'Ukryj istotę + regeneruje 2 Obrony raz na turę.',
+  description: '[WEJŚCIE] [AURA] Ukryj istotę + regeneruje 2 Obrony raz na turę.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_TURN_START],
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4328,7 +4395,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_przyjazn',
   name: 'Przyjaźń',
-  description: 'Istota A przejmuje obrażenia i efekty za istotę B.',
+  description: '[WEJŚCIE] Istota A przejmuje obrażenia i efekty za istotę B.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4350,6 +4417,7 @@ registerEffect({
     if (!guardian) return effectResult(newState)
 
     const protected_ = sorted.find(c => c.instanceId !== guardian.instanceId) ?? sorted[1]
+    if (!protected_) return effectResult(newState, log)
 
     guardian.metadata.przyjaznGuard = protected_.instanceId
     protected_.metadata.przyjaznProtector = guardian.instanceId
@@ -4365,7 +4433,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_przyjazn_enhanced',
   name: 'Przyjaźń (wzmocniona)',
-  description: 'Gdy ochroniarz zginie — chroniony zyskuje 3 darmowe ataki.',
+  description: '[WEJŚCIE] Gdy ochroniarz zginie — chroniony zyskuje 3 darmowe ataki.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -4386,6 +4454,7 @@ registerEffect({
     if (!guardian) return effectResult(newState)
 
     const protected_ = sorted.find(c => c.instanceId !== guardian.instanceId) ?? sorted[1]
+    if (!protected_) return effectResult(newState, log)
 
     guardian.metadata.przyjaznGuard = protected_.instanceId
     guardian.metadata.przyjaznEnhanced = true
@@ -4396,6 +4465,1907 @@ registerEffect({
       'effect'
     ))
     return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ BOSKIE WSPARCIE — +2 ATK i +2 DEF wybranej istocie
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_boskie_wsparcie',
+  name: 'Boskie Wsparcie',
+  description: '[ZDARZENIE] +2 Ataku i +2 Obrony wybranej istocie.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.currentStats.attack += 2
+    card.currentStats.defense += 2
+    const log = addLog(newState, `Boskie Wsparcie: ${card.cardData.name} zyskuje +2 ATK i +2 DEF!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_boskie_wsparcie_enhanced',
+  name: 'Boskie Wsparcie (wzmocnione)',
+  description: '[ZDARZENIE+] +2 ATK, +2 DEF i Lot.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.currentStats.attack += 2
+    card.currentStats.defense += 2
+    ;(card.cardData as any).isFlying = true
+    card.isGrounded = false
+    const log = addLog(newState, `Boskie Wsparcie+: ${card.cardData.name} zyskuje +2/+2 i Lot!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ PIÓRO ŻAR-PTAKA — Reset ATK/DEF do bazy, usuń negatywne efekty
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_pioro_zarptaka',
+  name: 'Pióro Żar-Ptaka',
+  description: '[ARTEFAKT] Przywróć Atak i Obronę do bazy. Usuń negatywne efekty.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    const baseStats = (card.cardData as any).stats
+    card.currentStats.attack = baseStats.attack
+    card.currentStats.defense = baseStats.defense
+    card.activeEffects = card.activeEffects.filter(e =>
+      !e.effectId.includes('curse') && !e.effectId.includes('debuff') && !e.effectId.includes('drain') && !e.effectId.includes('paralyze')
+    )
+    card.paralyzeRoundsLeft = null
+    card.poisonRoundsLeft = null
+    card.isSilenced = false
+    card.cannotAttack = false
+    card.isGrounded = false
+    const log = addLog(newState, `Pióro Żar-Ptaka: ${card.cardData.name} odradza się — staty przywrócone, efekty oczyszczone!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_pioro_zarptaka_enhanced',
+  name: 'Pióro Żar-Ptaka (wzmocnione)',
+  description: '[ARTEFAKT+] Zdejmij WSZYSTKIE premie i atrybuty z wybranej istoty.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    const baseStats = (card.cardData as any).stats
+    card.currentStats.attack = baseStats.attack
+    card.currentStats.defense = baseStats.defense
+    card.activeEffects = []
+    card.equippedArtifacts = []
+    card.paralyzeRoundsLeft = null
+    card.poisonRoundsLeft = null
+    card.isSilenced = false
+    card.cannotAttack = false
+    card.isGrounded = false
+    card.metadata = {}
+    const log = addLog(newState, `Pióro Żar-Ptaka+: ${card.cardData.name} — WSZYSTKIE premie i atrybuty usunięte!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ AMULET Z ROZETĄ — Odporność na Magię (artefakt)
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_amulet_z_rozeta',
+  name: 'Amulet Z Rozetą',
+  description: '[ARTEFAKT] Odporność na Magię.',
+  trigger: EffectTrigger.PASSIVE,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => effectResult(cloneGameState(ctx.state)),
+  // Enforcement: canAttack w LineManager sprawdza equippedArtifacts
+})
+
+registerEffect({
+  id: 'adventure_amulet_z_rozeta_enhanced',
+  name: 'Amulet Z Rozetą (wzmocniony)',
+  description: '[ARTEFAKT+] Odporność na wrogie Karty Przygody.',
+  trigger: EffectTrigger.PASSIVE,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => effectResult(cloneGameState(ctx.state)),
+})
+
+// ===================================================================
+// ✅ PŁASZCZ STRZYBÓGA — Lot (artefakt)
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_paszcz_strzyboga',
+  name: 'Płaszcz Strzybóga',
+  description: '[ARTEFAKT] Istota zyskuje Lot.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    ;(card.cardData as any).isFlying = true
+    card.isGrounded = false
+    const log = addLog(newState, `Płaszcz Strzybóga: ${card.cardData.name} zyskuje Lot!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_paszcz_strzyboga_enhanced',
+  name: 'Płaszcz Strzybóga (wzmocniony)',
+  description: '[ARTEFAKT+] Wszyscy wrogowie tracą Lot.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    let count = 0
+    for (const e of enemies) {
+      if ((e.cardData as any).isFlying) {
+        e.isGrounded = true
+        count++
+      }
+    }
+    const log = addLog(newState, `Płaszcz Strzybóga+: ${count} wrogów traci Lot!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ TARCZA DOBRYNI NIKITICZA — Absorbuje 8 obrażeń
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_tarcza_dobryni_nikiticza',
+  name: 'Tarcza Dobryni Nikiticza',
+  description: '[ARTEFAKT] Absorbuje 8 obrażeń.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.metadata.tarczaDobryni = 8
+    const log = addLog(newState, `Tarcza Dobryni Nikiticza: ${card.cardData.name} zyskuje tarczę na 8 obrażeń!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_tarcza_dobryni_nikiticza_enhanced',
+  name: 'Tarcza Dobryni Nikiticza (wzmocniona)',
+  description: '[ARTEFAKT+] Raz: anuluj dowolny atak lub premię na nośnika.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.metadata.tarczaDobryni = 8
+    card.metadata.tarczaDobryniBlock = true
+    const log = addLog(newState, `Tarcza Dobryni+: ${card.cardData.name} zyskuje tarczę na 8 DMG + jednorazowe anulowanie!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ WYSPA BUJAN — Lokacja: +3 do limitu ręki
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_wyspa_bujan',
+  name: 'Wyspa Bujan',
+  description: '[LOKACJA] +3 karty do limitu ręki.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PASSIVE,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    newState.players[source.owner].handLimit += 3
+    const log = addLog(newState, `Wyspa Bujan: Limit ręki +3!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_wyspa_bujan_enhanced',
+  name: 'Wyspa Bujan (wzmocniona)',
+  description: '[LOKACJA+] +3 do limitu ręki + podejrzyj wierzchnią kartę talii.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PASSIVE,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    newState.players[source.owner].handLimit += 3
+    const log: LogEntry[] = [addLog(newState, `Wyspa Bujan+: Limit ręki +3!`, 'effect')]
+    if (newState.players[source.owner].deck.length > 0) {
+      const topCard = newState.players[source.owner].deck[0]!
+      log.push(addLog(newState, `Wyspa Bujan+: Na wierzchu talii: ${topCard.cardData.name}.`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ TRYZNA — Rywal -1 do limitu kart w ręce
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_tryzna',
+  name: 'Tryzna',
+  description: '[ZDARZENIE] Rywal -1 do limitu kart w ręce.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    newState.players[enemySide].handLimit = Math.max(1, newState.players[enemySide].handLimit - 1)
+    // Odrzuć nadmiarowe karty
+    const enemy = newState.players[enemySide]
+    const log: LogEntry[] = [addLog(newState, `Tryzna: Limit ręki rywala zmniejszony do ${enemy.handLimit}!`, 'effect')]
+    while (enemy.hand.length > enemy.handLimit) {
+      const discarded = enemy.hand.pop()!
+      enemy.graveyard.push(discarded)
+      log.push(addLog(newState, `Tryzna: ${discarded.cardData.name} odrzucona z ręki rywala!`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_tryzna_enhanced',
+  name: 'Tryzna (wzmocniona)',
+  description: '[ZDARZENIE+] Rywal może grać max 2 karty na rundę.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    newState.players[enemySide].handLimit = Math.max(1, newState.players[enemySide].handLimit - 1)
+    ;(newState.players[enemySide] as any).tryznaCardLimit = 2
+    const log = addLog(newState, `Tryzna+: Rywal może grać max 2 karty na rundę!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ KUKŁA MARZANNY — Nieumarli sparaliżowani na 3 rundy
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_kuka_marzanny',
+  name: 'Kukła Marzanny',
+  description: '[ZDARZENIE] Nieumarli sparaliżowani na 3 rundy.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      if ((e.cardData as any).idDomain === 3) { // Nieumarli = domain 3
+        e.paralyzeRoundsLeft = 3
+        e.cannotAttack = true
+        log.push(addLog(newState, `Kukła Marzanny: ${e.cardData.name} sparaliżowany na 3 rundy!`, 'effect'))
+      }
+    }
+    if (log.length === 0) log.push(addLog(newState, `Kukła Marzanny: Brak Nieumarłych na polu wroga.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_kuka_marzanny_enhanced',
+  name: 'Kukła Marzanny (wzmocniona)',
+  description: '[ZDARZENIE+] Żywi mają ×2 Ataku vs Nieumarli przez 3 rundy.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    const log: LogEntry[] = []
+    for (const a of allies) {
+      if ((a.cardData as any).idDomain === 2) { // Żywi = domain 2
+        a.metadata.kuklaDoubleVsUndead = 3
+        log.push(addLog(newState, `Kukła Marzanny+: ${a.cardData.name} zyskuje ×2 ATK vs Nieumarli na 3 rundy!`, 'effect'))
+      }
+    }
+    if (log.length === 0) log.push(addLog(newState, `Kukła Marzanny+: Brak Żywych na Twoim polu.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ ZDRADA POPIELA — Wrogie istoty nie mogą być w Obronie
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_zdrada_popiela',
+  name: 'Zdrada Popiela',
+  description: '[ZDARZENIE] Wrogie istoty na polu nie mogą być w Pozycji Obrony.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    let count = 0
+    for (const e of enemies) {
+      if (e.position === CardPosition.DEFENSE) {
+        e.position = CardPosition.ATTACK
+        count++
+      }
+    }
+    const log = addLog(newState, `Zdrada Popiela: ${count} wrogów zmuszonych do pozycji Ataku!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_zdrada_popiela_enhanced',
+  name: 'Zdrada Popiela (wzmocniona)',
+  description: '[ZDARZENIE+] Zmieniaj pozycje wrogich istot do końca tury.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      // Odwróć pozycję
+      e.position = e.position === CardPosition.ATTACK ? CardPosition.DEFENSE : CardPosition.ATTACK
+    }
+    const log = addLog(newState, `Zdrada Popiela+: Pozycje ${enemies.length} wrogów odwrócone!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ GWIZD SOŁOWIEJA — Wrogowie z ATK > DEF tracą nadwyżkę
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_gwizd_soowieja',
+  name: 'Gwizd Sołowieja',
+  description: '[ZDARZENIE] Wrogowie z Atakiem > Obroną tracą nadwyżkę.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    const log: LogEntry[] = []
+    for (const e of enemies) {
+      if (e.currentStats.attack > e.currentStats.defense) {
+        const excess = e.currentStats.attack - e.currentStats.defense
+        e.currentStats.attack -= excess
+        log.push(addLog(newState, `Gwizd Sołowieja: ${e.cardData.name} traci ${excess} ATK (nadwyżka)!`, 'effect'))
+      }
+    }
+    if (log.length === 0) log.push(addLog(newState, `Gwizd Sołowieja: Żaden wróg nie ma ATK > DEF.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_gwizd_soowieja_enhanced',
+  name: 'Gwizd Sołowieja (wzmocniony)',
+  description: '[ZDARZENIE+] Wszystkie wrogie istoty nie mogą atakować.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.cannotAttack = true
+    }
+    const log = addLog(newState, `Gwizd Sołowieja+: ${enemies.length} wrogów nie może atakować!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ KATAKLIZM — -½ ATK i DEF WSZYSTKIM istotom
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_kataklizm',
+  name: 'Kataklizm',
+  description: '[ZDARZENIE] -½ Ataku i Obrony WSZYSTKIM istotom na polu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    for (const side of ['player1', 'player2'] as PlayerSide[]) {
+      const creatures = getAllCreaturesOnField(newState, side)
+      for (const c of creatures) {
+        const oldAtk = c.currentStats.attack
+        const oldDef = c.currentStats.defense
+        c.currentStats.attack = Math.max(1, Math.floor(c.currentStats.attack / 2))
+        c.currentStats.defense = Math.max(1, Math.floor(c.currentStats.defense / 2))
+        log.push(addLog(newState, `Kataklizm: ${c.cardData.name} ATK ${oldAtk}→${c.currentStats.attack}, DEF ${oldDef}→${c.currentStats.defense}`, 'effect'))
+      }
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_kataklizm_enhanced',
+  name: 'Kataklizm (wzmocniony)',
+  description: '[ZDARZENIE+] Zniszcz wszystkie wrogie Lokacje.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const log: LogEntry[] = []
+    if (newState.players[enemySide].activeLocation) {
+      const loc = newState.players[enemySide].activeLocation!
+      log.push(addLog(newState, `Kataklizm+: Lokacja ${loc.cardData.name} wroga zniszczona!`, 'effect'))
+      newState.players[enemySide].activeLocation = null
+    } else {
+      log.push(addLog(newState, `Kataklizm+: Wróg nie ma aktywnej Lokacji.`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ PAKT Z INKLUZEM — -1 ATK i -2 DEF WSZYSTKIM wrogom → sumę daj swojej istocie
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_pakt_z_inkluzem',
+  name: 'Pakt Z Inkluzem',
+  description: '[ZDARZENIE] -1 ATK i -2 DEF WSZYSTKIM wrogom → sumę daj swojej istocie.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    const log: LogEntry[] = []
+    let totalAtk = 0
+    let totalDef = 0
+    for (const e of enemies) {
+      const atkLoss = Math.min(e.currentStats.attack, 1)
+      const defLoss = Math.min(e.currentStats.defense, 2)
+      e.currentStats.attack -= atkLoss
+      e.currentStats.defense -= defLoss
+      totalAtk += atkLoss
+      totalDef += defLoss
+    }
+    log.push(addLog(newState, `Pakt Z Inkluzem: ${enemies.length} wrogów traci po -1 ATK / -2 DEF!`, 'effect'))
+    if (target) {
+      const ally = findCardInState(newState, target.instanceId)
+      if (ally) {
+        ally.currentStats.attack += totalAtk
+        ally.currentStats.defense += totalDef
+        log.push(addLog(newState, `Pakt Z Inkluzem: ${ally.cardData.name} zyskuje +${totalAtk} ATK / +${totalDef} DEF!`, 'effect'))
+      }
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_pakt_z_inkluzem_enhanced',
+  name: 'Pakt Z Inkluzem (wzmocniony)',
+  description: '[ZDARZENIE+] Zamień stronami 2 istoty na polu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    // Zamiana: najsłabszy sojusznik ↔ najsilniejszy wróg
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    if (allies.length === 0 || enemies.length === 0) {
+      log.push(addLog(newState, `Pakt Z Inkluzem+: Obie strony muszą mieć istoty!`, 'effect'))
+      return effectResult(newState, log)
+    }
+    const weakestAlly = allies.sort((a, b) => (a.currentStats.attack + a.currentStats.defense) - (b.currentStats.attack + b.currentStats.defense))[0]!
+    const strongestEnemy = enemies.sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))[0]!
+    // Swap owners
+    weakestAlly.owner = enemySide as PlayerSide
+    strongestEnemy.owner = source.owner as PlayerSide
+    removeCardFromField(newState, weakestAlly.instanceId)
+    removeCardFromField(newState, strongestEnemy.instanceId)
+    weakestAlly.line = BattleLine.FRONT
+    strongestEnemy.line = BattleLine.FRONT
+    newState.players[enemySide].field.lines[BattleLine.FRONT].push(weakestAlly)
+    newState.players[source.owner].field.lines[BattleLine.FRONT].push(strongestEnemy)
+    log.push(addLog(newState, `Pakt Z Inkluzem+: ${weakestAlly.cardData.name} ↔ ${strongestEnemy.cardData.name} — zamiana stron!`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ SZAŁ BITEWNY — Wybrany wróg atakuje innego wroga
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_sza_bitewny',
+  name: 'Szał Bitewny',
+  description: '[ZDARZENIE] Wybrany wróg atakuje innego wroga w zasięgu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const log: LogEntry[] = []
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+
+    // Jeśli gracz wybrał cel — to on atakuje sojusznika
+    const attacker = target ? findCardInState(newState, target.instanceId)
+      : (enemies.length > 0 ? enemies[Math.floor(Math.random() * enemies.length)]! : null)
+    if (!attacker) return effectResult(newState, [addLog(newState, `Szał Bitewny: Brak celów!`, 'effect')])
+
+    const otherEnemies = enemies.filter(c => c.instanceId !== attacker.instanceId)
+    if (otherEnemies.length === 0) {
+      log.push(addLog(newState, `Szał Bitewny: ${attacker.cardData.name} nie ma kogo zaatakować!`, 'effect'))
+      return effectResult(newState, log)
+    }
+    const victim = otherEnemies.sort((a, b) => a.currentStats.defense - b.currentStats.defense)[0]!
+    const damage = attacker.currentStats.attack
+    victim.currentStats.defense -= damage
+    log.push(addLog(newState, `Szał Bitewny: ${attacker.cardData.name} uderza ${victim.cardData.name} za ${damage}!`, 'effect'))
+    if (victim.currentStats.defense <= 0) {
+      moveToGraveyard(newState, victim)
+      log.push(addLog(newState, `${victim.cardData.name} ginie od Szału Bitewnego!`, 'death'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_sza_bitewny_enhanced',
+  name: 'Szał Bitewny (wzmocniony)',
+  description: '[ZDARZENIE+] Przejmij wroga — wraca do rywala gdy nie zaatakuje w rundzie.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const log: LogEntry[] = []
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    if (enemies.length === 0) return effectResult(newState, [addLog(newState, `Szał Bitewny+: Brak wrogów!`, 'effect')])
+    const stolen = target ? findCardInState(newState, target.instanceId)
+      : enemies.sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))[0]!
+    if (!stolen) return effectResult(newState)
+    removeCardFromField(newState, stolen.instanceId)
+    stolen.owner = source.owner as PlayerSide
+    stolen.line = BattleLine.FRONT
+    stolen.metadata.szalBitewnyTemporary = true
+    stolen.metadata.szalBitewnyOriginalOwner = enemySide
+    newState.players[source.owner].field.lines[BattleLine.FRONT].push(stolen)
+    log.push(addLog(newState, `Szał Bitewny+: ${stolen.cardData.name} przechodzi na Twoją stronę!`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ ŻERTWA — Poświęć istotę, daj podwójne staty innej
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_zertwa',
+  name: 'Żertwa',
+  description: '[ZDARZENIE] Poświęć swoją istotę — jej podwójny ATK i DEF daj innej istocie.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length < 2) return effectResult(newState, [addLog(newState, `Żertwa: Potrzeba co najmniej 2 istot!`, 'effect')])
+
+    // Poświęć najsłabszą (lub target), buff najsilniejszą
+    const sorted = [...allies].sort((a, b) => (a.currentStats.attack + a.currentStats.defense) - (b.currentStats.attack + b.currentStats.defense))
+    const sacrifice = target ? findCardInState(newState, target.instanceId) : sorted[0]!
+    if (!sacrifice) return effectResult(newState)
+    const beneficiary = sorted.find(c => c.instanceId !== sacrifice.instanceId)
+    if (!beneficiary) return effectResult(newState)
+
+    const bonusAtk = sacrifice.currentStats.attack * 2
+    const bonusDef = sacrifice.currentStats.defense * 2
+    moveToGraveyard(newState, sacrifice)
+    beneficiary.currentStats.attack += bonusAtk
+    beneficiary.currentStats.defense += bonusDef
+    log.push(addLog(newState, `Żertwa: ${sacrifice.cardData.name} poświęcona! ${beneficiary.cardData.name} zyskuje +${bonusAtk} ATK / +${bonusDef} DEF!`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_zertwa_enhanced',
+  name: 'Żertwa (wzmocniona)',
+  description: '[ZDARZENIE+] Zadaj podwójny ATK+DEF poświęconej istoty jako obrażenia wrogowi.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const log: LogEntry[] = []
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length === 0) return effectResult(newState, [addLog(newState, `Żertwa+: Brak istot do poświęcenia!`, 'effect')])
+
+    const sacrifice = target ? findCardInState(newState, target.instanceId) : allies.sort((a, b) =>
+      (a.currentStats.attack + a.currentStats.defense) - (b.currentStats.attack + b.currentStats.defense))[0]!
+    if (!sacrifice) return effectResult(newState)
+
+    const totalDmg = (sacrifice.currentStats.attack + sacrifice.currentStats.defense) * 2
+    moveToGraveyard(newState, sacrifice)
+    log.push(addLog(newState, `Żertwa+: ${sacrifice.cardData.name} poświęcona!`, 'effect'))
+
+    // Zadaj obrażenia najsilniejszemu wrogowi
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    if (enemies.length > 0) {
+      const victim = enemies.sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))[0]!
+      victim.currentStats.defense -= totalDmg
+      log.push(addLog(newState, `Żertwa+: ${victim.cardData.name} otrzymuje ${totalDmg} obrażeń!`, 'effect'))
+      if (victim.currentStats.defense <= 0) {
+        moveToGraveyard(newState, victim)
+        log.push(addLog(newState, `${victim.cardData.name} ginie od Żertwy!`, 'death'))
+      }
+    }
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ NEKROMANCJA — Stwórz Nieumarłego 4/4 LUB +4/+4 istniejącemu
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_nekromancja',
+  name: 'Nekromancja',
+  description: '[ZDARZENIE] Stwórz Nieumarłego 4/4 LUB daj +4/+4 istniejącemu Nieumarłemu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+
+    // Jeśli jest cel (istniejący Nieumarły) — buff
+    if (target) {
+      const card = findCardInState(newState, target.instanceId)
+      if (card) {
+        card.currentStats.attack += 4
+        card.currentStats.defense += 4
+        log.push(addLog(newState, `Nekromancja: ${card.cardData.name} zyskuje +4 ATK / +4 DEF!`, 'effect'))
+        return effectResult(newState, log)
+      }
+    }
+
+    // Brak celu — stwórz token 4/4
+    const token: CardInstance = {
+      instanceId: `nekro_token_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      cardData: {
+        id: 9999,
+        name: 'Nieumarły (token)',
+        cardType: 'creature',
+        effectId: '',
+        effectDescription: 'Token stworzony przez Nekromancję.',
+        stats: { attack: 4, defense: 4, maxAttack: 4, maxDefense: 4 },
+        attackType: 0, // Wręcz
+        idDomain: 3, // Nieumarli
+        isFlying: false,
+      } as any,
+      owner: source.owner as PlayerSide,
+      currentStats: { attack: 4, defense: 4, maxAttack: 4, maxDefense: 4 },
+      position: CardPosition.DEFENSE,
+      line: BattleLine.FRONT,
+      isRevealed: true,
+      hasAttackedThisTurn: false,
+      cannotAttack: false,
+      isSilenced: false,
+      isGrounded: false,
+      turnsInPlay: 0,
+      roundEnteredPlay: newState.roundNumber,
+      activeEffects: [],
+      equippedArtifacts: [],
+      metadata: {},
+      paralyzeRoundsLeft: null,
+      poisonRoundsLeft: null,
+      isImmune: false,
+      hasMovedThisTurn: false,
+    }
+    newState.players[source.owner].field.lines[BattleLine.FRONT].push(token)
+    log.push(addLog(newState, `Nekromancja: Przywołano Nieumarłego tokena 4/4 na L1!`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_nekromancja_enhanced',
+  name: 'Nekromancja (wzmocniona)',
+  description: '[ZDARZENIE+] ×2 lub ÷2 ATK/DEF WSZYSTKICH Nieumarłych na polu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    // Podwój staty sojuszniczych Nieumarłych
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    for (const a of allies) {
+      if ((a.cardData as any).idDomain === 3) {
+        a.currentStats.attack *= 2
+        a.currentStats.defense *= 2
+        log.push(addLog(newState, `Nekromancja+: ${a.cardData.name} ×2 ATK/DEF!`, 'effect'))
+      }
+    }
+    // Połów staty wrogich Nieumarłych
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      if ((e.cardData as any).idDomain === 3) {
+        e.currentStats.attack = Math.max(1, Math.floor(e.currentStats.attack / 2))
+        e.currentStats.defense = Math.max(1, Math.floor(e.currentStats.defense / 2))
+        log.push(addLog(newState, `Nekromancja+: ${e.cardData.name} ÷2 ATK/DEF!`, 'effect'))
+      }
+    }
+    if (log.length === 0) log.push(addLog(newState, `Nekromancja+: Brak Nieumarłych na polu.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ BEZSILNOŚĆ — Wrogie istoty nie korzystają z premii przez 3 rundy
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_bezsilnosc',
+  name: 'Bezsilność',
+  description: '[ZDARZENIE] Przez 3 rundy wrogie istoty nie korzystają z premii.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.isSilenced = true
+      e.metadata.bezsilnoscRounds = 3
+    }
+    const log = addLog(newState, `Bezsilność: ${enemies.length} wrogów wyciszonych na 3 rundy!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_bezsilnosc_enhanced',
+  name: 'Bezsilność (wzmocniona)',
+  description: '[ZDARZENIE+] Przez ten czas wrogi atak = tylko Wręcz.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.isSilenced = true
+      e.metadata.bezsilnoscRounds = 3
+      e.metadata.bezsilnoscMeleeOnly = true
+    }
+    const log = addLog(newState, `Bezsilność+: ${enemies.length} wrogów wyciszonych i ograniczonych do Wręcz na 3 rundy!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ HANDEL — Odłóż rękę, przetasuj talię, dobierz nowe
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_handel',
+  name: 'Handel',
+  description: '[ZDARZENIE] Odłóż rękę, przetasuj talię, dobierz nowe karty.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const player = newState.players[source.owner]
+    const handSize = player.hand.length
+    // Reszta ręki (bez karty Handel — już zagrana) wraca do talii
+    player.deck.push(...player.hand)
+    player.hand = []
+    // Przetasuj
+    for (let i = player.deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [player.deck[i], player.deck[j]] = [player.deck[j]!, player.deck[i]!]
+    }
+    // Dobierz tyle ile miałeś
+    for (let i = 0; i < handSize && player.deck.length > 0; i++) {
+      const card = player.deck.shift()!
+      card.isRevealed = false
+      player.hand.push(card)
+    }
+    const log = addLog(newState, `Handel: Wymiana ręki — odłożono ${handSize}, dobrano ${player.hand.length} nowych kart!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_handel_enhanced',
+  name: 'Handel (wzmocniony)',
+  description: '[ZDARZENIE+] Wymiana rąk — dostajesz tyle kart ile miałeś.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const player = newState.players[source.owner]
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemy = newState.players[enemySide]
+    // Wymiana rąk
+    const myHand = [...player.hand]
+    const enemyHand = [...enemy.hand]
+    player.hand = enemyHand
+    enemy.hand = myHand
+    // Zmień ownera
+    for (const c of player.hand) { c.owner = source.owner as PlayerSide; c.isRevealed = true }
+    for (const c of enemy.hand) { c.owner = enemySide as PlayerSide; c.isRevealed = false }
+    const log = addLog(newState, `Handel+: Wymiana rąk! Ty: ${player.hand.length} kart, Wróg: ${enemy.hand.length} kart.`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ SWAĆBA — Wróg nie może atakować przez 3 rundy
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_swacba',
+  name: 'Swaćba',
+  description: '[ZDARZENIE] Przez 3 rundy wróg nie może atakować.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.cannotAttack = true
+      e.metadata.swacbaRounds = 3
+    }
+    const log = addLog(newState, `Swaćba: Wrogie istoty nie mogą atakować przez 3 rundy!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_swacba_enhanced',
+  name: 'Swaćba (wzmocniona)',
+  description: '[ZDARZENIE+] Wróg nie wystawia nowych istot (dopóki ma pole).',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.cannotAttack = true
+      e.metadata.swacbaRounds = 3
+    }
+    ;(newState.players[enemySide] as any).swacbaBlock = true
+    const log = addLog(newState, `Swaćba+: Wrogie istoty sparaliżowane + wróg nie może wystawiać nowych istot!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ MISJONARZE — Przez 5 tur wróg nie atakuje Magią
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_misjonarze',
+  name: 'Misjonarze',
+  description: '[ZDARZENIE] Przez 5 tur wróg nie atakuje Magią.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    const log: LogEntry[] = []
+    for (const e of enemies) {
+      if ((e.cardData as any).attackType === AttackType.MAGIC) {
+        e.cannotAttack = true
+        e.metadata.misjonarzeRounds = 5
+        log.push(addLog(newState, `Misjonarze: ${e.cardData.name} nie może atakować Magią przez 5 tur!`, 'effect'))
+      }
+    }
+    if (log.length === 0) log.push(addLog(newState, `Misjonarze: Brak wrogich magów na polu.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_misjonarze_enhanced',
+  name: 'Misjonarze (wzmocniony)',
+  description: '[ZDARZENIE+] Anuluj wrogie zaklęcie (jednorazowe).',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    ;(newState.players[source.owner] as any).misjonarzeCounterspell = true
+    const log = addLog(newState, `Misjonarze+: Następne wrogie zaklęcie zostanie anulowane!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ ZAĆMIENIE SŁOŃCA — Istoty bez premii do końca tury
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_zacmienie_sonca',
+  name: 'Zaćmienie Słońca',
+  description: '[ZDARZENIE] Do końca następnej tury — istoty na polu bez premii.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    for (const side of ['player1', 'player2'] as PlayerSide[]) {
+      const creatures = getAllCreaturesOnField(newState, side)
+      for (const c of creatures) {
+        c.isSilenced = true
+        c.metadata.zacmienieRounds = 1
+      }
+    }
+    log.push(addLog(newState, `Zaćmienie Słońca: Wszystkie istoty wyciszone do końca następnej tury!`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_zacmienie_sonca_enhanced',
+  name: 'Zaćmienie Słońca (wzmocnione)',
+  description: '[ZDARZENIE+] Przez 3 rundy wrogie istoty bez premii.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.isSilenced = true
+      e.metadata.zacmienieRounds = 3
+    }
+    const log = addLog(newState, `Zaćmienie Słońca+: ${enemies.length} wrogów wyciszonych na 3 rundy!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ TOPÓR PERUNA AMULET — Odbij 2 ciosy wroga na napastnika
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_topor_peruna_amulet',
+  name: 'Topór Peruna (Amulet)',
+  description: '[ZDARZENIE] Odbij 2 wybrane ciosy wroga z powrotem na napastnika.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    const log: LogEntry[] = []
+    // Daj 2 sojusznikom odbicie następnego ciosu
+    const targets = target ? [findCardInState(newState, target.instanceId)].filter(Boolean) as CardInstance[]
+      : allies.slice(0, 2)
+    for (const a of targets) {
+      a.metadata.toporPerunaReflect = true
+      log.push(addLog(newState, `Topór Peruna: ${a.cardData.name} odbije następny cios!`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_topor_peruna_amulet_enhanced',
+  name: 'Topór Peruna Amulet (wzmocniony)',
+  description: '[ZDARZENIE+] Wybierz cel odbicia — inna wroga istota.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    for (const a of allies) {
+      a.metadata.toporPerunaReflect = true
+      a.metadata.toporPerunaRedirect = true
+    }
+    const log = addLog(newState, `Topór Peruna+: ${allies.length} sojuszników odbije ciosy na wybranego wroga!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ SREBRNA GAŁĄŹ — Zmień domenę istoty
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_srebrna_gaaz',
+  name: 'Srebrna Gałąź',
+  description: '[ARTEFAKT] Zmień domenę istoty.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    // Zmień na domenę gracza (lub losową inną)
+    const currentDomain = (card.cardData as any).idDomain
+    const newDomain = currentDomain === 1 ? 2 : currentDomain === 2 ? 1 : currentDomain === 3 ? 4 : 3
+    ;(card.cardData as any).idDomain = newDomain
+    const domainNames: Record<number,string> = {1:'Perun',2:'Żywi',3:'Nieumarli',4:'Weles'}
+    const log = addLog(newState, `Srebrna Gałąź: ${card.cardData.name} zmienia domenę na ${domainNames[newDomain]}!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_srebrna_gaaz_enhanced',
+  name: 'Srebrna Gałąź (wzmocniona)',
+  description: '[ARTEFAKT+] Istota odporna na wybraną domenę.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    // Odporna na domenę 4 (Weles) domyślnie — AI nie wybiera
+    card.metadata.immuneToDomain = 4
+    const log = addLog(newState, `Srebrna Gałąź+: ${card.cardData.name} odporna na Weles!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ ZŁOTA BABA — Zagraj jako istotę-pułapkę
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_zota_baba',
+  name: 'Złota Baba',
+  description: '[ZDARZENIE] Zagraj jako istotę 0/8. Kto ją zaatakuje — przechodzi na Twoją stronę.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const token: CardInstance = {
+      instanceId: `zlota_baba_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      cardData: {
+        id: 9998, name: 'Złota Baba', cardType: 'creature', effectId: 'zlota_baba_trap',
+        effectDescription: 'Kto zaatakuje — przechodzi na stronę właściciela.',
+        stats: { attack: 0, defense: 8, maxAttack: 0, maxDefense: 8 },
+        attackType: 0, idDomain: 1, isFlying: false,
+      } as any,
+      owner: source.owner as PlayerSide,
+      currentStats: { attack: 0, defense: 8, maxAttack: 0, maxDefense: 8 },
+      position: CardPosition.DEFENSE, line: BattleLine.FRONT,
+      isRevealed: false, hasAttackedThisTurn: false, cannotAttack: true,
+      isSilenced: false, isGrounded: false, turnsInPlay: 0,
+      roundEnteredPlay: newState.roundNumber, activeEffects: [],
+      equippedArtifacts: [], metadata: { zlotaBabaTrap: true },
+      paralyzeRoundsLeft: null, poisonRoundsLeft: null,
+      isImmune: false, hasMovedThisTurn: false,
+    }
+    newState.players[source.owner].field.lines[BattleLine.FRONT].push(token)
+    const log = addLog(newState, `Złota Baba: Pułapka wystawiona na L1!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_zota_baba_enhanced',
+  name: 'Złota Baba (wzmocniona)',
+  description: '[ZDARZENIE+] Ukradnij wrogą Lokację lub Artefakt.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const log: LogEntry[] = []
+    if (newState.players[enemySide].activeLocation) {
+      const loc = newState.players[enemySide].activeLocation!
+      newState.players[enemySide].activeLocation = null
+      loc.owner = source.owner as PlayerSide
+      newState.players[source.owner].activeLocation = loc
+      log.push(addLog(newState, `Złota Baba+: Lokacja ${loc.cardData.name} skradziona!`, 'effect'))
+    } else {
+      log.push(addLog(newState, `Złota Baba+: Wróg nie ma Lokacji do kradzieży.`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ PRZEBUDZENIE STOLEMÓW — Zniszcz Lokację
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_przebudzenie_stolemow',
+  name: 'Przebudzenie Stolemów',
+  description: '[ZDARZENIE] Zniszcz Lokację wroga.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const log: LogEntry[] = []
+    if (newState.players[enemySide].activeLocation) {
+      const loc = newState.players[enemySide].activeLocation!
+      log.push(addLog(newState, `Przebudzenie Stolemów: Lokacja ${loc.cardData.name} zniszczona!`, 'effect'))
+      newState.players[enemySide].activeLocation = null
+    } else {
+      log.push(addLog(newState, `Przebudzenie Stolemów: Wróg nie ma aktywnej Lokacji.`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_przebudzenie_stolemow_enhanced',
+  name: 'Przebudzenie Stolemów (wzmocnione)',
+  description: '[ZDARZENIE+] Zniszcz 3 aktywne Zdarzenia na polu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    const removed = newState.activeEvents.splice(0, 3)
+    for (const ev of removed) {
+      log.push(addLog(newState, `Przebudzenie Stolemów+: Zdarzenie ${ev.cardData.name} zniszczone!`, 'effect'))
+    }
+    if (removed.length === 0) log.push(addLog(newState, `Przebudzenie Stolemów+: Brak aktywnych Zdarzeń.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ BRATERSTWO BOGATYRÓW — Połącz 2 istoty (sumuj staty)
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_braterstwo_bogatyrow',
+  name: 'Braterstwo Bogatyrów',
+  description: '[ZDARZENIE] Połącz 2 swoje istoty — sumuj ATK i DEF.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length < 2) return effectResult(newState, [addLog(newState, `Braterstwo: Potrzeba 2 istot!`, 'effect')])
+    const sorted = [...allies].sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))
+    const survivor = target ? findCardInState(newState, target.instanceId) ?? sorted[0]! : sorted[0]!
+    const sacrifice = sorted.find(c => c.instanceId !== survivor.instanceId)!
+    survivor.currentStats.attack += sacrifice.currentStats.attack
+    survivor.currentStats.defense += sacrifice.currentStats.defense
+    // Przenieś artefakty
+    survivor.equippedArtifacts.push(...sacrifice.equippedArtifacts)
+    moveToGraveyard(newState, sacrifice)
+    const log = addLog(newState, `Braterstwo Bogatyrów: ${sacrifice.cardData.name} łączy się z ${survivor.cardData.name}! (ATK=${survivor.currentStats.attack}, DEF=${survivor.currentStats.defense})`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_braterstwo_bogatyrow_enhanced',
+  name: 'Braterstwo Bogatyrów (wzmocnione)',
+  description: '[ZDARZENIE+] Połącz do 4 istot w jedną.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length < 2) return effectResult(newState, [addLog(newState, `Braterstwo+: Potrzeba 2+ istot!`, 'effect')])
+    const sorted = [...allies].sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))
+    const survivor = sorted[0]!
+    const toMerge = sorted.slice(1, 4)
+    for (const s of toMerge) {
+      survivor.currentStats.attack += s.currentStats.attack
+      survivor.currentStats.defense += s.currentStats.defense
+      survivor.equippedArtifacts.push(...s.equippedArtifacts)
+      moveToGraveyard(newState, s)
+    }
+    const log = addLog(newState, `Braterstwo+: ${toMerge.length} istot połączonych w ${survivor.cardData.name}! (ATK=${survivor.currentStats.attack}, DEF=${survivor.currentStats.defense})`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ SLEDOVIK — Wystawij 2 dodatkowe istoty / odporność na Weles
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_sledovik',
+  name: 'Sledovik',
+  description: '[ZDARZENIE] Istota odporna na ataki Welesowców. Wystawij 2 dodatkowe istoty.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    // Daj sojusznikowi odporność na Weles
+    if (target) {
+      const card = findCardInState(newState, target.instanceId)
+      if (card) {
+        card.metadata.immuneToDomain = 4
+        log.push(addLog(newState, `Sledovik: ${card.cardData.name} odporny na Welesowców!`, 'effect'))
+      }
+    }
+    // +2 do limitu wystawiania istot
+    newState.players[source.owner].creaturesPlayedThisTurn = Math.max(0, newState.players[source.owner].creaturesPlayedThisTurn - 2)
+    log.push(addLog(newState, `Sledovik: Możesz wystawić 2 dodatkowe istoty!`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_sledovik_enhanced',
+  name: 'Sledovik (wzmocniony)',
+  description: '[ZDARZENIE+] Zniszcz wybranego Welesowca / dodatkowy atak.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const log: LogEntry[] = []
+    // Zniszcz Welesowca
+    const welesowcy = getAllCreaturesOnField(newState, enemySide).filter(c => (c.cardData as any).idDomain === 4)
+    const victim = target ? findCardInState(newState, target.instanceId) : (welesowcy.length > 0 ? welesowcy[0]! : null)
+    if (victim && (victim.cardData as any).idDomain === 4) {
+      moveToGraveyard(newState, victim)
+      log.push(addLog(newState, `Sledovik+: ${victim.cardData.name} (Weles) zniszczony!`, 'effect'))
+    } else {
+      log.push(addLog(newState, `Sledovik+: Brak Welesowców do zniszczenia.`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ RUSLAN HELMET — Odporność na wrogie premie (artefakt)
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_ruslan_helmet',
+  name: 'Ruslan Helmet',
+  description: '[ARTEFAKT] Odporność na wrogie premie.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.isImmune = true
+    const log = addLog(newState, `Ruslan Helmet: ${card.cardData.name} odporny na wrogie premie!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+registerEffect({
+  id: 'adventure_ruslan_helmet_enhanced',
+  name: 'Ruslan Helmet (wzmocniony)',
+  description: '[ARTEFAKT+] Jeśli nie atakuje — nie można go zaatakować.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.PREVENTION,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.isImmune = true
+    card.metadata.ruslanHelmetStealth = true
+    const log = addLog(newState, `Ruslan Helmet+: ${card.cardData.name} odporny + niewidzialny w obronie!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ ALATYR — Dobierz 5 kart, wystawij istoty
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_alatyr',
+  name: 'Alatyr',
+  description: '[ARTEFAKT] Dobierz 5 kart — wystawij z nich ile chcesz istot.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const player = newState.players[source.owner]
+    const log: LogEntry[] = []
+    // Dobierz 5 kart
+    let drawn = 0
+    for (let i = 0; i < 5 && player.deck.length > 0; i++) {
+      const card = player.deck.shift()!
+      card.isRevealed = source.owner === 'player1'
+      player.hand.push(card)
+      drawn++
+    }
+    log.push(addLog(newState, `Alatyr: Dobrano ${drawn} kart!`, 'effect'))
+    // Wystawij automatycznie istoty (AI) — do 3 na wolne miejsca
+    if ((player as any).isAI || source.owner === 'player2') {
+      const creatures = player.hand.filter(c => c.cardData.cardType === 'creature').slice(0, 3)
+      for (const c of creatures) {
+        for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+          if (player.field.lines[line].length < 5) {
+            const idx = player.hand.findIndex(h => h.instanceId === c.instanceId)
+            if (idx !== -1) player.hand.splice(idx, 1)
+            c.line = line
+            c.turnsInPlay = 0
+            c.roundEnteredPlay = newState.roundNumber
+            player.field.lines[line].push(c)
+            log.push(addLog(newState, `Alatyr: ${c.cardData.name} wystawiony w L${line}!`, 'effect'))
+            break
+          }
+        }
+      }
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_alatyr_enhanced',
+  name: 'Alatyr (wzmocniony)',
+  description: '[ARTEFAKT+] Nośnik = Prowokacja (rywal musi bić tylko jego).',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.activeEffects.push({ effectId: 'blotnik_taunt', sourceInstanceId: card.instanceId, trigger: EffectTrigger.PASSIVE, remainingTurns: null, stackId: `alatyr_taunt_${card.instanceId}`, metadata: {} })
+    const log = addLog(newState, `Alatyr+: ${card.cardData.name} zyskuje Prowokację!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA PERENA — Welesowcy ½ ATK/DEF + tracą premie
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_perena',
+  name: 'Łaska Perena',
+  description: '[ZDARZENIE] Welesowcy tracą ½ ATK i DEF i WSZYSTKIE premie.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    for (const side of ['player1', 'player2'] as PlayerSide[]) {
+      for (const c of getAllCreaturesOnField(newState, side)) {
+        if ((c.cardData as any).idDomain === 4) {
+          c.currentStats.attack = Math.max(1, Math.floor(c.currentStats.attack / 2))
+          c.currentStats.defense = Math.max(1, Math.floor(c.currentStats.defense / 2))
+          c.activeEffects = []
+          c.isSilenced = true
+          log.push(addLog(newState, `Łaska Perena: ${c.cardData.name} osłabiony! (½ statów, premie usunięte)`, 'effect'))
+        }
+      }
+    }
+    if (log.length === 0) log.push(addLog(newState, `Łaska Perena: Brak Welesowców na polu.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_perena_enhanced',
+  name: 'Łaska Perena (wzmocniona)',
+  description: '[ZDARZENIE+] Zniszcz dowolną istotę na polu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    const victim = target ? findCardInState(newState, target.instanceId)
+      : (enemies.length > 0 ? enemies.sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))[0]! : null)
+    if (victim) {
+      moveToGraveyard(newState, victim)
+      return effectResult(newState, [addLog(newState, `Łaska Perena+: ${victim.cardData.name} zniszczony!`, 'death')])
+    }
+    return effectResult(newState, [addLog(newState, `Łaska Perena+: Brak celów.`, 'effect')])
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA RODA — Daj istocie dowolną premię
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_roda',
+  name: 'Łaska Roda',
+  description: '[ZDARZENIE] Daj istocie +3 ATK i +3 DEF.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.currentStats.attack += 3
+    card.currentStats.defense += 3
+    return effectResult(newState, [addLog(newState, `Łaska Roda: ${card.cardData.name} zyskuje +3 ATK / +3 DEF!`, 'effect')])
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_roda_enhanced',
+  name: 'Łaska Roda (wzmocniona)',
+  description: '[ZDARZENIE+] 2 istoty zamieniają się premiami i atrybutami.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length < 2) return effectResult(newState, [addLog(newState, `Łaska Roda+: Potrzeba 2 istot!`, 'effect')])
+    const a = allies[0]!, b = allies[1]!
+    const tmpAtk = a.currentStats.attack; const tmpDef = a.currentStats.defense
+    a.currentStats.attack = b.currentStats.attack; a.currentStats.defense = b.currentStats.defense
+    b.currentStats.attack = tmpAtk; b.currentStats.defense = tmpDef
+    const tmpEffects = [...a.activeEffects]; a.activeEffects = [...b.activeEffects]; b.activeEffects = tmpEffects
+    return effectResult(newState, [addLog(newState, `Łaska Roda+: ${a.cardData.name} ↔ ${b.cardData.name} — zamiana statów i premii!`, 'effect')])
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA ZORZY — Przywróć zużyte Zdarzenie
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_zorzy',
+  name: 'Łaska Zorzy',
+  description: '[ZDARZENIE] Przywróć 1 zużyte Zdarzenie z cmentarza na rękę.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const player = newState.players[source.owner]
+    const eventIdx = player.graveyard.findIndex(c => c.cardData.cardType === 'adventure')
+    if (eventIdx !== -1) {
+      const card = player.graveyard.splice(eventIdx, 1)[0]!
+      card.isRevealed = source.owner === 'player1'
+      player.hand.push(card)
+      return effectResult(newState, [addLog(newState, `Łaska Zorzy: ${card.cardData.name} wraca z cmentarza na rękę!`, 'effect')])
+    }
+    return effectResult(newState, [addLog(newState, `Łaska Zorzy: Brak Zdarzeń w cmentarzu.`, 'effect')])
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_zorzy_enhanced',
+  name: 'Łaska Zorzy (wzmocniona)',
+  description: '[ZDARZENIE+] Skopiuj aktywne Zdarzenie na polu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state } = ctx
+    const newState = cloneGameState(state)
+    if (newState.activeEvents.length > 0) {
+      const copied = JSON.parse(JSON.stringify(newState.activeEvents[0]!))
+      copied.instanceId = `zorzy_copy_${Date.now()}`
+      newState.activeEvents.push(copied)
+      return effectResult(newState, [addLog(newState, `Łaska Zorzy+: Skopiowano Zdarzenie ${copied.cardData.name}!`, 'effect')])
+    }
+    return effectResult(newState, [addLog(newState, `Łaska Zorzy+: Brak aktywnych Zdarzeń.`, 'effect')])
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA SWAROŻYCA — Zadaj 6 obrażeń wrogom
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_swarozyca',
+  name: 'Łaska Swarożyca',
+  description: '[ZDARZENIE] Zadaj 6 obrażeń rozłożonych po równo między wrogów.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    const log: LogEntry[] = []
+    if (enemies.length === 0) return effectResult(newState, [addLog(newState, `Łaska Swarożyca: Brak wrogów.`, 'effect')])
+    const dmgEach = Math.floor(6 / enemies.length)
+    const remainder = 6 - dmgEach * enemies.length
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i]!
+      const dmg = dmgEach + (i < remainder ? 1 : 0)
+      e.currentStats.defense -= dmg
+      log.push(addLog(newState, `Łaska Swarożyca: ${e.cardData.name} otrzymuje ${dmg} obrażeń!`, 'effect'))
+      if (e.currentStats.defense <= 0) {
+        moveToGraveyard(newState, e)
+        log.push(addLog(newState, `${e.cardData.name} ginie!`, 'death'))
+      }
+    }
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_swarozyca_enhanced',
+  name: 'Łaska Swarożyca (wzmocniona)',
+  description: '[ZDARZENIE+] Rozdzielaj 6 obrażeń dowolnie.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const log: LogEntry[] = []
+    // Jeśli jest cel — 6 DMG na niego, inaczej najsilniejszy wróg
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const victim = target ? findCardInState(newState, target.instanceId)
+      : getAllCreaturesOnField(newState, enemySide).sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))[0] ?? null
+    if (victim) {
+      victim.currentStats.defense -= 6
+      log.push(addLog(newState, `Łaska Swarożyca+: ${victim.cardData.name} otrzymuje 6 obrażeń!`, 'effect'))
+      if (victim.currentStats.defense <= 0) {
+        moveToGraveyard(newState, victim)
+        log.push(addLog(newState, `${victim.cardData.name} ginie!`, 'death'))
+      }
+    } else {
+      log.push(addLog(newState, `Łaska Swarożyca+: Brak celów.`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA MORANY — Zabij 3 następne wystawione wrogi istoty
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_morany',
+  name: 'Łaska Morany',
+  description: '[ZDARZENIE] Zabij 3 następne wystawione wrogi istoty.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    ;(newState.players[source.owner] as any).moranaKillCount = 3
+    return effectResult(newState, [addLog(newState, `Łaska Morany: Następne 3 wystawione wrogi istoty zostaną zabite!`, 'effect')])
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_morany_enhanced',
+  name: 'Łaska Morany (wzmocniona)',
+  description: '[ZDARZENIE+] 1 z zabitych trafia do Twojej talii.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    ;(newState.players[source.owner] as any).moranaKillCount = 3
+    ;(newState.players[source.owner] as any).moranaStealOne = true
+    return effectResult(newState, [addLog(newState, `Łaska Morany+: Następne 3 wrogi istoty zabite, 1. trafia do Twojej talii!`, 'effect')])
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA SWAROGA — Odtwórz Artefakt/Lokację
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_swaroga',
+  name: 'Łaska Swaroga',
+  description: '[ZDARZENIE] Odtwórz zniszczony Artefakt lub Lokację z cmentarza.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const player = newState.players[source.owner]
+    const idx = player.graveyard.findIndex(c => c.cardData.cardType === 'adventure')
+    if (idx !== -1) {
+      const card = player.graveyard.splice(idx, 1)[0]!
+      player.hand.push(card)
+      return effectResult(newState, [addLog(newState, `Łaska Swaroga: ${card.cardData.name} odtworzona z cmentarza!`, 'effect')])
+    }
+    return effectResult(newState, [addLog(newState, `Łaska Swaroga: Brak zniszczonych Przygód.`, 'effect')])
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_swaroga_enhanced',
+  name: 'Łaska Swaroga (wzmocniona)',
+  description: '[ZDARZENIE+] Skopiuj aktywny Artefakt/Lokację na polu.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const player = newState.players[source.owner]
+    const log: LogEntry[] = []
+    // Skopiuj lokację wroga
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemyLoc = newState.players[enemySide].activeLocation
+    if (enemyLoc && !player.activeLocation) {
+      player.activeLocation = JSON.parse(JSON.stringify(enemyLoc))
+      player.activeLocation!.owner = source.owner as PlayerSide
+      log.push(addLog(newState, `Łaska Swaroga+: Skopiowano Lokację ${enemyLoc.cardData.name}!`, 'effect'))
+    } else {
+      log.push(addLog(newState, `Łaska Swaroga+: Brak Lokacji do skopiowania.`, 'effect'))
+    }
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA ŚWIĘTOWIDA — Za każde zabójstwo +ATK ofiary
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_swietowida',
+  name: 'Łaska Świętowida',
+  description: '[ZDARZENIE] Wskazana istota: za każde zabójstwo +ATK ofiary.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, target } = ctx
+    if (!target) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, target.instanceId)
+    if (!card) return effectResult(newState)
+    card.metadata.swietowidKillBuff = true
+    return effectResult(newState, [addLog(newState, `Łaska Świętowida: ${card.cardData.name} — za każde zabójstwo +ATK ofiary!`, 'effect')])
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_swietowida_enhanced',
+  name: 'Łaska Świętowida (wzmocniona)',
+  description: '[ZDARZENIE+] Twoje istoty po zabiciu wroga nie kończą tury.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    for (const a of allies) {
+      a.metadata.swietowidFreeKill = true
+    }
+    return effectResult(newState, [addLog(newState, `Łaska Świętowida+: Twoje istoty po zabiciu nie kończą tury!`, 'effect')])
+  },
+})
+
+// ===================================================================
+// ✅ POŚWIĘCENIE WANDY — Wróg sparaliżowany 1 rundę
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_poswiecenie_wandy',
+  name: 'Poświęcenie Wandy',
+  description: '[ZDARZENIE] Wróg nie może nic robić przez następną rundę.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.cannotAttack = true
+      e.paralyzeRoundsLeft = 1
+    }
+    ;(newState.players[enemySide] as any).wandaSkipTurn = true
+    return effectResult(newState, [addLog(newState, `Poświęcenie Wandy: Wróg sparaliżowany na następną rundę!`, 'effect')])
+  },
+})
+
+registerEffect({
+  id: 'adventure_poswiecenie_wandy_enhanced',
+  name: 'Poświęcenie Wandy (wzmocnione)',
+  description: '[ZDARZENIE+] Wróg sparaliżowany na 2 rundy.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    for (const e of enemies) {
+      e.cannotAttack = true
+      e.paralyzeRoundsLeft = 2
+    }
+    ;(newState.players[enemySide] as any).wandaSkipTurn = 2
+    return effectResult(newState, [addLog(newState, `Poświęcenie Wandy+: Wróg sparaliżowany na 2 rundy!`, 'effect')])
+  },
+})
+
+// ===================================================================
+// ✅ ŁASKA ŁADY — Zaatakowani wrogowie tracą Lot
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_aska_ady',
+  name: 'Łaska Łady',
+  description: '[ZDARZENIE] Zaatakowani wrogowie tracą Lot.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(newState, enemySide)
+    const log: LogEntry[] = []
+    for (const e of enemies) {
+      if ((e.cardData as any).isFlying) {
+        e.isGrounded = true
+        log.push(addLog(newState, `Łaska Łady: ${e.cardData.name} traci Lot!`, 'effect'))
+      }
+    }
+    if (log.length === 0) log.push(addLog(newState, `Łaska Łady: Brak latających wrogów.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+registerEffect({
+  id: 'adventure_aska_ady_enhanced',
+  name: 'Łaska Łady (wzmocniona)',
+  description: '[ZDARZENIE+] Istoty w L3 otrzymują ×3 obrażeń.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const enemySide = source.owner === 'player1' ? 'player2' : 'player1'
+    const l3Enemies = newState.players[enemySide].field.lines[BattleLine.SUPPORT]
+    const log: LogEntry[] = []
+    for (const e of l3Enemies) {
+      e.metadata.tripleIncomingDamage = true
+      log.push(addLog(newState, `Łaska Łady+: ${e.cardData.name} (L3) otrzyma ×3 obrażeń!`, 'effect'))
+    }
+    if (log.length === 0) log.push(addLog(newState, `Łaska Łady+: Brak wrogów w L3.`, 'effect'))
+    return effectResult(newState, log)
+  },
+})
+
+// ===================================================================
+// ✅ GUSŁA — Transfer statów i premii między istotami
+// ===================================================================
+
+registerEffect({
+  id: 'adventure_gusa',
+  name: 'Gusła',
+  description: '[ZDARZENIE] Transfer ATK, DEF i premii z jednej istoty na drugą.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source, target } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length < 2) return effectResult(newState, [addLog(newState, `Gusła: Potrzeba 2 istot!`, 'effect')])
+    const sorted = [...allies].sort((a, b) => (a.currentStats.attack + a.currentStats.defense) - (b.currentStats.attack + b.currentStats.defense))
+    const donor = target ? findCardInState(newState, target.instanceId) ?? sorted[0]! : sorted[0]!
+    const receiver = sorted.find(c => c.instanceId !== donor.instanceId)!
+    receiver.currentStats.attack += donor.currentStats.attack
+    receiver.currentStats.defense += donor.currentStats.defense
+    receiver.activeEffects.push(...donor.activeEffects)
+    donor.currentStats.attack = 0
+    donor.currentStats.defense = 1
+    donor.activeEffects = []
+    return effectResult(newState, [addLog(newState, `Gusła: ${donor.cardData.name} → ${receiver.cardData.name}! Transfer statów i premii.`, 'effect')])
+  },
+})
+
+registerEffect({
+  id: 'adventure_gusa_enhanced',
+  name: 'Gusła (wzmocnione)',
+  description: '[ZDARZENIE+] Zamień ATK i DEF między 2 swoimi istotami.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length < 2) return effectResult(newState, [addLog(newState, `Gusła+: Potrzeba 2 istot!`, 'effect')])
+    const a = allies[0]!, b = allies[1]!
+    const tmpAtk = a.currentStats.attack; const tmpDef = a.currentStats.defense
+    a.currentStats.attack = b.currentStats.attack; a.currentStats.defense = b.currentStats.defense
+    b.currentStats.attack = tmpAtk; b.currentStats.defense = tmpDef
+    return effectResult(newState, [addLog(newState, `Gusła+: ${a.cardData.name} ↔ ${b.cardData.name} — zamiana statów!`, 'effect')])
   },
 })
 
