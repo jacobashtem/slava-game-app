@@ -725,7 +725,7 @@ function checkDamagePrevention(
     // Gracz odmówił użycia tarczy Brzeginy — pomiń
   } else {
   const brzeginaOnField = getAllCreaturesForPlayer(state, defender.owner)
-    .find(c => c.cardData.name === 'Brzegina')
+    .find(c => (c.cardData as any).effectId === 'brzegina_shield_for_gold')
 
   if (brzeginaOnField) {
     const effect = getEffect('brzegina_shield_for_gold')
@@ -742,7 +742,7 @@ function checkDamagePrevention(
   if ((defender.cardData as any).effectId === 'utopiec_half_damage') {
     const reduced = Math.floor(damage / 2)
     const newState = cloneGameState(state)
-    const defCard = newState.players[defender.owner].field.lines[defender.line!]?.find(c => c.instanceId === defender.instanceId)
+    const defCard = findCardOnField(newState, defender.instanceId)
     if (defCard) {
       // Cofnij pełne obrażenia i zadaj połowę
       defCard.currentStats.defense += damage
@@ -759,7 +759,7 @@ function checkDamagePrevention(
     const reduced = Math.max(0, damage - 1)
     if (reduced < damage) {
       const newState = cloneGameState(state)
-      const defCard = newState.players[defender.owner].field.lines[defender.line!]?.find(c => c.instanceId === defender.instanceId)
+      const defCard = findCardOnField(newState, defender.instanceId)
       if (defCard) {
         defCard.currentStats.defense += damage
         defCard.currentStats.defense -= reduced
@@ -778,7 +778,7 @@ function checkDamagePrevention(
       const reduced = Math.max(0, damage - znachorOnField.currentStats.attack)
       if (reduced < damage) {
         const newState = cloneGameState(state)
-        const defCard = newState.players[defender.owner].field.lines[defender.line!]?.find(c => c.instanceId === defender.instanceId)
+        const defCard = findCardOnField(newState, defender.instanceId)
         if (defCard) {
           defCard.currentStats.defense += damage
           defCard.currentStats.defense -= reduced
@@ -796,13 +796,11 @@ function checkDamagePrevention(
       .find(c => c.instanceId === guardianId)
     if (guardian && guardian.metadata.przyjaznGuard === defender.instanceId) {
       const newState = cloneGameState(state)
-      const guardianInState = newState.players[guardian.owner].field.lines[guardian.line!]
-        ?.find(c => c.instanceId === guardianId)
+      const guardianInState = findCardOnField(newState, guardianId)
       if (guardianInState) {
         guardianInState.currentStats.defense -= damage
         // Przywróć obrażenia obrońcy (nie trafi)
-        const defCard = newState.players[defender.owner].field.lines[defender.line!]
-          ?.find(c => c.instanceId === defender.instanceId)
+        const defCard = findCardOnField(newState, defender.instanceId)
         if (defCard) defCard.currentStats.defense += damage
         const log = addLog(newState,
           `Przyjaźń: ${guardianInState.cardData.name} osłania ${defender.cardData.name} — bierze ${damage} obrażeń!`,
@@ -819,7 +817,7 @@ function checkDamagePrevention(
     const reduced = Math.max(0, damage - 3)
     if (reduced < damage) {
       const newState = cloneGameState(state)
-      const defCard = newState.players[defender.owner].field.lines[defender.line!]?.find(c => c.instanceId === defender.instanceId)
+      const defCard = findCardOnField(newState, defender.instanceId)
       if (defCard) {
         defCard.currentStats.defense += damage
         defCard.currentStats.defense -= reduced
