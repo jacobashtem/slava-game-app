@@ -248,6 +248,11 @@ const parsedEffectDescription = computed(() => {
         </template>
       </div>
 
+      <!-- Karta Przygody: ulepszony efekt -->
+      <div v-if="!isCreature && data.enhancedEffectDescription" class="tt-effect tt-enhanced">
+        <span class="tt-enhanced-label">Ulepszony:</span> {{ data.enhancedEffectDescription }}
+      </div>
+
       <!-- Lore -->
       <div v-if="data.lore" class="tt-lore" v-html="data.lore" />
 
@@ -505,6 +510,18 @@ const parsedEffectDescription = computed(() => {
   font-style: italic;
   padding: 5px 10px;
   border-top: 1px solid rgba(255,255,255,0.04);
+}
+
+.tt-enhanced {
+  color: #fbbf24 !important;
+  font-style: normal;
+}
+.tt-enhanced-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fbbf24;
+  letter-spacing: 0.03em;
 }
 
 .tt-effect-tag {

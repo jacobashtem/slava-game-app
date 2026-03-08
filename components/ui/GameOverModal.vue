@@ -22,9 +22,9 @@ const stats = computed(() => {
     aiGold: a.gold,
     playerDeck: p.deck.length,
     aiDeck: a.deck.length,
-    // Count kills from action log
-    playerKills: game.state.actionLog.filter(e => e.type === 'death' && e.side === 'player2').length,
-    aiKills: game.state.actionLog.filter(e => e.type === 'death' && e.side === 'player1').length,
+    // Kills = enemy graveyard, losses = own graveyard
+    playerKills: a.graveyard.length,
+    aiKills: p.graveyard.length,
   }
 })
 

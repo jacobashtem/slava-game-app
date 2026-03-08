@@ -794,6 +794,16 @@ export class GameEngine {
     return null
   }
 
+  /**
+   * Ustawia pendingInteraction na wewnętrznym stanie silnika i zwraca kopię.
+   */
+  injectPendingInteraction(interaction: GameState['pendingInteraction']): GameState {
+    const newState = cloneGameState(this.state)
+    newState.pendingInteraction = interaction
+    this.state = newState
+    return cloneGameState(this.state)
+  }
+
   // ===== ODCZYT STANU =====
 
   getState(): GameState {

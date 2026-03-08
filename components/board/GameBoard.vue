@@ -304,18 +304,14 @@ const onPlayDescription = computed(() => {
               const pa = ui.pendingActivation!
               ui.pendingActivation = null
               if (pa.requiresTarget && pa.availableTargetIds?.length) {
-                // Płatna + wymaga cel → pendingInteraction do wyboru celu
-                if (game.state) {
-                  const newState = JSON.parse(JSON.stringify(game.state))
-                  newState.pendingInteraction = {
-                    type: 'on_play_target',
-                    sourceInstanceId: pa.cardInstanceId,
-                    respondingPlayer: 'player1',
-                    availableTargetIds: pa.availableTargetIds,
-                    metadata: { isActivation: true, paidCost: pa.cost },
-                  }
-                  game.state = newState
-                }
+                // Płatna + wymaga cel → pendingInteraction (przez engine żeby sync)
+                game.injectPendingInteraction({
+                  type: 'on_play_target',
+                  sourceInstanceId: pa.cardInstanceId,
+                  respondingPlayer: 'player1',
+                  availableTargetIds: pa.availableTargetIds,
+                  metadata: { isActivation: true, paidCost: pa.cost },
+                })
               } else {
                 game.activateCreatureEffect(pa.cardInstanceId)
               }

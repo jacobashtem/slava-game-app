@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import CreatureCard from '../cards/CreatureCard.vue'
 import { Icon } from '@iconify/vue'
 import type { CardInstance } from '../../game-engine/types'
@@ -110,6 +110,8 @@ const adventureTypeColor = (card: CardInstance) => {
         :key="card.instanceId"
         :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId }]"
         @click="onCardClick(card)"
+        @mouseenter="ui.showTooltip(card.instanceId)"
+        @mouseleave="ui.hideTooltip()"
       >
         <!-- Istota -->
         <CreatureCard

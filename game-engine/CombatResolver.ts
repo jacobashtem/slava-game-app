@@ -436,8 +436,9 @@ export function resolveAttack(
   if (defenderDied) {
     currentAttacker = findCardOnField(newState, attackerInstanceId)
     if (currentAttacker && currentAttacker.metadata.likantropiaActive) {
-      const baseAtk = (defender.cardData as any).stats?.attack ?? defender.currentStats.attack
-      const baseDef = (defender.cardData as any).stats?.defense ?? defender.currentStats.defense
+      const defenderRef = newState.players[defender.owner].graveyard.find(c => c.instanceId === defenderInstanceId) ?? defender
+      const baseAtk = (defenderRef.cardData as any).stats?.attack ?? defenderRef.currentStats.attack
+      const baseDef = (defenderRef.cardData as any).stats?.defense ?? defenderRef.currentStats.defense
       currentAttacker.currentStats.attack += baseAtk
       currentAttacker.currentStats.defense += baseDef
       currentAttacker.metadata.likantropiaLastKillRound = newState.roundNumber

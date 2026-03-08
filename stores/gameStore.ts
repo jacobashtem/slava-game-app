@@ -293,16 +293,14 @@ export const useGameStore = defineStore('game', () => {
           availableTargetIds: allTargets,
         }
       } else {
-        // Darmowa + wymaga cel → od razu pendingInteraction
-        const newState = JSON.parse(JSON.stringify(state.value))
-        newState.pendingInteraction = {
+        // Darmowa + wymaga cel → od razu pendingInteraction (przez engine żeby sync)
+        state.value = engine.injectPendingInteraction({
           type: 'on_play_target' as const,
           sourceInstanceId: cardInstanceId,
           respondingPlayer: 'player1',
           availableTargetIds: allTargets,
           metadata: { isActivation: true },
-        }
-        state.value = newState
+        })
       }
       return
     }
@@ -355,6 +353,10 @@ export const useGameStore = defineStore('game', () => {
     } catch (e: any) {
       console.warn('[gameStore] surrender:', e.message)
     }
+  }
+
+  function injectPendingInteraction(interaction: NonNullable<import('../game-engine/types').GameState['pendingInteraction']>) {
+    state.value = engine.injectPendingInteraction(interaction)
   }
 
   function drawCard() {
@@ -441,15 +443,17 @@ export const useGameStore = defineStore('game', () => {
 
     await delay(AI_DELAY_MS)
 
+    if (!state.value) { isAIThinking.value = false; clearTimeout(aiTimeout); return }
     const logBefore = state.value.actionLog.length
     aiTurnLogStart.value = logBefore
     const decisions = aiPlayer.planTurn(engine.getState())
 
     for (const decision of decisions) {
-      if (winner.value) break
+      if (!state.value || winner.value) break
       // Pauza tury AI gdy gracz musi podjąć decyzję (np. Strela, Chowaniec)
-      if (state.value?.pendingInteraction) break
+      if (state.value.pendingInteraction) break
       await delay(AI_DELAY_MS)
+      if (!state.value) break
 
       try {
         switch (decision.type) {
@@ -482,7 +486,8 @@ export const useGameStore = defineStore('game', () => {
                 }
 
                 // 2. Ensure card is visually in ATTACK position before animation
-                if (aiAttacker && aiAttacker.position !== CardPosition.ATTACK) {
+                const aiAttackerNow = findCardOnField('player2', decision.cardInstanceId)
+                if (aiAttackerNow && aiAttackerNow.position !== CardPosition.ATTACK) {
                   try {
                     state.value = engine.aiChangePosition(decision.cardInstanceId, CardPosition.ATTACK)
                     await delay(400)
@@ -710,6 +715,7 @@ export const useGameStore = defineStore('game', () => {
     playAdventure,
     attack,
     resolvePendingInteraction,
+    injectPendingInteraction,
     changePosition,
     moveCreatureLine,
     requestActivateEffect,
