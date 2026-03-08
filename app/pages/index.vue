@@ -71,6 +71,10 @@ const domains = [
               :class="['toggle-btn', { active: difficulty === 'medium' }]"
               @click="difficulty = 'medium'"
             >Srednia</button>
+            <button
+              :class="['toggle-btn', { active: difficulty === 'hard' }]"
+              @click="difficulty = 'hard'"
+            >Trudna</button>
           </div>
         </div>
 

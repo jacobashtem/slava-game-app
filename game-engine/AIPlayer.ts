@@ -15,6 +15,48 @@ import { canActivateEffect, getEffect } from './EffectRegistry'
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard'
 
+// Efekty o wysokim zagrożeniu — priorytetowe cele do zabicia
+const DANGEROUS_EFFECTS = new Set([
+  // Aury tempo/ofensywne
+  'chlop_extra_attack', 'lesnica_double_attack', 'kikimora_free_attack',
+  // AOE / cleave
+  'swiatogor_line_cleave', 'morowa_dziewica_aoe_all', 'konny_cleave', 'waz_tugaryn_cleave',
+  // ON_ANY_DEATH scaling
+  'baba_jaga_death_growth', 'smierc_death_growth_save',
+  // Kradzież / kontrola
+  'aitwar_steal_hand', 'czarnoksieznik_steal_abilities', 'inkluz_steal_buff', 'mara_sacrifice_takeover',
+  // Immunitet / obrona pasywna
+  'wapierz_invincible_hunger', 'brzegina_shield_for_gold', 'mavka_line_shield',
+  'utopiec_half_damage', 'szeptunka_damage_reduction',
+  // Paraliż / disable
+  'bazyliszek_paralyze', 'polnocnica_mass_paralyze', 'biali_ludzie_wound_disarm',
+  // Natychmiastowe zabójstwo
+  'cicha_kill_weak', 'poludnica_kill_weakest', 'bogunka_instant_kill_human', 'kania_chain_kill',
+  // Lifesteal / drain
+  'strzyga_lifesteal', 'bezkost_atk_drain',
+  // Spell defense (blokuje przygody)
+  'bzionek_spell_intercept', 'czarownica_redirect_spell',
+  // Inne groźne pasywne
+  'rusalka_mirror_attack', 'licho_block_draw', 'buka_force_defense', 'matoha_anti_magic',
+  'zmora_grow_sacrifice', 'gryf_double_dmg_on_play_turn',
+])
+
+// Efekty wsparcia — istoty użyteczne ale mniej groźne bojowo
+const SUPPORT_EFFECTS = new Set([
+  // Leczenie / regeneracja
+  'barstuk_ally_regen', 'wolch_heal', 'bagiennik_cleanse_buff', 'siemiargl_cleanse',
+  // Ekonomia
+  'zmije_glory_on_empty_field', 'chasnik_gold_on_kill', 'korgorusze_recover_glory', 'szatopierz_discard_for_gold',
+  // Wskrzeszenie
+  'cmentarna_baba_resurrect', 'wij_revive_once', 'homen_convert_on_death',
+  // Pozycjonowanie / taktyka
+  'belt_rearrange', 'chowaniec_intercept', 'naczelnik_human_rally',
+  // Buff sojuszników
+  'polewik_buff_neighbors', 'kresnik_choose_buff', 'rodzanice_swap_buff',
+  // Informacja / dobieranie
+  'dziad_reveal_all', 'rodzanice_scry', 'domowik_hand_size',
+])
+
 export interface AIDecision {
   type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'activate_effect' | 'end_turn'
   cardInstanceId?: string
@@ -42,6 +84,7 @@ export class AIPlayer {
     switch (this.difficulty) {
       case 'easy': return this.planEasyTurn(state)
       case 'medium': return this.planMediumTurn(state)
+      case 'hard': return this.planHardTurn(state)
       default: return this.planEasyTurn(state)
     }
   }
@@ -267,6 +310,232 @@ export class AIPlayer {
 
     decisions.push({ type: 'end_turn' })
     return decisions
+  }
+
+  // ===================================================================
+  // HARD AI — zaawansowane heurystyki + ocena zagrożeń
+  // ===================================================================
+
+  private planHardTurn(state: GameState): AIDecision[] {
+    const decisions: AIDecision[] = []
+    let currentState = cloneGameState(state)
+    const player = currentState.players[this.side]
+    const enemySide: PlayerSide = this.side === 'player1' ? 'player2' : 'player1'
+
+    // === ANALIZA SYTUACJI ===
+    const myField = getAllCreaturesOnField(currentState, this.side)
+    const enemyField = getAllCreaturesOnField(currentState, enemySide)
+    const myPower = myField.reduce((s, c) => s + c.currentStats.attack + c.currentStats.defense, 0)
+    const enemyPower = enemyField.reduce((s, c) => s + c.currentStats.attack + c.currentStats.defense, 0)
+    const isLosing = enemyPower > myPower * 1.3
+    const isWinning = myPower > enemyPower * 1.5
+
+    // === PLAY: wybierz najlepszą istotę (scoring) ===
+    if (canPlayCreature(currentState, this.side)) {
+      const creaturesInHand = player.hand
+        .filter(c => c.cardData.cardType === 'creature')
+        .map(c => ({ card: c, score: this.scoreCreatureForPlay(c, currentState, isLosing) }))
+        .sort((a, b) => b.score - a.score)
+
+      if (creaturesInHand.length > 0) {
+        const best = creaturesInHand[0]!
+        const line = this.chooseLineStrategic(currentState, best.card)
+        if (line !== null) {
+          decisions.push({ type: 'play_creature', cardInstanceId: best.card.instanceId, targetLine: line })
+          try {
+            const { newState } = playCreature(currentState, best.card.instanceId, line)
+            currentState = newState
+          } catch {}
+        }
+      }
+    }
+
+    // === PLAY: przygody — priorytetyzuj wg sytuacji ===
+    const adventuresInHand = player.hand
+      .filter(c => c.cardData.cardType === 'adventure')
+      .map(c => ({ card: c, score: this.scoreAdventureForPlay(c, currentState, isLosing) }))
+      .sort((a, b) => b.score - a.score)
+
+    if (adventuresInHand.length > 0) {
+      const best = adventuresInHand[0]!
+      const adventure = best.card
+      const advData = adventure.cardData as any
+      const myFieldNow = getAllCreaturesOnField(currentState, this.side)
+      const enemiesNow = getAllCreaturesOnField(currentState, enemySide)
+
+      // Enhanced: używaj gdy złoto ≥ 2 (zachowaj 1 ZŁ w rezerwie na zdolności)
+      const canEnhance = player.gold >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST + 1 && advData.enhancedEffectId
+      const useEnhanced = canEnhance ? true : (player.gold >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && isLosing)
+
+      if (advData.adventureType === 1 && myFieldNow.length > 0) {
+        // Artefakt → najcenniejsza istota (wysoki ATK + ma efekt)
+        const target = myFieldNow.reduce((a, b) => this.creatureThreatScore(a) > this.creatureThreatScore(b) ? a : b)
+        decisions.push({ type: 'play_adventure', cardInstanceId: adventure.instanceId, targetInstanceId: target.instanceId, useEnhanced: !!useEnhanced })
+      } else {
+        // Zdarzenie/Lokacja
+        const targetId = enemiesNow.length > 0
+          ? enemiesNow.reduce((a, b) => this.creatureThreatScore(a) > this.creatureThreatScore(b) ? a : b).instanceId
+          : (myFieldNow.length > 0 ? myFieldNow.reduce((a, b) => this.creatureThreatScore(a) > this.creatureThreatScore(b) ? a : b).instanceId : undefined)
+        decisions.push({ type: 'play_adventure', cardInstanceId: adventure.instanceId, targetInstanceId: targetId, useEnhanced: !!useEnhanced })
+      }
+    }
+
+    // === PLAY: aktywuj zdolności (z oceną wartości) ===
+    const activatable = getAllCreaturesOnField(currentState, this.side)
+      .filter(c => canActivateEffect(currentState, c))
+    for (const creature of activatable) {
+      const effect = getEffect((creature.cardData as any).effectId)
+      if (!effect) continue
+      const cost = effect.activationCost ?? 0
+      if (cost > currentState.players[this.side].gold) continue
+      // Samobójcze efekty: aktywuj tylko gdy warto (dużo istot + silny cel)
+      if (effect.activationCooldown === 'once') {
+        const myCount = getAllCreaturesOnField(currentState, this.side).length
+        if (myCount <= 3) continue
+      }
+      let targetId: string | undefined
+      if (effect.activationRequiresTarget) {
+        const targets = getAllCreaturesOnField(currentState, enemySide)
+          .filter(c => c.currentStats.defense > 0)
+          .filter(c => !effect.activationTargetFilter || effect.activationTargetFilter(c, creature, currentState))
+        if (targets.length === 0) continue
+        // Cel: największe zagrożenie
+        targetId = targets.reduce((a, b) => this.creatureThreatScore(a) > this.creatureThreatScore(b) ? a : b).instanceId
+      }
+      decisions.push({ type: 'activate_effect', cardInstanceId: creature.instanceId, targetInstanceId: targetId })
+    }
+
+    // === COMBAT: inteligentne pozycjonowanie ===
+    const creaturesForCombat = getAllCreaturesOnField(currentState, this.side)
+    const enemiesForCombat = getAllCreaturesOnField(currentState, enemySide)
+    const enemyMaxAtk = enemiesForCombat.reduce((max, c) => Math.max(max, c.currentStats.attack), 0)
+
+    for (const creature of creaturesForCombat) {
+      let targetPos: CardPosition
+      if (isLosing && creature.currentStats.defense <= enemyMaxAtk) {
+        // Przegrywa + kruchy → obrona (chroń wartościowe karty)
+        targetPos = CardPosition.DEFENSE
+      } else if (creature.currentStats.defense <= 1) {
+        // Bardzo kruchy → obrona zawsze
+        targetPos = CardPosition.DEFENSE
+      } else if (isWinning || creature.currentStats.attack >= 3) {
+        // Wygrywa lub mocny atakujący → atak
+        targetPos = CardPosition.ATTACK
+      } else if (enemiesForCombat.length === 0) {
+        // Brak wrogów → obrona (nic do atakowania)
+        targetPos = CardPosition.DEFENSE
+      } else {
+        targetPos = CardPosition.ATTACK
+      }
+      if (creature.position !== targetPos) {
+        decisions.push({ type: 'change_position', cardInstanceId: creature.instanceId, targetPosition: targetPos })
+        try {
+          const { newState } = changePosition(currentState, creature.instanceId, targetPos)
+          currentState = newState
+        } catch {}
+      }
+    }
+
+    // === COMBAT: inteligentny wybór celów ===
+    const attackers = getAllCreaturesOnField(currentState, this.side)
+      .filter(c => c.position === CardPosition.ATTACK && !c.hasAttackedThisTurn && !c.cannotAttack)
+      .sort((a, b) => b.currentStats.attack - a.currentStats.attack) // najsilniejszy atakuje pierwszy
+
+    const currentEnemies = getAllCreaturesOnField(currentState, enemySide)
+
+    for (const attacker of attackers) {
+      const validTargets = currentEnemies.filter(e => canAttack(currentState, attacker, e).valid)
+      if (validTargets.length === 0) continue
+
+      // Cel scoring:
+      const scoredTargets = validTargets.map(t => {
+        let score = 0
+        const canKill = t.currentStats.defense <= attacker.currentStats.attack
+        const willSurvive = attacker.currentStats.defense > t.currentStats.attack
+        const threatScore = this.creatureThreatScore(t)
+
+        if (canKill) score += 100                  // zabicie = wysoki priorytet
+        if (canKill && willSurvive) score += 50    // zabij i przeżyj = idealnie
+        if (!willSurvive && !canKill) score -= 80  // zginę bez zabicia = zła wymiana
+        score += threatScore * 2                    // groźne cele = priorytet
+        if (canKill) score += threatScore * 3       // zabij groźnego = mega priorytet
+        return { target: t, score }
+      })
+
+      scoredTargets.sort((a, b) => b.score - a.score)
+      const best = scoredTargets[0]!
+
+      // Pomiń atak jeśli wymiana jest bardzo zła (zginę bez zabicia, cel nie jest groźny)
+      if (best.score < -30 && !isLosing) continue
+
+      decisions.push({
+        type: 'attack',
+        cardInstanceId: attacker.instanceId,
+        targetInstanceId: best.target.instanceId,
+      })
+      break // 1 atak na turę
+    }
+
+    decisions.push({ type: 'end_turn' })
+    return decisions
+  }
+
+  // ===================================================================
+  // SCORING — ocena wartości kart
+  // ===================================================================
+
+  /** Threat score: jak groźna jest istota na polu (wyższy = ważniejszy cel do zabicia) */
+  private creatureThreatScore(card: CardInstance): number {
+    let score = card.currentStats.attack * 2 + card.currentStats.defense
+    const effectId = (card.cardData as any).effectId as string
+    // Istoty z ciągłymi efektami (aury, triggery) są groźniejsze
+    if (DANGEROUS_EFFECTS.has(effectId)) score += 15
+    // Efekty leczenia/buffowania sojuszników
+    if (SUPPORT_EFFECTS.has(effectId)) score += 10
+    // Artefakty dają dodatkową wartość
+    if (card.equippedArtifacts.length > 0) score += 5 * card.equippedArtifacts.length
+    // Aktywowalne efekty dostępne = zagrożenie
+    if ((card.cardData as any).effectId) {
+      const eff = getEffect(effectId)
+      if (eff?.activatable && !card.isSilenced) score += 8
+    }
+    return score
+  }
+
+  /** Scoring istoty do wystawienia z ręki */
+  private scoreCreatureForPlay(card: CardInstance, state: GameState, isLosing: boolean): number {
+    let score = card.currentStats.attack + card.currentStats.defense
+    const effectId = (card.cardData as any).effectId as string
+    const effect = getEffect(effectId)
+    // Karty z użytecznymi efektami ON_PLAY
+    if (effect) {
+      const triggers = Array.isArray(effect.trigger) ? effect.trigger : [effect.trigger]
+      if (triggers.includes('ON_PLAY' as any)) score += 8
+      if (effect.activatable) score += 5
+      if (DANGEROUS_EFFECTS.has(effectId)) score += 6
+      if (SUPPORT_EFFECTS.has(effectId)) score += 6
+    }
+    // Preferuj tanki gdy przegrywasz
+    if (isLosing && card.currentStats.defense >= 5) score += 4
+    // Preferuj damage dealerów gdy wygrywasz
+    if (!isLosing && card.currentStats.attack >= 4) score += 3
+    return score
+  }
+
+  /** Scoring przygody */
+  private scoreAdventureForPlay(card: CardInstance, state: GameState, isLosing: boolean): number {
+    const data = card.cardData as any
+    let score = 5 // bazowa wartość
+    // Artefakty zyskują wartość gdy mamy istoty na polu
+    if (data.adventureType === 1) {
+      const myField = getAllCreaturesOnField(state, this.side)
+      score += myField.length > 0 ? 8 : -10
+    }
+    // Lokacje mają trwały efekt
+    if (data.adventureType === 2) score += 6
+    // Zdarzenia — średnia wartość
+    if (data.adventureType === 0) score += 3
+    return score
   }
 
   // ===================================================================

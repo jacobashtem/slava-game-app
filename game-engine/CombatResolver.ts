@@ -376,10 +376,12 @@ export function resolveAttack(
         defenderCardRemoved.currentStats.defense = (defenderCardRemoved.cardData as any).stats.defense
         defenderCardRemoved.line = BattleLine.FRONT
         // Usuń z cmentarza i trofeów
-        const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.lastIndexOf(defenderCardRemoved)
+        const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
         if (gravIdx !== -1) newState.players[defenderCardRemoved.owner].graveyard.splice(gravIdx, 1)
-        const trophyIdx = attackerPlayer?.trophies.lastIndexOf(defenderCardRemoved)
-        if (trophyIdx !== undefined && trophyIdx !== -1) attackerPlayer?.trophies.splice(trophyIdx, 1)
+        if (attackerPlayer) {
+          const trophyIdx = attackerPlayer.trophies.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
+          if (trophyIdx !== -1) attackerPlayer.trophies.splice(trophyIdx, 1)
+        }
         newState.players[defenderCardRemoved.owner].field.lines[BattleLine.FRONT].push(defenderCardRemoved)
         defenderDied = false
         log.push(addLog(newState, `${defenderCardRemoved.cardData.name}: Serce bije! Wstaje na L1!`, 'effect'))
@@ -389,10 +391,12 @@ export function resolveAttack(
       if (defenderCardRemoved.metadata.wijRevived && !defenderCardRemoved.metadata.wijPermanentlyDead) {
         defenderCardRemoved.currentStats.defense = (defenderCardRemoved.cardData as any).stats.defense
         defenderCardRemoved.line = BattleLine.FRONT
-        const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.lastIndexOf(defenderCardRemoved)
+        const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
         if (gravIdx !== -1) newState.players[defenderCardRemoved.owner].graveyard.splice(gravIdx, 1)
-        const trophyIdx = attackerPlayer?.trophies.lastIndexOf(defenderCardRemoved)
-        if (trophyIdx !== undefined && trophyIdx !== -1) attackerPlayer?.trophies.splice(trophyIdx, 1)
+        if (attackerPlayer) {
+          const trophyIdx = attackerPlayer.trophies.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
+          if (trophyIdx !== -1) attackerPlayer.trophies.splice(trophyIdx, 1)
+        }
         newState.players[defenderCardRemoved.owner].field.lines[BattleLine.FRONT].push(defenderCardRemoved)
         defenderDied = false
         log.push(addLog(newState, `${defenderCardRemoved.cardData.name}: Nieśmiertelny! Wraca na L1 na ostatnią turę!`, 'effect'))

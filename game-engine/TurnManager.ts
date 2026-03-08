@@ -722,7 +722,8 @@ export function moveCreatureLine(
 
   // Przesuń kartę
   const srcLine = currentPlayer.field.lines[foundLine]
-  srcLine.splice(srcLine.findIndex(c => c.instanceId === cardInstanceId), 1)
+  const srcIdx = srcLine.findIndex(c => c.instanceId === cardInstanceId)
+  if (srcIdx !== -1) srcLine.splice(srcIdx, 1)
   foundCard.line = targetLine
   currentPlayer.field.lines[targetLine].push(foundCard)
 
