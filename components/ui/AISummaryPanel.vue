@@ -50,11 +50,14 @@ const showAI = computed(() => game.aiTurnSummary.length > 0 && !game.isAIThinkin
   bottom: 160px;
   right: 16px;
   width: 280px;
+  max-height: calc(100vh - 200px);
   background: #0c1220;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.7);
   z-index: 200;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .ai-panel {

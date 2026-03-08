@@ -284,18 +284,18 @@ const parsedEffectDescription = computed(() => {
 <style scoped>
 .card-tooltip {
   position: fixed;
-  bottom: 165px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 160px;
+  left: 12px;
   background: #0c1220;
   border: 1px solid var(--tc, #334155);
   border-radius: 8px;
   padding: 0;
   width: 200px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
   z-index: 150;
   pointer-events: none;
   box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
-  overflow: hidden;
 }
 
 .tt-header {
@@ -611,6 +611,6 @@ const parsedEffectDescription = computed(() => {
 }
 .tooltip-fade-enter-from, .tooltip-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(6px);
+  transform: translateY(6px);
 }
 </style>

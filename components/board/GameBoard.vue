@@ -177,11 +177,10 @@ const onPlayDescription = computed(() => {
       </div>
     </div>
 
-    <!-- ===== WSKAZÓWKA KONTEKSTOWA ===== -->
-    <GameHint />
-
-    <!-- ===== PASEK AKTYWNYCH AUR (nad ręką) ===== -->
-    <div v-if="activeAuras.length || activeEventCards.length" class="aura-bar">
+    <!-- ===== WSKAZÓWKA KONTEKSTOWA + AURY (overlayowane nad planszą) ===== -->
+    <div class="board-overlays">
+      <GameHint />
+      <div v-if="activeAuras.length || activeEventCards.length" class="aura-bar">
       <span
         v-for="(a, i) in activeAuras"
         :key="'aura-' + i"
@@ -200,6 +199,7 @@ const onPlayDescription = computed(() => {
         📜 {{ ev.cardData.name }}
         <span v-if="ev.roundsRemaining != null" class="aura-rounds">{{ ev.roundsRemaining }}</span>
       </span>
+      </div>
     </div>
 
     <!-- ===== RĘKA GRACZA (dolny pasek) ===== -->
@@ -430,6 +430,21 @@ const onPlayDescription = computed(() => {
   text-shadow: 0 0 8px rgba(200, 168, 78, 0.2);
 }
 
+/* ====== OVERLAY HINTS + AURAS (above board, don't affect layout) ====== */
+.board-overlays {
+  position: absolute;
+  bottom: 150px; /* sits above the hand */
+  left: 0;
+  right: 0;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+.board-overlays > * {
+  pointer-events: auto;
+}
+
 /* ====== LOADING ====== */
 .board-loading {
   display: flex;
@@ -458,7 +473,7 @@ const onPlayDescription = computed(() => {
 /* ====== PLAY LIMIT TOAST ====== */
 .play-limit-toast {
   position: fixed;
-  bottom: 180px;
+  bottom: 160px;
   left: 50%;
   transform: translateX(-50%);
   background: #1e293b;
