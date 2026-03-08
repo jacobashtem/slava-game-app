@@ -18,6 +18,22 @@
   --undead: #9c27b0;
   --weles: #c62828;
 
+  /* Strefy kosmologiczne (Nawia / Jawia / Prawia) */
+  --bg-nawia: rgba(88, 28, 135, 0.08);    /* L3 — Nawia (zaświaty, duch) */
+  --bg-jawia: rgba(180, 130, 60, 0.06);   /* L1 — Jawia (świat śmiertelnych) */
+  --bg-prawia: rgba(99, 102, 241, 0.06);  /* L2 — Prawia (boskie) */
+
+  /* Kolory linii */
+  --line-front: #ef4444;
+  --line-distance: #eab308;
+  --line-support: #818cf8;
+
+  /* Separator */
+  --divider-color: rgba(200, 168, 78, 0.08);
+
+  /* Vignette */
+  --vignette-opacity: 0.55;
+
   --text-primary: #e2e8f0;
   --text-muted: #64748b;
   --border-default: #1e293b;

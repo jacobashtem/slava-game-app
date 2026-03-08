@@ -259,12 +259,26 @@ function onLineDrop(e: DragEvent) {
   height: 100%;
   padding: 4px 4px;
   border-radius: 6px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-line);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.15);
   transition: border-color 0.2s, background 0.2s;
   position: relative;
   gap: 4px;
   overflow-y: auto;
+}
+
+/* Per-zone color tinting */
+.battle-line.line-1 {
+  background: var(--bg-jawia);
+  border-color: rgba(180, 130, 60, 0.12);
+}
+.battle-line.line-2 {
+  background: var(--bg-prawia);
+  border-color: rgba(99, 102, 241, 0.10);
+}
+.battle-line.line-3 {
+  background: var(--bg-nawia);
+  border-color: rgba(88, 28, 135, 0.12);
 }
 
 .battle-line.highlighted {
@@ -289,6 +303,10 @@ function onLineDrop(e: DragEvent) {
   flex-shrink: 0;
   padding: 2px 0;
 }
+
+.line-1 .line-label { color: rgba(200, 160, 70, 0.6); }
+.line-2 .line-label { color: rgba(99, 102, 241, 0.5); }
+.line-3 .line-label { color: rgba(168, 85, 247, 0.5); }
 
 .cards-col {
   display: flex;

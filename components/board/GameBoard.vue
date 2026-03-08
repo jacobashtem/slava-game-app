@@ -23,6 +23,21 @@ const ui = useUIStore()
 const player = computed(() => game.state?.players.player1)
 const ai = computed(() => game.state?.players.player2)
 
+// ===== SEASON-BASED BATTLEFIELD BACKGROUND =====
+// Placeholder gradients — replace with url() when WebP artwork arrives:
+//   import springBg from '../../assets/backgrounds/battlefields/spring.webp?url'
+//   ...then: spring: `url(${springBg})`,
+const seasonGradients: Record<string, string> = {
+  spring: 'radial-gradient(ellipse 120% 100% at 50% 60%, #0d2818 0%, #0a1628 40%, #080c1a 100%)',
+  summer: 'radial-gradient(ellipse 120% 100% at 50% 55%, #1a1a0a 0%, #0f1520 40%, #080c1a 100%)',
+  autumn: 'radial-gradient(ellipse 120% 100% at 50% 55%, #1a0f08 0%, #12101c 40%, #080c1a 100%)',
+  winter: 'radial-gradient(ellipse 120% 100% at 50% 55%, #0c1420 0%, #0a0e1e 40%, #060a14 100%)',
+}
+
+const bgStyle = computed(() => ({
+  '--bf-bg': seasonGradients[game.season] ?? seasonGradients.summer,
+}))
+
 // ===== ACTIVE AURAS INFO BAR =====
 const passiveAuraMap: Record<string, { icon: string; label: string; desc: string }> = {
   'matoha_anti_magic':       { icon: '🚫', label: 'Anty-Magia',   desc: 'Blokuje ataki typu Magia na sojuszników.' },
@@ -85,7 +100,7 @@ const onPlayDescription = computed(() => {
 </script>
 
 <template>
-  <div class="game-board" v-if="game.state && player && ai">
+  <div class="game-board" v-if="game.state && player && ai" :style="bgStyle">
 
     <!-- ===== PASEK GÓRNY ===== -->
     <div class="top-bar">
@@ -273,7 +288,39 @@ const onPlayDescription = computed(() => {
   overflow: hidden;
   background: var(--bg-board);
   color: var(--text-primary);
+  position: relative;
 }
+
+/* Battlefield background image/gradient layer */
+.game-board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--bf-bg, var(--bg-board));
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background 2s ease;
+}
+
+/* Vignette overlay — darker edges for readability */
+.game-board::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 85% 70% at 50% 50%,
+      transparent 30%,
+      rgba(0, 0, 0, var(--vignette-opacity, 0.55)) 100%
+    );
+}
+
+/* All direct children above the ::before/::after pseudo-elements */
+.game-board > * { position: relative; z-index: 1; }
 
 /* ====== PASEK GÓRNY ====== */
 .top-bar {
@@ -281,8 +328,9 @@ const onPlayDescription = computed(() => {
   align-items: center;
   gap: 8px;
   padding: 4px 10px;
-  border-bottom: 1px solid var(--border-default);
-  background: rgba(0,0,0,0.35);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
   flex-shrink: 0;
   min-height: 44px;
 }
@@ -307,15 +355,15 @@ const onPlayDescription = computed(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 4px;
-  border-right: 1px solid var(--border-default);
-  background: rgba(0,0,0,0.15);
+  border-right: 1px solid rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.25);
   flex-shrink: 0;
   width: 80px;
 }
 
 .sidebar-player {
   border-right: none;
-  border-left: 1px solid var(--border-default);
+  border-left: 1px solid rgba(255,255,255,0.04);
 }
 
 /* AI hand backs */
@@ -354,14 +402,22 @@ const onPlayDescription = computed(() => {
 .divider-line {
   flex: 1;
   width: 1px;
-  background: rgba(255,255,255,0.08);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(200, 168, 78, 0.2) 30%,
+    rgba(200, 168, 78, 0.35) 50%,
+    rgba(200, 168, 78, 0.2) 70%,
+    transparent
+  );
 }
 
 .divider-badge {
   font-size: 14px;
-  color: #475569;
+  color: rgba(200, 168, 78, 0.4);
   padding: 4px 0;
   writing-mode: vertical-rl;
+  text-shadow: 0 0 8px rgba(200, 168, 78, 0.2);
 }
 
 /* ====== LOADING ====== */
@@ -514,8 +570,9 @@ const onPlayDescription = computed(() => {
   align-items: center;
   gap: 6px;
   padding: 2px 10px;
-  border-top: 1px solid var(--border-default);
-  background: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid rgba(255,255,255,0.04);
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
   flex-shrink: 0;
   min-height: 24px;
   overflow-x: auto;

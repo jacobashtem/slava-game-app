@@ -42,6 +42,13 @@ export const useGameStore = defineStore('game', () => {
   const winner = computed(() => state.value?.winner ?? null)
   const actionLog = computed(() => state.value?.actionLog ?? [])
   const roundNumber = computed(() => state.value?.roundNumber ?? 1)
+  const season = computed<'spring' | 'summer' | 'autumn' | 'winter'>(() => {
+    const r = roundNumber.value
+    if (r <= 3) return 'spring'
+    if (r <= 6) return 'summer'
+    if (r <= 9) return 'autumn'
+    return 'winter'
+  })
   const isPlayerTurn = computed(() => currentTurn.value === 'player1' && !isAIThinking.value)
   const playerCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(playerTurnLogStart.value).slice(-6))
   const aiCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(aiTurnLogStart.value).slice(-6))
@@ -689,6 +696,7 @@ export const useGameStore = defineStore('game', () => {
     winner,
     actionLog,
     roundNumber,
+    season,
     isPlayerTurn,
     playerCurrentLogs,
     aiCurrentLogs,
