@@ -100,7 +100,7 @@ export class AIPlayer {
       }
     }
 
-    // FAZA COMBAT: zaatakuj losowym atakującym
+    // FAZA COMBAT: zaatakuj losowym atakującym — MAX 1 atak na turę (jak gracz)
     const attackers = getAllCreaturesOnField(currentState, this.side)
       .filter(c => c.position === CardPosition.ATTACK && !c.hasAttackedThisTurn && !c.cannotAttack)
 
@@ -115,6 +115,7 @@ export class AIPlayer {
           cardInstanceId: attacker.instanceId,
           targetInstanceId: target.instanceId,
         })
+        break // limit: 1 atak na turę
       }
     }
 
@@ -157,6 +158,11 @@ export class AIPlayer {
       const targetPos = shouldDefend ? CardPosition.DEFENSE : CardPosition.ATTACK
       if (creature.position !== targetPos) {
         decisions.push({ type: 'change_position', cardInstanceId: creature.instanceId, targetPosition: targetPos })
+        // Aktualizuj currentState żeby atak widział poprawne pozycje
+        try {
+          const { newState } = changePosition(currentState, creature.instanceId, targetPos)
+          currentState = newState
+        } catch {}
       }
     }
 
@@ -173,7 +179,6 @@ export class AIPlayer {
       // Priorytety celów:
       // 1. Cel który mogę zabić jednym ciosem
       // 2. Cel z najniższą obroną
-      // 3. Cel z najwyższym atakiem
 
       let target = validTargets.find(t => t.currentStats.defense <= attacker.currentStats.attack)
         ?? validTargets.reduce((best, t) => t.currentStats.defense < best.currentStats.defense ? t : best)
@@ -183,6 +188,7 @@ export class AIPlayer {
         cardInstanceId: attacker.instanceId,
         targetInstanceId: target.instanceId,
       })
+      break // limit: 1 atak na turę (symetrycznie z graczem)
     }
 
     decisions.push({ type: 'end_turn' })

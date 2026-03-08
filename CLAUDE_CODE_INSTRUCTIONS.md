@@ -3,8 +3,8 @@
 ---
 ## ★ AKTUALNY STAN PROJEKTU (aktualizuj przy każdym zakończeniu pracy)
 
-**Data ostatniej sesji:** 2026-03-05
-**Etap:** ETAP 2 ✅ ZAKOŃCZONY → ETAP 3 (efekty kart) W TRAKCIE
+**Data ostatniej sesji:** 2026-03-06
+**Etap:** ETAP 3 — implementacja efektów kart W TRAKCIE
 
 ### Co jest gotowe:
 - Etap 1: Cały silnik gry (types, constants, CardFactory, DeckBuilder, LineManager, CombatResolver, TurnManager, GameEngine, AIPlayer, EffectRegistry, GameStateUtils) ✅
@@ -13,12 +13,15 @@
 - EffectRegistry — "Księga Zdolności" — jedyne źródło efektów ✅
 - Arena mode (/arena) — plac testowy kart z autocomplete ✅
 - Alpha Deck — talia z tylko sprawdzonych kart ✅
+- 48 efektów istot zaimplementowanych (sesja 2026-03-06) ✅
+- ON_DAMAGE_DEALT / ON_DAMAGE_RECEIVED / ON_ANY_DEATH triggery ✅
+- Abilities[] wyświetlane w CreatureCard i CardTooltip ✅
 
 ### Aktualny task (zaczynamy od tego przy następnym uruchomieniu):
 **ETAP 3: Testowanie i implementacja efektów kart po kolei przez Arenę**
 - Workflow: Arena → wybierz kartę → przetestuj efekt → oznacz ✅ w `memory/cards-status.md` → dodaj effectId do `ALPHA_CREATURE_EFFECT_IDS` w DeckBuilder.ts
-- Następna karta do implementacji: **Matoha** (matoha_effect — przeczytać opis, zakodować)
-- Potem: Łapiduch, Świetle, Żar-ptak, Żmije, i cała reszta niezaimplementowanych
+- Następne karty do implementacji (w kolejności trudności): Wołch, Jędza, Siemiargł, Świetle, Jaroszek, Południca
+- Stubs do poprawy: Znachor, Wisielec, Wąpierz, Zmora, Baba Jaga
 
 ### Kluczowe pliki do sprawdzenia na starcie:
 - `memory/CHANGELOG.md` — co było zrobione

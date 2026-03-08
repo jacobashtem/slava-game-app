@@ -53,9 +53,11 @@ export function getEnemyFrontLine(state: GameState, attackerSide: PlayerSide): B
 export function canPlayCreature(state: GameState, side: PlayerSide): boolean {
   const player = state.players[side]
 
-  // Sprawdź limit pola (max 5 istot), chyba że Arkona jest aktywna
+  // Sprawdź limit pola (max 5 istot), chyba że Arkona lub Żupan jest aktywny
   const arkonaActive = player.activeLocation?.cardData.name === 'Arkona'
-  if (!arkonaActive && getTotalCreatureCount(state, side) >= GOLD_EDITION_RULES.MAX_FIELD_CREATURES) {
+  const zupanActive = Object.values(player.field.lines).flat()
+    .some(c => (c.cardData as any).effectId === 'zupan_no_field_limit')
+  if (!arkonaActive && !zupanActive && getTotalCreatureCount(state, side) >= GOLD_EDITION_RULES.MAX_FIELD_CREATURES) {
     return false
   }
 
@@ -108,8 +110,31 @@ export function canAttack(
     return { valid: false, reason: 'Atakujący nie może atakować (efekt statusu).' }
   }
 
+  // Matecznik: ukryta istota nie może atakować ani być celem
+  if (attacker.metadata.matecznikHidden) {
+    return { valid: false, reason: `${attacker.cardData.name} ukryta w Mateczniku — nie może atakować.` }
+  }
+  if (target.metadata.matecznikHidden) {
+    return { valid: false, reason: `${target.cardData.name} ukryta w Mateczniku — nie może być celem.` }
+  }
+
+  // Miecz Kladenet+: nośnik może atakować dowolną linię wroga (bypass line order restrictions)
+  if (attacker.equippedArtifacts.some((a: any) => a.effectId === 'adventure_miecz_kladenet_enhanced')) {
+    if (target.currentStats.defense > 0) {
+      return { valid: true }
+    }
+    return { valid: false, reason: `${target.cardData.name} jest już martwa.` }
+  }
+
   if (attacker.hasAttackedThisTurn) {
-    return { valid: false, reason: 'Atakujący już atakował w tej turze.' }
+    // Leśnica: może atakować 2 razy na turę
+    if ((attacker.cardData as any).effectId === 'lesnica_double_attack') {
+      const attacks = (attacker.metadata.attacksThisTurn as number) ?? 0
+      if (attacks >= 2) return { valid: false, reason: 'Leśnica już atakowała 2 razy w tej turze.' }
+      // allow second attack — fall through
+    } else {
+      return { valid: false, reason: 'Atakujący już atakował w tej turze.' }
+    }
   }
 
   if (attacker.owner === target.owner) {
@@ -144,6 +169,73 @@ export function canAttack(
     return { valid: false, reason: 'Zraniona karta musi atakować swego oprawcę (Arena).' }
   }
 
+  // ===== PASYWNE ODPORNOŚCI CELU =====
+  const targetEffectId = (target.cardData as any).effectId
+
+  // Buka (#97): wrogowie ze słabszym ATK muszą być w obronie (nie mogą atakować Buki)
+  if (targetEffectId === 'buka_force_defense' && attacker.currentStats.attack < target.currentStats.attack) {
+    return { valid: false, reason: `${target.cardData.name}: Twoja istota jest za słaba, żeby ją atakować.` }
+  }
+
+  // Matoha (#17): wrogie istoty z typem Magia nie mogą atakować (sprawdzone po stronie atakującego)
+  // (Matoha jest na polu obrońcy — sprawdź czy obrońca ma sojusznika Matohę)
+  const hasMaToha = getAllCreaturesOnField(state, defenderSide)
+    .some(c => (c.cardData as any).effectId === 'matoha_anti_magic')
+  if (hasMaToha && attackType === AttackType.MAGIC) {
+    return { valid: false, reason: 'Matoha blokuje ataki Magii.' }
+  }
+
+  // Wilkołak (#87): odporny na Wręcz < 7
+  if (targetEffectId === 'wilkolak_melee_immune' && attackType === AttackType.MELEE && attacker.currentStats.attack < 7) {
+    return { valid: false, reason: `${target.cardData.name}: Wilkołak jest odporny na Wręcz < 7.` }
+  }
+
+  // Stukacz (#83): wrogowie z wyższym ATK nie mogą go atakować
+  if (targetEffectId === 'stukacz_strong_immune' && attacker.currentStats.attack > target.currentStats.attack) {
+    return { valid: false, reason: `${target.cardData.name}: Stukacz odpiera ataki silniejszych istot.` }
+  }
+
+  // Dydko (#101): silniejsi I równi nie mogą go uderzać
+  if (targetEffectId === 'dydko_strong_immune' && attacker.currentStats.attack >= target.currentStats.attack) {
+    return { valid: false, reason: `${target.cardData.name}: Dydko unika ataków równych i silniejszych.` }
+  }
+
+  // Kudłak (#73): odporny jeśli zadał obrażenia w tej rundzie
+  if (targetEffectId === 'kudlak_conditional_immunity') {
+    if ((target.metadata.kudlakDealtDamageThisRound as number) === state.roundNumber) {
+      return { valid: false, reason: `${target.cardData.name}: Kudłak jest nietykalny w rundzie, w której atakował.` }
+    }
+  }
+
+  // Tur (#55): odporny na Dystans i Magię
+  if (targetEffectId === 'tur_ranged_magic_immune'
+      && (attackType === AttackType.RANGED || attackType === AttackType.MAGIC)) {
+    return { valid: false, reason: `${target.cardData.name}: Tur jest odporny na Dystans i Magię.` }
+  }
+
+  // Grad (#104): odporny na Wręcz i Dystans — tylko Magia i Żywioł mogą go trafić
+  if (targetEffectId === 'grad_magic_element_only'
+      && attackType !== AttackType.MAGIC && attackType !== AttackType.ELEMENTAL) {
+    return { valid: false, reason: `${target.cardData.name}: Grad jest odporny na ten typ ataku — tylko Magia i Żywioł mogą go trafić.` }
+  }
+
+  // Mavka (#111): sojusznicy w tej samej linii co Mavka nie mogą być celem ataków
+  const hasMavkaShield = getAllCreaturesOnField(state, target.owner)
+    .some(c => (c.cardData as any).effectId === 'mavka_line_shield'
+          && c.instanceId !== target.instanceId
+          && c.line === target.line
+          && !c.isSilenced)
+  if (hasMavkaShield) {
+    return { valid: false, reason: `${target.cardData.name} jest chroniony przez Mavkę!` }
+  }
+
+  // Smocze Jajo (#113): blokuje wrogie ataki Żywiołem po stronie posiadacza
+  const hasJajoShield = getAllCreaturesOnField(state, defenderSide)
+    .some(c => (c.cardData as any).effectId === 'smocze_jajo_hatch' && !c.isSilenced)
+  if (hasJajoShield && attackType === AttackType.ELEMENTAL) {
+    return { valid: false, reason: 'Smocze Jajo chroni przed atakami Żywiołu!' }
+  }
+
   return { valid: true }
 }
 
@@ -163,6 +255,10 @@ function checkAttackRange(
   switch (attackType) {
     case AttackType.MELEE:
     case AttackType.ELEMENTAL: {
+      // Liczyrzepa: może atakować dowolną linię (jak Magia)
+      if ((attacker.cardData as any).effectId === 'liczyrzepa_choose_type') {
+        return { valid: true }
+      }
       // Wręcz/Żywioł może atakować TYLKO z linii L1 (Front)
       if (attacker.line !== BattleLine.FRONT) {
         return { valid: false, reason: 'Wręcz/Żywioł może atakować tylko z linii L1 (Front). Przenieś istotę do L1.' }

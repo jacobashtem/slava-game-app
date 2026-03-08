@@ -150,10 +150,46 @@ export class GameEngine {
     this.assertPlayerTurn()
     this.assertPhase(GamePhase.COMBAT)
 
-    // Limit: tylko jeden atak na turę
-    const alreadyAttacked = getAllCreaturesOnField(this.state, 'player1').some(c => c.hasAttackedThisTurn)
-    if (alreadyAttacked) {
-      throw new Error('Możesz wykonać tylko jeden atak na turę.')
+    // Limit: atak na turę (z wyjątkami dla Kikimory i Leśnicy)
+    const p1Creatures = getAllCreaturesOnField(this.state, 'player1')
+
+    // Przyjaźń+: istota z freeAttacksLeft może atakować poza limitem
+    const attacker = p1Creatures.find(c => c.instanceId === attackerInstanceId)
+    const hasFreeAttack = attacker && ((attacker.metadata.freeAttacksLeft as number) ?? 0) > 0
+
+    if (!hasFreeAttack) {
+      // Kikimora: jej atak nie zajmuje slotu atakowego (aura "darmowy atak")
+      const normalAttacksUsed = p1Creatures
+        .filter(c => (c.cardData as any).effectId !== 'kikimora_free_attack')
+        .filter(c => {
+          // Leśnica może atakować 2 razy — liczy tylko jeśli wyczerpała oba sloty
+          if ((c.cardData as any).effectId === 'lesnica_double_attack') {
+            return ((c.metadata.attacksThisTurn as number) ?? 0) >= 2
+          }
+          return c.hasAttackedThisTurn
+        }).length
+      // Chłop: AURA daje +1 dodatkowy slot ataku
+      const hasChlop = p1Creatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
+      const maxAttacks = hasChlop ? 2 : 1
+      if (normalAttacksUsed >= maxAttacks) {
+        throw new Error('Możesz wykonać tylko jeden atak na turę.')
+      }
+    }
+
+    // Liczyrzepa: gracz musi wybrać typ ataku PRZED wykonaniem ataku
+    const attackerCard = p1Creatures.find(c => c.instanceId === attackerInstanceId)
+    if (attackerCard && (attackerCard.cardData as any).effectId === 'liczyrzepa_choose_type') {
+      const pendingState = cloneGameState(this.state)
+      pendingState.pendingInteraction = {
+        type: 'liczyrzepa_type',
+        sourceInstanceId: attackerInstanceId,
+        respondingPlayer: 'player1',
+        availableChoices: ['Wręcz', 'Żywioł', 'Magia', 'Dystans'],
+        targetInstanceId: defenderInstanceId,
+      }
+      addLog(pendingState, `${attackerCard.cardData.name}: Wybierz typ ataku przed uderzeniem!`, 'effect')
+      this.applyStateAndLog(pendingState, [])
+      return cloneGameState(this.state)
     }
 
     const { newState, log } = performAttack(this.state, attackerInstanceId, defenderInstanceId)
@@ -319,16 +355,55 @@ export class GameEngine {
 
   // ===== AI EXECUTION (bez sprawdzania kolejki gracza) =====
 
-  aiPlayCreature(cardInstanceId: string, targetLine: BattleLine): GameState {
+  aiPlayCreature(cardInstanceId: string, targetLine: BattleLine, skipStrelaCheck = false): GameState {
     this.assertPhase(GamePhase.PLAY)
+
+    // Strela: jeśli gracz ma Strelę w ręce, może ją zagrać jako przerwanie
+    if (!skipStrelaCheck) {
+      const strelaCard = this.state.players.player1.hand.find(
+        c => (c.cardData as any).effectId === 'strela_flash_counter'
+      )
+      if (strelaCard) {
+        const pendingState = cloneGameState(this.state)
+        pendingState.pendingInteraction = {
+          type: 'strela_intercept',
+          sourceInstanceId: strelaCard.instanceId,
+          respondingPlayer: 'player1',
+          metadata: { aiCardInstanceId: cardInstanceId, aiTargetLine: targetLine, aiCardType: 'creature' },
+        }
+        addLog(pendingState, `AI zagrywa kartę! Strela jest w twojej ręce — czy chcesz przerwać?`, 'effect')
+        this.applyStateAndLog(pendingState, [])
+        return cloneGameState(this.state)
+      }
+    }
+
     const { newState, log } = playCreature(this.state, cardInstanceId, targetLine)
     this.applyStateAndLog(newState, log)
     this.checkWinAndNotify()
     return cloneGameState(this.state)
   }
 
-  aiPlayAdventure(cardInstanceId: string, targetInstanceId?: string, useEnhanced = false): GameState {
+  aiPlayAdventure(cardInstanceId: string, targetInstanceId?: string, useEnhanced = false, skipStrelaCheck = false): GameState {
     this.assertPhase(GamePhase.PLAY)
+
+    if (!skipStrelaCheck) {
+      const strelaCard = this.state.players.player1.hand.find(
+        c => (c.cardData as any).effectId === 'strela_flash_counter'
+      )
+      if (strelaCard) {
+        const pendingState = cloneGameState(this.state)
+        pendingState.pendingInteraction = {
+          type: 'strela_intercept',
+          sourceInstanceId: strelaCard.instanceId,
+          respondingPlayer: 'player1',
+          metadata: { aiCardInstanceId: cardInstanceId, aiTargetInstanceId: targetInstanceId, aiCardType: 'adventure', aiUseEnhanced: useEnhanced },
+        }
+        addLog(pendingState, `AI zagrywa kartę! Strela jest w twojej ręce — czy chcesz przerwać?`, 'effect')
+        this.applyStateAndLog(pendingState, [])
+        return cloneGameState(this.state)
+      }
+    }
+
     const { newState, log } = playAdventure(this.state, cardInstanceId, targetInstanceId, useEnhanced)
     this.applyStateAndLog(newState, log)
     this.checkWinAndNotify()
@@ -347,6 +422,20 @@ export class GameEngine {
 
   aiAttack(attackerInstanceId: string, defenderInstanceId: string): GameState {
     this.assertPhase(GamePhase.COMBAT)
+    // Limit: AI może wykonać tylko jeden atak na turę (symetrycznie z graczem)
+    const p2Creatures = getAllCreaturesOnField(this.state, 'player2')
+    const aiNormalAttacksUsed = p2Creatures
+      .filter(c => (c.cardData as any).effectId !== 'kikimora_free_attack')
+      .filter(c => {
+        if ((c.cardData as any).effectId === 'lesnica_double_attack') {
+          return ((c.metadata.attacksThisTurn as number) ?? 0) >= 2
+        }
+        return c.hasAttackedThisTurn
+      }).length
+    const aiHasChlop = p2Creatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
+    if (aiNormalAttacksUsed >= (aiHasChlop ? 2 : 1)) {
+      throw new Error('AI może wykonać tylko jeden atak na turę.')
+    }
     const { newState, log } = performAttack(this.state, attackerInstanceId, defenderInstanceId)
     this.applyStateAndLog(newState, log)
     this.checkWinAndNotify()
@@ -365,6 +454,243 @@ export class GameEngine {
     this.state = this.runStartPhase(this.state)
     this.notifyStateChange()
     return cloneGameState(this.state)
+  }
+
+  // ===== PENDING INTERACTION RESOLVER =====
+
+  /**
+   * Rozwiązuje oczekującą interakcję gracza (np. Alkonost hipnoza, Kresnik wybór buffy).
+   * `choice` — instanceId karty lub string z opcją (zależnie od typu interakcji).
+   */
+  resolvePendingInteraction(choice: string): GameState {
+    const interaction = this.state.pendingInteraction
+    if (!interaction) throw new Error('[GameEngine] Brak oczekującej interakcji.')
+
+    const newState = cloneGameState(this.state)
+    delete newState.pendingInteraction
+
+    // Chowaniec: przejmij atak (tak) lub przepuść (nie)
+    if (interaction.type === 'chowaniec_intercept') {
+      const attackerId = interaction.attackerInstanceId!
+      const originalTargetId = interaction.targetInstanceId!
+      const chowaniecId = interaction.sourceInstanceId
+      const actualTargetId = choice === 'yes' ? chowaniecId : originalTargetId
+      const { newState: afterAtk, log: atkLog } = performAttack(newState, attackerId, actualTargetId, { skipChowaniecCheck: true })
+      this.applyStateAndLog(afterAtk, atkLog)
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    if (interaction.type === 'alkonost_target') {
+      const attackerInstanceId = interaction.attackerInstanceId!
+      const targetInstanceId = choice
+
+      // Atakujący już użył hasAttackedThisTurn — chwilowo zresetuj żeby resolveAttack przeszedł
+      const fields = [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT] as const
+      for (const side of ['player1', 'player2'] as PlayerSide[]) {
+        for (const line of fields) {
+          const card = newState.players[side].field.lines[line].find(c => c.instanceId === attackerInstanceId)
+          if (card) card.hasAttackedThisTurn = false
+        }
+      }
+
+      const { newState: afterForced, log } = performAttack(newState, attackerInstanceId, targetInstanceId)
+      // Po wymuszonym ataku: przywróć hasAttackedThisTurn = true (to był dodatkowy atak, nie normalny slot)
+      for (const side of ['player1', 'player2'] as PlayerSide[]) {
+        for (const line of fields) {
+          const card = afterForced.players[side].field.lines[line].find(c => c.instanceId === attackerInstanceId)
+          if (card) card.hasAttackedThisTurn = true
+        }
+      }
+      this.applyStateAndLog(afterForced, log)
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Kresnik: zastosuj wybraną premię przez ponowne wywołanie efektu z metadata
+    if (interaction.type === 'kresnik_buff') {
+      const effect = getEffect('kresnik_choose_buff')
+      const sourceCard = this.findCardInState(newState, interaction.sourceInstanceId)
+      if (effect && sourceCard) {
+        const result = effect.execute({
+          state: newState,
+          source: sourceCard,
+          trigger: EffectTrigger.ON_PLAY,
+          metadata: { kresnikBuff: choice },
+        })
+        this.applyStateAndLog(result.newState, result.log)
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      return cloneGameState(this.state)
+    }
+
+    // Baba: zastosuj wybraną domenę
+    if (interaction.type === 'baba_domain') {
+      const effect = getEffect('baba_bonus_vs_type')
+      const sourceCard = this.findCardInState(newState, interaction.sourceInstanceId)
+      if (effect && sourceCard) {
+        const result = effect.execute({
+          state: newState,
+          source: sourceCard,
+          trigger: EffectTrigger.ON_PLAY,
+          metadata: { babaDomain: choice },
+        })
+        this.applyStateAndLog(result.newState, result.log)
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      return cloneGameState(this.state)
+    }
+
+    // Cmentarna Baba: wskrzesz wybranego Nieumarłego z cmentarza
+    if (interaction.type === 'cmentarna_baba_resurrect') {
+      const ownerSide = interaction.respondingPlayer
+      const owner = newState.players[ownerSide]
+      const gravIdx = owner.graveyard.findIndex(c => c.instanceId === choice)
+      if (gravIdx !== -1) {
+        const toResurrect = owner.graveyard.splice(gravIdx, 1)[0]
+        toResurrect.currentStats.defense = (toResurrect.cardData as any).stats.defense
+        toResurrect.line = BattleLine.FRONT
+        toResurrect.turnsInPlay = 0
+        owner.field.lines[BattleLine.FRONT].push(toResurrect)
+        const log = addLog(newState, `Cmentarna Baba: Wskrzesza ${toResurrect.cardData.name} z cmentarza!`, 'effect')
+        this.applyStateAndLog(newState, [log])
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Wielkolud: kontratakuje wybranego wroga
+    if (interaction.type === 'wielkolud_counter') {
+      const wielkolud = this.findCardInState(newState, interaction.sourceInstanceId)
+      const chosen = this.findCardInState(newState, choice)
+      if (wielkolud && chosen) {
+        const damage = wielkolud.currentStats.attack
+        chosen.currentStats.defense -= damage
+        const log = addLog(newState,
+          `${wielkolud.cardData.name}: Kontratakuje ${chosen.cardData.name} za ${damage} obrażeń!`,
+          'effect'
+        )
+        // Usuń martwe jednostki
+        for (const side of ['player1', 'player2'] as PlayerSide[]) {
+          for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+            const dead = newState.players[side].field.lines[line].filter(c => c.currentStats.defense <= 0)
+            for (const dc of dead) {
+              newState.players[side].field.lines[line] = newState.players[side].field.lines[line].filter(c => c.instanceId !== dc.instanceId)
+              newState.players[side].graveyard.push(dc)
+              addLog(newState, `${dc.cardData.name} ginie od kontrataku Wielkoluda!`, 'combat')
+            }
+          }
+        }
+        this.applyStateAndLog(newState, [log])
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Inkluz: przekaż skradzioną premię wybranemu sojusznikowi
+    if (interaction.type === 'inkluz_recipient') {
+      const stolenRaw = interaction.metadata?.stolenEffect as string | undefined
+      const recipient = this.findCardInState(newState, choice)
+      if (stolenRaw && recipient) {
+        try {
+          const stolen = JSON.parse(stolenRaw)
+          recipient.activeEffects.push(stolen)
+          const log = addLog(newState,
+            `Inkluz: Przekazuje premię "${stolen.effectId}" do ${recipient.cardData.name}!`,
+            'effect'
+          )
+          this.applyStateAndLog(newState, [log])
+        } catch {
+          this.applyStateAndLog(newState, [])
+        }
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      return cloneGameState(this.state)
+    }
+
+    // Liczyrzepa: ustaw wybrany typ i wykonaj właściwy atak
+    if (interaction.type === 'liczyrzepa_type') {
+      const card = this.findCardInState(newState, interaction.sourceInstanceId)
+      const targetId = interaction.targetInstanceId
+      if (card && targetId) {
+        const typeMap: Record<string, number> = {
+          'Wręcz': 0, 'Żywioł': 1, 'Magia': 2, 'Dystans': 3,
+        }
+        card.metadata.licyzrepaAttackTypeChosen = typeMap[choice] ?? 0
+        const { newState: afterAtk, log: atkLog } = performAttack(newState, card.instanceId, targetId)
+        // Wyczyść tymczasowy typ po ataku
+        for (const side of ['player1', 'player2'] as PlayerSide[]) {
+          for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+            const found = afterAtk.players[side].field.lines[line].find(c => c.instanceId === card.instanceId)
+            if (found) delete found.metadata.licyzrepaAttackTypeChosen
+          }
+        }
+        this.applyStateAndLog(afterAtk, atkLog)
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Strela: przerwanie AI zagrania karty
+    if (interaction.type === 'strela_intercept') {
+      const strelaId = interaction.sourceInstanceId
+      const meta = interaction.metadata ?? {}
+
+      if (choice === 'yes') {
+        // Zagraj Strelę z ręki gracza (darmowo, na Linię 1)
+        const strelaInHand = newState.players.player1.hand.find(c => c.instanceId === strelaId)
+        if (strelaInHand) {
+          newState.players.player1.hand = newState.players.player1.hand.filter(c => c.instanceId !== strelaId)
+          strelaInHand.line = BattleLine.FRONT
+          newState.players.player1.field.lines[BattleLine.FRONT].push(strelaInHand)
+
+          // AI's karta wraca na spód talii
+          const aiCardId = meta.aiCardInstanceId as string
+          const aiCard = newState.players.player2.hand.find(c => c.instanceId === aiCardId)
+          if (aiCard) {
+            newState.players.player2.hand = newState.players.player2.hand.filter(c => c.instanceId !== aiCardId)
+            newState.players.player2.deck.push(aiCard)
+            addLog(newState, `Strela! Wchodzi na pole — karta AI "${aiCard.cardData.name}" trafia na spód talii.`, 'effect')
+          } else {
+            addLog(newState, `Strela! Wchodzi na pole z ręki.`, 'effect')
+          }
+        }
+        this.applyStateAndLog(newState, [])
+        this.checkWinAndNotify()
+        return cloneGameState(this.state)
+      } else {
+        // Gracz rezygnuje — AI zagrywa kartę normalnie (z pominięciem sprawdzenia Streli)
+        this.applyStateAndLog(newState, [])
+        if (meta.aiCardType === 'creature') {
+          return this.aiPlayCreature(meta.aiCardInstanceId as string, meta.aiTargetLine as BattleLine, true)
+        } else {
+          return this.aiPlayAdventure(meta.aiCardInstanceId as string, meta.aiTargetInstanceId as string | undefined, !!meta.aiUseEnhanced, true)
+        }
+      }
+    }
+
+    // Pozostałe typy — fallback
+    this.applyStateAndLog(newState, [])
+    return cloneGameState(this.state)
+  }
+
+  private findCardInState(state: GameState, instanceId: string) {
+    for (const side of ['player1', 'player2'] as PlayerSide[]) {
+      for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+        const found = state.players[side].field.lines[line].find(c => c.instanceId === instanceId)
+        if (found) return found
+      }
+    }
+    return null
   }
 
   // ===== ODCZYT STANU =====

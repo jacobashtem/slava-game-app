@@ -57,11 +57,8 @@ function onCardClick(card: CardInstance) {
     }
 
     if (game.currentPhase === GamePhase.COMBAT) {
-      // W COMBAT: obrona → przełącz na atak; atak → wybierz jako atakującego
-      if (card.position === CardPosition.DEFENSE) {
-        game.changePosition(card.instanceId, CardPosition.ATTACK)
-        return
-      }
+      // W COMBAT: karta w obronie nie może atakować — zmiana pozycji przez badge
+      if (card.position === CardPosition.DEFENSE) return
       if (card.cannotAttack) {
         ui.showPlayLimitToast('Ta istota nie może atakować (efekt statusu).')
         return
@@ -190,12 +187,11 @@ function onLineDrop(e: DragEvent) {
         @dragstart="onDragStart($event, card)"
         @dragend="onDragEnd"
       >
-        <!-- Ikona tarczy przy kontrataku -->
-        <Transition name="counter-pop">
-          <div v-if="ui.counterAttackCardId === card.instanceId" class="counter-shield">
-            <Icon icon="game-icons:shield-reflect" />
-          </div>
-        </Transition>
+        <!-- Floating damage number -->
+        <div v-if="ui.hitAmounts[card.instanceId]" class="damage-number" :key="`dmg-${card.instanceId}-${ui.hitAmounts[card.instanceId]}`">
+          -{{ ui.hitAmounts[card.instanceId] }}
+        </div>
+
         <CreatureCard
           :card="card"
           :selected="ui.selectedCardId === card.instanceId || ui.attackingCardId === card.instanceId"
@@ -205,6 +201,7 @@ function onLineDrop(e: DragEvent) {
           :is-valid-target="ui.validAttackTargets.has(card.instanceId)"
           :dimmed="ui.isSelectingTarget && !ui.validAttackTargets.has(card.instanceId) && !isPlayerSide"
           :toggle-position-on-click="isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY && !ui.pendingArtifactId"
+          :can-toggle-position="isPlayerSide && game.isPlayerTurn && (game.currentPhase === GamePhase.PLAY || (game.currentPhase === GamePhase.COMBAT && !card.hasAttackedThisTurn)) && !ui.pendingArtifactId"
           :effect-available="isEffectAvailable(card)"
           :effect-cost="getEffectCost(card)"
           @click="onCardClick(card)"
@@ -282,22 +279,29 @@ function onLineDrop(e: DragEvent) {
   position: relative;
 }
 
-.counter-shield {
+/* ===== FLOATING DAMAGE NUMBER ===== */
+.damage-number {
   position: absolute;
-  top: -22px;
+  top: -10px;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
+  z-index: 30;
   font-size: 22px;
-  color: #60a5fa;
-  filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.8));
+  font-weight: 900;
+  color: #ef4444;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.9), 0 2px 6px rgba(0, 0, 0, 0.95);
   pointer-events: none;
+  white-space: nowrap;
+  font-family: monospace;
+  letter-spacing: -0.5px;
+  animation: dmg-float 1.6s ease forwards;
+}
+@keyframes dmg-float {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.2); }
+  15%  { transform: translateX(-50%) translateY(-6px) scale(1.4); }
+  40%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-55px) scale(0.9); }
 }
 
-.counter-pop-enter-active { transition: all 0.2s ease; }
-.counter-pop-enter-from   { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(6px); }
-.counter-pop-leave-active { transition: all 0.25s ease; }
-.counter-pop-leave-to     { opacity: 0; transform: translateX(-50%) scale(1.4) translateY(-8px); }
 
 .empty-slot {
   width: 80px;

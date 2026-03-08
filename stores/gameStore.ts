@@ -14,7 +14,7 @@ import { getEffect } from '../game-engine/EffectRegistry'
 import type { PlayerSide } from '../game-engine/types'
 import { useUIStore } from './uiStore'
 
-const AI_DELAY_MS = 900
+const AI_DELAY_MS = 1300
 
 export const useGameStore = defineStore('game', () => {
   // ===== STATE =====
@@ -25,8 +25,11 @@ export const useGameStore = defineStore('game', () => {
   const isAIThinking = ref(false)
   const gameStarted = ref(false)
   const aiTurnSummary = ref<string[]>([])
+  const playerTurnSummary = ref<string[]>([])
   const isArenaMode = ref(false)
   const arenaFocusedName = ref('')
+  const playerTurnLogStart = ref(0)
+  const aiTurnLogStart = ref(0)
 
   // ===== COMPUTED =====
   const player = computed(() => state.value?.players.player1 ?? null)
@@ -37,17 +40,18 @@ export const useGameStore = defineStore('game', () => {
   const actionLog = computed(() => state.value?.actionLog ?? [])
   const roundNumber = computed(() => state.value?.roundNumber ?? 1)
   const isPlayerTurn = computed(() => currentTurn.value === 'player1' && !isAIThinking.value)
+  const playerCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(playerTurnLogStart.value).slice(-6))
+  const aiCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(aiTurnLogStart.value).slice(-6))
 
   // ===== SETUP =====
   function startGame() {
     isArenaMode.value = false
     arenaFocusedName.value = ''
-    engine.onStateChanged((newState) => {
-      state.value = newState
-    })
-
+    // NIE rejestrujemy onStateChanged — state.value ustawiamy ręcznie po każdej akcji
+    // żeby animacje (damage numbers, tarcza) miały czas się wyświetlić przed zmianą stanu
     state.value = engine.startGame('gold')
     gameStarted.value = true
+    playerTurnLogStart.value = state.value.actionLog.length
 
     if (state.value.players[state.value.currentTurn].isAI) {
       runAITurn()
@@ -57,9 +61,6 @@ export const useGameStore = defineStore('game', () => {
   function setupArenaMode(freshState: GameState, focusedName = '') {
     isArenaMode.value = true
     arenaFocusedName.value = focusedName
-    engine.onStateChanged((newState) => {
-      state.value = newState
-    })
     state.value = engine.setupArena(freshState)
     gameStarted.value = true
   }
@@ -67,12 +68,9 @@ export const useGameStore = defineStore('game', () => {
   function startAlphaGame() {
     isArenaMode.value = false
     arenaFocusedName.value = ''
-    engine.onStateChanged((newState) => {
-      state.value = newState
-    })
-
     state.value = engine.startAlphaGame()
     gameStarted.value = true
+    playerTurnLogStart.value = state.value.actionLog.length
 
     if (state.value.players[state.value.currentTurn].isAI) {
       runAITurn()
@@ -102,6 +100,8 @@ export const useGameStore = defineStore('game', () => {
       state.value = engine.playerPlayAdventure(cardInstanceId, targetInstanceId, useEnhanced)
     } catch (e: any) {
       console.warn('[gameStore] playAdventure:', e.message)
+      const ui = useUIStore()
+      ui.showPlayLimitToast(e.message ?? 'Nie można zagrać karty przygody.')
     }
   }
 
@@ -111,29 +111,47 @@ export const useGameStore = defineStore('game', () => {
 
     // Jeśli cel jest ukrytą kartą AI, krótko ujawnij przed atakiem
     const defender = findCardOnField('player2', defenderInstanceId)
-    if (defender && !defender.isRevealed) {
+    const wasHidden = defender && !defender.isRevealed
+    if (wasHidden) {
       ui.revealingCardId = defenderInstanceId
       await delay(500)
-      ui.revealingCardId = null
+      // NIE czyścimy tutaj — karta pozostaje widoczna przez całą animację ataku
     }
 
     // Animacja ataku: napastnik miga, obrońca podświetlony
     ui.triggerAttackAnimation(attackerInstanceId, defenderInstanceId)
-    await delay(600)
+    await delay(900)
 
     try {
       const prevEnemyGrave = state.value?.players.player2.graveyard.length ?? 0
       const prevPlayerGrave = state.value?.players.player1.graveyard.length ?? 0
 
-      const logLenBefore = state.value?.actionLog.length ?? 0
+      // Zapamiętaj DEF przed atakiem do damage numbers
+      const defDefBefore = findCardOnField('player2', defenderInstanceId)?.currentStats.defense ?? 0
+      const atkDefBefore = findCardOnField('player1', attackerInstanceId)?.currentStats.defense ?? 0
+
       const newState = engine.playerAttack(attackerInstanceId, defenderInstanceId)
 
-      // Kontratak — sprawdź nowe wpisy loga czy obrońca kontratakował
-      const newEntries = newState.actionLog.slice(logLenBefore)
-      const hasCounter = newEntries.some(e => e.message.includes('kontratakuje'))
-      if (hasCounter) {
+      // Floating damage numbers
+      const findInState = (side: 'player1' | 'player2', id: string) => {
+        for (const line of Object.values(newState.players[side].field.lines)) {
+          const found = (line as any[]).find((c: any) => c.instanceId === id)
+          if (found) return found
+        }
+        return null
+      }
+      const defDefAfter = findInState('player2', defenderInstanceId)?.currentStats.defense ?? 0
+      const atkDefAfter = findInState('player1', attackerInstanceId)?.currentStats.defense ?? 0
+      const dmgToDefender = Math.max(0, defDefBefore - defDefAfter)
+      const dmgToAttacker = Math.max(0, atkDefBefore - atkDefAfter)
+      if (dmgToDefender > 0) ui.triggerDamageNumber(defenderInstanceId, dmgToDefender)
+      if (dmgToAttacker > 0) ui.triggerDamageNumber(attackerInstanceId, dmgToAttacker)
+
+      // Kontratak — DEF atakującego spadła = kontratak nastąpił
+      if (dmgToAttacker > 0) {
+        console.log('[KONTRATAK] gracz atakuje, obrońca kontratakuje:', defenderInstanceId, 'dmgToAttacker:', dmgToAttacker)
         ui.counterAttackCardId = defenderInstanceId
-        await delay(500)
+        await delay(1000)
         ui.counterAttackCardId = null
       }
 
@@ -143,11 +161,40 @@ export const useGameStore = defineStore('game', () => {
       if (enemyDied) ui.triggerDeathAnimation(defenderInstanceId)
       if (playerDied) ui.triggerDeathAnimation(attackerInstanceId)
 
-      if (enemyDied || playerDied) await delay(700)
+      if (enemyDied || playerDied) await delay(1100)
 
       state.value = newState
+      // Dopiero tutaj — state.value ma isRevealed=true, więc karta nie zniknie
+      if (wasHidden) ui.revealingCardId = null
+
+      // pendingInteraction: silnik czeka na decyzję gracza (np. Alkonost hipnoza)
+      // UI odczyta state.value.pendingInteraction i pokaże modal
     } catch (e: any) {
       console.warn('[gameStore] attack:', e.message)
+    }
+  }
+
+  /**
+   * Rozwiązuje oczekującą interakcję gracza.
+   * `choice` — instanceId karty lub string z opcją.
+   */
+  async function resolvePendingInteraction(choice: string) {
+    const ui = useUIStore()
+    try {
+      const prevGrave1 = state.value?.players.player1.graveyard.length ?? 0
+      const prevGrave2 = state.value?.players.player2.graveyard.length ?? 0
+      const newState = engine.resolvePendingInteraction(choice)
+      state.value = newState
+      // Animacje śmierci jeśli ktoś zginął (np. sojusznik trafiony przez Alkonosta)
+      const died1 = newState.players.player1.graveyard.length > prevGrave1
+      const died2 = newState.players.player2.graveyard.length > prevGrave2
+      if (died1 || died2) await delay(600)
+      // Jeśli nadal tura AI i brak nowej interakcji — wznów turę AI
+      if (state.value && state.value.players[state.value.currentTurn].isAI && !winner.value && !state.value.pendingInteraction) {
+        runAITurn()
+      }
+    } catch (e: any) {
+      console.warn('[gameStore] resolvePendingInteraction:', e.message)
     }
   }
 
@@ -259,6 +306,15 @@ export const useGameStore = defineStore('game', () => {
   function endTurn() {
     if (!isPlayerTurn.value) return
     try {
+      // Zbierz podsumowanie tury gracza z wpisów efektów/gry/śmierci
+      const logSlice = state.value?.actionLog.slice(playerTurnLogStart.value) ?? []
+      const summary = logSlice
+        .filter(e => ['play', 'effect', 'death'].includes(e.type))
+        .map(e => e.message)
+      if (summary.length > 0) {
+        playerTurnSummary.value = summary
+      }
+
       state.value = engine.playerEndTurn()
       if (state.value?.players[state.value.currentTurn].isAI && !winner.value) {
         runAITurn()
@@ -266,6 +322,10 @@ export const useGameStore = defineStore('game', () => {
     } catch (e: any) {
       console.warn('[gameStore] endTurn:', e.message)
     }
+  }
+
+  function dismissPlayerSummary() {
+    playerTurnSummary.value = []
   }
 
   // ===== AI TURN =====
@@ -285,10 +345,13 @@ export const useGameStore = defineStore('game', () => {
     await delay(AI_DELAY_MS)
 
     const logBefore = state.value.actionLog.length
+    aiTurnLogStart.value = logBefore
     const decisions = aiPlayer.planTurn(engine.getState())
 
     for (const decision of decisions) {
       if (winner.value) break
+      // Pauza tury AI gdy gracz musi podjąć decyzję (np. Strela, Chowaniec)
+      if (state.value?.pendingInteraction) break
       await delay(AI_DELAY_MS)
 
       try {
@@ -312,19 +375,62 @@ export const useGameStore = defineStore('game', () => {
               {
                 const ui = useUIStore()
                 ui.triggerAttackAnimation(decision.cardInstanceId, decision.targetInstanceId)
-                await delay(600)
+                await delay(900)
 
                 const prevP2Grave = state.value?.players.player2.graveyard.length ?? 0
                 const prevP1Grave = state.value?.players.player1.graveyard.length ?? 0
 
+                // Damage numbers dla ataku AI
+                const aiTgtDefBefore = (() => {
+                  for (const line of Object.values(state.value?.players.player1.field.lines ?? {})) {
+                    const found = (line as any[]).find((c: any) => c.instanceId === decision.targetInstanceId)
+                    if (found) return found.currentStats.defense
+                  }
+                  return 0
+                })()
+                const aiAtkDefBefore = (() => {
+                  for (const line of Object.values(state.value?.players.player2.field.lines ?? {})) {
+                    const found = (line as any[]).find((c: any) => c.instanceId === decision.cardInstanceId)
+                    if (found) return found.currentStats.defense
+                  }
+                  return 0
+                })()
+
                 const newState = engine.aiAttack(decision.cardInstanceId, decision.targetInstanceId)
+
+                const aiTgtDefAfter = (() => {
+                  for (const line of Object.values(newState.players.player1.field.lines)) {
+                    const found = (line as any[]).find((c: any) => c.instanceId === decision.targetInstanceId)
+                    if (found) return found.currentStats.defense
+                  }
+                  return 0
+                })()
+                const aiAtkDefAfter = (() => {
+                  for (const line of Object.values(newState.players.player2.field.lines)) {
+                    const found = (line as any[]).find((c: any) => c.instanceId === decision.cardInstanceId)
+                    if (found) return found.currentStats.defense
+                  }
+                  return 0
+                })()
+                const dmgToTgt = Math.max(0, aiTgtDefBefore - aiTgtDefAfter)
+                const dmgToAi = Math.max(0, aiAtkDefBefore - aiAtkDefAfter)
+                if (dmgToTgt > 0) ui.triggerDamageNumber(decision.targetInstanceId, dmgToTgt)
+                if (dmgToAi > 0) ui.triggerDamageNumber(decision.cardInstanceId, dmgToAi)
+
+                // Kontratak gracza — DEF atakującego AI spadła = gracz kontratakował
+                if (dmgToAi > 0) {
+                  console.log('[KONTRATAK] AI atakuje, gracz kontratakuje:', decision.targetInstanceId, 'dmgToAi:', dmgToAi)
+                  ui.counterAttackCardId = decision.targetInstanceId
+                  await delay(1000)
+                  ui.counterAttackCardId = null
+                }
 
                 const aiDied = newState.players.player2.graveyard.length > prevP2Grave
                 const playerDied = newState.players.player1.graveyard.length > prevP1Grave
                 if (aiDied) ui.triggerDeathAnimation(decision.cardInstanceId)
                 if (playerDied) ui.triggerDeathAnimation(decision.targetInstanceId)
 
-                if (aiDied || playerDied) await delay(700)
+                if (aiDied || playerDied) await delay(1100)
 
                 state.value = newState
               }
@@ -340,7 +446,10 @@ export const useGameStore = defineStore('game', () => {
             break
         }
       } catch (e: any) {
-        console.warn('[gameStore] AI decision error:', e.message)
+        // "Nie znaleziono kart" = cel zginął wcześniej w tej turze — normalne
+        if (!e.message?.includes('Nie znaleziono kart') && !e.message?.includes('jeden atak')) {
+          console.warn('[gameStore] AI decision error:', e.message)
+        }
       }
     }
 
@@ -353,7 +462,15 @@ export const useGameStore = defineStore('game', () => {
       aiTurnSummary.value = relevant
     }
 
+    // Jeśli tура przerwała się przez pendingInteraction — NIE kończymy, czekamy na gracza
+    if (state.value?.pendingInteraction) {
+      isAIThinking.value = false
+      return
+    }
+
     isAIThinking.value = false
+    // Resetuj start tury gracza — teraz zaczyna gracz
+    playerTurnLogStart.value = state.value?.actionLog.length ?? 0
   }
 
   function dismissAISummary() {
@@ -396,6 +513,7 @@ export const useGameStore = defineStore('game', () => {
     isAIThinking,
     gameStarted,
     aiTurnSummary,
+    playerTurnSummary,
     isArenaMode,
     arenaFocusedName,
     // computed
@@ -407,6 +525,8 @@ export const useGameStore = defineStore('game', () => {
     actionLog,
     roundNumber,
     isPlayerTurn,
+    playerCurrentLogs,
+    aiCurrentLogs,
     // actions
     startGame,
     startAlphaGame,
@@ -414,6 +534,7 @@ export const useGameStore = defineStore('game', () => {
     playCreature,
     playAdventure,
     attack,
+    resolvePendingInteraction,
     changePosition,
     moveCreatureLine,
     requestActivateEffect,
@@ -425,6 +546,7 @@ export const useGameStore = defineStore('game', () => {
     skipOnPlay,
     surrender,
     dismissAISummary,
+    dismissPlayerSummary,
     // helpers
     getCreaturesOnField,
     getHand,

@@ -168,8 +168,22 @@ const atkDamaged = computed(() =>
         </div>
       </template>
 
-      <!-- Opis efektu -->
-      <div v-if="data.effectDescription" class="tt-effect">
+      <!-- Abilities z triggerami (jeśli dostępne) -->
+      <template v-if="data.abilities && data.abilities.length">
+        <div class="tt-abilities">
+          <div v-for="(ab, i) in data.abilities" :key="i" class="tt-ability-entry">
+            <span class="tt-ab-trigger">{{ {
+              ON_PLAY: 'WEJŚCIE', ACTION: 'AKCJA', AURA: 'AURA', REACTION: 'REAKCJA',
+              ON_DEATH: 'ŚMIERĆ', ON_KILL: 'ZABÓJSTWO', ON_TURN_START: 'START TURY',
+              ON_TURN_END: 'KONIEC TURY', ON_ANY_DEATH: 'KAŻDA ŚMIERĆ', ON_ATTACK: 'ATAK',
+              ON_ENEMY_PLAY: 'ZASADZKA', ENEMY_ACTION: 'AKCJA WROGA', PASSIVE: 'AURA',
+            }[ab.trigger] ?? ab.trigger }}</span>
+            <span class="tt-ab-text">{{ ab.text }}</span>
+          </div>
+        </div>
+      </template>
+      <!-- Fallback: stary opis efektu -->
+      <div v-else-if="data.effectDescription" class="tt-effect">
         {{ data.effectDescription }}
       </div>
 
@@ -390,7 +404,40 @@ const atkDamaged = computed(() =>
   border-color: rgba(167, 139, 250, 0.35);
 }
 
-/* Efekt */
+/* Abilities list */
+.tt-abilities {
+  padding: 5px 10px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tt-ability-entry {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  line-height: 1.4;
+}
+.tt-ab-trigger {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(99,102,241,0.25);
+  color: #a5b4fc;
+  border-radius: 3px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.tt-ab-text {
+  font-size: 10px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+/* Efekt (fallback) */
 .tt-effect {
   font-size: 10px;
   color: #94a3b8;

@@ -5,8 +5,8 @@
 import type { GameState, CardInstance, LogEntry, ActiveEventCard } from './types'
 import { GamePhase, EffectTrigger, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
-import { cloneGameState, addLog } from './GameStateUtils'
-import { drawCard } from './DeckBuilder'
+import { cloneGameState, addLog, getAllCreaturesOnField } from './GameStateUtils'
+import { drawCard, drawCards } from './DeckBuilder'
 import { placeCreatureOnField, canPlayCreature, canPlaceInLine } from './LineManager'
 import { resolveAttack } from './CombatResolver'
 import { getEffect, canActivateEffect } from './EffectRegistry'
@@ -37,8 +37,23 @@ export function processStartPhase(state: GameState): { newState: GameState; log:
       // Usuń jednorazowe metadane
       delete card.metadata.canReturnToDeck
       delete card.metadata.canDefendAfterAttack
+      delete card.metadata.attacksThisTurn
     }
   }
+
+  // Efekty tick: Zagorkinia klątwa (-1 ATK/-1 DEF co turę)
+  for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+    for (const card of currentPlayer.field.lines[line]) {
+      if (card.metadata.zagorkiniaCursed) {
+        card.currentStats.attack = Math.max(0, card.currentStats.attack - 1)
+        card.currentStats.defense -= 1
+        log.push(addLog(newState, `${card.cardData.name}: Klątwa Zagorkini! -1 ATK/-1 DEF.`, 'effect'))
+      }
+    }
+  }
+
+  // Efekty ON_TURN_START (generyczny loop — Cicha, Domowik, Świetle, Południca, Starszyzna, etc.)
+  newState = processTurnStartEffects(newState, log)
 
   // Tick duration events and check conditional events (once per round, at player1 START)
   if (newState.currentTurn === 'player1') {
@@ -62,10 +77,54 @@ export function processDrawPhase(state: GameState): { newState: GameState; log: 
   const currentPlayer = newState.players[newState.currentTurn]
   const target = GOLD_EDITION_RULES.STARTING_HAND
 
+  // Licho (#108): blokuje dobiór kart rywala
+  const opponentSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+  const hasLicho = getAllCreaturesForPlayer(newState, opponentSide)
+    .some(c => (c.cardData as any).effectId === 'licho_block_draw')
+  if (hasLicho) {
+    log.push(addLog(newState, `Licho blokuje dobiór kart ${newState.currentTurn} — zdolność: Licho uniemożliwia dobiór kart przez wroga.`, 'effect'))
+    newState.currentPhase = GamePhase.PLAY
+    return { newState, log, drawn }
+  }
+
+  // Bieda (#94): gracz mający Biedę na swoim polu nie może dobierać kart
+  const hasBieda = getAllCreaturesForPlayer(newState, newState.currentTurn as PlayerSide)
+    .some(c => (c.cardData as any).effectId === 'bieda_spy_block_draw')
+  if (hasBieda) {
+    log.push(addLog(newState, `Bieda blokuje dobiór kart ${newState.currentTurn} — zdolność: Bieda na polu gracza uniemożliwia mu dobiór.`, 'effect'))
+    newState.currentPhase = GamePhase.PLAY
+    return { newState, log, drawn }
+  }
+
+  // Reshuffle cmentarza do talii gdy talia jest pusta
+  if (currentPlayer.deck.length === 0 && currentPlayer.graveyard.length > 0) {
+    const reshuffled = currentPlayer.graveyard
+      .filter(c => c.cardData.cardType === 'creature')
+      .map(c => { c.isRevealed = false; c.currentStats = { ...(c.cardData as any).stats }; c.poisonRoundsLeft = null; c.isSilenced = false; c.activeEffects = []; c.hasAttackedThisTurn = false; return c })
+    for (let i = reshuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [reshuffled[i], reshuffled[j]] = [reshuffled[j], reshuffled[i]]
+    }
+    currentPlayer.deck.push(...reshuffled)
+    currentPlayer.graveyard = currentPlayer.graveyard.filter(c => c.cardData.cardType !== 'creature')
+    log.push(addLog(newState, `${newState.currentTurn}: Talia pusta — cmentarz (${reshuffled.length} istot) przetasowany z powrotem.`, 'system'))
+  }
+
   while (currentPlayer.hand.length < target) {
     const card = drawCard(currentPlayer)
     if (!card) break
     drawn.push(card)
+  }
+
+  // Rehtra+: karty dobrane przez rywala są ujawniane
+  {
+    const opponentSide: PlayerSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+    const opponentLocation = newState.players[opponentSide].activeLocation
+    if (opponentLocation && (opponentLocation.cardData as any).effectId === 'adventure_rehtra_enhanced') {
+      for (const drawnCard of drawn) {
+        drawnCard.isRevealed = true
+      }
+    }
   }
 
   if (drawn.length > 0) {
@@ -165,8 +224,19 @@ export function playAdventure(
     throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest przygodą.`)
   }
 
-  // Koszt: podstawowy = DARMOWY, ulepszony = 2 ZŁ
+  // Koszt: podstawowy = DARMOWY, ulepszony = 1 ZŁ
   const adventureCost = useEnhanced ? GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST : 0
+
+  // Tęsknica: blokuje enhanced adventures
+  if (useEnhanced) {
+    const opponentSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+    const hasTesknica = getAllCreaturesForPlayer(newState, opponentSide)
+      .some(c => (c.cardData as any).effectId === 'tesknica_block_enhance')
+    if (hasTesknica) {
+      throw new Error(`[TurnManager] Tęsknica blokuje ulepszanie zaklęć!`)
+    }
+  }
+
   if (adventureCost > 0 && currentPlayer.gold < adventureCost) {
     throw new Error(`[TurnManager] Brak Złocisza. Potrzebujesz ${adventureCost} ZŁ na ulepszony efekt.`)
   }
@@ -191,6 +261,69 @@ export function playAdventure(
   let targetCard: CardInstance | undefined
   if (targetInstanceId) {
     targetCard = findCardAnywhere(newState, targetInstanceId) ?? undefined
+  }
+
+  // Bzionek (#64): może przechwycić zaklęcie wymierzone w sojusznika
+  if (targetCard && targetCard.owner !== newState.currentTurn) {
+    const bzionek = getAllCreaturesForPlayer(newState, targetCard.owner)
+      .find(c => (c.cardData as any).effectId === 'bzionek_spell_intercept'
+             && c.instanceId !== targetCard!.instanceId
+             && !c.isSilenced)
+    if (bzionek) {
+      log.push(addLog(newState, `Bzionek przechwytuje zaklęcie wymierzone w ${targetCard.cardData.name}!`, 'effect'))
+      targetCard = bzionek
+    }
+  }
+
+  // Czarownica (#36): może przekierować zaklęcie na istotę rzucającego
+  if (targetCard && targetCard.owner !== newState.currentTurn) {
+    const czarownica = getAllCreaturesForPlayer(newState, targetCard.owner)
+      .find(c => (c.cardData as any).effectId === 'czarownica_redirect_spell'
+             && c.instanceId !== targetCard!.instanceId
+             && !c.isSilenced)
+    if (czarownica) {
+      const usedFree = !!czarownica.metadata.czarownicaUsedFree
+      const cost = usedFree ? 1 : 0
+      const ownerSide = czarownica.owner as PlayerSide
+      if (cost === 0 || newState.players[ownerSide].gold >= cost) {
+        if (cost > 0) newState.players[ownerSide].gold -= cost
+        czarownica.metadata.czarownicaUsedFree = true
+        const casterSide = newState.currentTurn as PlayerSide
+        const casterCreatures = getAllCreaturesForPlayer(newState, casterSide)
+        if (casterCreatures.length > 0) {
+          const newTarget = casterCreatures[Math.floor(Math.random() * casterCreatures.length)]
+          log.push(addLog(newState,
+            `Czarownica przekierowuje zaklęcie z ${targetCard.cardData.name} na ${newTarget.cardData.name}!`,
+            'effect'
+          ))
+          targetCard = newTarget
+        }
+      }
+    }
+  }
+
+  // Julki (#39): cel karty przygody odporny na zaklęcia
+  if (targetCard && (targetCard.cardData as any).effectId === 'julki_adventure_immunity' && !targetCard.isSilenced) {
+    throw new Error(`[TurnManager] Julki są odporne na karty przygody!`)
+  }
+
+  // Zlot Czarownic: blokuje 3 kolejne przygody rywala
+  const opponentSide2 = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+  const zlotEvent = newState.activeEvents.find(
+    e => e.owner === opponentSide2 && e.cardData.effectId === 'adventure_zlot_czarownic'
+      && (e.roundsRemaining ?? 0) > 0
+  )
+  if (zlotEvent) {
+    zlotEvent.roundsRemaining = (zlotEvent.roundsRemaining ?? 1) - 1
+    if (zlotEvent.roundsRemaining <= 0) {
+      newState.activeEvents = newState.activeEvents.filter(e => e !== zlotEvent)
+    }
+    // Zwróć kartę do ręki (zablokowano)
+    currentPlayer.hand.push(card)
+    log.push(addLog(newState, `Zlot Czarownic blokuje zaklęcie ${card.cardData.name} — ${zlotEvent.roundsRemaining} blokad pozostało (Zlot Czarownic anuluje 3 kolejne przygody wroga).`, 'effect'))
+    currentPlayer.adventuresPlayedThisTurn--
+    currentPlayer.gold += useEnhanced ? GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST : 0
+    return { newState, log }
   }
 
   // Wykonaj efekt
@@ -229,12 +362,17 @@ export function playAdventure(
     currentOwner.activeLocation = card
   } else if (persistence !== 'instant') {
     // Zdarzenie z persistence: leży na stole jako ActiveEventCard
+    let eventRoundsRemaining: number | null = persistence === 'duration' ? (adventureData.durationRounds ?? null) : null
+    // Zlot Czarownic: roundsRemaining = liczba blokowanych przygód (nie rund)
+    if (effectId === 'adventure_zlot_czarownic' || effectId === 'adventure_zlot_czarownic_enhanced') {
+      eventRoundsRemaining = 3
+    }
     const activeEvent: ActiveEventCard = {
       instanceId: card.instanceId,
       cardData: adventureData,
       owner: newState.currentTurn,
       playedOnRound: newState.roundNumber,
-      roundsRemaining: persistence === 'duration' ? (adventureData.durationRounds ?? null) : null,
+      roundsRemaining: eventRoundsRemaining,
       conditionEnd: adventureData.conditionEnd,
     }
     newState.activeEvents.push(activeEvent)
@@ -269,6 +407,15 @@ export function drawCardManually(state: GameState): { newState: GameState; log: 
 
   const card = drawCard(currentPlayer)
   if (!card) throw new Error('Nie ma kart w talii.')
+
+  // Rehtra+: ujawnij dobieraną kartę jeśli przeciwnik ma tę lokację
+  {
+    const opponentSide: PlayerSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+    const opponentLocation = newState.players[opponentSide].activeLocation
+    if (opponentLocation && (opponentLocation.cardData as any).effectId === 'adventure_rehtra_enhanced') {
+      card.isRevealed = true
+    }
+  }
 
   log.push(addLog(newState, `${newState.currentTurn} dobiera kartę z talii.`, 'draw'))
   return { newState, log }
@@ -370,10 +517,47 @@ export function activateCreatureEffect(
 export function performAttack(
   state: GameState,
   attackerInstanceId: string,
-  defenderInstanceId: string
+  defenderInstanceId: string,
+  options?: { skipChowaniecCheck?: boolean }
 ): { newState: GameState; log: LogEntry[] } {
   if (state.currentPhase !== GamePhase.COMBAT) {
     throw new Error(`[TurnManager] Nie jesteś w fazie COMBAT (jesteś w ${state.currentPhase}).`)
+  }
+
+  // Chowaniec: intercept check — jeśli defender jest ludzkim graczem i ma Chowańca w DEFENSE
+  if (!options?.skipChowaniecCheck) {
+    const defCard = (() => {
+      for (const side of ['player1', 'player2'] as const) {
+        for (const line of [0, 1, 2] as const) {
+          const found = state.players[side].field.lines[line].find(c => c.instanceId === defenderInstanceId)
+          if (found) return found
+        }
+      }
+      return null
+    })()
+
+    if (defCard && !state.players[defCard.owner as 'player1' | 'player2'].isAI) {
+      const defOwner = defCard.owner as 'player1' | 'player2'
+      const chowaniec = getAllCreaturesOnField(state, defOwner).find(c =>
+        (c.cardData as any).effectId === 'chowaniec_intercept' &&
+        c.instanceId !== defenderInstanceId &&
+        c.position === CardPosition.DEFENSE &&
+        !c.isSilenced &&
+        c.currentStats.defense > 0
+      )
+      if (chowaniec) {
+        const pendingState = cloneGameState(state)
+        pendingState.pendingInteraction = {
+          type: 'chowaniec_intercept',
+          sourceInstanceId: chowaniec.instanceId,
+          respondingPlayer: defOwner,
+          attackerInstanceId,
+          targetInstanceId: defenderInstanceId,
+        }
+        addLog(pendingState, `${chowaniec.cardData.name}: Może przejąć atak na ${defCard.cardData.name}! Czy interweniować?`, 'effect')
+        return { newState: pendingState, log: [] }
+      }
+    }
   }
 
   const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId)
@@ -393,6 +577,8 @@ export function changePosition(
 
   if (!card) throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest na polu.`)
   if (card.owner !== newState.currentTurn) throw new Error(`[TurnManager] To nie twoja karta.`)
+
+  if (card.metadata.positionLocked) throw new Error(`[TurnManager] ${card.cardData.name} jest unieruchomiona — nie może zmieniać pozycji (Łucznik).`)
 
   const oldPosition = card.position
   card.position = newPosition
@@ -506,6 +692,59 @@ export function advancePhase(state: GameState): { newState: GameState; log: LogE
 // EFEKTY TUROWE
 // ===================================================================
 
+function processTurnStartEffects(state: GameState, log: LogEntry[]): GameState {
+  let newState = cloneGameState(state)
+
+  // Wyczyść tymczasowe paraliże (Północnica) dla obu stron
+  for (const side of ['player1', 'player2'] as PlayerSide[]) {
+    for (const card of getAllCreaturesForPlayer(newState, side)) {
+      if ((card.metadata.temporaryParalyzeRound as number) !== undefined
+          && (card.metadata.temporaryParalyzeRound as number) < newState.roundNumber) {
+        delete card.metadata.cannotAttack
+        delete card.metadata.temporaryParalyzeRound
+      }
+    }
+  }
+
+  // Likantropia: decay — 2 rundy bez zabójstwa = -½ ATK i DEF
+  for (const side of ['player1', 'player2'] as PlayerSide[]) {
+    for (const card of getAllCreaturesForPlayer(newState, side)) {
+      if (!card.metadata.likantropiaActive) continue
+      const lastKill = (card.metadata.likantropiaLastKillRound as number) ?? 0
+      if (newState.roundNumber - lastKill >= 2 && newState.roundNumber > 0) {
+        card.currentStats.attack = Math.floor(card.currentStats.attack / 2)
+        card.currentStats.defense = Math.max(1, Math.floor(card.currentStats.defense / 2))
+        card.metadata.likantropiaLastKillRound = newState.roundNumber  // reset żeby nie halvować co rundę
+        log.push(addLog(newState, `Likantropia: ${card.cardData.name} słabnie bez ofiar! Staty zredukowane.`, 'effect'))
+      }
+    }
+  }
+
+  // Odpal ON_TURN_START efekty dla OBU stron (Cicha, Południca itp. działają każdą turę)
+  for (const side of ['player1', 'player2'] as PlayerSide[]) {
+    for (const card of getAllCreaturesForPlayer(newState, side)) {
+      if (card.isSilenced) continue
+      const effectId = (card.cardData as any).effectId
+      // Ogranicz do tury właściciela dla efektów z własnego pola (ON_TURN_START = tylko właściciel)
+      // Wyjątek: Cicha i Południca dotyczą obu stron — zawsze odpalają
+      const effect = getEffect(effectId)
+      if (!effect) continue
+      const triggers = Array.isArray(effect.trigger) ? effect.trigger : [effect.trigger]
+      if (!triggers.includes(EffectTrigger.ON_TURN_START)) continue
+      // Karta właściciela — odpal tylko w jego turę; karty "globalne" odpalaj zawsze
+      if (card.owner !== newState.currentTurn
+          && !['cicha_kill_weak', 'poludnica_kill_weakest'].includes(effectId)) continue
+      try {
+        const result = effect.execute({ state: newState, source: card, trigger: EffectTrigger.ON_TURN_START })
+        newState = result.newState
+        log.push(...result.log)
+      } catch {}
+    }
+  }
+
+  return newState
+}
+
 function processRoundStartEffects(state: GameState, log: LogEntry[]): GameState {
   let newState = cloneGameState(state)
 
@@ -607,7 +846,7 @@ function processActiveEvents(state: GameState, log: LogEntry[]): GameState {
       poisonRoundsLeft: null,
       metadata: {},
     })
-    log.push(addLog(newState, `${expired.cardData.name} wygasa i trafia na cmentarz.`, 'effect'))
+    log.push(addLog(newState, `${expired.cardData.name} wygasa i trafia na cmentarz — zdarzenie dobiegło końca (czas trwania wyczerpany).`, 'effect'))
   }
 
   return newState

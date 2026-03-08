@@ -1,12 +1,35 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 
 const game = useGameStore()
+
+// Pokaż podsumowanie tury gracza gdy jest gotowe
+const showPlayer = computed(() => game.playerTurnSummary.length > 0)
+// Pokaż podsumowanie AI gdy skończyło myśleć
+const showAI = computed(() => game.aiTurnSummary.length > 0 && !game.isAIThinking)
 </script>
 
 <template>
+  <!-- Podsumowanie tury GRACZA -->
   <Transition name="summary-slide">
-    <div v-if="game.aiTurnSummary.length > 0 && !game.isAIThinking" class="ai-summary">
+    <div v-if="showPlayer" class="summary-panel player-panel">
+      <div class="summary-header player-header">
+        <span class="summary-title">Twoja tura — aktywne zdolności</span>
+        <button class="summary-close" @click="game.dismissPlayerSummary()">✕</button>
+      </div>
+      <ul class="summary-list">
+        <li v-for="(entry, i) in game.playerTurnSummary" :key="i" class="summary-entry player-entry">
+          {{ entry }}
+        </li>
+      </ul>
+      <button class="summary-ok player-ok" @click="game.dismissPlayerSummary()">OK</button>
+    </div>
+  </Transition>
+
+  <!-- Podsumowanie tury AI -->
+  <Transition name="summary-slide">
+    <div v-if="showAI && !showPlayer" class="summary-panel ai-panel">
       <div class="summary-header">
         <span class="summary-title">Tura przeciwnika — podsumowanie</span>
         <button class="summary-close" @click="game.dismissAISummary()">✕</button>
@@ -22,17 +45,24 @@ const game = useGameStore()
 </template>
 
 <style scoped>
-.ai-summary {
+.summary-panel {
   position: fixed;
   bottom: 160px;
   right: 16px;
   width: 280px;
   background: #0c1220;
-  border: 1px solid rgba(99, 102, 241, 0.4);
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.7);
   z-index: 200;
   overflow: hidden;
+}
+
+.ai-panel {
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.player-panel {
+  border: 1px solid rgba(52, 211, 153, 0.4);
 }
 
 .summary-header {
@@ -50,6 +80,14 @@ const game = useGameStore()
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #818cf8;
+}
+
+.player-header .summary-title {
+  color: #34d399;
+}
+
+.player-entry::before {
+  color: #34d399 !important;
 }
 
 .summary-close {
@@ -109,6 +147,15 @@ const game = useGameStore()
 
 .summary-ok:hover {
   background: rgba(99, 102, 241, 0.3);
+}
+
+.player-ok {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #34d399;
+}
+.player-ok:hover {
+  background: rgba(52, 211, 153, 0.25);
 }
 
 .summary-slide-enter-active,

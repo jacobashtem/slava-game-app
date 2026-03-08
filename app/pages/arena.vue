@@ -83,6 +83,10 @@ function clearCard() {
       <div v-if="arena.focusedEntry" class="focused-info">
         <span class="fi-name">{{ arena.focusedEntry.name }}</span>
         <span class="fi-id">{{ arena.focusedEntry.effectId }}</span>
+        <span v-if="arena.currentHint && arena.isReady" class="fi-hint">
+          <Icon icon="game-icons:info" class="hint-icon" />
+          {{ arena.currentHint }}
+        </span>
       </div>
 
       <div class="arena-bar-right">
@@ -252,6 +256,20 @@ function clearCard() {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.fi-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.hint-icon { font-size: 12px; color: #60a5fa; flex-shrink: 0; }
 
 .arena-bar-right { flex-shrink: 0; margin-left: auto; }
 

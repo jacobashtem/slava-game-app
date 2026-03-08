@@ -9,6 +9,7 @@ import DeckPile from '../ui/DeckPile.vue'
 import CardTooltip from '../ui/CardTooltip.vue'
 import GameOverModal from '../ui/GameOverModal.vue'
 import GraveyardModal from '../ui/GraveyardModal.vue'
+import PendingInteractionModal from '../ui/PendingInteractionModal.vue'
 import GameHint from '../ui/GameHint.vue'
 import AISummaryPanel from '../ui/AISummaryPanel.vue'
 import CardBack from '../cards/CardBack.vue'
@@ -166,6 +167,7 @@ const onPlayDescription = computed(() => {
     <AISummaryPanel />
     <GameOverModal />
     <GraveyardModal />
+    <PendingInteractionModal />
   </div>
 
   <div v-else class="board-loading">

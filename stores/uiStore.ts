@@ -3,7 +3,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 
 export type UIMode = 'idle' | 'placing' | 'attacking' | 'moving'
 
@@ -35,6 +35,8 @@ export const useUIStore = defineStore('ui', () => {
   const revealingCardId = ref<string | null>(null)
   // Karta aktualnie kontratakvująca (ikona tarczy)
   const counterAttackCardId = ref<string | null>(null)
+  // Floating damage numbers: instanceId → kwota obrażeń
+  const hitAmounts = reactive<Record<string, number>>({})
   // Artefakt czekający na wybór celu istoty
   const pendingArtifactId = ref<string | null>(null)
   // Tryb ulepszenia: kliknięto monety → kolejna karta przygody zagrana jako enhanced
@@ -99,14 +101,21 @@ export const useUIStore = defineStore('ui', () => {
     setTimeout(() => {
       animatingAttack.value = null
       animatingHit.value = null
-    }, 600)
+    }, 900)
   }
 
   function triggerDeathAnimation(instanceId: string) {
     animatingDeath.value = new Set([...animatingDeath.value, instanceId])
     setTimeout(() => {
       animatingDeath.value.delete(instanceId)
-    }, 500)
+    }, 750)
+  }
+
+  function triggerDamageNumber(instanceId: string, amount: number) {
+    hitAmounts[instanceId] = amount
+    setTimeout(() => {
+      delete hitAmounts[instanceId]
+    }, 1600)
   }
 
   function showTooltip(instanceId: string) {
@@ -177,6 +186,8 @@ export const useUIStore = defineStore('ui', () => {
     animatingDeath,
     revealingCardId,
     counterAttackCardId,
+    hitAmounts,
+    triggerDamageNumber,
     highlightedLines,
     validAttackTargets,
     showGameOver,

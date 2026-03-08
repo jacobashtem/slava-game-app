@@ -157,6 +157,35 @@ export interface ActiveEventCard {
   conditionEnd?: string
 }
 
+// ===== PENDING PLAYER INTERACTION =====
+// Gdy silnik potrzebuje decyzji gracza w trakcie efektu, ustawia to pole.
+// UI renderuje modal odpowiedni do typu i czeka na odpowiedź.
+
+export type PendingInteractionType =
+  | 'alkonost_target'          // Alkonost: wskaż sojusznika który zostanie zaatakowany
+  | 'chowaniec_intercept'      // Chowaniec: czy przejąć atak? (Y/N)
+  | 'kresnik_buff'             // Kresnik ON_PLAY: wybierz premię
+  | 'baba_domain'              // Baba ON_PLAY: wybierz domenę
+  | 'cmentarna_baba_resurrect' // Cmentarna Baba: wybierz kartę z cmentarza
+  | 'inkluz_recipient'         // Inkluz: wybierz sojusznika który dostanie premię
+  | 'wielkolud_counter'        // Wielkolud: wybierz cel kontrataku
+  | 'liczyrzepa_type'          // Liczyrzepa: wybierz typ ataku
+  | 'strela_intercept'         // Strela: czy zagrać kartę? (Y/N)
+
+export interface PendingInteraction {
+  type: PendingInteractionType
+  // Karta która wyzwala interakcję
+  sourceInstanceId: string
+  // Kto musi odpowiedzieć
+  respondingPlayer: PlayerSide
+  // Opcjonalny kontekst
+  attackerInstanceId?: string      // dla alkonost: kto atakował
+  targetInstanceId?: string        // kontekst pomocniczy
+  availableTargetIds?: string[]    // lista instanceId do wyboru
+  availableChoices?: string[]      // lista stringów do wyboru (np. nazwy premii)
+  metadata?: Record<string, unknown>
+}
+
 // ===== GAME STATE =====
 
 export interface GameState {
@@ -174,6 +203,8 @@ export interface GameState {
   activeAdventureEffects: string[]
   // Karta czekająca na potwierdzenie przez gracza efektu ON_PLAY (activatable)
   awaitingOnPlayConfirmation: string | null  // instanceId karty
+  // Oczekująca interakcja gracza (blokuje grę do czasu odpowiedzi)
+  pendingInteraction?: PendingInteraction
 }
 
 // ===== COMBAT =====
