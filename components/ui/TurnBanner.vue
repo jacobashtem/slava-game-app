@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 
 const game = useGameStore()
 const showBanner = ref(false)
 const bannerText = ref('')
 const bannerType = ref<'player' | 'ai' | 'season'>('player')
+let bannerTimer: ReturnType<typeof setTimeout> | null = null
+
+function showFor(text: string, type: 'player' | 'ai' | 'season', duration: number) {
+  if (bannerTimer) clearTimeout(bannerTimer)
+  bannerText.value = text
+  bannerType.value = type
+  showBanner.value = true
+  bannerTimer = setTimeout(() => { showBanner.value = false; bannerTimer = null }, duration)
+}
+
+onUnmounted(() => { if (bannerTimer) clearTimeout(bannerTimer) })
 
 const seasonNames: Record<string, string> = {
   spring: '🌸 Wiosna',
@@ -17,26 +28,14 @@ const seasonNames: Record<string, string> = {
 // Season change announcement
 watch(() => game.season, (season, prevSeason) => {
   if (!prevSeason || season === prevSeason) return
-  bannerText.value = seasonNames[season] ?? season
-  bannerType.value = 'season'
-  showBanner.value = true
-  setTimeout(() => { showBanner.value = false }, 1800)
+  showFor(seasonNames[season] ?? season, 'season', 1800)
 })
 
 // Turn change announcement
 watch(() => game.currentTurn, (turn, prevTurn) => {
   if (!prevTurn || !turn) return
-  // Don't show turn banner if season banner is showing
   if (showBanner.value && bannerType.value === 'season') return
-  if (turn === 'player1') {
-    bannerText.value = 'Twoja tura'
-    bannerType.value = 'player'
-  } else {
-    bannerText.value = 'Tura przeciwnika'
-    bannerType.value = 'ai'
-  }
-  showBanner.value = true
-  setTimeout(() => { showBanner.value = false }, 1200)
+  showFor(turn === 'player1' ? 'Twoja tura' : 'Tura przeciwnika', turn === 'player1' ? 'player' : 'ai', 1200)
 })
 </script>
 

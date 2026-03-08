@@ -333,76 +333,89 @@ export function resolveAttack(
       }
     }
 
-    // Trigger ON_DEATH obrońcy
-    const deathResult = triggerEffect(newState, currentDefender, EffectTrigger.ON_DEATH)
-    newState = deathResult.newState
-    log.push(...deathResult.log)
-
-    // Trigger ON_KILL atakującego (np. Dziki Myśliwy, Czarnoksiężnik)
-    currentAttacker = findCardOnField(newState, attackerInstanceId)
-    if (currentAttacker) {
-      const killResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_KILL, currentDefender)
-      newState = killResult.newState
-      log.push(...killResult.log)
-    }
-
-    // Sprawdź efekt Moc Światogora: karta ginie po zabiciu
-    currentAttacker = findCardOnField(newState, attackerInstanceId)
-    if (currentAttacker?.metadata?.diesOnKill) {
-      currentAttacker.currentStats.defense = 0
-      log.push(addLog(newState, `${currentAttacker.cardData.name} ginie zgodnie z efektem Mocy Światogora!`, 'death'))
-    }
-
-    // ON_ANY_DEATH — trigger dla wszystkich istot na polu (np. Baba Jaga)
-    const allBeforeDefDeath = getAllCreaturesForPlayer(newState, 'player1').concat(getAllCreaturesForPlayer(newState, 'player2'))
-    for (const watcher of allBeforeDefDeath) {
-      if (watcher.instanceId === defenderInstanceId) continue
-      const watchResult = triggerEffect(newState, watcher, EffectTrigger.ON_ANY_DEATH, currentDefender)
-      newState = watchResult.newState
-      log.push(...watchResult.log)
-    }
-
-    // Trofeum: dodaj do trofeów właściciela atakującego (tryb Slava!)
-    const attackerPlayer = newState.players[currentAttacker?.owner ?? attacker.owner]
-    const defenderCardRemoved = removeFromField(newState, defenderInstanceId)
-    if (defenderCardRemoved) {
-      defenderCardRemoved.line = null
-      newState.players[defenderCardRemoved.owner].graveyard.push(defenderCardRemoved)
-      attackerPlayer?.trophies.push(defenderCardRemoved)
-
-      // Kościej (#43): wskrzesza się po śmierci od Wręcz (1. raz gratis)
-      if (defenderCardRemoved.metadata.kosciejResurrected) {
-        delete defenderCardRemoved.metadata.kosciejResurrected
-        defenderCardRemoved.currentStats.defense = (defenderCardRemoved.cardData as any).stats.defense
-        defenderCardRemoved.line = BattleLine.FRONT
-        // Usuń z cmentarza i trofeów
-        const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
-        if (gravIdx !== -1) newState.players[defenderCardRemoved.owner].graveyard.splice(gravIdx, 1)
-        if (attackerPlayer) {
-          const trophyIdx = attackerPlayer.trophies.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
-          if (trophyIdx !== -1) attackerPlayer.trophies.splice(trophyIdx, 1)
-        }
-        newState.players[defenderCardRemoved.owner].field.lines[BattleLine.FRONT].push(defenderCardRemoved)
+    // Sobowtór: kopia chroniona dopóki oryginał żyje — sprawdź PRZED triggerami śmierci
+    if (currentDefender.metadata.sobowtorProtected) {
+      const originalId = currentDefender.metadata.sobowtorOriginalId as string
+      const originalAlive = getAllCreaturesForPlayer(newState, currentDefender.owner)
+        .some(c => c.instanceId === originalId)
+      if (originalAlive) {
+        currentDefender.currentStats.defense = (currentDefender.cardData as any).stats?.defense ?? 1
         defenderDied = false
-        log.push(addLog(newState, `${defenderCardRemoved.cardData.name}: Serce bije! Wstaje na L1!`, 'effect'))
-      }
-
-      // Wij (#116): wskrzesza się raz na grę na 1 turę
-      if (defenderCardRemoved.metadata.wijRevived && !defenderCardRemoved.metadata.wijPermanentlyDead) {
-        defenderCardRemoved.currentStats.defense = (defenderCardRemoved.cardData as any).stats.defense
-        defenderCardRemoved.line = BattleLine.FRONT
-        const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
-        if (gravIdx !== -1) newState.players[defenderCardRemoved.owner].graveyard.splice(gravIdx, 1)
-        if (attackerPlayer) {
-          const trophyIdx = attackerPlayer.trophies.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
-          if (trophyIdx !== -1) attackerPlayer.trophies.splice(trophyIdx, 1)
-        }
-        newState.players[defenderCardRemoved.owner].field.lines[BattleLine.FRONT].push(defenderCardRemoved)
-        defenderDied = false
-        log.push(addLog(newState, `${defenderCardRemoved.cardData.name}: Nieśmiertelny! Wraca na L1 na ostatnią turę!`, 'effect'))
+        log.push(addLog(newState, `Sobowtór: Kopia ${currentDefender.cardData.name} niezniszczalna dopóki oryginał żyje!`, 'effect'))
       }
     }
-  }
+
+    // Trigger ON_DEATH obrońcy (pominięty jeśli Sobowtór uratował)
+    if (defenderDied) {
+      const deathResult = triggerEffect(newState, currentDefender, EffectTrigger.ON_DEATH)
+      newState = deathResult.newState
+      log.push(...deathResult.log)
+
+      // Trigger ON_KILL atakującego (np. Dziki Myśliwy, Czarnoksiężnik)
+      currentAttacker = findCardOnField(newState, attackerInstanceId)
+      if (currentAttacker) {
+        const killResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_KILL, currentDefender)
+        newState = killResult.newState
+        log.push(...killResult.log)
+      }
+
+      // Sprawdź efekt Moc Światogora: karta ginie po zabiciu
+      currentAttacker = findCardOnField(newState, attackerInstanceId)
+      if (currentAttacker?.metadata?.diesOnKill) {
+        currentAttacker.currentStats.defense = 0
+        log.push(addLog(newState, `${currentAttacker.cardData.name} ginie zgodnie z efektem Mocy Światogora!`, 'death'))
+      }
+
+      // ON_ANY_DEATH — trigger dla wszystkich istot na polu (np. Baba Jaga)
+      const allBeforeDefDeath = getAllCreaturesForPlayer(newState, 'player1').concat(getAllCreaturesForPlayer(newState, 'player2'))
+      for (const watcher of allBeforeDefDeath) {
+        if (watcher.instanceId === defenderInstanceId) continue
+        const watchResult = triggerEffect(newState, watcher, EffectTrigger.ON_ANY_DEATH, currentDefender)
+        newState = watchResult.newState
+        log.push(...watchResult.log)
+      }
+
+      // Trofeum: dodaj do trofeów właściciela atakującego (tryb Slava!)
+      const attackerPlayer = newState.players[currentAttacker?.owner ?? attacker.owner]
+      const defenderCardRemoved = removeFromField(newState, defenderInstanceId)
+      if (defenderCardRemoved) {
+        defenderCardRemoved.line = null
+        newState.players[defenderCardRemoved.owner].graveyard.push(defenderCardRemoved)
+        attackerPlayer?.trophies.push(defenderCardRemoved)
+
+        // Kościej (#43): wskrzesza się po śmierci od Wręcz (1. raz gratis)
+        if (defenderCardRemoved.metadata.kosciejResurrected) {
+          delete defenderCardRemoved.metadata.kosciejResurrected
+          defenderCardRemoved.currentStats.defense = (defenderCardRemoved.cardData as any).stats.defense
+          defenderCardRemoved.line = BattleLine.FRONT
+          const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
+          if (gravIdx !== -1) newState.players[defenderCardRemoved.owner].graveyard.splice(gravIdx, 1)
+          if (attackerPlayer) {
+            const trophyIdx = attackerPlayer.trophies.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
+            if (trophyIdx !== -1) attackerPlayer.trophies.splice(trophyIdx, 1)
+          }
+          newState.players[defenderCardRemoved.owner].field.lines[BattleLine.FRONT].push(defenderCardRemoved)
+          defenderDied = false
+          log.push(addLog(newState, `${defenderCardRemoved.cardData.name}: Serce bije! Wstaje na L1!`, 'effect'))
+        }
+
+        // Wij (#116): wskrzesza się raz na grę na 1 turę
+        if (defenderCardRemoved.metadata.wijRevived && !defenderCardRemoved.metadata.wijPermanentlyDead) {
+          defenderCardRemoved.currentStats.defense = (defenderCardRemoved.cardData as any).stats.defense
+          defenderCardRemoved.line = BattleLine.FRONT
+          const gravIdx = newState.players[defenderCardRemoved.owner].graveyard.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
+          if (gravIdx !== -1) newState.players[defenderCardRemoved.owner].graveyard.splice(gravIdx, 1)
+          if (attackerPlayer) {
+            const trophyIdx = attackerPlayer.trophies.findIndex(c => c.instanceId === defenderCardRemoved.instanceId)
+            if (trophyIdx !== -1) attackerPlayer.trophies.splice(trophyIdx, 1)
+          }
+          newState.players[defenderCardRemoved.owner].field.lines[BattleLine.FRONT].push(defenderCardRemoved)
+          defenderDied = false
+          log.push(addLog(newState, `${defenderCardRemoved.cardData.name}: Nieśmiertelny! Wraca na L1 na ostatnią turę!`, 'effect'))
+        }
+      }
+    } // end if (defenderDied)
+  } // end if (currentDefender.defense <= 0)
 
   // 9. ŚMIERĆ ATAKUJĄCEGO (od kontrataku lub Mocy Światogora)
   let attackerDied = false
@@ -453,26 +466,6 @@ export function resolveAttack(
     }
   }
 
-  // Sobowtór: kopia chroniona dopóki oryginał żyje
-  if (defenderDied) {
-    const defenderGrave = newState.players[defender.owner].graveyard.find(c => c.instanceId === defenderInstanceId)
-    if (defenderGrave && defenderGrave.metadata.sobowtorProtected) {
-      const originalId = defenderGrave.metadata.sobowtorOriginalId as string
-      const originalAlive = getAllCreaturesForPlayer(newState, defenderGrave.owner)
-        .some(c => c.instanceId === originalId)
-      if (originalAlive) {
-        // Oryginał żyje — kopia niezniszczalna, wróć ją na pole
-        defenderGrave.currentStats.defense = (defenderGrave.cardData as any).stats?.defense ?? 1
-        newState.players[defenderGrave.owner].graveyard = newState.players[defenderGrave.owner].graveyard
-          .filter(c => c.instanceId !== defenderInstanceId)
-        defenderGrave.line = BattleLine.FRONT
-        newState.players[defenderGrave.owner].field.lines[BattleLine.FRONT].push(defenderGrave)
-        defenderDied = false
-        log.push(addLog(newState, `Sobowtór: Kopia ${defenderGrave.cardData.name} niezniszczalna dopóki oryginał żyje!`, 'effect'))
-      }
-    }
-  }
-
   // Miecz Kladenet / Miecz Kladenet+: nośnik atakuje 2. cel
   currentAttacker = findCardOnField(newState, attackerInstanceId)
   if (currentAttacker && !attackerDied &&
@@ -494,6 +487,28 @@ export function resolveAttack(
           removed.line = null
           newState.players[enemySide].graveyard.push(removed)
           log.push(addLog(newState, `${removed.cardData.name} ginie od Miecza Kladeneta!`, 'death'))
+
+          // Triggery śmierci drugiego celu
+          const deathResult2 = triggerEffect(newState, removed, EffectTrigger.ON_DEATH)
+          newState = deathResult2.newState
+          log.push(...deathResult2.log)
+
+          // ON_KILL atakującego za drugi cel
+          const atkAfter2 = findCardOnField(newState, attackerInstanceId)
+          if (atkAfter2) {
+            const killResult2 = triggerEffect(newState, atkAfter2, EffectTrigger.ON_KILL, removed)
+            newState = killResult2.newState
+            log.push(...killResult2.log)
+          }
+
+          // ON_ANY_DEATH watchers
+          const allAfter2 = getAllCreaturesForPlayer(newState, 'player1').concat(getAllCreaturesForPlayer(newState, 'player2'))
+          for (const watcher of allAfter2) {
+            if (watcher.instanceId === removed.instanceId) continue
+            const anyDeathResult = triggerEffect(newState, watcher, EffectTrigger.ON_ANY_DEATH, removed)
+            newState = anyDeathResult.newState
+            log.push(...anyDeathResult.log)
+          }
         }
       }
     }

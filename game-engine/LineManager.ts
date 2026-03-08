@@ -143,7 +143,7 @@ export function canAttack(
 
   const attackerSide = attacker.owner
   const defenderSide = target.owner
-  const attackType = (attacker.cardData as any).attackType as AttackType
+  const attackType = ((attacker.cardData as any).attackType as AttackType) ?? AttackType.MELEE
 
   // Bitwa Nad Tollense: all creatures ignore line restrictions
   const bitwaActive = state.activeEvents?.some(e => e.cardData.effectId === 'adventure_bitwa_nad_tollense')
