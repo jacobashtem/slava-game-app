@@ -330,7 +330,7 @@ const onPlayDescription = computed(() => {
 }
 
 /* All direct children above the ::before/::after pseudo-elements */
-.game-board > * { position: relative; z-index: 1; }
+.game-board > *:not(.board-overlays) { position: relative; z-index: 1; }
 
 /* ====== PASEK GÓRNY ====== */
 .top-bar {
