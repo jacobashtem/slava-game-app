@@ -1,4 +1,5 @@
 <script setup lang="ts">
+definePageMeta({ ssr: false })
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'

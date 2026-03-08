@@ -191,12 +191,21 @@ export class AIPlayer {
       }
     }
 
-    // PLAY: aktywuj zdolności istot (jeśli dostępne)
+    // PLAY: aktywuj zdolności istot (jeśli dostępne i opłacalne)
+    const aiPlayer = currentState.players[this.side]
     const activatableCreatures = getAllCreaturesOnField(currentState, this.side)
       .filter(c => canActivateEffect(currentState, c))
     for (const creature of activatableCreatures) {
       const effect = getEffect((creature.cardData as any).effectId)
       if (!effect) continue
+      const cost = effect.activationCost ?? 0
+      // Sprawdź czy AI stać na aktywację
+      if (cost > aiPlayer.gold) continue
+      // Pomiń efekty samobójcze (np. Mara) gdy AI ma mało istot
+      if (effect.activationCooldown === 'once') {
+        const myCount = getAllCreaturesOnField(currentState, this.side).length
+        if (myCount <= 2) continue // nie poświęcaj gdy masz ≤ 2 istoty
+      }
       // Wybierz cel jeśli wymaga
       let targetId: string | undefined
       if (effect.activationRequiresTarget) {
@@ -205,7 +214,6 @@ export class AIPlayer {
           .filter(c => c.currentStats.defense > 0)
           .filter(c => !effect.activationTargetFilter || effect.activationTargetFilter(c, creature, currentState))
         if (enemies.length === 0) continue
-        // Cel: najsłabszy (do zabicia) lub najsilniejszy (debuff)
         targetId = enemies.reduce((a, b) =>
           a.currentStats.defense < b.currentStats.defense ? a : b
         ).instanceId
