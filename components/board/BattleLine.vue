@@ -247,7 +247,6 @@ function onLineDrop(e: DragEvent) {
           @activate-effect="onActivateEffect(card)"
           @mouseenter="ui.showTooltip(card.instanceId)"
           @mouseleave="ui.hideTooltip()"
-          @mouseleave="ui.hideTooltip()"
         />
       </div>
 
