@@ -24,8 +24,8 @@ const player = computed(() => game.state?.players.player1)
 const ai = computed(() => game.state?.players.player2)
 
 // ===== SEASON-BASED BATTLEFIELD BACKGROUND =====
-// Dynamic imports for season backgrounds (PNG → swap to WebP when available)
-const bgModules = import.meta.glob('../../assets/backgrounds/battlefields/1/*.png', { eager: true, query: '?url', import: 'default' })
+// Dynamic imports for season backgrounds (WebP, with PNG fallback)
+const bgModules = import.meta.glob('../../assets/backgrounds/battlefields/1/*.webp', { eager: true, query: '?url', import: 'default' })
 const seasonBgMap: Record<string, string> = {}
 for (const [path, url] of Object.entries(bgModules)) {
   if (path.includes('wiosna')) seasonBgMap.spring = url as string
