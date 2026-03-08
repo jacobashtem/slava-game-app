@@ -45,12 +45,14 @@ const MAX_SLOTS = 5
 const ghostSlots = computed(() => Math.max(0, MAX_SLOTS - props.cards.length))
 
 // ===== KLIK NA LINIĘ (wystawianie z ręki) =====
-function onLineClick() {
+function onLineClick(e: MouseEvent) {
   if (!props.isPlayerSide) return
-  if (ui.isPlacingCard && ui.selectedCardId) {
-    game.playCreature(ui.selectedCardId, props.line)
-    ui.clearSelection()
-  }
+  if (!ui.isPlacingCard || !ui.selectedCardId) return
+  // Nie reaguj gdy klik był na karcie (CreatureCard obsługuje to)
+  const target = e.target as HTMLElement
+  if (target.closest('.creature-card')) return
+  game.playCreature(ui.selectedCardId, props.line)
+  ui.clearSelection()
 }
 
 // ===== KLIK NA KARTĘ =====
@@ -204,7 +206,7 @@ function onLineDrop(e: DragEvent) {
 <template>
   <div
     :class="['battle-line', `line-${line}`, { highlighted: isDropTarget || isDragOver, 'enemy-targeting': isEnemyAttackTarget }]"
-    @click.self="onLineClick"
+    @click="onLineClick"
     @dragover="onDragOver"
     @dragleave="onDragLeave"
     @drop="onLineDrop"
@@ -253,17 +255,7 @@ function onLineDrop(e: DragEvent) {
         v-for="i in ghostSlots"
         :key="`ghost-${i}`"
         :class="['ghost-slot', { 'ghost-active': isDropTarget }]"
-        @click.stop="isDropTarget ? onLineClick() : undefined"
       />
-
-      <!-- Drop zone: visible when placing -->
-      <div
-        v-if="isPlayerSide && isDropTarget && cards.length >= MAX_SLOTS"
-        class="empty-slot active"
-        @click.stop="onLineClick"
-      >
-        <span>+</span>
-      </div>
     </div>
   </div>
 </template>
@@ -301,9 +293,10 @@ function onLineDrop(e: DragEvent) {
 }
 
 .battle-line.highlighted {
-  border-color: rgba(99, 102, 241, 0.6);
-  background: rgba(99, 102, 241, 0.06);
+  border-color: rgba(99, 102, 241, 0.7);
+  background: rgba(99, 102, 241, 0.08);
   cursor: pointer;
+  box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.08);
 }
 
 .battle-line.enemy-targeting {
@@ -389,49 +382,43 @@ function onLineDrop(e: DragEvent) {
 }
 
 
-/* Ghost slot: faint card outline showing available space */
+/* Ghost slot: card outline showing available space */
 .ghost-slot {
-  width: 80px;
-  height: 112px;
+  width: 86px;
+  height: 120px;
   border-radius: 6px;
-  border: 1px dashed rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.01);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.015);
   flex-shrink: 0;
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.ghost-slot.ghost-active {
-  border-color: rgba(99, 102, 241, 0.4);
-  background: rgba(99, 102, 241, 0.04);
-  cursor: pointer;
-  animation: slot-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes slot-pulse {
-  0%, 100% { border-color: rgba(99, 102, 241, 0.3); }
-  50% { border-color: rgba(99, 102, 241, 0.7); }
-}
-
-.empty-slot {
-  width: 80px;
-  height: 112px;
-  border-radius: 6px;
-  border: 1px dashed var(--border-highlight);
+  transition: all 0.25s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.3;
-  transition: opacity 0.2s;
 }
 
-.empty-slot.active {
-  opacity: 0.8;
-  border-color: rgba(99, 102, 241, 0.7);
-  color: rgba(99, 102, 241, 0.9);
-  font-size: 24px;
-  cursor: pointer;
-}
-.empty-slot.active:hover {
+/* Aktywny ghost = gracz wybrał kartę z ręki, te sloty pulsują i są klikalne */
+.ghost-slot.ghost-active {
+  border: 2px dashed rgba(99, 102, 241, 0.7);
   background: rgba(99, 102, 241, 0.1);
+  cursor: pointer;
+  animation: slot-pulse 1.2s ease-in-out infinite;
+  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.15), 0 0 8px rgba(99, 102, 241, 0.2);
+}
+.ghost-slot.ghost-active::after {
+  content: '+';
+  font-size: 28px;
+  font-weight: 300;
+  color: rgba(99, 102, 241, 0.7);
+  line-height: 1;
+}
+.ghost-slot.ghost-active:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.9);
+  box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.25), 0 0 16px rgba(99, 102, 241, 0.35);
+}
+
+@keyframes slot-pulse {
+  0%, 100% { border-color: rgba(99, 102, 241, 0.5); background: rgba(99, 102, 241, 0.06); }
+  50% { border-color: rgba(99, 102, 241, 0.9); background: rgba(99, 102, 241, 0.14); }
 }
 </style>
