@@ -24,9 +24,17 @@ const player = computed(() => game.state?.players.player1)
 const ai = computed(() => game.state?.players.player2)
 
 // ===== SEASON-BASED BATTLEFIELD BACKGROUND =====
-// Placeholder gradients — replace with url() when WebP artwork arrives:
-//   import springBg from '../../assets/backgrounds/battlefields/spring.webp?url'
-//   ...then: spring: `url(${springBg})`,
+// Dynamic imports for season backgrounds (PNG → swap to WebP when available)
+const bgModules = import.meta.glob('../../assets/backgrounds/battlefields/1/*.png', { eager: true, query: '?url', import: 'default' })
+const seasonBgMap: Record<string, string> = {}
+for (const [path, url] of Object.entries(bgModules)) {
+  if (path.includes('wiosna')) seasonBgMap.spring = url as string
+  else if (path.includes('lato')) seasonBgMap.summer = url as string
+  else if (path.includes('jesien')) seasonBgMap.autumn = url as string
+  else if (path.includes('zima')) seasonBgMap.winter = url as string
+}
+
+// Fallback gradients in case images aren't loaded
 const seasonGradients: Record<string, string> = {
   spring: 'radial-gradient(ellipse 120% 100% at 50% 60%, #0d2818 0%, #0a1628 40%, #080c1a 100%)',
   summer: 'radial-gradient(ellipse 120% 100% at 50% 55%, #1a1a0a 0%, #0f1520 40%, #080c1a 100%)',
@@ -34,9 +42,11 @@ const seasonGradients: Record<string, string> = {
   winter: 'radial-gradient(ellipse 120% 100% at 50% 55%, #0c1420 0%, #0a0e1e 40%, #060a14 100%)',
 }
 
-const bgStyle = computed(() => ({
-  '--bf-bg': seasonGradients[game.season] ?? seasonGradients.summer,
-}))
+const bgStyle = computed(() => {
+  const url = seasonBgMap[game.season]
+  const bg = url ? `url(${url})` : (seasonGradients[game.season] ?? seasonGradients.summer)
+  return { '--bf-bg': bg }
+})
 
 // ===== ACTIVE AURAS INFO BAR =====
 const passiveAuraMap: Record<string, { icon: string; label: string; desc: string }> = {
