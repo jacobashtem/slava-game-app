@@ -1189,9 +1189,7 @@ registerEffect({
   execute: (ctx) => {
     const { state, source, target, value } = ctx
     if (!target || !value || value <= 0) return effectResult(cloneGameState(state))
-    const overflow = Math.abs(Math.min(0, target.currentStats.defense + value - (value - value)))
-    // Overflow = jak bardzo "przebiło" obrony celu
-    // target.currentStats.defense jest już <= 0 po ataku; overflow = |defense|
+    // Overflow = jak bardzo "przebiło" obrony celu (defense jest już <= 0 po ataku)
     const actualOverflow = Math.abs(Math.min(0, target.currentStats.defense))
     if (actualOverflow <= 0) return effectResult(cloneGameState(state))
 

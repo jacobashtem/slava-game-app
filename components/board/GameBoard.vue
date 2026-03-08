@@ -113,6 +113,7 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
   if (game.state?.pendingInteraction || ui.pendingActivation || ui.confirmingSurrender) return
   if (game.state?.awaitingOnPlayConfirmation) return
+  if (ui.isEnhancedMode || ui.isPlacingCard || ui.isMovingCard || ui.pendingArtifactId) return
 
   switch (e.key) {
     case ' ':  // Space = advance phase / end turn
@@ -302,18 +303,20 @@ const onPlayDescription = computed(() => {
           <div class="onplay-btns">
             <button class="onplay-yes" @click="() => {
               const pa = ui.pendingActivation!
-              ui.pendingActivation = null
-              if (pa.requiresTarget && pa.availableTargetIds?.length) {
-                // Płatna + wymaga cel → pendingInteraction (przez engine żeby sync)
-                game.injectPendingInteraction({
-                  type: 'on_play_target',
-                  sourceInstanceId: pa.cardInstanceId,
-                  respondingPlayer: 'player1',
-                  availableTargetIds: pa.availableTargetIds,
-                  metadata: { isActivation: true, paidCost: pa.cost },
-                })
-              } else {
-                game.activateCreatureEffect(pa.cardInstanceId)
+              try {
+                if (pa.requiresTarget && pa.availableTargetIds?.length) {
+                  game.injectPendingInteraction({
+                    type: 'on_play_target',
+                    sourceInstanceId: pa.cardInstanceId,
+                    respondingPlayer: 'player1',
+                    availableTargetIds: pa.availableTargetIds,
+                    metadata: { isActivation: true, paidCost: pa.cost },
+                  })
+                } else {
+                  game.activateCreatureEffect(pa.cardInstanceId)
+                }
+              } finally {
+                ui.pendingActivation = null
               }
             }">TAK — Aktywuj</button>
             <button class="onplay-no" @click="ui.pendingActivation = null">NIE — Anuluj</button>

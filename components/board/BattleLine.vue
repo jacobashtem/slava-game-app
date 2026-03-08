@@ -62,8 +62,11 @@ function onCardClick(card: CardInstance) {
   if (props.isPlayerSide) {
     // Artefakt czeka na cel
     if (ui.pendingArtifactId && game.currentPhase === GamePhase.PLAY) {
-      game.playAdventure(ui.pendingArtifactId, card.instanceId)
-      ui.clearPendingArtifact()
+      try {
+        game.playAdventure(ui.pendingArtifactId, card.instanceId)
+      } finally {
+        ui.clearPendingArtifact()
+      }
       return
     }
 
