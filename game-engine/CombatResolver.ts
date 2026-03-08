@@ -246,7 +246,7 @@ export function resolveAttack(
       result: {
         attacker: finalAttackerNc, defender: finalDefenderNc,
         damageToDefender, damageToAttacker: 0,
-        defenderDied: false, attackerDied: false, counterattackOccurred: false,
+        defenderDied: !findCardOnField(newState, defenderInstanceId), attackerDied: !findCardOnField(newState, attackerInstanceId), counterattackOccurred: false,
         effectsTriggered, log,
       },
     }
