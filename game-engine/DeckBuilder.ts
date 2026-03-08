@@ -297,11 +297,13 @@ export function buildRandomDeck(
   const shuffledAdventures = shuffle([...availableAdventures])
 
   for (let i = 0; i < creatureCount; i++) {
+    if (shuffledCreatures.length === 0) break
     const cardData = shuffledCreatures[i % shuffledCreatures.length]!
     deck.push(createCreatureInstance(cardData, owner))
   }
 
   for (let i = 0; i < adventureCount; i++) {
+    if (shuffledAdventures.length === 0) break
     const cardData = shuffledAdventures[i % shuffledAdventures.length]!
     deck.push(createAdventureInstance(cardData, owner))
   }

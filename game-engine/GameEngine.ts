@@ -777,12 +777,12 @@ export class GameEngine {
           const log = addLog(newState, `${kosciej.cardData.name}: Wskrzeszony za 1 ZŁ! Wraca na L1!`, 'effect')
           this.applyStateAndLog(newState, [log])
         } else {
-          addLog(newState, `${interaction.sourceInstanceId}: Nie można wskrzesić — brak ZŁ lub karty!`, 'system')
-          this.applyStateAndLog(newState, [])
+          const failLog = addLog(newState, `${interaction.sourceInstanceId}: Nie można wskrzesić — brak ZŁ lub karty!`, 'system')
+          this.applyStateAndLog(newState, [failLog])
         }
       } else {
-        addLog(newState, `Kościej: Gracz rezygnuje z wskrzeszenia.`, 'effect')
-        this.applyStateAndLog(newState, [])
+        const skipLog = addLog(newState, `Kościej: Gracz rezygnuje z wskrzeszenia.`, 'effect')
+        this.applyStateAndLog(newState, [skipLog])
       }
       this.checkWinAndNotify()
       return cloneGameState(this.state)
