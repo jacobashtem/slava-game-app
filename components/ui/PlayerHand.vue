@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import CreatureCard from '../cards/CreatureCard.vue'
 import { Icon } from '@iconify/vue'
 import type { CardInstance } from '../../game-engine/types'
@@ -28,6 +28,10 @@ const canDraw = computed(() =>
   && (game.player?.deck.length ?? 0) > 0
   && hand.value.length < HAND_SIZE
 )
+
+// Hand composition summary
+const creatureCount = computed(() => hand.value.filter(c => c.cardData.cardType === 'creature').length)
+const adventureCount = computed(() => hand.value.filter(c => c.cardData.cardType !== 'creature').length)
 
 function onCardClick(card: CardInstance) {
   if (!game.isPlayerTurn) return
@@ -92,7 +96,11 @@ const adventureTypeColor = (card: CardInstance) => {
   <div class="player-hand">
     <div class="hand-label">
       <Icon icon="game-icons:card-hand" />
-      Ręka ({{ hand.length }})
+      <span>Ręka ({{ hand.length }})</span>
+      <span v-if="hand.length > 0" class="hand-composition">
+        <span class="hc-creature" v-if="creatureCount > 0">{{ creatureCount }}i</span>
+        <span class="hc-adventure" v-if="adventureCount > 0">{{ adventureCount }}p</span>
+      </span>
     </div>
 
     <div class="hand-cards">
@@ -184,6 +192,16 @@ const adventureTypeColor = (card: CardInstance) => {
   min-width: 44px;
   flex-shrink: 0;
 }
+
+.hand-composition {
+  display: flex;
+  gap: 4px;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.hc-creature { color: #86efac; }
+.hc-adventure { color: #fbbf24; }
 
 .hand-cards {
   display: flex;

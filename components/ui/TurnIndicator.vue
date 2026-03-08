@@ -12,6 +12,22 @@ const phaseLabel = computed(() => ({
   [GamePhase.COMBAT]: 'Walka',
   [GamePhase.END]:    'Koniec',
 }[game.currentPhase] ?? game.currentPhase))
+
+const seasonInfo = computed(() => ({
+  spring: { label: 'Wiosna', icon: '🌸' },
+  summer: { label: 'Lato',   icon: '☀' },
+  autumn: { label: 'Jesień', icon: '🍂' },
+  winter: { label: 'Zima',   icon: '❄' },
+}[game.season]))
+
+// Season progress: which round within current season (1-3)
+const seasonProgress = computed(() => {
+  const r = game.roundNumber
+  if (r <= 3) return r
+  if (r <= 6) return r - 3
+  if (r <= 9) return r - 6
+  return Math.min(r - 9, 3) // winter goes on indefinitely, cap display at 3
+})
 </script>
 
 <template>
@@ -21,6 +37,12 @@ const phaseLabel = computed(() => ({
     </div>
     <div class="phase-badge">{{ phaseLabel }}</div>
     <div class="round-info">R.{{ game.roundNumber }}</div>
+    <div class="season-badge" v-if="seasonInfo">
+      {{ seasonInfo.icon }} {{ seasonInfo.label }}
+      <span class="season-dots">
+        <span v-for="i in 3" :key="i" :class="['dot', { filled: i <= seasonProgress }]" />
+      </span>
+    </div>
   </div>
 </template>
 
@@ -67,6 +89,35 @@ const phaseLabel = computed(() => ({
   font-size: 10px;
   font-family: monospace;
   white-space: nowrap;
+}
+
+.season-badge {
+  font-size: 9px;
+  color: #94a3b8;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 3px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.season-dots {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dot.filled {
+  background: #94a3b8;
 }
 
 @keyframes blink {

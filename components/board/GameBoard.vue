@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch, onMounted, onUnmounted } from 'vue'
 import PlayerField from './PlayerField.vue'
 import PlayerHand from '../ui/PlayerHand.vue'
 import TurnIndicator from '../ui/TurnIndicator.vue'
@@ -12,10 +12,14 @@ import GraveyardModal from '../ui/GraveyardModal.vue'
 import PendingInteractionModal from '../ui/PendingInteractionModal.vue'
 import GameHint from '../ui/GameHint.vue'
 import AISummaryPanel from '../ui/AISummaryPanel.vue'
+import WeatherEffects from '../ui/WeatherEffects.vue'
+import MusicPlayer from '../ui/MusicPlayer.vue'
+import TurnBanner from '../ui/TurnBanner.vue'
 import CardBack from '../cards/CardBack.vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
-import { BattleLine } from '../../game-engine/constants'
+import { BattleLine, GamePhase } from '../../game-engine/constants'
+import { useSFX } from '../../composables/useSFX'
 
 const game = useGameStore()
 const ui = useUIStore()
@@ -95,6 +99,42 @@ const activeAuras = computed<ActiveAuraEntry[]>(() => {
 // Active event cards (Zlot Czarownic, Twierdza, etc.)
 const activeEventCards = computed(() => game.state?.activeEvents ?? [])
 
+// ===== SFX WATCHERS =====
+const sfx = useSFX()
+watch(() => ui.animatingAttack, (v) => { if (v) sfx.sfxAttack() })
+watch(() => ui.animatingHit, (v) => { if (v) sfx.sfxHit() })
+watch(() => ui.animatingDeath, (v) => { if (v.size > 0) sfx.sfxDeath() }, { deep: true })
+watch(() => game.winner, (v) => { if (v) sfx.sfxGameOver() })
+watch(() => game.currentPhase, () => sfx.sfxPhase())
+
+// ===== KEYBOARD SHORTCUTS =====
+function onKeyDown(e: KeyboardEvent) {
+  // Don't handle if modal is open or typing in input
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+  if (game.state?.pendingInteraction || ui.pendingActivation || ui.confirmingSurrender) return
+  if (game.state?.awaitingOnPlayConfirmation) return
+
+  switch (e.key) {
+    case ' ':  // Space = advance phase / end turn
+    case 'Enter':
+      e.preventDefault()
+      if (!game.isPlayerTurn || game.winner) return
+      if (game.currentPhase === GamePhase.COMBAT || game.currentPhase === GamePhase.END) {
+        game.endTurn()
+      } else {
+        game.advancePhase()
+      }
+      break
+    case 'Escape':
+      e.preventDefault()
+      ui.clearSelection()
+      break
+  }
+}
+
+onMounted(() => { window.addEventListener('keydown', onKeyDown) })
+onUnmounted(() => { window.removeEventListener('keydown', onKeyDown) })
+
 const onPlayDescription = computed(() => {
   const cardId = game.state?.awaitingOnPlayConfirmation
   if (!cardId || !game.state) return ''
@@ -112,6 +152,9 @@ const onPlayDescription = computed(() => {
 <template>
   <div class="game-board" v-if="game.state && player && ai" :style="bgStyle">
 
+    <!-- ===== EFEKTY POGODOWE ===== -->
+    <WeatherEffects :season="game.season" />
+
     <!-- ===== PASEK GÓRNY ===== -->
     <div class="top-bar">
       <div class="top-bar-left">
@@ -121,6 +164,7 @@ const onPlayDescription = computed(() => {
         <ActionLog />
       </div>
       <div class="top-bar-right">
+        <MusicPlayer />
         <PhaseControls />
       </div>
     </div>
@@ -138,6 +182,12 @@ const onPlayDescription = computed(() => {
           :is-a-i="true"
           @open-graveyard="ui.openGraveyardViewer('player2')"
         />
+        <!-- AI hand: stacked card backs -->
+        <div v-if="ai.hand.length > 0" class="ai-hand-backs">
+          <CardBack v-for="i in Math.min(ai.hand.length, 6)" :key="i" :small="true" class="ai-back" />
+          <span v-if="ai.hand.length > 6" class="ai-hand-extra">+{{ ai.hand.length - 6 }}</span>
+        </div>
+        <span v-else class="empty-hand-label">Pusta ręka</span>
         <div class="sidebar-spacer" />
         <button
           v-if="!game.winner"
@@ -276,6 +326,7 @@ const onPlayDescription = computed(() => {
       </div>
     </Transition>
 
+    <TurnBanner />
     <CardTooltip />
     <AISummaryPanel />
     <GameOverModal />
@@ -347,7 +398,7 @@ const onPlayDescription = computed(() => {
 
 .top-bar-left { flex: 0 0 auto; }
 .top-bar-center { flex: 1; min-width: 0; }
-.top-bar-right { flex: 0 0 auto; }
+.top-bar-right { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
 
 /* ====== GŁÓWNA PLANSZA ====== */
 .board-main {
@@ -390,6 +441,13 @@ const onPlayDescription = computed(() => {
 }
 .ai-back:first-child {
   margin-top: 0;
+}
+
+.ai-hand-extra {
+  font-size: 9px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-top: 2px;
 }
 
 .empty-hand-label {

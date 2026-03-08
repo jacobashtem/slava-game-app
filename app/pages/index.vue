@@ -20,34 +20,9 @@ function toggleDomain(domain: number) {
   }
 }
 
-// ===== MUZYKA =====
-const songModules = import.meta.glob('../../assets/songs/*.mp3', { eager: true, query: '?url', import: 'default' })
-const songUrls = Object.values(songModules) as string[]
-
-let _bgAudio: HTMLAudioElement | null = null
-let _currentSongIdx = -1
-
-function playNextSong() {
-  if (songUrls.length === 0) return
-  _currentSongIdx = (_currentSongIdx + 1) % songUrls.length
-  const url = songUrls[_currentSongIdx]
-  if (_bgAudio) { _bgAudio.pause(); _bgAudio = null }
-  _bgAudio = new Audio(url)
-  _bgAudio.volume = 0.4
-  _bgAudio.addEventListener('ended', playNextSong)
-  _bgAudio.play().catch(() => {})
-}
-
-function playRandomSong() {
-  if (songUrls.length === 0) return
-  _currentSongIdx = Math.floor(Math.random() * songUrls.length) - 1
-  playNextSong()
-}
-
 function startNewGame() {
   game.setDifficulty(difficulty.value)
   game.setDomains(selectedDomains.value)
-  playRandomSong()
   game.startGame()
   navigateTo('/game')
 }
@@ -55,7 +30,6 @@ function startNewGame() {
 function startAlphaGame() {
   game.setDifficulty(difficulty.value)
   game.setDomains(selectedDomains.value)
-  playRandomSong()
   game.startAlphaGame()
   navigateTo('/game')
 }

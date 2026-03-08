@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
@@ -7,6 +8,32 @@ import { useArenaStore } from '../../stores/arenaStore'
 const game = useGameStore()
 const ui = useUIStore()
 const arena = useArenaStore()
+
+const stats = computed(() => {
+  if (!game.state) return null
+  const p = game.state.players.player1
+  const a = game.state.players.player2
+  return {
+    round: game.roundNumber,
+    season: game.season,
+    playerGrave: p.graveyard.length,
+    aiGrave: a.graveyard.length,
+    playerGold: p.gold,
+    aiGold: a.gold,
+    playerDeck: p.deck.length,
+    aiDeck: a.deck.length,
+    // Count kills from action log
+    playerKills: game.state.actionLog.filter(e => e.type === 'death' && e.side === 'player2').length,
+    aiKills: game.state.actionLog.filter(e => e.type === 'death' && e.side === 'player1').length,
+  }
+})
+
+const seasonLabel: Record<string, string> = {
+  spring: 'Wiosna',
+  summer: 'Lato',
+  autumn: 'Jesień',
+  winter: 'Zima',
+}
 
 function restart() {
   ui.clearSelection()
@@ -32,7 +59,29 @@ function restart() {
         <p class="result-sub">
           {{ game.winner === 'player1' ? 'Chwała bohaterowi Słowian!' : 'Wróg okazał się silniejszy tym razem...' }}
         </p>
-        <p class="round-info">Runda {{ game.roundNumber }}</p>
+        <!-- Game stats -->
+        <div v-if="stats" class="game-stats">
+          <div class="stat-row">
+            <span class="stat-label">Runda</span>
+            <span class="stat-val">{{ stats.round }} ({{ seasonLabel[stats.season] ?? stats.season }})</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Zabici wrogowie</span>
+            <span class="stat-val stat-kills">{{ stats.playerKills }}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Stracone istoty</span>
+            <span class="stat-val stat-losses">{{ stats.aiKills }}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Złoto</span>
+            <span class="stat-val">{{ stats.playerGold }} ZŁ</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Talia</span>
+            <span class="stat-val">{{ stats.playerDeck }} kart</span>
+          </div>
+        </div>
         <button class="restart-btn" @click="restart">
           <Icon icon="game-icons:cycle" />
           {{ game.isArenaMode ? 'Resetuj Arenę' : 'Zagraj ponownie' }}
@@ -89,11 +138,38 @@ h2 { margin: 0; font-size: 28px; }
   margin: 0;
 }
 
-.round-info {
-  font-size: 12px;
-  color: #475569;
-  margin: 0;
+/* Game stats */
+.game-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 240px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid #1e293b;
+  border-radius: 8px;
 }
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.stat-label {
+  color: #64748b;
+}
+
+.stat-val {
+  color: #94a3b8;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.stat-kills { color: #4ade80; }
+.stat-losses { color: #f87171; }
 
 .restart-btn {
   display: flex;

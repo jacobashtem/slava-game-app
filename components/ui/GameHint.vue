@@ -26,7 +26,7 @@ const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null 
     if (ui.isPlacingCard) {
       return { text: 'Kliknij linię na polu, aby wystawić istotę', type: 'info' }
     }
-    return { text: 'Faza Wystawiania — wystaw istotę, zagraj kartę przygody lub przenieś istotę na pole', type: 'info' }
+    return { text: 'Faza Wystawiania — wystaw istotę, zagraj kartę przygody lub przenieś istotę na pole [Spacja → dalej]', type: 'info' }
   }
 
   if (phase === GamePhase.COMBAT) {
@@ -42,10 +42,10 @@ const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null 
       : []
 
     if (canAttackers.length === 0) {
-      return { text: 'Brak istot zdolnych do ataku — zakończ turę', type: 'ok' }
+      return { text: 'Brak istot zdolnych do ataku — zakończ turę [Spacja]', type: 'ok' }
     }
 
-    return { text: `Faza Walki — wybierz swoją istotę (⚔ ATK) aby zaatakować`, type: 'warn' }
+    return { text: `Faza Walki — wybierz swoją istotę (⚔ ATK) aby zaatakować [Spacja → zakończ turę, Esc → anuluj]`, type: 'warn' }
   }
 
   return null
