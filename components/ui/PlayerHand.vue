@@ -102,8 +102,6 @@ const adventureTypeColor = (card: CardInstance) => {
         :key="card.instanceId"
         :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId }]"
         @click="onCardClick(card)"
-        @mouseenter="ui.showTooltip(card.instanceId)"
-        @mouseleave="ui.hideTooltip()"
       >
         <!-- Istota -->
         <CreatureCard
@@ -200,16 +198,13 @@ const adventureTypeColor = (card: CardInstance) => {
 
 .hand-card-wrap {
   cursor: pointer;
-  transition: transform 0.15s ease;
   flex-shrink: 0;
 }
 
-.hand-card-wrap:hover {
-  transform: translateY(-10px);
-}
-
 .hand-card-wrap.selected {
-  transform: translateY(-16px);
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 /* Adventure card */
