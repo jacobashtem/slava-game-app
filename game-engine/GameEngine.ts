@@ -351,6 +351,7 @@ export class GameEngine {
     // Uruchom START + DRAW dla AI (lub następnej tury gracza)
     this.state = this.runStartPhase(this.state)
     this.notifyStateChange()
+    this.checkWinAndNotify()
 
     // Jeśli to tura AI, uruchom AI
     if (this.state.players[this.state.currentTurn].isAI) {
@@ -468,6 +469,7 @@ export class GameEngine {
     this.applyStateAndLog(newState, log)
     this.state = this.runStartPhase(this.state)
     this.notifyStateChange()
+    this.checkWinAndNotify()
     return cloneGameState(this.state)
   }
 
@@ -807,6 +809,19 @@ export class GameEngine {
   injectPendingInteraction(interaction: GameState['pendingInteraction']): GameState {
     const newState = cloneGameState(this.state)
     newState.pendingInteraction = interaction
+    this.state = newState
+    return cloneGameState(this.state)
+  }
+
+  /**
+   * Awaryjne przywrócenie tury gracza (gdy AI się zawiesi).
+   */
+  forcePlayerTurn(): GameState {
+    const newState = cloneGameState(this.state)
+    newState.currentTurn = 'player1'
+    newState.currentPhase = GamePhase.PLAY
+    delete newState.pendingInteraction
+    newState.awaitingOnPlayConfirmation = null
     this.state = newState
     return cloneGameState(this.state)
   }

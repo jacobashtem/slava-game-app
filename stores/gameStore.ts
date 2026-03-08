@@ -435,7 +435,12 @@ export const useGameStore = defineStore('game', () => {
     const aiTimeout = setTimeout(() => {
       if (isAIThinking.value) {
         console.warn('[gameStore] AI turn timeout — forcing end')
-        try { state.value = engine.aiEndTurn() } catch {}
+        try {
+          state.value = engine.aiEndTurn()
+        } catch {
+          // aiEndTurn failed — force recovery to player turn
+          state.value = engine.forcePlayerTurn()
+        }
         isAIThinking.value = false
         playerTurnLogStart.value = state.value?.actionLog.length ?? 0
       }
@@ -600,8 +605,8 @@ export const useGameStore = defineStore('game', () => {
     if (state.value && state.value.currentTurn !== 'player1' && !winner.value) {
       try {
         state.value = engine.aiEndTurn()
-      } catch (e: any) {
-        console.warn('[gameStore] AI forced end_turn error:', e.message)
+      } catch {
+        state.value = engine.forcePlayerTurn()
       }
     }
 
