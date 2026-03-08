@@ -456,6 +456,13 @@ export class GameEngine {
     return cloneGameState(this.state)
   }
 
+  aiActivateEffect(cardInstanceId: string, targetInstanceId?: string): GameState {
+    const { newState, log } = activateCreatureEffect(this.state, cardInstanceId, targetInstanceId)
+    this.applyStateAndLog(newState, log)
+    this.checkWinAndNotify()
+    return cloneGameState(this.state)
+  }
+
   aiEndTurn(): GameState {
     const { newState, log } = processEndPhase(this.state)
     this.applyStateAndLog(newState, log)

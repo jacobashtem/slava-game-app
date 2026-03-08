@@ -557,6 +557,11 @@ export const useGameStore = defineStore('game', () => {
               }
             }
             break
+          case 'activate_effect':
+            if (decision.cardInstanceId) {
+              state.value = engine.aiActivateEffect(decision.cardInstanceId, decision.targetInstanceId)
+            }
+            break
           case 'change_position':
             if (decision.cardInstanceId && decision.targetPosition) {
               state.value = engine.aiChangePosition(decision.cardInstanceId, decision.targetPosition)

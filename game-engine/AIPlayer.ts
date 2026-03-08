@@ -11,11 +11,12 @@ import { cloneGameState, addLog } from './GameStateUtils'
 import { canAttack, canPlayCreature, canPlaceInLine, getAllCreaturesOnField, getEnemyFrontLine } from './LineManager'
 import { playCreature, playAdventure, performAttack, changePosition } from './TurnManager'
 import { GOLD_EDITION_RULES } from './constants'
+import { canActivateEffect, getEffect } from './EffectRegistry'
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard'
 
 export interface AIDecision {
-  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'end_turn'
+  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'activate_effect' | 'end_turn'
   cardInstanceId?: string
   targetInstanceId?: string
   targetLine?: BattleLine
@@ -188,6 +189,32 @@ export class AIPlayer {
           useEnhanced,
         })
       }
+    }
+
+    // PLAY: aktywuj zdolności istot (jeśli dostępne)
+    const activatableCreatures = getAllCreaturesOnField(currentState, this.side)
+      .filter(c => canActivateEffect(currentState, c))
+    for (const creature of activatableCreatures) {
+      const effect = getEffect((creature.cardData as any).effectId)
+      if (!effect) continue
+      // Wybierz cel jeśli wymaga
+      let targetId: string | undefined
+      if (effect.activationRequiresTarget) {
+        const enemySide = this.side === 'player1' ? 'player2' : 'player1'
+        const enemies = getAllCreaturesOnField(currentState, enemySide)
+          .filter(c => c.currentStats.defense > 0)
+          .filter(c => !effect.activationTargetFilter || effect.activationTargetFilter(c, creature, currentState))
+        if (enemies.length === 0) continue
+        // Cel: najsłabszy (do zabicia) lub najsilniejszy (debuff)
+        targetId = enemies.reduce((a, b) =>
+          a.currentStats.defense < b.currentStats.defense ? a : b
+        ).instanceId
+      }
+      decisions.push({
+        type: 'activate_effect',
+        cardInstanceId: creature.instanceId,
+        targetInstanceId: targetId,
+      })
     }
 
     // COMBAT: ustaw pozycje — słabe istoty (def ≤ 2) w obronę, reszta w atak

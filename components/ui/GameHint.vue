@@ -9,7 +9,16 @@ const game = useGameStore()
 const ui = useUIStore()
 
 const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null => {
-  if (!game.isPlayerTurn || game.winner) return null
+  if (game.winner) return null
+
+  // AI thinking hint
+  if (!game.isPlayerTurn) {
+    if (game.isAIThinking) return { text: 'Przeciwnik rozważa swój ruch...', type: 'info' }
+    return null
+  }
+
+  // Pending interaction — modal handles it
+  if (game.state?.pendingInteraction || game.state?.awaitingOnPlayConfirmation) return null
 
   const phase = game.currentPhase
 
@@ -86,6 +95,18 @@ const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null 
   color: #86efac;
   background: rgba(134, 239, 172, 0.06);
   border-top: 1px solid rgba(134, 239, 172, 0.15);
+}
+
+.hint-ai {
+  color: #fca5a5;
+  background: rgba(252, 165, 165, 0.06);
+  border-top: 1px solid rgba(252, 165, 165, 0.15);
+  animation: blink 1.5s ease infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .hint-fade-enter-active, .hint-fade-leave-active { transition: opacity 0.2s; }
