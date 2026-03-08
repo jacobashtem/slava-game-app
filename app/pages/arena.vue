@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useArenaStore, type ArenaCardEntry } from '../../stores/arenaStore'
 import { useGameStore } from '../../stores/gameStore'
@@ -9,105 +9,172 @@ definePageMeta({ ssr: false })
 const arena = useArenaStore()
 const game = useGameStore()
 
-// ===== WYSZUKIWARKA =====
+// ===== FILTR / SZUKAJ =====
 const searchQuery = ref('')
-const searchOpen = ref(false)
+const typeFilter = ref<'all' | 'creature' | 'adventure'>('all')
 
 const filteredCards = computed(() => {
+  let list = arena.catalog
+  if (typeFilter.value !== 'all') {
+    list = list.filter(c => c.cardType === typeFilter.value)
+  }
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return arena.catalog.slice(0, 10)
-  return arena.catalog
-    .filter(c => c.name.toLowerCase().includes(q))
-    .slice(0, 10)
+  if (q) {
+    list = list.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.effectDescription.toLowerCase().includes(q) ||
+      c.effectId.toLowerCase().includes(q)
+    )
+  }
+  return list
 })
+
+// ===== NAWIGACJA =====
+const listRef = ref<HTMLElement | null>(null)
 
 function selectCard(entry: ArenaCardEntry) {
   arena.setupScenario(entry)
-  searchQuery.value = entry.name
-  searchOpen.value = false
 }
 
-function delayCloseSearch() {
-  setTimeout(() => { searchOpen.value = false }, 150)
+function selectNext() {
+  if (!arena.focusedEntry) {
+    if (filteredCards.value.length > 0) selectCard(filteredCards.value[0]!)
+    return
+  }
+  const idx = filteredCards.value.findIndex(c => c.id === arena.focusedEntry!.id && c.cardType === arena.focusedEntry!.cardType)
+  if (idx < filteredCards.value.length - 1) {
+    selectCard(filteredCards.value[idx + 1]!)
+    scrollToActive(idx + 1)
+  }
 }
 
-function clearCard() {
-  game.isArenaMode = false
-  arena.isReady = false
-  arena.focusedEntry = null
-  searchQuery.value = ''
+function selectPrev() {
+  if (!arena.focusedEntry) return
+  const idx = filteredCards.value.findIndex(c => c.id === arena.focusedEntry!.id && c.cardType === arena.focusedEntry!.cardType)
+  if (idx > 0) {
+    selectCard(filteredCards.value[idx - 1]!)
+    scrollToActive(idx - 1)
+  }
+}
+
+function scrollToActive(idx: number) {
+  nextTick(() => {
+    const el = listRef.value?.querySelector(`[data-idx="${idx}"]`)
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  })
+}
+
+// domain color helper
+function getDomainColor(data: any): string {
+  const colors: Record<number, string> = { 1: '#f5c542', 2: '#4caf50', 3: '#9c27b0', 4: '#c62828' }
+  return colors[data.idDomain] ?? '#94a3b8'
 }
 </script>
 
 <template>
   <div class="arena-wrapper">
-    <!-- Kompaktowy pasek areny nad planszą -->
-    <div class="arena-bar">
-      <NuxtLink to="/" class="arena-back-btn">
-        <Icon icon="game-icons:exit-door" />
-        Menu
-      </NuxtLink>
-
-      <div class="arena-bar-title">
-        <Icon icon="game-icons:card-joker" />
-        Arena
+    <!-- SIDEBAR: lista kart -->
+    <div class="arena-sidebar">
+      <div class="sidebar-header">
+        <NuxtLink to="/" class="arena-back-btn">
+          <Icon icon="game-icons:exit-door" /> Menu
+        </NuxtLink>
+        <div class="sidebar-title">
+          <Icon icon="game-icons:card-joker" />
+          Arena
+        </div>
       </div>
 
-      <!-- Wyszukiwarka karty -->
-      <div class="arena-search" @focusout.capture="delayCloseSearch">
-        <Icon icon="game-icons:magnifying-glass" class="search-icon" />
+      <!-- Search + filters -->
+      <div class="sidebar-filters">
         <input
           v-model="searchQuery"
-          class="arena-search-input"
-          placeholder="Wybierz kartę do testowania…"
-          @focus="searchOpen = true"
-          @input="searchOpen = true"
+          class="sidebar-search"
+          placeholder="Szukaj karty..."
         />
-        <button v-if="arena.focusedEntry" class="arena-clear-btn" @click="clearCard">✕</button>
-
-        <Transition name="adropdown">
-          <div v-if="searchOpen && filteredCards.length" class="arena-dropdown">
-            <div
-              v-for="entry in filteredCards"
-              :key="`${entry.cardType}-${entry.id}`"
-              class="adropdown-item"
-              @mousedown.prevent="selectCard(entry)"
-            >
-              <span :class="['entry-badge', entry.cardType]">
-                {{ entry.cardType === 'creature' ? 'Istota' : 'Przygoda' }}
-              </span>
-              <span class="entry-name">{{ entry.name }}</span>
-              <span class="entry-effect">{{ entry.effectDescription.slice(0, 50) }}…</span>
-            </div>
-          </div>
-        </Transition>
+        <div class="filter-tabs">
+          <button :class="['ftab', { active: typeFilter === 'all' }]" @click="typeFilter = 'all'">
+            Wszystkie ({{ arena.catalog.length }})
+          </button>
+          <button :class="['ftab', { active: typeFilter === 'creature' }]" @click="typeFilter = 'creature'">
+            Istoty
+          </button>
+          <button :class="['ftab', { active: typeFilter === 'adventure' }]" @click="typeFilter = 'adventure'">
+            Przygody
+          </button>
+        </div>
       </div>
 
-      <!-- Info o testowanej karcie -->
-      <div v-if="arena.focusedEntry" class="focused-info">
-        <span class="fi-name">{{ arena.focusedEntry.name }}</span>
-        <span class="fi-id">{{ arena.focusedEntry.effectId }}</span>
-        <span v-if="arena.currentHint && arena.isReady" class="fi-hint">
-          <Icon icon="game-icons:info" class="hint-icon" />
-          {{ arena.currentHint }}
-        </span>
-      </div>
-
-      <div class="arena-bar-right">
-        <button v-if="arena.isReady" class="arena-reset-btn" @click="arena.reset()">
-          <Icon icon="game-icons:cycle" />
-          Reset
+      <!-- Prev/Next buttons -->
+      <div class="nav-btns">
+        <button class="nav-btn" @click="selectPrev" :disabled="!arena.focusedEntry">
+          <Icon icon="game-icons:arrow-dunk" style="transform: rotate(180deg)" /> Poprzednia
         </button>
+        <button class="nav-btn" @click="selectNext">
+          Nastepna <Icon icon="game-icons:arrow-dunk" />
+        </button>
+      </div>
+
+      <!-- Scrollable card list -->
+      <div class="card-list" ref="listRef">
+        <div
+          v-for="(entry, idx) in filteredCards"
+          :key="`${entry.cardType}-${entry.id}`"
+          :data-idx="idx"
+          :class="['card-item', {
+            active: arena.focusedEntry?.id === entry.id && arena.focusedEntry?.cardType === entry.cardType,
+            creature: entry.cardType === 'creature',
+            adventure: entry.cardType === 'adventure',
+          }]"
+          @click="selectCard(entry)"
+        >
+          <span class="card-num">{{ entry.cardType === 'creature' ? entry.id : `P${entry.id}` }}</span>
+          <span
+            v-if="entry.cardType === 'creature'"
+            class="domain-dot"
+            :style="`background: ${getDomainColor(entry.data)}`"
+          />
+          <span
+            v-else
+            class="adv-type-dot"
+            :class="(entry.data as any).type?.toLowerCase()"
+          />
+          <span class="card-item-name">{{ entry.name }}</span>
+          <span v-if="entry.cardType === 'creature'" class="card-item-stats">
+            {{ (entry.data as any).stats?.attack }}/{{ (entry.data as any).stats?.defense }}
+          </span>
+          <span v-else class="card-item-type">{{ (entry.data as any).type }}</span>
+        </div>
+
+        <div v-if="filteredCards.length === 0" class="no-results">
+          Brak wynikow
+        </div>
       </div>
     </div>
 
-    <!-- Plansza gry (pełna, identyczna jak w /game) -->
-    <div class="arena-board-container">
-      <GameBoard v-if="arena.isReady" />
-      <div v-else class="arena-placeholder">
-        <Icon icon="game-icons:card-random" class="placeholder-icon" />
-        <p>Wybierz kartę z wyszukiwarki, aby rozpocząć test.</p>
-        <p class="placeholder-sub">Dostaniesz preset scenariusz — testuj karty jak w prawdziwej grze.</p>
+    <!-- MAIN: plansza gry -->
+    <div class="arena-main">
+      <!-- Info bar gdy karta wybrana -->
+      <div v-if="arena.focusedEntry && arena.isReady" class="arena-info-bar">
+        <span class="fi-name">{{ arena.focusedEntry.name }}</span>
+        <span class="fi-id">{{ arena.focusedEntry.effectId }}</span>
+        <span v-if="arena.currentHint" class="fi-hint">
+          <Icon icon="game-icons:info" class="hint-icon" />
+          {{ arena.currentHint }}
+        </span>
+        <button class="arena-reset-btn" @click="arena.reset()">
+          <Icon icon="game-icons:cycle" /> Reset
+        </button>
+      </div>
+
+      <!-- Plansza gry -->
+      <div class="arena-board-container">
+        <GameBoard v-if="arena.isReady" />
+        <div v-else class="arena-placeholder">
+          <Icon icon="game-icons:card-random" class="placeholder-icon" />
+          <p>Wybierz karte z listy po lewej, aby rozpoczac test.</p>
+          <p class="placeholder-sub">Kliknij dowolna karte lub uzyj przyciskow Poprzednia/Nastepna.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -116,30 +183,34 @@ function clearCard() {
 <style scoped>
 .arena-wrapper {
   display: flex;
-  flex-direction: column;
   height: 100vh;
   overflow: hidden;
   background: var(--bg-board, #0f172a);
 }
 
-/* ===== PASEK ARENY ===== */
-.arena-bar {
+/* ===== SIDEBAR ===== */
+.arena-sidebar {
+  width: 280px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.4);
+  border-right: 1px solid rgba(139, 92, 246, 0.25);
+  z-index: 10;
+}
+
+.sidebar-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 12px;
-  background: rgba(0, 0, 0, 0.6);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.35);
-  flex-shrink: 0;
-  min-height: 40px;
-  z-index: 10;
-  position: relative;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .arena-back-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   color: #94a3b8;
   text-decoration: none;
   font-size: 11px;
@@ -152,99 +223,187 @@ function clearCard() {
 }
 .arena-back-btn:hover { color: #e2e8f0; border-color: rgba(255, 255, 255, 0.25); }
 
-.arena-bar-title {
+.sidebar-title {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: #a78bfa;
-  flex-shrink: 0;
 }
 
-/* Wyszukiwarka */
-.arena-search {
-  position: relative;
+/* Filters */
+.sidebar-filters {
+  padding: 8px 10px;
   display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  padding: 0 8px;
+  flex-direction: column;
   gap: 6px;
-  width: 280px;
-  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-.search-icon { color: #475569; font-size: 13px; flex-shrink: 0; }
-.arena-search-input {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
+
+.sidebar-search {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
   color: #e2e8f0;
   font-size: 12px;
-  padding: 5px 0;
+  outline: none;
 }
-.arena-search-input::placeholder { color: #475569; }
-.arena-clear-btn {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 2px;
-}
-.arena-clear-btn:hover { color: #e2e8f0; }
+.sidebar-search:focus { border-color: #6366f1; }
+.sidebar-search::placeholder { color: #475569; }
 
-.arena-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  width: 420px;
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
-  z-index: 200;
+.filter-tabs {
+  display: flex;
+  gap: 3px;
 }
-.adropdown-item {
+
+.ftab {
+  flex: 1;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.03);
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+}
+.ftab.active { border-color: #4f46e5; color: #a5b4fc; background: rgba(99, 102, 241, 0.1); }
+.ftab:hover:not(.active) { background: rgba(255,255,255,0.05); }
+
+/* Nav buttons */
+.nav-btns {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.nav-btn {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  background: rgba(139, 92, 246, 0.06);
+  color: #a78bfa;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  transition: background 0.1s;
+  transition: all 0.12s;
 }
-.adropdown-item:hover { background: rgba(99, 102, 241, 0.12); }
-.adropdown-item:last-child { border-bottom: none; }
-.entry-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 3px;
+.nav-btn:hover:not(:disabled) { background: rgba(139, 92, 246, 0.15); }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Card list */
+.card-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+}
+
+.card-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.1s, border-color 0.1s;
+  min-height: 30px;
+}
+.card-item:hover { background: rgba(255,255,255,0.04); }
+.card-item.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-left-color: #6366f1;
+}
+.card-item.active .card-item-name { color: #e2e8f0; }
+
+.card-num {
+  font-size: 10px;
+  font-family: monospace;
+  color: #475569;
+  min-width: 24px;
+  text-align: right;
   flex-shrink: 0;
 }
-.entry-badge.creature { background: rgba(99, 102, 241, 0.2); color: #a78bfa; }
-.entry-badge.adventure { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-.entry-name { font-size: 12px; font-weight: 600; color: #e2e8f0; min-width: 110px; }
-.entry-effect { font-size: 10px; color: #64748b; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.adropdown-enter-active, .adropdown-leave-active { transition: opacity 0.1s, transform 0.1s; }
-.adropdown-enter-from, .adropdown-leave-to { opacity: 0; transform: translateY(-4px); }
+.domain-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
-/* Info o wybranej karcie */
-.focused-info {
+.adv-type-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.adv-type-dot.zdarzenie { background: #60a5fa; }
+.adv-type-dot.artefakt { background: #fbbf24; }
+.adv-type-dot.lokacja { background: #34d399; }
+
+.card-item-name {
+  font-size: 12px;
+  color: #94a3b8;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-item-stats {
+  font-size: 11px;
+  font-family: monospace;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.card-item-type {
+  font-size: 9px;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.no-results {
+  padding: 20px;
+  text-align: center;
+  color: #475569;
+  font-size: 12px;
+}
+
+/* ===== MAIN ===== */
+.arena-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Info bar */
+.arena-info-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
+  gap: 10px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  min-height: 34px;
+  flex-shrink: 0;
 }
+
 .fi-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: #e2e8f0;
   white-space: nowrap;
@@ -257,8 +416,6 @@ function clearCard() {
   padding: 1px 5px;
   border-radius: 3px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .fi-hint {
   display: flex;
@@ -267,20 +424,18 @@ function clearCard() {
   font-size: 11px;
   color: #94a3b8;
   font-style: italic;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
-  min-width: 0;
 }
 .hint-icon { font-size: 12px; color: #60a5fa; flex-shrink: 0; }
-
-.arena-bar-right { flex-shrink: 0; margin-left: auto; }
 
 .arena-reset-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);
   color: #fbbf24;
@@ -290,21 +445,22 @@ function clearCard() {
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 .arena-reset-btn:hover { background: rgba(251, 191, 36, 0.22); }
 
-/* ===== PLANSZA ===== */
+/* Board container */
 .arena-board-container {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  /* Override GameBoard's 100vh to fill remaining space */
 }
 .arena-board-container :deep(.game-board) {
   height: 100%;
 }
 
-/* ===== PLACEHOLDER ===== */
+/* Placeholder */
 .arena-placeholder {
   display: flex;
   flex-direction: column;
@@ -315,6 +471,12 @@ function clearCard() {
   color: #475569;
 }
 .placeholder-icon { font-size: 64px; opacity: 0.4; }
-.arena-placeholder p { font-size: 15px; }
+.arena-placeholder p { font-size: 15px; margin: 0; }
 .placeholder-sub { font-size: 12px !important; color: #334155; }
+
+/* Scrollbar styling */
+.card-list::-webkit-scrollbar { width: 6px; }
+.card-list::-webkit-scrollbar-track { background: transparent; }
+.card-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+.card-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 </style>
