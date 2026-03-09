@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
+import gsap from 'gsap'
 import type { CardInstance } from '../../game-engine/types'
 import { AttackType, CardPosition } from '../../game-engine/constants'
 import { useUIStore } from '../../stores/uiStore'
@@ -336,6 +337,66 @@ const isResurrecting = computed(() => !props.inHand && !!props.card.metadata?.ju
 const hasDied = ref(false)
 watch(() => props.isDying, (v) => { if (v) hasDied.value = true })
 
+// ===== GSAP ANIMATION REFS =====
+const cardEl = ref<HTMLElement | null>(null)
+
+// GSAP: Hit impact — replaces CSS @keyframes hit-impact
+watch(() => props.isHit, (v) => {
+  if (!v || !cardEl.value) return
+  nextTick(() => {
+    gsap.fromTo(cardEl.value!,
+      { x: 0, y: 0 },
+      {
+        x: 'random(-6, 6)', y: 'random(-2, 2)',
+        duration: 0.06, repeat: 6, yoyo: true,
+        ease: 'power1.inOut',
+        onComplete: () => { gsap.set(cardEl.value!, { x: 0, y: 0 }) }
+      }
+    )
+  })
+})
+
+// GSAP: Death burn — replaces CSS @keyframes death-burn
+watch(() => props.isDying, (v) => {
+  if (!v || !cardEl.value) return
+  nextTick(() => {
+    gsap.timeline()
+      .to(cardEl.value!, { scale: 1.08, filter: 'brightness(2) saturate(1.5)', duration: 0.15 })
+      .to(cardEl.value!, { scale: 0.92, opacity: 0.7, filter: 'brightness(1.2)', duration: 0.2 })
+      .to(cardEl.value!, { scale: 0.5, opacity: 0.15, filter: 'brightness(0.4)', rotation: 'random(-8, 8)', duration: 0.3 })
+      .to(cardEl.value!, { scale: 0.05, opacity: 0, rotation: 'random(-15, 15)', duration: 0.25, ease: 'power2.in' })
+  })
+})
+
+// GSAP: Growth flash — replaces CSS @keyframes growth-flash
+watch(isGrowing, (v) => {
+  if (!v || !cardEl.value) return
+  nextTick(() => {
+    gsap.fromTo(cardEl.value!,
+      { boxShadow: '0 0 0 0px rgba(34, 197, 94, 0)' },
+      { boxShadow: '0 0 0 4px rgba(34, 197, 94, 0.8), 0 0 16px 4px rgba(34, 197, 94, 0.4)',
+        duration: 0.3, yoyo: true, repeat: 1, ease: 'power2.out' }
+    )
+  })
+})
+
+// GSAP: Resurrect glow — replaces CSS @keyframes resurrect-glow
+watch(isResurrecting, (v) => {
+  if (!v || !cardEl.value) return
+  nextTick(() => {
+    gsap.fromTo(cardEl.value!,
+      { boxShadow: '0 0 0 0px rgba(167, 139, 250, 0)' },
+      { boxShadow: '0 0 0 5px rgba(167, 139, 250, 0.9), 0 0 20px 6px rgba(167, 139, 250, 0.5)',
+        duration: 0.4, yoyo: true, repeat: 1, ease: 'power2.out' }
+    )
+  })
+})
+
+// Cleanup GSAP on unmount
+onUnmounted(() => {
+  if (cardEl.value) gsap.killTweensOf(cardEl.value)
+})
+
 const cardData = computed(() => props.card.cardData as any)
 const stats = computed(() => props.card.currentStats)
 // Różnica statystyk od bazowych (buffy/debuffy widoczne na karcie)
@@ -431,6 +492,7 @@ function onClick() {
   <!-- Widoczna karta -->
   <div
     v-else
+    ref="cardEl"
     :class="cardClass"
     :style="{ '--domain-color': domainColor }"
     @click="onClick"
@@ -754,12 +816,11 @@ function onClick() {
 }
 
 .is-attacking {
-  box-shadow: 0 0 0 3px #f59e0b, 0 0 16px 4px #f59e0b;
   animation: attack-charge 0.8s ease infinite;
 }
 @keyframes attack-charge {
-  0%, 100% { outline: 3px solid #f59e0b; outline-offset: 0; opacity: 1; }
-  50%      { outline: 4px solid #fbbf24; outline-offset: 2px; opacity: 0.9; }
+  0%, 100% { box-shadow: 0 0 0 3px #f59e0b, 0 0 8px 2px rgba(245,158,11,0.5); }
+  50%      { box-shadow: 0 0 0 4px #fbbf24, 0 0 20px 6px rgba(251,191,36,0.8); }
 }
 
 .is-valid-target {
@@ -769,8 +830,9 @@ function onClick() {
   box-shadow: 0 0 0 3px #ef4444, 0 0 20px 6px rgba(239,68,68,0.6);
 }
 
-.is-hit   { animation: hit-impact 0.5s ease; }
-.is-dying { animation: death-burn 0.9s ease forwards; }
+/* hit-impact and death-burn now handled by GSAP watchers in <script> */
+.is-hit   { /* GSAP handles shake animation */ }
+.is-dying { /* GSAP handles death timeline */ }
 /* Po zakończeniu animacji śmierci — karta pozostaje niewidoczna */
 .has-died:not(.is-dying) { opacity: 0; pointer-events: none; }
 .is-dimmed { opacity: 0.45; pointer-events: none; }
@@ -1099,8 +1161,8 @@ function onClick() {
   transform: rotate(90deg);
 }
 @keyframes shield-pulse {
-  from { outline: 3px solid #60a5fa; outline-offset: 0; opacity: 0.85; }
-  to   { outline: 5px solid #93c5fd; outline-offset: 2px; opacity: 1; }
+  from { box-shadow: 0 0 0 3px #60a5fa, 0 0 8px 2px rgba(96,165,250,0.4); opacity: 0.85; }
+  to   { box-shadow: 0 0 0 5px #93c5fd, 0 0 16px 4px rgba(147,197,253,0.6); opacity: 1; }
 }
 
 /* Overlay tarczy na twarzy karty */
@@ -1132,8 +1194,8 @@ function onClick() {
   line-height: 1.4;
 }
 @keyframes shield-bg {
-  from { background: rgba(30, 90, 200, 0.65); outline-color: #60a5fa; }
-  to   { background: rgba(50, 130, 255, 0.88); outline-color: #fff; }
+  from { background: rgba(30, 90, 200, 0.65); box-shadow: inset 0 0 0 2px #60a5fa; }
+  to   { background: rgba(50, 130, 255, 0.88); box-shadow: inset 0 0 0 3px #fff; }
 }
 
 /* Klikalny badge pozycji */
@@ -1193,8 +1255,8 @@ function onClick() {
 .ability-slot-empty { flex: 1; }
 
 @keyframes effect-pulse {
-  0%, 100% { outline: 2px solid transparent; outline-offset: 0; }
-  50%       { outline: 2px solid rgba(251,191,36,0.35); outline-offset: 1px; }
+  0%, 100% { box-shadow: 0 0 0 0px rgba(251,191,36,0); }
+  50%       { box-shadow: 0 0 0 2px rgba(251,191,36,0.35), 0 0 6px rgba(251,191,36,0.2); }
 }
 
 @keyframes pulse-glow {
@@ -1202,28 +1264,7 @@ function onClick() {
   50%       { box-shadow: 0 0 0 3px #f59e0b, 0 0 22px 8px rgba(245,158,11,0.8); }
 }
 
-/* ===== HIT IMPACT — shake + red flash ===== */
-@keyframes hit-impact {
-  0%   { translate: 0 0; }
-  10%  { translate: -6px 2px; }
-  20%  { translate: 6px -1px; }
-  35%  { translate: -4px 0; }
-  50%  { translate: 4px 1px; }
-  65%  { translate: -2px 0; }
-  80%  { translate: 2px 0; }
-  100% { translate: 0 0; }
-}
-
-/* ===== DEATH BURN — karta kurczy się i znika ===== */
-@keyframes death-burn {
-  0%   { opacity: 1; scale: 1; }
-  15%  { opacity: 1; scale: 1.06; }
-  30%  { opacity: 0.85; scale: 1.02; }
-  50%  { opacity: 0.55; scale: 0.9; }
-  70%  { opacity: 0.3; scale: 0.7; }
-  85%  { opacity: 0.1; scale: 0.45; }
-  100% { opacity: 0; scale: 0.15; }
-}
+/* hit-impact & death-burn: removed — now GSAP-driven in <script> */
 
 /* ===== PASYWNA AURA ===== */
 .badge-passive {
@@ -1399,25 +1440,9 @@ function onClick() {
   50%      { background: rgba(220, 38, 38, 0.45); }
 }
 
-/* ===== GROWTH FLASH (Baba Jaga / Śmierć) ===== */
-.is-growing {
-  animation: growth-flash 0.6s ease-out;
-}
-@keyframes growth-flash {
-  0%   { outline: 3px solid transparent; outline-offset: 0; }
-  30%  { outline: 3px solid rgba(34, 197, 94, 0.8); outline-offset: 3px; }
-  100% { outline: 3px solid transparent; outline-offset: 0; }
-}
-
-/* ===== RESURRECTION FLASH (Kościej) ===== */
-.is-resurrecting {
-  animation: resurrect-glow 1s ease-out;
-}
-@keyframes resurrect-glow {
-  0%   { outline: 3px solid transparent; outline-offset: 0; opacity: 0.8; }
-  30%  { outline: 4px solid rgba(167, 139, 250, 0.9); outline-offset: 4px; opacity: 1; }
-  100% { outline: 3px solid transparent; outline-offset: 0; opacity: 1; }
-}
+/* growth-flash and resurrect-glow now handled by GSAP watchers in <script> */
+.is-growing { /* GSAP green pulse */ }
+.is-resurrecting { /* GSAP purple pulse */ }
 
 /* ===== SLASH EFFECT — cięcie miecza na trafionym celu ===== */
 /* ===== HIT VFX CONTAINER ===== */
@@ -1512,6 +1537,7 @@ function onClick() {
   border: 2px solid #a855f7;
   border-radius: 50%;
   opacity: 0;
+  transform-origin: center;
   animation: magic-ring-expand 0.5s ease-out forwards;
 }
 @keyframes magic-burst {
@@ -1521,21 +1547,20 @@ function onClick() {
   100% { opacity: 0; transform: translate(calc(cos(var(--angle)) * 55px), calc(sin(var(--angle)) * 55px)) scale(0); }
 }
 @keyframes magic-ring-expand {
-  0%   { opacity: 0; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-width: 3px; }
-  30%  { opacity: 1; }
-  100% { opacity: 0; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-width: 1px; }
+  0%   { opacity: 0; transform: scale(0.15); border-width: 3px; }
+  30%  { opacity: 1; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(6); border-width: 1px; }
 }
 
 /* --- RANGED: arrow streak + impact --- */
 .arrow-streak {
   position: absolute;
   top: 50%;
-  left: -20px;
+  left: 20%;
   width: 40px;
   height: 3px;
   background: linear-gradient(90deg, transparent, #93c5fd, #3b82f6);
   border-radius: 2px;
-  transform: translateY(-50%);
   animation: arrow-fly 0.3s ease-out forwards;
 }
 .arrow-impact {
@@ -1551,9 +1576,9 @@ function onClick() {
   animation: arrow-hit 0.4s ease-out 0.25s forwards;
 }
 @keyframes arrow-fly {
-  0%   { left: -40px; opacity: 0; width: 30px; }
-  30%  { opacity: 1; width: 50px; }
-  100% { left: 60%; opacity: 0; width: 20px; }
+  0%   { transform: translateX(-60px) translateY(-50%) scaleX(0.6); opacity: 0; }
+  30%  { transform: translateX(0) translateY(-50%) scaleX(1.2); opacity: 1; }
+  100% { transform: translateX(80px) translateY(-50%) scaleX(0.4); opacity: 0; }
 }
 @keyframes arrow-hit {
   0%   { opacity: 0; transform: scale(0.3); }
@@ -1631,8 +1656,8 @@ function onClick() {
   line-height: 1.4;
 }
 @keyframes immune-bg {
-  from { background: rgba(120, 80, 20, 0.7); }
-  to   { background: rgba(140, 100, 30, 0.85); }
+  from { opacity: 0.85; }
+  to   { opacity: 1; }
 }
 .immune-flash-enter-active {
   transition: opacity 0.15s ease;

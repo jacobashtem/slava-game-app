@@ -15,7 +15,11 @@
   "dependencies": {
     "@iconify/vue": "^5.0.0",
     "@pinia/nuxt": "^0.11.3",
-    "@vueuse/motion": "^3.0.3",
+    "@tsparticles/slim": "^3.9.1",
+    "@tsparticles/vue3": "^3.0.1",
+    "@types/howler": "^2.2.12",
+    "gsap": "^3.14.2",
+    "howler": "^2.2.4",
     "nuxt": "^4.3.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",
@@ -25,7 +29,6 @@
     "@oxc-parser/binding-win32-x64-msvc": "^0.112.0"
   },
   "devDependencies": {
-    "@nuxtjs/tailwindcss": "^6.14.0",
     "@vitejs/plugin-vue": "^6.0.4",
     "vitest": "^4.0.18"
   }

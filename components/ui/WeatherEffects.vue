@@ -1,40 +1,155 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+/**
+ * WeatherEffects — seasonal particle effects using tsParticles.
+ * Replaces 8-25 CSS div particles with GPU-accelerated canvas particles.
+ */
+import { computed, ref, watch, onMounted } from 'vue'
 
 const props = defineProps<{
   season: 'spring' | 'summer' | 'autumn' | 'winter'
 }>()
 
-const particleCount = computed(() => ({
-  spring: 12,
-  summer: 8,
-  autumn: 18,
-  winter: 25,
-}[props.season]))
+const containerRef = ref<any>(null)
 
-const particleChar = computed(() => ({
-  spring: '🌸',
-  summer: '✦',
-  autumn: '🍂',
-  winter: '❄',
-}[props.season]))
+const particlesId = computed(() => `weather-${props.season}`)
+
+/** tsParticles config per season */
+const particlesOptions = computed(() => {
+  const base = {
+    fullScreen: false,
+    fpsLimit: 60,
+    detectRetina: true,
+    background: { color: 'transparent' },
+  }
+
+  switch (props.season) {
+    case 'spring':
+      return {
+        ...base,
+        particles: {
+          number: { value: 18 },
+          shape: {
+            type: 'char',
+            options: {
+              char: {
+                value: ['🌸', '🌺', '✿'],
+                font: 'serif',
+                weight: '400',
+              },
+            },
+          },
+          size: { value: { min: 8, max: 14 } },
+          opacity: { value: { min: 0.15, max: 0.5 }, animation: { enable: true, speed: 0.3, minimumValue: 0.1 } },
+          move: {
+            enable: true,
+            speed: { min: 0.5, max: 1.5 },
+            direction: 'bottom' as const,
+            drift: 1.5,
+            outModes: { default: 'out' as const },
+          },
+          rotate: { value: { min: 0, max: 360 }, animation: { enable: true, speed: 3 } },
+          wobble: { enable: true, distance: 15, speed: 3 },
+        },
+      }
+    case 'summer':
+      return {
+        ...base,
+        particles: {
+          number: { value: 12 },
+          shape: { type: 'circle' },
+          size: { value: { min: 2, max: 5 } },
+          color: { value: ['#fbbf24', '#f59e0b', '#fcd34d'] },
+          opacity: {
+            value: { min: 0.1, max: 0.6 },
+            animation: { enable: true, speed: 0.8, minimumValue: 0.05, sync: false },
+          },
+          move: {
+            enable: true,
+            speed: { min: 0.2, max: 0.6 },
+            direction: 'none' as const,
+            random: true,
+            outModes: { default: 'bounce' as const },
+          },
+          shadow: {
+            enable: true,
+            color: '#fbbf24',
+            blur: 8,
+          },
+        },
+      }
+    case 'autumn':
+      return {
+        ...base,
+        particles: {
+          number: { value: 22 },
+          shape: {
+            type: 'char',
+            options: {
+              char: {
+                value: ['🍂', '🍁', '🍃'],
+                font: 'serif',
+                weight: '400',
+              },
+            },
+          },
+          size: { value: { min: 10, max: 16 } },
+          opacity: { value: { min: 0.15, max: 0.45 } },
+          move: {
+            enable: true,
+            speed: { min: 0.8, max: 2 },
+            direction: 'bottom' as const,
+            drift: 2.5,
+            outModes: { default: 'out' as const },
+          },
+          rotate: {
+            value: { min: 0, max: 360 },
+            animation: { enable: true, speed: 5 },
+          },
+          wobble: { enable: true, distance: 20, speed: 5 },
+        },
+      }
+    case 'winter':
+      return {
+        ...base,
+        particles: {
+          number: { value: 35 },
+          shape: {
+            type: 'char',
+            options: {
+              char: {
+                value: ['❄', '❅', '•'],
+                font: 'serif',
+                weight: '400',
+              },
+            },
+          },
+          size: { value: { min: 4, max: 12 } },
+          color: { value: ['#e2e8f0', '#cbd5e1', '#ffffff'] },
+          opacity: { value: { min: 0.1, max: 0.4 } },
+          move: {
+            enable: true,
+            speed: { min: 0.3, max: 1.2 },
+            direction: 'bottom' as const,
+            drift: 1,
+            outModes: { default: 'out' as const },
+          },
+          wobble: { enable: true, distance: 10, speed: 2 },
+        },
+      }
+    default:
+      return base
+  }
+})
 </script>
 
 <template>
-  <div :class="['weather-layer', `weather-${season}`]" aria-hidden="true">
-    <span
-      v-for="i in particleCount"
-      :key="i"
-      class="particle"
-      :style="{
-        '--delay': `${(i * 1.7) % 12}s`,
-        '--x-start': `${(i * 17) % 100}%`,
-        '--x-drift': `${((i * 7) % 60) - 30}px`,
-        '--duration': `${6 + (i * 1.3) % 8}s`,
-        '--size': `${8 + (i * 3) % 10}px`,
-        '--opacity': `${0.15 + (i * 0.03) % 0.35}`,
-      }"
-    >{{ particleChar }}</span>
+  <div class="weather-layer" aria-hidden="true">
+    <vue-particles
+      :id="particlesId"
+      :key="season"
+      :options="particlesOptions"
+      class="particles-canvas"
+    />
   </div>
 </template>
 
@@ -46,123 +161,14 @@ const particleChar = computed(() => ({
   pointer-events: none;
   overflow: hidden;
 }
-
-.particle {
-  position: absolute;
-  top: -20px;
-  left: var(--x-start, 50%);
-  font-size: var(--size, 10px);
-  opacity: var(--opacity, 0.2);
-  animation: particle-fall var(--duration, 8s) linear var(--delay, 0s) infinite;
-  user-select: none;
-  will-change: transform, opacity;
+.particles-canvas {
+  width: 100%;
+  height: 100%;
 }
-
-@keyframes particle-fall {
-  0% {
-    transform: translateY(-20px) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: var(--opacity, 0.2);
-  }
-  90% {
-    opacity: var(--opacity, 0.2);
-  }
-  100% {
-    transform: translateY(calc(100vh + 20px)) translateX(var(--x-drift, 20px)) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-/* Wiosna: delikatne płatki */
-.weather-spring .particle {
-  opacity: calc(var(--opacity, 0.2) * 0.9);
-}
-
-/* Lato: świetliki */
-.weather-summer .particle {
-  animation-name: firefly-float;
-  color: #fbbf24;
-  text-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
-}
-
-@keyframes firefly-float {
-  0% {
-    transform: translateY(20%) translateX(0);
-    opacity: 0;
-  }
-  20% {
-    opacity: var(--opacity, 0.2);
-  }
-  50% {
-    transform: translateY(40%) translateX(var(--x-drift, 20px));
-    opacity: calc(var(--opacity, 0.2) * 1.5);
-  }
-  80% {
-    opacity: var(--opacity, 0.2);
-  }
-  100% {
-    transform: translateY(60%) translateX(calc(var(--x-drift, 20px) * -1));
-    opacity: 0;
-  }
-}
-
-/* Jesien: liście */
-.weather-autumn .particle {
-  animation-name: leaf-fall;
-}
-
-@keyframes leaf-fall {
-  0% {
-    transform: translateY(-20px) translateX(0) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: var(--opacity, 0.2);
-  }
-  50% {
-    transform: translateY(50vh) translateX(var(--x-drift, 20px)) rotate(180deg);
-  }
-  90% {
-    opacity: var(--opacity, 0.2);
-  }
-  100% {
-    transform: translateY(calc(100vh + 20px)) translateX(calc(var(--x-drift, 20px) * -0.5)) rotate(400deg);
-    opacity: 0;
-  }
-}
-
-/* Zima: śnieg */
-.weather-winter .particle {
-  color: #e2e8f0;
-  animation-name: snow-fall;
-}
-
-@keyframes snow-fall {
-  0% {
-    transform: translateY(-20px) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: var(--opacity, 0.2);
-  }
-  50% {
-    transform: translateY(50vh) translateX(var(--x-drift, 20px));
-  }
-  90% {
-    opacity: calc(var(--opacity, 0.2) * 0.8);
-  }
-  100% {
-    transform: translateY(calc(100vh + 20px)) translateX(calc(var(--x-drift, 20px) * 1.3));
-    opacity: 0;
-  }
-}
-
 /* Reduce particles on mobile for performance */
 @media (max-width: 767px) {
-  .weather-container .weather-particle:nth-child(n+8) {
-    display: none;
+  .weather-layer {
+    opacity: 0.6;
   }
 }
 </style>
