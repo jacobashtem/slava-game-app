@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 
@@ -7,6 +7,9 @@ const game = useGameStore()
 
 const interaction = computed(() => game.state?.pendingInteraction ?? null)
 const show = computed(() => !!interaction.value)
+const targetSearch = ref('')
+// Reset szukajki gdy zmieni się interakcja
+watch(interaction, () => { targetSearch.value = '' })
 
 // Wyszukaj kartę po instanceId na polach, rękach i cmentarzach obu graczy
 function findCard(instanceId: string) {
@@ -32,6 +35,16 @@ const availableTargets = computed(() => {
   const ids = interaction.value?.availableTargetIds ?? []
   return ids.map(id => findCard(id)).filter(Boolean)
 })
+
+const filteredTargets = computed(() => {
+  const q = targetSearch.value.trim().toLowerCase()
+  if (!q) return availableTargets.value
+  return availableTargets.value.filter((c: any) =>
+    c.cardData?.name?.toLowerCase().includes(q)
+  )
+})
+
+const showTargetSearch = computed(() => availableTargets.value.length >= 5)
 
 const domainColors: Record<number, string> = {
   1: '#60a5fa',
@@ -140,23 +153,33 @@ function pickTarget(choice: string) {
         <!-- Wybór z listy kart (alkonost, wielkolud, inkluz, cmentarna baba) -->
         <div
           v-if="['alkonost_target', 'wielkolud_counter', 'inkluz_recipient', 'cmentarna_baba_resurrect', 'on_play_target'].includes(interaction?.type ?? '')"
-          class="pi-targets"
+          class="pi-targets-wrap"
         >
-          <button
-            v-for="card in availableTargets"
-            :key="(card as any).instanceId"
-            class="pi-target-btn"
-            :style="{ '--domain-color': cardDomainColor(card) }"
-            @click="pickTarget((card as any).instanceId)"
-          >
-            <span class="pi-t-name">{{ ((card as any).cardData as any)?.name }}</span>
-            <span class="pi-t-stats">
-              ⚔ {{ (card as any).currentStats.attack }}
-              &nbsp;
-              🛡 {{ (card as any).currentStats.defense }}
-            </span>
-          </button>
+          <input
+            v-if="showTargetSearch"
+            v-model="targetSearch"
+            class="pi-search"
+            placeholder="Szukaj karty..."
+            autofocus
+          />
+          <div class="pi-targets">
+            <button
+              v-for="card in filteredTargets"
+              :key="(card as any).instanceId"
+              class="pi-target-btn"
+              :style="{ '--domain-color': cardDomainColor(card) }"
+              @click="pickTarget((card as any).instanceId)"
+            >
+              <span class="pi-t-name">{{ ((card as any).cardData as any)?.name }}</span>
+              <span class="pi-t-stats">
+                ⚔ {{ (card as any).currentStats.attack }}
+                &nbsp;
+                🛡 {{ (card as any).currentStats.defense }}
+              </span>
+            </button>
+          </div>
           <p v-if="availableTargets.length === 0" class="pi-empty">Brak dostępnych celów.</p>
+          <p v-else-if="filteredTargets.length === 0" class="pi-empty">Brak wyników dla "{{ targetSearch }}"</p>
         </div>
 
         <!-- Wybór stringowy (kresnik_buff, baba_domain, liczyrzepa_type) -->
@@ -331,12 +354,36 @@ function pickTarget(choice: string) {
   line-height: 1.6;
 }
 
-/* Target card buttons */
+/* Target card section */
+.pi-targets-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.pi-search {
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.pi-search::placeholder { color: #475569; }
+.pi-search:focus { border-color: #7c3aed; }
+
 .pi-targets {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
+  max-height: 240px;
+  overflow-y: auto;
+  width: 100%;
 }
 
 .pi-target-btn {

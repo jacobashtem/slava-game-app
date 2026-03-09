@@ -186,11 +186,13 @@ export const useGameStore = defineStore('game', () => {
       // Dopiero tutaj — state.value ma isRevealed=true, więc karta nie zniknie
       if (wasHidden) ui.revealingCardId = null
 
-      // pendingInteraction: silnik czeka na decyzję gracza (np. Alkonost hipnoza)
-      // UI odczyta state.value.pendingInteraction i pokaże modal
+      // pendingInteraction: silnik czeka na decyzję — jeśli AI responduje, auto-rozwiąż
+      if (newState.pendingInteraction?.respondingPlayer === 'player2') {
+        await autoResolveAIInteraction()
+      }
 
       // Auto-end turn po udanym ataku (chyba że jest pendingInteraction lub gracz ma jeszcze ataki)
-      if (!newState.pendingInteraction && !winner.value) {
+      if (!state.value?.pendingInteraction && !winner.value) {
         const hasMoreAttacks = hasRemainingAttacks(newState)
         if (!hasMoreAttacks) {
           await delay(400)
@@ -557,6 +559,11 @@ export const useGameStore = defineStore('game', () => {
                 if (aiDied || playerDied) await delay(1100)
 
                 state.value = newState
+
+                // Auto-rozwiąż interakcje AI (np. Alkonost AI)
+                if (state.value?.pendingInteraction?.respondingPlayer === 'player2') {
+                  await autoResolveAIInteraction()
+                }
               }
             }
             break
@@ -615,6 +622,40 @@ export const useGameStore = defineStore('game', () => {
 
   function dismissAISummary() {
     aiTurnSummary.value = []
+  }
+
+  /**
+   * Gdy pendingInteraction ma respondingPlayer = AI, auto-rozwiąż za AI.
+   * Zwraca true jeśli interakcja została rozwiązana.
+   */
+  async function autoResolveAIInteraction(): Promise<boolean> {
+    const interaction = state.value?.pendingInteraction
+    if (!interaction) return false
+    if (interaction.respondingPlayer === 'player1') return false // gracz decyduje
+
+    await delay(600)
+
+    // AI wybiera: pierwszy dostępny cel / pierwszą opcję
+    let choice: string | undefined
+
+    if (interaction.availableTargetIds?.length) {
+      // AI: wybierz cel z najwyższym threat score (lub losowo)
+      choice = interaction.availableTargetIds[0]
+    } else if (interaction.availableChoices?.length) {
+      choice = interaction.availableChoices[0]
+    } else {
+      // Tak/Nie: AI zawsze mówi 'yes' (np. Chowaniec/Brzegina)
+      choice = 'yes'
+    }
+
+    if (choice) {
+      try {
+        state.value = engine.resolvePendingInteraction(choice)
+      } catch (e: any) {
+        console.warn('[gameStore] AI auto-resolve interaction:', e.message)
+      }
+    }
+    return true
   }
 
   // ===== HELPERS =====
