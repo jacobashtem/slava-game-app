@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
+import gsap from 'gsap'
 import CreatureCard from '../cards/CreatureCard.vue'
 import type { CardInstance } from '../../game-engine/types'
 import { BattleLine as BL, CardPosition, GamePhase } from '../../game-engine/constants'
@@ -171,6 +172,20 @@ function getAllTargets(): string[] {
     .map(e => e.instanceId)
 }
 
+// ===== GSAP DAMAGE FLOAT =====
+function animateDmgFloat(el: HTMLElement) {
+  gsap.fromTo(el,
+    { y: 0, scale: 1.3, opacity: 1, x: '-50%' },
+    {
+      y: -65, scale: 0.75, opacity: 0,
+      duration: 1.6, ease: 'power2.out',
+      onComplete: () => el.remove(),
+    }
+  )
+  // Bounce up first
+  gsap.to(el, { scale: 1.6, duration: 0.15, yoyo: true, repeat: 1, ease: 'power1.out' })
+}
+
 // ===== DRAG & DROP =====
 let _draggingId = ''
 
@@ -237,8 +252,11 @@ function onLineDrop(e: DragEvent) {
         @dragstart="onDragStart($event, card)"
         @dragend="onDragEnd"
       >
-        <!-- Floating damage number -->
-        <div v-if="ui.hitAmounts[card.instanceId]" class="damage-number" :key="`dmg-${card.instanceId}-${ui.hitAmounts[card.instanceId]}`">
+        <!-- Floating damage number — GSAP animated -->
+        <div v-if="ui.hitAmounts[card.instanceId]" class="damage-number"
+          :key="`dmg-${card.instanceId}-${ui.hitAmounts[card.instanceId]}`"
+          :ref="(el: any) => { if (el) animateDmgFloat(el as HTMLElement) }"
+        >
           -{{ ui.hitAmounts[card.instanceId] }}
         </div>
 
@@ -438,13 +456,7 @@ function onLineDrop(e: DragEvent) {
   white-space: nowrap;
   font-family: var(--font-display, Georgia, serif);
   letter-spacing: -0.5px;
-  animation: dmg-float 1.6s ease forwards;
-}
-@keyframes dmg-float {
-  0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.3); }
-  15%  { transform: translateX(-50%) translateY(-8px) scale(1.5); }
-  40%  { opacity: 1; }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-60px) scale(0.8); }
+  /* GSAP handles float animation via animateDmgFloat() */
 }
 
 /* ===== GHOST SLOTS — Runic stone tablets ===== */
@@ -499,8 +511,8 @@ function onLineDrop(e: DragEvent) {
 }
 
 @keyframes rune-slot-pulse {
-  0%, 100% { border-color: rgba(200, 168, 78, 0.3); }
-  50%      { border-color: rgba(200, 168, 78, 0.6); }
+  0%, 100% { box-shadow: 0 0 0 0px rgba(200, 168, 78, 0); }
+  50%      { box-shadow: 0 0 0 1px rgba(200, 168, 78, 0.4), 0 0 8px rgba(200, 168, 78, 0.15); }
 }
 
 /* ====== MOBILE RESPONSIVE ====== */

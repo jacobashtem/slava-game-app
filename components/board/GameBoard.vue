@@ -919,9 +919,9 @@ const onPlayDescription = computed(() => {
   animation: aura-pulse 0.6s ease-out 2;
 }
 @keyframes aura-pulse {
-  0%   { outline: 2px solid transparent; outline-offset: 0; }
-  30%  { outline: 3px solid rgba(251, 191, 36, 0.7); outline-offset: 2px; }
-  100% { outline: 2px solid transparent; outline-offset: 0; }
+  0%   { box-shadow: 0 0 0 0px rgba(251, 191, 36, 0); }
+  30%  { box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.7), 0 0 12px rgba(251, 191, 36, 0.3); }
+  100% { box-shadow: 0 0 0 0px rgba(251, 191, 36, 0); }
 }
 
 .aura-rounds {

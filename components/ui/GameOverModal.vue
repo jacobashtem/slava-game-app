@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import gsap from 'gsap'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { useArenaStore } from '../../stores/arenaStore'
@@ -32,6 +33,43 @@ const seasonLabel: Record<string, string> = {
   spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima',
 }
 
+// GSAP refs for entrance animation
+const modalBoxEl = ref<HTMLElement | null>(null)
+const glowEl = ref<HTMLElement | null>(null)
+const iconEl = ref<HTMLElement | null>(null)
+const titleEl = ref<HTMLElement | null>(null)
+
+watch(() => game.winner, (w) => {
+  if (!w) return
+  nextTick(() => {
+    // Entrance timeline — staggered reveal
+    const tl = gsap.timeline({ defaults: { ease: 'back.out(1.7)' } })
+
+    if (glowEl.value) {
+      tl.fromTo(glowEl.value, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 0.3, duration: 0.8, ease: 'power2.out' }, 0)
+    }
+    if (modalBoxEl.value) {
+      tl.fromTo(modalBoxEl.value, { scale: 0.8, y: 30, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.5 }, 0.1)
+    }
+    if (iconEl.value) {
+      tl.fromTo(iconEl.value, { scale: 0, rotation: -20, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.6 }, 0.3)
+    }
+    if (titleEl.value) {
+      tl.fromTo(titleEl.value, { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, 0.5)
+    }
+
+    // Breathing glow loop
+    if (glowEl.value) {
+      gsap.to(glowEl.value, { scale: 1.1, opacity: 0.4, duration: 2, yoyo: true, repeat: -1, ease: 'sine.inOut', delay: 1 })
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (glowEl.value) gsap.killTweensOf(glowEl.value)
+  if (modalBoxEl.value) gsap.killTweensOf(modalBoxEl.value)
+})
+
 function restart() {
   ui.clearSelection()
   ui.showGameOver = false
@@ -49,19 +87,19 @@ function restart() {
   <Transition name="modal-fade">
     <div v-if="game.winner" class="modal-overlay">
       <!-- Radial glow behind modal -->
-      <div :class="['modal-glow', isWin ? 'glow-win' : 'glow-lose']" />
+      <div ref="glowEl" :class="['modal-glow', isWin ? 'glow-win' : 'glow-lose']" />
 
-      <div :class="['modal-box', isWin ? 'box-win' : 'box-lose']">
+      <div ref="modalBoxEl" :class="['modal-box', isWin ? 'box-win' : 'box-lose']">
         <!-- Top ornament -->
         <div class="ornament-top" />
 
         <!-- Icon -->
-        <div :class="['result-icon', isWin ? 'win' : 'lose']">
+        <div ref="iconEl" :class="['result-icon', isWin ? 'win' : 'lose']">
           <Icon :icon="isWin ? 'game-icons:laurel-crown' : 'game-icons:skull-crossed-bones'" />
         </div>
 
         <!-- Title -->
-        <h2 :class="isWin ? 'win-text' : 'lose-text'">
+        <h2 ref="titleEl" :class="isWin ? 'win-text' : 'lose-text'">
           {{ isWin ? 'ZWYCIĘSTWO' : 'PORAŻKA' }}
         </h2>
         <p class="result-sub">
@@ -133,15 +171,10 @@ function restart() {
   filter: blur(100px);
   opacity: 0.3;
   pointer-events: none;
-  animation: glow-breathe 3s ease-in-out infinite;
+  /* GSAP handles glow breathing animation */
 }
 .glow-win  { background: radial-gradient(circle, #fbbf24 0%, transparent 70%); }
 .glow-lose { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
-
-@keyframes glow-breathe {
-  0%, 100% { opacity: 0.2; transform: scale(1); }
-  50%      { opacity: 0.35; transform: scale(1.1); }
-}
 
 .modal-box {
   position: relative;
@@ -157,17 +190,12 @@ function restart() {
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.8),
     0 0 1px 0 rgba(255, 255, 255, 0.1) inset;
-  animation: modal-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* GSAP handles entrance animation */
   min-width: 320px;
 }
 
 .box-win  { border-color: rgba(251, 191, 36, 0.3); }
 .box-lose { border-color: rgba(100, 116, 139, 0.3); }
-
-@keyframes modal-enter {
-  from { opacity: 0; transform: scale(0.85) translateY(20px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
 
 /* Ornamental lines */
 .ornament-top, .ornament-bottom {
@@ -180,11 +208,7 @@ function restart() {
 .result-icon {
   font-size: 64px;
   line-height: 1;
-  animation: icon-entrance 0.6s ease-out 0.2s both;
-}
-@keyframes icon-entrance {
-  from { opacity: 0; transform: scale(0.5) rotate(-15deg); }
-  to   { opacity: 1; transform: scale(1) rotate(0); }
+  /* GSAP handles icon entrance */
 }
 
 .result-icon.win  { color: #fbbf24; filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.5)); }
@@ -195,11 +219,7 @@ h2 {
   font-size: 32px;
   font-family: var(--font-display, Georgia, serif);
   letter-spacing: 0.15em;
-  animation: title-entrance 0.4s ease-out 0.3s both;
-}
-@keyframes title-entrance {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  /* GSAP handles title entrance */
 }
 
 .win-text {
