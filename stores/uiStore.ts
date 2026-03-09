@@ -53,6 +53,9 @@ export const useUIStore = defineStore('ui', () => {
     availableTargetIds?: string[]
   } | null>(null)
 
+  // Karta wystawiana na pole wroga (Wieszczy, Bieda)
+  const placingOnEnemyField = ref(false)
+
   // ===== COMPUTED =====
   const isSelectingTarget = computed(() => mode.value === 'attacking' && attackingCardId.value !== null)
   const isPlacingCard = computed(() => mode.value === 'placing' && selectedCardId.value !== null)
@@ -95,6 +98,7 @@ export const useUIStore = defineStore('ui', () => {
     mode.value = 'idle'
     validAttackTargets.value = new Set()
     highlightedLines.value = new Set()
+    placingOnEnemyField.value = false
   }
 
   function triggerAttackAnimation(attackerId: string, defenderId: string) {
@@ -200,6 +204,7 @@ export const useUIStore = defineStore('ui', () => {
     isEnhancedMode,
     confirmingSurrender,
     pendingActivation,
+    placingOnEnemyField,
     isSelectingTarget,
     isPlacingCard,
     isMovingCard,

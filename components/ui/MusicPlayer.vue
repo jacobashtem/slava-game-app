@@ -82,17 +82,17 @@ const currentName = computed(() => tracks[currentTrack.value]?.name ?? '')
 <template>
   <div :class="['music-player', { expanded }]">
     <!-- Collapsed: just a small icon -->
-    <button class="mp-toggle" @click="expanded = !expanded" :title="expanded ? 'Ukryj' : 'Muzyka'">
+    <button class="mp-toggle" @click="expanded = !expanded" :data-tip="expanded ? 'Ukryj' : 'Muzyka'">
       🎵
     </button>
 
     <template v-if="expanded">
       <div class="mp-controls">
-        <button class="mp-btn" @click="prev" title="Poprzednia">⏮</button>
-        <button class="mp-btn mp-play" @click="toggle" :title="isPlaying ? 'Pauza' : 'Graj'">
+        <button class="mp-btn" @click="prev" data-tip="Poprzednia">⏮</button>
+        <button class="mp-btn mp-play" @click="toggle" :data-tip="isPlaying ? 'Pauza' : 'Graj'">
           {{ isPlaying ? '⏸' : '▶' }}
         </button>
-        <button class="mp-btn" @click="next" title="Następna">⏭</button>
+        <button class="mp-btn" @click="next" data-tip="Następna">⏭</button>
       </div>
       <div class="mp-track-name">{{ currentName }}</div>
       <div class="mp-progress-bar">
@@ -105,7 +105,7 @@ const currentName = computed(() => tracks[currentTrack.value]?.name ?? '')
         step="0.05"
         v-model.number="volume"
         class="mp-volume"
-        title="Głośność"
+        data-tip="Głośność"
       />
     </template>
 
@@ -146,8 +146,30 @@ const currentName = computed(() => tracks[currentTrack.value]?.name ?? '')
   line-height: 1;
   opacity: 0.6;
   transition: opacity 0.15s;
+  position: relative;
 }
 .mp-toggle:hover { opacity: 1; }
+
+/* Styled tooltips */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
+}
 
 .mp-controls {
   display: flex;

@@ -27,7 +27,15 @@
       "Bash(grep:*)",
       "Bash(python3:*)",
       "Bash(node_modules/typescript/bin/tsc:*)",
-      "Bash(/c/jacobash/driverstatus/driver-status-frontend/node_modules/.bin/tsc:*)"
+      "Bash(/c/jacobash/driverstatus/driver-status-frontend/node_modules/.bin/tsc:*)",
+      "Bash(__NEW_LINE_3c06f5d86d0724f7__ echo:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(do npx:*)",
+      "Bash(npm ls:*)",
+      "Bash(/tmp/check_todos.sh:*)",
+      "Bash(jq:*)",
+      "Bash(test:*)"
     ]
   }
 }

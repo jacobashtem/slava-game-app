@@ -9,6 +9,7 @@ import artefaktImg from '~/assets/cards/artefakt.png'
 import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import { getAllCreaturesOnField } from '../../game-engine/LineManager'
+import { getEffect } from '../../game-engine/EffectRegistry'
 
 const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaImg }
 
@@ -46,11 +47,25 @@ function onCardClick(card: CardInstance) {
   ui.selectCardFromHand(card.instanceId)
 
   if (ui.selectedCardId === card.instanceId) {
-    ui.setHighlightedLines([
-      `player1-${BattleLine.FRONT}`,
-      `player1-${BattleLine.RANGED}`,
-      `player1-${BattleLine.SUPPORT}`,
-    ])
+    // Sprawdź czy karta wystawiana na pole wroga (Wieszczy, Bieda)
+    const effectId = (card.cardData as any).effectId
+    const effect = effectId ? getEffect(effectId) : null
+    const onEnemyField = effect?.playOnEnemyField === true
+
+    if (onEnemyField) {
+      ui.placingOnEnemyField = true
+      ui.setHighlightedLines([
+        `player2-${BattleLine.FRONT}`,
+        `player2-${BattleLine.RANGED}`,
+        `player2-${BattleLine.SUPPORT}`,
+      ])
+    } else {
+      ui.setHighlightedLines([
+        `player1-${BattleLine.FRONT}`,
+        `player1-${BattleLine.RANGED}`,
+        `player1-${BattleLine.SUPPORT}`,
+      ])
+    }
   } else {
     ui.setHighlightedLines([])
   }

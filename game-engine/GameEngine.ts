@@ -264,7 +264,7 @@ export class GameEngine {
       const result = effect.execute({ state: newState, source: card, trigger: EffectTrigger.ON_PLAY })
       this.applyStateAndLog(result.newState, result.log)
     } catch (err) {
-      console.warn('[GameEngine] confirmOnPlay error:', err)
+      // ON_PLAY effect failed — fallback to state without effect
       this.state = newState
     }
 

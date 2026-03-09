@@ -178,7 +178,7 @@ const parsedEffectDescription = computed(() => {
       <div class="tt-header" :style="{ '--tc': isCreature ? domainInfo.color : '#6366f1' }">
         <span class="tt-name">{{ data.name }}</span>
         <div class="tt-header-right">
-          <img v-if="isCreature && domainImgs[data.domain]" :src="domainImgs[data.domain]" class="tt-domain-img" :title="domainInfo.name" />
+          <img v-if="isCreature && domainImgs[data.domain]" :src="domainImgs[data.domain]" class="tt-domain-img" />
           <img v-else-if="!isCreature && adventureTypeImgs[data.adventureType]" :src="adventureTypeImgs[data.adventureType]" class="tt-domain-img" />
           <span v-if="isCreature" class="tt-domain">{{ domainInfo.name }}</span>
           <span v-else class="tt-adventure-type">{{ adventureTypeLabel }}</span>
@@ -192,7 +192,7 @@ const parsedEffectDescription = computed(() => {
           v-if="data.isFlying && !card.isGrounded"
           :src="flyingImg"
           class="tt-art-flying"
-          title="Latający"
+          alt="Latający"
         />
       </div>
 

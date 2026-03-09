@@ -195,7 +195,7 @@ const onPlayDescription = computed(() => {
           v-if="!game.winner"
           class="surrender-side-btn"
           @click="ui.confirmingSurrender = true"
-          title="Poddaj grę"
+          v-tip="'Poddaj grę'"
         >
           🏳
         </button>
@@ -238,7 +238,7 @@ const onPlayDescription = computed(() => {
         :key="'aura-' + i"
         class="aura-chip"
         :class="a.side === 'player1' ? 'aura-ally' : 'aura-enemy'"
-        :title="`${a.cardName}: ${a.desc}`"
+        v-tip="`${a.cardName}: ${a.desc}`"
       >
         {{ a.icon }} {{ a.label }}
       </span>
@@ -246,7 +246,7 @@ const onPlayDescription = computed(() => {
         v-for="ev in activeEventCards"
         :key="'ev-' + ev.instanceId"
         class="aura-chip aura-event"
-        :title="`${ev.cardData.name} (${ev.roundsRemaining != null ? ev.roundsRemaining + ' rund' : 'permanentna'})`"
+        v-tip="`${ev.cardData.name} (${ev.roundsRemaining != null ? ev.roundsRemaining + ' rund' : 'permanentna'})`"
       >
         📜 {{ ev.cardData.name }}
         <span v-if="ev.roundsRemaining != null" class="aura-rounds">{{ ev.roundsRemaining }}</span>
@@ -560,6 +560,25 @@ const onPlayDescription = computed(() => {
   cursor: pointer;
   transition: all 0.15s;
   line-height: 1;
+  position: relative;
+}
+.surrender-side-btn:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  background: #0f172a;
+  color: #fca5a5;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  pointer-events: none;
 }
 .surrender-side-btn:hover {
   background: rgba(239, 68, 68, 0.1);
@@ -674,6 +693,42 @@ const onPlayDescription = computed(() => {
   white-space: nowrap;
   cursor: help;
   flex-shrink: 0;
+  position: relative;
+}
+.aura-chip:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #475569;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+  width: max-content;
+  max-width: 240px;
+  pointer-events: none;
+}
+.aura-chip:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  border: 4px solid transparent;
+  border-top-color: #334155;
+  pointer-events: none;
+}
+@keyframes chip-tip-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(3px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .aura-ally {

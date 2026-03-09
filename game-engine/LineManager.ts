@@ -45,6 +45,19 @@ export function getEnemyFrontLine(state: GameState, attackerSide: PlayerSide): B
   return null  // wróg nie ma żadnych istot na polu
 }
 
+/**
+ * Zwraca najniższą zajętą linię WŁASNEGO pola (front obrońcy).
+ */
+export function getOwnFrontLine(state: GameState, side: PlayerSide): BattleLine | null {
+  const lines = [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]
+  for (const line of lines) {
+    if (state.players[side].field.lines[line].length > 0) {
+      return line
+    }
+  }
+  return null
+}
+
 // ===== WALIDACJA WYSTAWIANIA =====
 
 /**
@@ -331,22 +344,30 @@ export function placeCreatureOnField(
   state: GameState,
   card: CardInstance,
   line: BattleLine,
-  roundNumber: number
+  roundNumber: number,
+  /** Nadpisz stronę pola (dla kart wystawianych na pole wroga) */
+  overrideFieldSide?: PlayerSide
 ): void {
-  const player = state.players[card.owner]
+  const fieldSide = overrideFieldSide ?? card.owner
+  const fieldPlayer = state.players[fieldSide]
   card.line = line
   card.turnsInPlay = 0
   card.roundEnteredPlay = roundNumber
-  card.isRevealed = false  // ujawnia się dopiero przy ataku/obronie
-
-  // Usuń z ręki
-  const handIdx = player.hand.findIndex(c => c.instanceId === card.instanceId)
-  if (handIdx !== -1) {
-    player.hand.splice(handIdx, 1)
+  if (!overrideFieldSide) {
+    card.isRevealed = false  // ujawnia się dopiero przy ataku/obronie
   }
 
-  player.field.lines[line].push(card)
-  player.creaturesPlayedThisTurn += 1
+  // Usuń z ręki — szukaj w ręce oryginalnego gracza (currentTurn)
+  for (const side of (['player1', 'player2'] as PlayerSide[])) {
+    const handIdx = state.players[side].hand.findIndex(c => c.instanceId === card.instanceId)
+    if (handIdx !== -1) {
+      state.players[side].hand.splice(handIdx, 1)
+      state.players[side].creaturesPlayedThisTurn += 1
+      break
+    }
+  }
+
+  fieldPlayer.field.lines[line].push(card)
 }
 
 /**

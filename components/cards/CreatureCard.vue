@@ -164,31 +164,41 @@ const mlotCounter = computed(() => {
   return (props.card.metadata.mlotSwarogaAttacksLeft as number) ?? 0
 })
 
-// Artefakt badge: pokaż ikonę artefaktu na karcie
+// Artefakt badge: pokaż ikony artefaktów na karcie (obsługuje wiele)
+const artMap: Record<string, { icon: string; label: string }> = {
+  'adventure_sztandar':           { icon: '🏴', label: 'Sztandar (+2 ATK sojusznikom, nie atakuje)' },
+  'adventure_sztandar_enhanced':  { icon: '🏴', label: 'Sztandar+ (+2 ATK, sojusznik przejmuje atak)' },
+  'adventure_miecz_kladenet':     { icon: '⚔', label: 'Miecz Kladenet (2 cele, brak kontrataku)' },
+  'adventure_miecz_kladenet_enhanced': { icon: '⚔', label: 'Miecz Kladenet+ (2 cele, dowolna linia)' },
+  'adventure_topor_peruna':       { icon: '⚡', label: 'Topór Peruna (×4 DMG, brak kontrataku)' },
+  'adventure_topor_peruna_enhanced': { icon: '⚡', label: 'Topór Peruna+ (×4, piercing)' },
+  'adventure_mlot_swaroga':       { icon: '🔨', label: 'Młot Swaroga (3 szalone ataki)' },
+  'adventure_mlot_swaroga_enhanced': { icon: '🔨', label: 'Młot Swaroga+ (3 ataki bez kontry)' },
+  'adventure_likantropia':        { icon: '🐺', label: 'Likantropia (absorpcja przy zabiciu)' },
+  'adventure_likantropia_enhanced': { icon: '🐺', label: 'Likantropia+ (absorpcja + sojusznicy)' },
+  'adventure_kwiat_paproci':      { icon: '🌸', label: 'Kwiat Paproci (zmiana typu ataku)' },
+  'adventure_kwiat_paproci_enhanced': { icon: '🌸', label: 'Kwiat Paproci+ (typ + odporność)' },
+  'adventure_moc_swiatogora':     { icon: '💪', label: 'Moc Światogora (×2 staty)' },
+  'adventure_moc_swiatogora_enhanced': { icon: '💪', label: 'Moc Światogora+ (×2, wskrzeszenie)' },
+  'adventure_matecznik':          { icon: '🌿', label: 'Matecznik (ukryta)' },
+  'adventure_matecznik_enhanced': { icon: '🌿', label: 'Matecznik+ (ukryta + regen)' },
+  'adventure_przyjazn':           { icon: '🤝', label: 'Przyjaźń (strażnik)' },
+  'adventure_przyjazn_enhanced':  { icon: '🤝', label: 'Przyjaźń+ (strażnik + free ataki)' },
+}
 const equippedArtifactBadge = computed(() => {
   if (props.inHand || !props.card.equippedArtifacts?.length) return null
-  const art = props.card.equippedArtifacts[0] as any
-  const artMap: Record<string, { icon: string; label: string }> = {
-    'adventure_sztandar':           { icon: '🏴', label: 'Sztandar (+2 ATK sojusznikom, nie atakuje)' },
-    'adventure_sztandar_enhanced':  { icon: '🏴', label: 'Sztandar+ (+2 ATK, sojusznik przejmuje atak)' },
-    'adventure_miecz_kladenet':     { icon: '⚔', label: 'Miecz Kladenet (2 cele, brak kontrataku)' },
-    'adventure_miecz_kladenet_enhanced': { icon: '⚔', label: 'Miecz Kladenet+ (2 cele, dowolna linia)' },
-    'adventure_topor_peruna':       { icon: '⚡', label: 'Topór Peruna (×4 DMG, brak kontrataku)' },
-    'adventure_topor_peruna_enhanced': { icon: '⚡', label: 'Topór Peruna+ (×4, piercing)' },
-    'adventure_mlot_swaroga':       { icon: '🔨', label: 'Młot Swaroga (3 szalone ataki)' },
-    'adventure_mlot_swaroga_enhanced': { icon: '🔨', label: 'Młot Swaroga+ (3 ataki bez kontry)' },
-    'adventure_likantropia':        { icon: '🐺', label: 'Likantropia (absorpcja przy zabiciu)' },
-    'adventure_likantropia_enhanced': { icon: '🐺', label: 'Likantropia+ (absorpcja + sojusznicy)' },
-    'adventure_kwiat_paproci':      { icon: '🌸', label: 'Kwiat Paproci (zmiana typu ataku)' },
-    'adventure_kwiat_paproci_enhanced': { icon: '🌸', label: 'Kwiat Paproci+ (typ + odporność)' },
-    'adventure_moc_swiatogora':     { icon: '💪', label: 'Moc Światogora (×2 staty)' },
-    'adventure_moc_swiatogora_enhanced': { icon: '💪', label: 'Moc Światogora+ (×2, wskrzeszenie)' },
-    'adventure_matecznik':          { icon: '🌿', label: 'Matecznik (ukryta)' },
-    'adventure_matecznik_enhanced': { icon: '🌿', label: 'Matecznik+ (ukryta + regen)' },
-    'adventure_przyjazn':           { icon: '🤝', label: 'Przyjaźń (strażnik)' },
-    'adventure_przyjazn_enhanced':  { icon: '🤝', label: 'Przyjaźń+ (strażnik + free ataki)' },
-  }
-  return artMap[art.effectId] ?? { icon: '⚙', label: art.name ?? 'Artefakt' }
+  return props.card.equippedArtifacts.map((art: any) => {
+    const mapped = artMap[art.effectId]
+    return mapped ?? { icon: '⚙', label: art.name ?? 'Artefakt' }
+  })
+})
+
+// Trofea Czarnoksiężnika — lista przejętych zdolności
+const trophies = computed(() => {
+  if (props.inHand) return null
+  const t = props.card.metadata?.trophies as any[] | undefined
+  if (!t?.length) return null
+  return t
 })
 
 // Zagrożenie Południcą / Cichą — najsłabsza istota na polu
@@ -402,44 +412,53 @@ function onClick() {
     <div class="card-body">
       <!-- Latający: duży, prawostronnie -->
       <div v-if="isFlying" class="flying-row">
-        <img :src="flyingImg" class="flying-img" title="Latający" />
+        <img :src="flyingImg" class="flying-img" v-tip="'Latający'" />
       </div>
       <div class="card-badges">
-        <Icon v-if="card.isSilenced"   icon="game-icons:silenced"       class="badge-icon badge-silenced" title="Uciszony" />
-        <Icon v-if="card.isImmune"     icon="game-icons:shield-reflect" class="badge-icon badge-immune"   title="Odporny" />
-        <Icon v-if="card.cannotAttack" icon="game-icons:chains"         class="badge-icon badge-disarmed" title="Nie może atakować" />
+        <Icon v-if="card.isSilenced"   icon="game-icons:silenced"       class="badge-icon badge-silenced" v-tip="'Uciszony'" />
+        <Icon v-if="card.isImmune"     icon="game-icons:shield-reflect" class="badge-icon badge-immune"   v-tip="'Odporny'" />
+        <Icon v-if="card.cannotAttack" icon="game-icons:chains"         class="badge-icon badge-disarmed" v-tip="'Nie może atakować'" />
         <span v-if="card.poisonRoundsLeft" class="badge-poison">☠ {{ card.poisonRoundsLeft }}</span>
-        <span v-if="card.paralyzeRoundsLeft !== null && card.paralyzeRoundsLeft !== 0" class="badge-paralyze" :title="card.paralyzeRoundsLeft === -1 ? 'Paraliż permanentny' : `Paraliż: ${card.paralyzeRoundsLeft} rund`">
+        <span v-if="card.paralyzeRoundsLeft !== null && card.paralyzeRoundsLeft !== 0" class="badge-paralyze" v-tip="card.paralyzeRoundsLeft === -1 ? 'Paraliż permanentny' : `Paraliż: ${card.paralyzeRoundsLeft} rund`">
           ⚡ {{ card.paralyzeRoundsLeft === -1 ? '∞' : card.paralyzeRoundsLeft }}
         </span>
         <!-- TIER 4 badges -->
-        <span v-if="isTaunt"            class="badge-tag badge-taunt"       title="Prowokacja — wróg musi atakować Błotnika">🎯</span>
-        <span v-if="isPrzyjaznGuard"    class="badge-tag badge-friend-g"    title="Chroni sojusznika (Przyjaźń)">🛡</span>
-        <span v-if="isPrzyjaznProtected" class="badge-tag badge-friend-p"   title="Chroniony przez sojusznika (Przyjaźń)">💛</span>
-        <span v-if="isLycan"            class="badge-tag badge-lycan"       title="Likantropia — wchłania ofiary">🐺</span>
-        <span v-if="isCursed"           class="badge-tag badge-cursed"      title="Przeklęty — traci 1 ATK/DEF co turę">🪄</span>
-        <span v-if="isInvincible"       class="badge-tag badge-invincible"  title="Nieśmiertelny — odporny na obrażenia">♾</span>
-        <span v-if="isWijRevived"       class="badge-tag badge-wij"         title="Wskrzeszony — ginie na koniec tej tury!">⏰</span>
-        <span v-if="isGuardian"         class="badge-tag badge-guardian"    title="Strażnik — kontratakuje napastników sojuszników">🐻</span>
-        <span v-if="isRiding"           class="badge-tag badge-rider"       title="Dosiadł Rumaka — rani całą linię">🐴</span>
+        <span v-if="isTaunt"            class="badge-tag badge-taunt"       v-tip="'Prowokacja — wróg musi atakować Błotnika'">🎯</span>
+        <span v-if="isPrzyjaznGuard"    class="badge-tag badge-friend-g"    v-tip="'Chroni sojusznika (Przyjaźń)'">🛡</span>
+        <span v-if="isPrzyjaznProtected" class="badge-tag badge-friend-p"   v-tip="'Chroniony przez sojusznika (Przyjaźń)'">💛</span>
+        <span v-if="isLycan"            class="badge-tag badge-lycan"       v-tip="'Likantropia — wchłania ofiary'">🐺</span>
+        <span v-if="isCursed"           class="badge-tag badge-cursed"      v-tip="'Przeklęty — traci 1 ATK/DEF co turę'">🪄</span>
+        <span v-if="isInvincible"       class="badge-tag badge-invincible"  v-tip="'Nieśmiertelny — odporny na obrażenia'">♾</span>
+        <span v-if="isWijRevived"       class="badge-tag badge-wij"         v-tip="'Wskrzeszony — ginie na koniec tej tury!'">⏰</span>
+        <span v-if="isGuardian"         class="badge-tag badge-guardian"    v-tip="'Strażnik — kontratakuje napastników sojuszników'">🐻</span>
+        <span v-if="isRiding"           class="badge-tag badge-rider"       v-tip="'Dosiadł Rumaka — rani całą linię'">🐴</span>
         <!-- Pasywna aura -->
         <span
           v-if="passiveAura"
           class="badge-tag badge-passive"
-          :title="`${passiveAura.label}: ${passiveAura.desc}`"
+          v-tip="`${passiveAura.label}: ${passiveAura.desc}`"
         >{{ passiveAura.icon }}</span>
         <!-- Licznik: Smocze Jajo -->
-        <span v-if="jajoCounter" class="badge-tag badge-counter badge-jajo" :title="`Wylęg za ${jajoCounter.max - jajoCounter.current} rund`">
+        <span v-if="jajoCounter" class="badge-tag badge-counter badge-jajo" v-tip="`Wylęg za ${jajoCounter.max - jajoCounter.current} rund`">
           🥚 {{ jajoCounter.current }}/{{ jajoCounter.max }}
         </span>
         <!-- Licznik: Młot Swaroga ataków -->
-        <span v-if="mlotCounter !== null" class="badge-tag badge-counter badge-mlot" :title="`Pozostało ataków Młota: ${mlotCounter}`">
+        <span v-if="mlotCounter !== null" class="badge-tag badge-counter badge-mlot" v-tip="`Pozostało ataków Młota: ${mlotCounter}`">
           🔨 {{ mlotCounter }}
         </span>
-        <!-- Artefakt equipped -->
-        <span v-if="equippedArtifactBadge" class="badge-tag badge-artifact" :title="equippedArtifactBadge.label">
-          {{ equippedArtifactBadge.icon }}
-        </span>
+        <!-- Artefakty equipped -->
+        <span
+          v-for="(art, ai) in (equippedArtifactBadge ?? [])"
+          :key="'art-' + ai"
+          class="badge-tag badge-artifact"
+          v-tip="art.label"
+        >{{ art.icon }}</span>
+        <!-- Trofea Czarnoksiężnika -->
+        <span
+          v-if="trophies"
+          class="badge-tag badge-trophies"
+          v-tip="trophies.map((t: any) => `${t.name} (${t.attack}/${t.defense}): ${t.effectDescription}`).join('\n')"
+        >💀 {{ trophies.length }}</span>
       </div>
 
       <!-- Aktywne efekty (buffy/debuffy) — widoczne na karcie -->
@@ -448,7 +467,7 @@ function onClick() {
           v-for="eff in activeEffectLabels"
           :key="eff.id"
           :class="['ae-pill', `ae-${eff.type}`]"
-          :title="eff.label + (eff.turns !== null ? ` (${eff.turns} tur)` : ' (perm.)')"
+          v-tip="eff.label + (eff.turns !== null ? ` (${eff.turns} tur)` : ' (perm.)')"
         >
           <span class="ae-icon">{{ eff.icon }}</span>
           <span class="ae-label">{{ eff.label }}</span>
@@ -472,7 +491,7 @@ function onClick() {
         <button
           v-if="effectCost === 0"
           class="effect-activate-btn"
-          :title="`Aktywuj zdolność (gratis)`"
+          v-tip="'Aktywuj zdolność (gratis)'"
           @click.stop="emit('activate-effect', card)"
         >⚡</button>
         <span v-else class="ability-slot-empty" />
@@ -481,7 +500,7 @@ function onClick() {
         <button
           v-if="effectCost !== undefined && effectCost > 0"
           class="effect-cost-pill"
-          :title="`Aktywuj za ${effectCost} ZŁ`"
+          v-tip="`Aktywuj za ${effectCost} ZŁ`"
           @click.stop="emit('activate-effect', card)"
         >🪙{{ effectCost }}</button>
       </div>
@@ -1149,6 +1168,24 @@ function onClick() {
   50%      { box-shadow: 0 0 8px rgba(251, 191, 36, 0.7), 0 0 3px rgba(251, 191, 36, 0.4); }
 }
 
+/* ===== TROFEA CZARNOKSIĘŻNIKA ===== */
+.badge-trophies {
+  background: rgba(168, 85, 247, 0.25);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  border-radius: 4px;
+  padding: 0 3px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #c084fc;
+  cursor: help;
+  animation: trophy-glow 2s ease-in-out infinite;
+}
+@keyframes trophy-glow {
+  0%, 100% { box-shadow: 0 0 2px rgba(168, 85, 247, 0.3); }
+  50%      { box-shadow: 0 0 8px rgba(168, 85, 247, 0.7); }
+}
+
+
 /* ===== ZAGROŻENIE (Południca/Cicha) ===== */
 .is-threatened {
   animation: threat-pulse 1.5s ease-in-out infinite;
@@ -1197,4 +1234,5 @@ function onClick() {
   30%  { box-shadow: 0 0 0 8px rgba(167, 139, 250, 0.9), 0 0 30px 12px rgba(167, 139, 250, 0.5); filter: brightness(1.5); }
   100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); filter: brightness(1); }
 }
+
 </style>

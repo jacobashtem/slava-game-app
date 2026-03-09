@@ -46,8 +46,13 @@ const ghostSlots = computed(() => Math.max(0, MAX_SLOTS - props.cards.length))
 
 // ===== KLIK NA LINIĘ (wystawianie z ręki) =====
 function onLineClick(e: MouseEvent) {
-  if (!props.isPlayerSide) return
   if (!ui.isPlacingCard || !ui.selectedCardId) return
+  // Wystawianie na pole wroga (Wieszczy, Bieda) — klik na linię wroga
+  if (ui.placingOnEnemyField) {
+    if (props.isPlayerSide) return // klik na własne linie zignoruj
+  } else {
+    if (!props.isPlayerSide) return // normalnie: tylko własne linie
+  }
   // Nie reaguj gdy klik był na karcie (CreatureCard obsługuje to)
   const target = e.target as HTMLElement
   if (target.closest('.creature-card')) return
@@ -280,7 +285,7 @@ function onLineDrop(e: DragEvent) {
   transition: border-color 0.2s, background 0.2s;
   position: relative;
   gap: 4px;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 /* Per-zone color tinting */

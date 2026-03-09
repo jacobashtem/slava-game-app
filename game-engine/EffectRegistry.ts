@@ -195,6 +195,9 @@ registerEffect({
   activationCost: 0,
   activationCooldown: 'per_turn',
   activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.owner === source.owner && card.instanceId !== source.instanceId
+  },
   execute: (ctx) => {
     // ctx.target = wybrany sojusznik (target selection w UI)
     const newState = cloneGameState(ctx.state)
@@ -1318,6 +1321,15 @@ registerEffect({
     if (card) {
       // Nadpisz effectId — od teraz Czarnoksiężnik działa jak zabity
       (card.cardData as any).effectId = stolenEffectId
+      // Zapisz trofeum (dla UI — badge z listą przejętych zdolności)
+      if (!card.metadata.trophies) card.metadata.trophies = []
+      ;(card.metadata.trophies as any[]).push({
+        name: target.cardData.name,
+        effectId: stolenEffectId,
+        effectDescription: (target.cardData as any).effectDescription ?? '',
+        attack: target.currentStats.attack,
+        defense: target.currentStats.maxDefense,
+      })
       const log = addLog(newState, `${source.cardData.name} przejmuje zdolności "${target.cardData.name}"!`, 'effect')
       return effectResult(newState, [log])
     }
@@ -1569,6 +1581,9 @@ registerEffect({
   activationCost: 1,
   activationCooldown: 'per_turn',
   activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.owner === source.owner && card.instanceId !== source.instanceId && card.currentStats.defense < card.currentStats.maxDefense
+  },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
     const target = ctx.target
@@ -1605,6 +1620,9 @@ registerEffect({
   activationCost: 0,
   activationCooldown: 'per_turn',
   activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.instanceId !== source.instanceId && card.activeEffects.length > 0
+  },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
     const target = ctx.target
@@ -1780,6 +1798,9 @@ registerEffect({
   activationCost: 0,
   activationCooldown: 'per_turn',
   activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.owner === source.owner && card.instanceId !== source.instanceId
+  },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
     const target = ctx.target
@@ -1999,6 +2020,7 @@ registerEffect({
 registerEffect({
   id: 'wieszczy_spy_burn',
   name: 'Przekleństwo Wieszczego',
+  playOnEnemyField: true,
   description: '[WEJŚCIE] [AURA] Przy wystawieniu: ujawnia wszystkie karty na polu wroga. Na końcu każdej tury: niszczy 1 losową kartę z ręki wroga.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_TURN_END],
   priority: EffectPriority.REACTION,
@@ -2038,6 +2060,9 @@ registerEffect({
   activationCost: 0,
   activationCooldown: 'per_turn',
   activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.instanceId !== source.instanceId && card.activeEffects.length > 0
+  },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
     const log: LogEntry[] = []
@@ -2283,6 +2308,9 @@ registerEffect({
   activationCost: 0,
   activationCooldown: 'once',
   activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.owner !== source.owner && card.currentStats.attack <= source.currentStats.attack * 2
+  },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
     const log: LogEntry[] = []
@@ -2917,6 +2945,7 @@ registerEffect({
 registerEffect({
   id: 'bieda_spy_block_draw',
   name: 'Bieda (Klątwa Ubóstwa)',
+  playOnEnemyField: true,
   description: '[AURA] Gracz mający Biedę na polu nie może dobierać kart.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.MODIFIER,
@@ -3502,6 +3531,12 @@ registerEffect({
   activationCost: 0,
   activationCooldown: 'once',
   activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.owner === source.owner &&
+      card.instanceId !== source.instanceId &&
+      (card.cardData as any).idDomain === 2 &&
+      !card.metadata.rumakActive
+  },
   canActivate: (ctx: EffectContext) => {
     const candidates = getAllCreaturesOnField(ctx.state, ctx.source.owner)
       .filter(c =>

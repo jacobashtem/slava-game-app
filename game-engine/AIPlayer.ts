@@ -543,9 +543,15 @@ export class AIPlayer {
   // ===================================================================
 
   private chooseLineForCreature(state: GameState, card: CardInstance): BattleLine | null {
+    // Karty wystawiane na pole wroga (Wieszczy, Bieda)
+    const effect = getEffect((card.cardData as any).effectId)
+    const targetSide = effect?.playOnEnemyField
+      ? (this.side === 'player1' ? 'player2' : 'player1')
+      : this.side
+
     // Priorytet: L1 → L2 → L3 (wolne miejsce)
     for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
-      if (canPlaceInLine(state, this.side, line)) return line
+      if (canPlaceInLine(state, targetSide as any, line)) return line
     }
     return null
   }

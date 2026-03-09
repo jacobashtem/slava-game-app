@@ -185,12 +185,28 @@ export function playCreature(
     throw new Error(`[TurnManager] Łapiduch wroga blokuje wystawianie demonów (Weles).`)
   }
 
-  placeCreatureOnField(newState, card, targetLine, newState.roundNumber)
-  const cardDisplayName = card.owner === 'player2' ? 'zakrytą jednostkę' : card.cardData.name
-  log.push(addLog(newState, `${newState.currentTurn} wystawia ${cardDisplayName} w linii ${targetLine}.`, 'play', [cardInstanceId]))
+  // Sprawdź czy karta wystawiana na pole wroga (Wieszczy, Bieda)
+  const effect = getEffect(card.cardData.effectId)
+  const isEnemyFieldCard = effect?.playOnEnemyField === true
+
+  if (isEnemyFieldCard) {
+    // Wystawiamy na pole WROGA — zmień właściciela
+    const enemySide: PlayerSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+    card.owner = enemySide
+    card.isRevealed = true // karta wroga jest widoczna
+    // Sprawdź limit pola wroga
+    if (!canPlaceInLine(newState, enemySide, targetLine)) {
+      throw new Error(`[TurnManager] Linia ${targetLine} wroga jest pełna.`)
+    }
+    placeCreatureOnField(newState, card, targetLine, newState.roundNumber, enemySide)
+    log.push(addLog(newState, `${newState.currentTurn} wystawia ${card.cardData.name} na pole wroga w linii ${targetLine}!`, 'play', [cardInstanceId]))
+  } else {
+    placeCreatureOnField(newState, card, targetLine, newState.roundNumber)
+    const cardDisplayName = card.owner === 'player2' ? 'zakrytą jednostkę' : card.cardData.name
+    log.push(addLog(newState, `${newState.currentTurn} wystawia ${cardDisplayName} w linii ${targetLine}.`, 'play', [cardInstanceId]))
+  }
 
   // Trigger ON_PLAY
-  const effect = getEffect(card.cardData.effectId)
   if (effect) {
     const triggers = Array.isArray(effect.trigger) ? effect.trigger : [effect.trigger]
     if (triggers.includes(EffectTrigger.ON_PLAY) && !card.isSilenced) {
@@ -227,7 +243,7 @@ export function playCreature(
           newState = effectResult.newState
           log.push(...effectResult.log)
         } catch (err) {
-          console.warn(`[TurnManager] Błąd ON_PLAY efektu "${card.cardData.effectId}":`, err)
+          // ON_PLAY effect failed — skip silently
         }
       }
     }
@@ -370,7 +386,7 @@ export function playAdventure(
       newState = effectResult.newState
       log.push(...effectResult.log)
     } catch (err) {
-      console.warn(`[TurnManager] Błąd efektu przygody "${effectId}":`, err)
+      // Adventure effect failed — skip silently
     }
   }
 
@@ -519,7 +535,7 @@ export function activateCreatureEffect(
     newState = result.newState
     log.push(...result.log)
   } catch (err) {
-    console.warn(`[TurnManager] activateCreatureEffect error for "${effect.id}":`, err)
+    // Activation failed — refund gold
     owner.gold += cost // zwróć złoto jeśli błąd
   }
 

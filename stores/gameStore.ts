@@ -103,7 +103,6 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerPlayCreature(cardInstanceId, line)
     } catch (e: any) {
-      console.warn('[gameStore] playCreature:', e.message)
       const ui = useUIStore()
       if (e.message?.includes('limit') || e.message?.includes('pełna') || e.message?.includes('MAX')) {
         ui.showPlayLimitToast('Pole jest pełne! Maksymalnie 5 istot.')
@@ -119,7 +118,6 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerPlayAdventure(cardInstanceId, targetInstanceId, useEnhanced)
     } catch (e: any) {
-      console.warn('[gameStore] playAdventure:', e.message)
       const ui = useUIStore()
       ui.showPlayLimitToast(e.message ?? 'Nie można zagrać karty przygody.')
     }
@@ -200,7 +198,6 @@ export const useGameStore = defineStore('game', () => {
         }
       }
     } catch (e: any) {
-      console.warn('[gameStore] attack:', e.message)
       ui.showPlayLimitToast(e.message ?? 'Nie można zaatakować.')
       // Cleanup reveal state on error
       if (wasHidden) ui.revealingCardId = null
@@ -232,7 +229,6 @@ export const useGameStore = defineStore('game', () => {
         endTurn()
       }
     } catch (e: any) {
-      console.warn('[gameStore] resolvePendingInteraction:', e.message)
     }
   }
 
@@ -241,7 +237,7 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerChangePosition(cardInstanceId, position)
     } catch (e: any) {
-      console.warn('[gameStore] changePosition:', e.message)
+      // silently ignore position change errors
     }
   }
 
@@ -324,7 +320,6 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerActivateEffect(cardInstanceId, targetInstanceId)
     } catch (e: any) {
-      console.warn('[gameStore] activateCreatureEffect:', e.message)
       const ui = useUIStore()
       ui.showPlayLimitToast(e.message ?? 'Nie można aktywować zdolności.')
     }
@@ -334,7 +329,6 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.confirmOnPlay()
     } catch (e: any) {
-      console.warn('[gameStore] confirmOnPlay:', e.message)
     }
   }
 
@@ -342,7 +336,6 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.skipOnPlay()
     } catch (e: any) {
-      console.warn('[gameStore] skipOnPlay:', e.message)
     }
   }
 
@@ -352,7 +345,6 @@ export const useGameStore = defineStore('game', () => {
       const ui = useUIStore()
       ui.openGameOver()
     } catch (e: any) {
-      console.warn('[gameStore] surrender:', e.message)
     }
   }
 
@@ -365,7 +357,6 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerDrawCard()
     } catch (e: any) {
-      console.warn('[gameStore] drawCard:', e.message)
       const ui = useUIStore()
       ui.showPlayLimitToast(e.message ?? 'Nie można dobrać karty.')
     }
@@ -376,7 +367,6 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerMoveCreatureLine(cardInstanceId, targetLine)
     } catch (e: any) {
-      console.warn('[gameStore] moveCreatureLine:', e.message)
     }
   }
 
@@ -389,7 +379,6 @@ export const useGameStore = defineStore('game', () => {
         runAITurn()
       }
     } catch (e: any) {
-      console.warn('[gameStore] advancePhase:', e.message)
     }
   }
 
@@ -410,7 +399,6 @@ export const useGameStore = defineStore('game', () => {
         runAITurn()
       }
     } catch (e: any) {
-      console.warn('[gameStore] endTurn:', e.message)
     }
   }
 
@@ -583,9 +571,7 @@ export const useGameStore = defineStore('game', () => {
         }
       } catch (e: any) {
         // "Nie znaleziono kart" = cel zginął wcześniej w tej turze — normalne
-        if (!e.message?.includes('Nie znaleziono kart') && !e.message?.includes('jeden atak')) {
-          console.warn('[gameStore] AI decision error:', e.message)
-        }
+        // Silently ignore expected AI errors (targets died mid-turn, attack limits)
       }
     }
 
@@ -652,7 +638,7 @@ export const useGameStore = defineStore('game', () => {
       try {
         state.value = engine.resolvePendingInteraction(choice)
       } catch (e: any) {
-        console.warn('[gameStore] AI auto-resolve interaction:', e.message)
+        // silently ignore AI auto-resolve errors
       }
     }
     return true

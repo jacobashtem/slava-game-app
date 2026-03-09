@@ -7,7 +7,7 @@ import type { GameState, CardInstance, CombatResult, LogEntry } from './types'
 import { CardPosition, AttackType, BattleLine, EffectTrigger } from './constants'
 import type { PlayerSide } from './types'
 import { cloneGameState, addLog, moveToGraveyard } from './GameStateUtils'
-import { canAttack, removeFromField, getEnemyFrontLine } from './LineManager'
+import { canAttack, removeFromField, getEnemyFrontLine, getOwnFrontLine } from './LineManager'
 import { getEffect } from './EffectRegistry'
 
 // ===================================================================
@@ -714,7 +714,16 @@ function canReachForCounter(
     return { canReach: true }
   }
 
-  // Wręcz/Żywioł: cel musi być na froncie wroga (najniższa zajęta linia)
+  // Wręcz/Żywioł: kontratakujący musi być na WŁASNYM froncie żeby dosięgnąć
+  const ownFrontLine = getOwnFrontLine(state, counterattacker.owner)
+  if (counterattacker.line !== ownFrontLine) {
+    return {
+      canReach: false,
+      reason: `${counterattacker.cardData.name} (${attackTypeName}) nie może kontratakować z L${counterattacker.line} — musi być na froncie (L${ownFrontLine}).`,
+    }
+  }
+
+  // Cel musi być na froncie wroga (najniższa zajęta linia przeciwnika)
   const frontLine = getEnemyFrontLine(state, counterattacker.owner)
   if (target.line === frontLine) {
     return { canReach: true }
@@ -868,7 +877,7 @@ function triggerEffect(
     const result = effectDef.execute({ state, source: card, target, trigger, value })
     return { newState: result.newState, log: result.log }
   } catch (err) {
-    console.warn(`[EffectRegistry] Błąd efektu "${effectDef.id}":`, err)
+    // Effect execution failed — silently fallback to no-op
     return { newState: state, log: [] }
   }
 }

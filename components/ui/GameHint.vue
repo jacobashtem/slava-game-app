@@ -33,6 +33,9 @@ const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null 
       return { text: 'Kliknij linię docelową, aby przenieść istotę', type: 'info' }
     }
     if (ui.isPlacingCard) {
+      if (ui.placingOnEnemyField) {
+        return { text: 'Kliknij linię na POLU WROGA, aby wystawić istotę po stronie przeciwnika', type: 'warn' }
+      }
       return { text: 'Kliknij linię na polu, aby wystawić istotę', type: 'info' }
     }
     return { text: 'Faza Wystawiania — wystaw istotę, zagraj kartę przygody lub przenieś istotę na pole [Spacja → dalej]', type: 'info' }

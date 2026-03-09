@@ -279,6 +279,10 @@ export interface EffectDefinition {
   activationRequiresTarget?: boolean
   // Opcjonalny filtr celów — zwraca true jeśli karta jest prawidłowym celem aktywacji
   activationTargetFilter?: (card: CardInstance, source: CardInstance, state: GameState) => boolean
+
+  // ===== WYSTAWIANIE NA POLE WROGA =====
+  // Karta wystawiana na pole przeciwnika (np. Wieszczy, Bieda)
+  playOnEnemyField?: boolean
 }
 
 // ===== AI =====
