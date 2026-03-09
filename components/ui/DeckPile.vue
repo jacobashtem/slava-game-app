@@ -40,9 +40,9 @@ const emit = defineEmits<{
     <!-- Złoto — dla gracza klikalnie (enhanced), dla AI tylko informacyjnie -->
     <div
       v-if="gold !== undefined"
-      :class="['pile-section', 'gold-section', { 'gold-section--active': !isAI && enhancedActive, 'gold-section--low': !isAI && (gold ?? 0) < 2 }]"
-      :title="isAI ? 'Punkty Sławy przeciwnika' : ((gold ?? 0) >= 2 ? 'Kliknij aby zagrać kartę wzmocnioną (2 ZŁ)' : 'Za mało złota na wzmocnienie (potrzebujesz 2 ZŁ)')"
-      @click="!isAI && (gold ?? 0) >= 2 ? emit('toggle-enhanced') : undefined"
+      :class="['pile-section', 'gold-section', { 'gold-section--active': !isAI && enhancedActive, 'gold-section--low': !isAI && (gold ?? 0) < 1 }]"
+      :title="isAI ? 'Złocisze przeciwnika' : ((gold ?? 0) >= 1 ? 'Kliknij aby zagrać kartę wzmocnioną (1 ZŁ)' : 'Za mało złota na wzmocnienie (potrzebujesz 1 ZŁ)')"
+      @click="!isAI && (gold ?? 0) >= 1 ? emit('toggle-enhanced') : undefined"
       :style="isAI ? {} : { cursor: 'pointer' }"
     >
       <Icon icon="game-icons:gold-bar" :class="['gold-icon', { 'gold-icon--enhanced': enhancedActive }]" />

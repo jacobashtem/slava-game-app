@@ -3,31 +3,41 @@
 ---
 ## ★ AKTUALNY STAN PROJEKTU (aktualizuj przy każdym zakończeniu pracy)
 
-**Data ostatniej sesji:** 2026-03-06
-**Etap:** ETAP 3 — implementacja efektów kart W TRAKCIE
+**Data ostatniej sesji:** 2026-03-09
+**Etap:** ETAP 5 — Audyt i polish ZAKOŃCZONY
 
 ### Co jest gotowe:
 - Etap 1: Cały silnik gry (types, constants, CardFactory, DeckBuilder, LineManager, CombatResolver, TurnManager, GameEngine, AIPlayer, EffectRegistry, GameStateUtils) ✅
-- Etap 2: Pełne UI (GameBoard, BattleLine, CreatureCard, PlayerHand, ActionLog, TurnIndicator, DeckPile, CardTooltip, PhaseControls, GameOverModal, ActiveEventsBar, AISummaryPanel) ✅
-- AI przeciwnik (medium difficulty, wszystkie fazy) ✅
+- Etap 2: Pełne UI (GameBoard, BattleLine, CreatureCard, PlayerHand, ActionLog, TurnIndicator, DeckPile, CardTooltip, PhaseControls, GameOverModal, AISummaryPanel, GraveyardModal, PendingInteractionModal, GameHint, TurnBanner, WeatherEffects, MusicPlayer, CardBack) ✅
+- AI przeciwnik — 3 poziomy: easy/medium/hard ✅
 - EffectRegistry — "Księga Zdolności" — jedyne źródło efektów ✅
 - Arena mode (/arena) — plac testowy kart z autocomplete ✅
-- Alpha Deck — talia z tylko sprawdzonych kart ✅
-- 48 efektów istot zaimplementowanych (sesja 2026-03-06) ✅
-- ON_DAMAGE_DEALT / ON_DAMAGE_RECEIVED / ON_ANY_DEATH triggery ✅
-- Abilities[] wyświetlane w CreatureCard i CardTooltip ✅
+- Alpha Deck — talia z tylko sprawdzonych kart (100% = pełna talia) ✅
+- **182 karty w pełni zaimplementowane** (120 istot + 62 przygody) ✅
+- Wszystkie triggery: ON_PLAY, ON_DEATH, ON_KILL, ON_DAMAGE_DEALT, ON_DAMAGE_RECEIVED, ON_ANY_DEATH, ON_TURN_START, ON_TURN_END, ON_ACTIVATE, i więcej ✅
+- Aktywowalne zdolności z cooldownami i kosztami ✅
+- Keyboard shortcuts (Space/Enter/Escape) ✅
+- WeatherEffects per sezon, MusicPlayer, SFX (Web Audio API) ✅
+- Galeria kart (/gallery), Zasady gry (/rules) ✅
+- Wybór trudności AI + filtr domen na ekranie startowym ✅
+- **93/93 testów passing, build poprawny** ✅
 
-### Aktualny task (zaczynamy od tego przy następnym uruchomieniu):
-**ETAP 3: Testowanie i implementacja efektów kart po kolei przez Arenę**
-- Workflow: Arena → wybierz kartę → przetestuj efekt → oznacz ✅ w `memory/cards-status.md` → dodaj effectId do `ALPHA_CREATURE_EFFECT_IDS` w DeckBuilder.ts
-- Następne karty do implementacji (w kolejności trudności): Wołch, Jędza, Siemiargł, Świetle, Jaroszek, Południca
-- Stubs do poprawy: Znachor, Wisielec, Wąpierz, Zmora, Baba Jaga
+### Audyt zakończony (2026-03-09):
+- Naprawiono 15+ bugów silnika i UI (Sobowtór triggery, Miecz Kladenet, reshuffle state, splice/-1, lastIndexOf po klonie, i więcej)
+- Hard AI z threat scoring, situation-aware positioning, trade evaluation
+- Brak znanych crashy ani bugów logiki
+
+### Następne kroki (propozycje):
+- Play-testing w przeglądarce
+- Etap 6: Tryb "Slava!" (GP, Panteon, Licytacja)
+- Etap 6.5: Grafiki kart, plansze, efekty dźwiękowe per typ ataku
+- UI polish (animacje, responsywność mobile)
 
 ### Kluczowe pliki do sprawdzenia na starcie:
-- `memory/CHANGELOG.md` — co było zrobione
-- `memory/cards-status.md` — które karty ✅/📋
-- `game-engine/EffectRegistry.ts` — efekty kart
-- `game-engine/DeckBuilder.ts` — ALPHA_CREATURE_EFFECT_IDS (lista gotowych kart)
+- `game-engine/EffectRegistry.ts` — efekty kart (jedyne źródło prawdy)
+- `game-engine/AIPlayer.ts` — 3 poziomy AI
+- `stores/gameStore.ts` — bridge silnik↔UI
+- `game-engine/CombatResolver.ts` — logika walki
 
 ### Mechaniki ustalone (nie zmieniać bez pytania):
 - ATAK = poziomo (rotate 90°), OBRONA = pionowo (niebieskie obramowanie)
@@ -64,8 +74,8 @@ AI jest wymagane od pierwszego grywalnego prototypu — bez niego nie da się te
 ## 2. STOS TECHNOLOGICZNY
 
 ### Framework
-- **Nuxt 3** (Vue 3 + Composition API + TypeScript)
-- **pnpm** jako package manager
+- **Nuxt 4.3.1** (Vue 3 + Composition API + TypeScript)
+- **npm** jako package manager (NIE pnpm — problem z natywnymi bindingami)
 
 ### Paczki do zainstalowania
 

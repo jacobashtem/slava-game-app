@@ -114,6 +114,7 @@ function onKeyDown(e: KeyboardEvent) {
   if (game.state?.pendingInteraction || ui.pendingActivation || ui.confirmingSurrender) return
   if (game.state?.awaitingOnPlayConfirmation) return
   if (ui.isEnhancedMode || ui.isPlacingCard || ui.isMovingCard || ui.pendingArtifactId) return
+  if (ui.graveyardViewerSide) return
 
   switch (e.key) {
     case ' ':  // Space = advance phase / end turn

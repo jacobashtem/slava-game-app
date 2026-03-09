@@ -8,39 +8,39 @@ import { Icon } from '@iconify/vue'
       <NuxtLink to="/" class="back-link">
         <Icon icon="game-icons:return-arrow" /> Menu
       </NuxtLink>
-      <h1>Jak grac?</h1>
+      <h1>Jak grać?</h1>
     </div>
 
     <div class="rules-content">
       <!-- PRZEBIEG GRY -->
       <section class="rule-section">
         <h2><Icon icon="game-icons:sword-clash" /> Przebieg gry</h2>
-        <p>Gra toczy sie turami. Kazdy gracz wykonuje swoja ture, potem gra przeciwnik. Celem jest pokonanie wszystkich istot wroga lub wyczerpanie jego talii.</p>
+        <p>Gra toczy się turami. Każdy gracz wykonuje swoją turę, potem gra przeciwnik. Celem jest pokonanie wszystkich istot wroga lub wyczerpanie jego talii.</p>
 
         <h3>Fazy tury</h3>
         <ol>
-          <li><strong>START</strong> — efekty poczatku tury, dobiór 1 karty</li>
-          <li><strong>GRA</strong> — wystaw istote, zagraj karte przygody</li>
-          <li><strong>WALKA</strong> — zmien pozycje istot, zaatakuj wroga</li>
-          <li><strong>KONIEC</strong> — efekty konca tury, tura przechodzi do przeciwnika</li>
+          <li><strong>START</strong> — efekty początku tury, dobiór 1 karty</li>
+          <li><strong>GRA</strong> — wystaw istotę, zagraj kartę przygody</li>
+          <li><strong>WALKA</strong> — zmień pozycje istot, zaatakuj wroga</li>
+          <li><strong>KONIEC</strong> — efekty końca tury, tura przechodzi do przeciwnika</li>
         </ol>
       </section>
 
       <!-- POLE BITWY -->
       <section class="rule-section">
         <h2><Icon icon="game-icons:battle-gear" /> Pole bitwy</h2>
-        <p>Pole bitwy sklada sie z 3 linii po kazdej stronie:</p>
+        <p>Pole bitwy składa się z 3 linii po każdej stronie:</p>
         <div class="lines-grid">
           <div class="line-info">
             <span class="line-badge l1">L1</span>
             <div>
-              <strong>Front</strong> — istoty Wrecz i Zywiol. Atakowane w pierwszej kolejnosci.
+              <strong>Front</strong> — istoty Wręcz i Żywioł. Atakowane w pierwszej kolejności.
             </div>
           </div>
           <div class="line-info">
             <span class="line-badge l2">L2</span>
             <div>
-              <strong>Dystans</strong> — istoty z atakiem Dystans. Chronione przez L1.
+              <strong>Dystans</strong> — istoty z atakiem dystansowym. Chronione przez L1.
             </div>
           </div>
           <div class="line-info">
@@ -50,7 +50,7 @@ import { Icon } from '@iconify/vue'
             </div>
           </div>
         </div>
-        <p>Maksymalnie <strong>5 istot</strong> na calym polu (wszystkie linie lacznie).</p>
+        <p>Maksymalnie <strong>5 istot</strong> na całym polu (wszystkie linie łącznie).</p>
       </section>
 
       <!-- POZYCJE -->
@@ -59,45 +59,45 @@ import { Icon } from '@iconify/vue'
         <div class="positions-grid">
           <div class="pos-info attack-pos">
             <span class="pos-badge">ATAK</span>
-            <span>Karta obrocona poziomo. Moze atakowac, ale nie kontratakuje.</span>
+            <span>Karta obrócona poziomo. Może atakować, ale nie kontratakuje.</span>
           </div>
           <div class="pos-info defense-pos">
             <span class="pos-badge">OBRONA</span>
             <span>Karta pionowo. Nie atakuje, ale kontratakuje gdy zaatakowana.</span>
           </div>
         </div>
-        <p>Zmiana pozycji jest darmowa i mozliwa raz na ture (w fazie WALKA).</p>
+        <p>Zmiana pozycji jest darmowa i możliwa raz na turę (w fazie WALKA).</p>
       </section>
 
       <!-- TYPY ATAKU -->
       <section class="rule-section">
         <h2><Icon icon="game-icons:crossed-swords" /> Typy ataku</h2>
         <div class="attack-types">
-          <div class="atk-type"><span class="atk-badge melee">Wrecz</span> Atakuje pierwsza zajeta linie wroga. Nie siega L2/L3 zza L1.</div>
-          <div class="atk-type"><span class="atk-badge elem">Zywiol</span> Jak Wrecz, ale trafia latajace istoty.</div>
-          <div class="atk-type"><span class="atk-badge ranged">Dystans</span> Atakuje dowolna linie wroga.</div>
-          <div class="atk-type"><span class="atk-badge magic">Magia</span> Atakuje dowolna linie wroga.</div>
+          <div class="atk-type"><span class="atk-badge melee">Wręcz</span> Atakuje pierwszą zajętą linię wroga. Nie sięga L2/L3 zza L1.</div>
+          <div class="atk-type"><span class="atk-badge elem">Żywioł</span> Jak Wręcz, ale trafia latające istoty.</div>
+          <div class="atk-type"><span class="atk-badge ranged">Dystans</span> Atakuje dowolną linię wroga.</div>
+          <div class="atk-type"><span class="atk-badge magic">Magia</span> Atakuje dowolną linię wroga.</div>
         </div>
       </section>
 
       <!-- KONTRATAK -->
       <section class="rule-section">
         <h2><Icon icon="game-icons:shield-bash" /> Kontratak</h2>
-        <p>Walka jest <strong>simultaniczna</strong>. Gdy atakujesz, obronca natychmiast kontratakuje (jesli jest w pozycji OBRONA) swoimi pelnymi statystykami <em>przed</em> otrzymaniem obrazen.</p>
-        <p>Kontratak uzywa DEF obrażanego jako obrazenia — NIE jego ATK.</p>
-        <p>Kontratak ma taki sam zasieg jak atak — istota Wrecz w L1 nie dosiegnie kontry z L2.</p>
+        <p>Walka jest <strong>simultaniczna</strong>. Gdy atakujesz, obrońca natychmiast kontratakuje (jeśli jest w pozycji OBRONA) swoimi pełnymi statystykami <em>przed</em> otrzymaniem obrażeń.</p>
+        <p>Kontratak używa DEF obrażanego jako obrażenia — NIE jego ATK.</p>
+        <p>Kontratak ma taki sam zasięg jak atak — istota Wręcz w L1 nie dosięgnie kontry z L2.</p>
       </section>
 
       <!-- KARTY PRZYGODY -->
       <section class="rule-section">
         <h2><Icon icon="game-icons:spell-book" /> Karty przygody</h2>
-        <p>Karty przygody to zaklecia, artefakty i lokacje.</p>
+        <p>Karty przygody to zaklęcia, artefakty i lokacje.</p>
         <ul>
-          <li><strong>Zdarzenie</strong> — jednorazowy efekt (np. obrazenia, leczenie)</li>
-          <li><strong>Artefakt</strong> — przypiecie do istoty, trwaly bonus</li>
-          <li><strong>Lokacja</strong> — pasywny efekt dla calego pola</li>
+          <li><strong>Zdarzenie</strong> — jednorazowy efekt (np. obrażenia, leczenie)</li>
+          <li><strong>Artefakt</strong> — przypięcie do istoty, trwały bonus</li>
+          <li><strong>Lokacja</strong> — pasywny efekt dla całego pola</li>
         </ul>
-        <p>Efekt podstawowy jest <strong>darmowy</strong>. Efekt wzmocniony kosztuje <strong>1 ZL</strong> (Punkt Slawy).</p>
+        <p>Efekt podstawowy jest <strong>darmowy</strong>. Efekt wzmocniony kosztuje <strong>1 ZŁ</strong>.</p>
       </section>
 
       <!-- DOMENY -->
@@ -108,35 +108,35 @@ import { Icon } from '@iconify/vue'
             <Icon icon="game-icons:lightning-storm" /> <strong>Perun</strong> — wojownicy bogów, pioruny
           </div>
           <div class="domain-item" style="--dc: #4caf50">
-            <Icon icon="game-icons:oak-leaf" /> <strong>Zywi</strong> — ludzie, zwierzeta, natura
+            <Icon icon="game-icons:oak-leaf" /> <strong>Żywi</strong> — ludzie, zwierzęta, natura
           </div>
           <div class="domain-item" style="--dc: #9c27b0">
             <Icon icon="game-icons:skull-crossed-bones" /> <strong>Nieumarli</strong> — upiory, duchy
           </div>
           <div class="domain-item" style="--dc: #c62828">
-            <Icon icon="game-icons:fire-dash" /> <strong>Weles</strong> — demony, zaswiatowe bestie
+            <Icon icon="game-icons:fire-dash" /> <strong>Weles</strong> — demony, zaświatowe bestie
           </div>
         </div>
       </section>
 
       <!-- ZLOTO -->
       <section class="rule-section">
-        <h2><Icon icon="game-icons:two-coins" /> Punkty Slawy (ZL)</h2>
-        <p>Kazdy gracz zaczyna z <strong>5 ZL</strong>. Zloto mozna wydac na:</p>
+        <h2><Icon icon="game-icons:two-coins" /> Złocisze (ZŁ)</h2>
+        <p>Każdy gracz zaczyna z <strong>5 ZŁ</strong>. Złoto można wydać na:</p>
         <ul>
-          <li>Wzmocnione efekty kart przygody (1 ZL)</li>
-          <li>Aktywowalne zdolnosci istot (koszt zalezy od karty)</li>
+          <li>Wzmocnione efekty kart przygody (1 ZŁ)</li>
+          <li>Aktywowalne zdolności istot (koszt zależy od karty)</li>
         </ul>
-        <p>Niektóre karty zarabiaja ZL przy zabiciu, smierci itp.</p>
+        <p>Niektóre karty zarabiają ZŁ przy zabiciu, śmierci itp.</p>
       </section>
 
       <!-- ZWYCIESTWO -->
       <section class="rule-section">
-        <h2><Icon icon="game-icons:laurel-crown" /> Warunki zwyciestwa</h2>
+        <h2><Icon icon="game-icons:laurel-crown" /> Warunki zwycięstwa</h2>
         <ul>
-          <li>Wrog traci wszystkie istoty z pola <strong>i</strong> nie ma wiecej w rece/talii</li>
-          <li>Wrog nie moze dobrac karty bo talia jest pusta</li>
-          <li>Wrog sie poddaje</li>
+          <li>Wróg traci wszystkie istoty z pola <strong>i</strong> nie ma więcej w ręce/talii</li>
+          <li>Wróg nie może dobrać karty bo talia jest pusta</li>
+          <li>Wróg się poddaje</li>
         </ul>
       </section>
     </div>

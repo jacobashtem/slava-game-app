@@ -8,7 +8,7 @@ const game = useGameStore()
 const interaction = computed(() => game.state?.pendingInteraction ?? null)
 const show = computed(() => !!interaction.value)
 
-// Wyszukaj kartę po instanceId na polach i cmentarzach obu graczy
+// Wyszukaj kartę po instanceId na polach, rękach i cmentarzach obu graczy
 function findCard(instanceId: string) {
   const state = game.state
   if (!state) return null
@@ -17,6 +17,8 @@ function findCard(instanceId: string) {
       const found = (line as any[]).find((c: any) => c.instanceId === instanceId)
       if (found) return found
     }
+    const inHand = state.players[side].hand.find((c: any) => c.instanceId === instanceId)
+    if (inHand) return inHand
     const inGrave = state.players[side].graveyard.find((c: any) => c.instanceId === instanceId)
     if (inGrave) return inGrave
   }

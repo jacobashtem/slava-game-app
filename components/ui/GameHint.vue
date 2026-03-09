@@ -27,7 +27,7 @@ const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null 
       return { text: 'Kliknij swoją istotę na polu, aby wyposażyć artefakt', type: 'info' }
     }
     if (ui.isEnhancedMode) {
-      return { text: '⚡ Tryb wzmocniony — kliknij kartę przygody, aby zagrać za 2 ZŁ (efekt ulepszony)', type: 'warn' }
+      return { text: '⚡ Tryb wzmocniony — kliknij kartę przygody, aby zagrać za 1 ZŁ (efekt ulepszony)', type: 'warn' }
     }
     if (ui.isMovingCard) {
       return { text: 'Kliknij linię docelową, aby przenieść istotę', type: 'info' }

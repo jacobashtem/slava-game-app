@@ -52,25 +52,25 @@ const domains = [
         <div class="logo-emblem">
           <Icon icon="game-icons:triquetra" class="emblem-icon" />
         </div>
-        <h1 class="game-title">SLAWA</h1>
-        <p class="game-subtitle">Vol. 2 — Zlota Edycja</p>
-        <p class="game-tagline">Slowianska gra karciana</p>
+        <h1 class="game-title">SŁAWA</h1>
+        <p class="game-subtitle">Vol. 2 — Złota Edycja</p>
+        <p class="game-tagline">Słowiańska gra karciana</p>
       </div>
 
       <!-- USTAWIENIA -->
       <div class="settings-section">
         <!-- Trudnosc AI -->
         <div class="setting-group">
-          <label class="setting-label">Trudnosc AI</label>
+          <label class="setting-label">Trudność AI</label>
           <div class="toggle-group">
             <button
               :class="['toggle-btn', { active: difficulty === 'easy' }]"
               @click="difficulty = 'easy'"
-            >Latwa</button>
+            >Łatwa</button>
             <button
               :class="['toggle-btn', { active: difficulty === 'medium' }]"
               @click="difficulty = 'medium'"
-            >Srednia</button>
+            >Średnia</button>
             <button
               :class="['toggle-btn', { active: difficulty === 'hard' }]"
               @click="difficulty = 'hard'"
@@ -80,7 +80,7 @@ const domains = [
 
         <!-- Domena gracza -->
         <div class="setting-group">
-          <label class="setting-label">Twoja domena <span class="hint">(brak = losowa)</span></label>
+          <label class="setting-label">Twoja domena <span class="hint">(brak wyboru = losowa)</span></label>
           <div class="domain-picks">
             <button
               v-for="d in domains" :key="d.id"
@@ -99,7 +99,7 @@ const domains = [
         <button class="menu-btn primary" @click="startNewGame">
           <Icon icon="game-icons:sword-clash" class="btn-icon" />
           Nowa Gra
-          <span class="game-mode-badge">wszystkie karty</span>
+          <span class="game-mode-badge">losowa talia</span>
         </button>
 
         <button class="menu-btn alpha" @click="startAlphaGame">
@@ -121,16 +121,16 @@ const domains = [
 
         <NuxtLink to="/rules" class="menu-btn secondary">
           <Icon icon="game-icons:book-cover" class="btn-icon" />
-          Jak grac?
+          Jak grać?
         </NuxtLink>
       </div>
 
       <div class="edition-info">
-        <div class="edition-badge">Zlota Edycja</div>
+        <div class="edition-badge">Złota Edycja</div>
         <div class="edition-rules">
           <span>5 startowych kart</span>
           <span>&middot;</span>
-          <span>5 ZL na start</span>
+          <span>5 ZŁ na start</span>
           <span>&middot;</span>
           <span>Talia 30 kart</span>
         </div>

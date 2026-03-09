@@ -532,6 +532,7 @@ function onClick() {
     <div v-if="isThreatened" class="state-overlay threat-overlay" :title="isThreatened">
       <span class="state-overlay-icon">⚠</span>
       <span class="state-overlay-label">ZAGROŻONY</span>
+      <span class="threat-reason">{{ isThreatened }}</span>
     </div>
 
     <div v-if="isValidTarget" class="target-overlay" />
@@ -1159,6 +1160,14 @@ function onClick() {
 .threat-overlay .state-overlay-label {
   color: #fca5a5;
   background: rgba(153, 27, 27, 0.85);
+}
+.threat-reason {
+  font-size: 7px;
+  color: #fca5a5;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 90%;
+  opacity: 0.9;
 }
 @keyframes threat-pulse {
   0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); }

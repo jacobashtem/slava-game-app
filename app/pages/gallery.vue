@@ -18,13 +18,13 @@ const typeFilter = ref<string | null>(null) // adventure type filter
 
 const DOMAIN_INFO: Record<number, { name: string; color: string; icon: string }> = {
   1: { name: 'Perun', color: '#f5c542', icon: 'game-icons:lightning-storm' },
-  2: { name: 'Zywi', color: '#4caf50', icon: 'game-icons:oak-leaf' },
+  2: { name: 'Żywi', color: '#4caf50', icon: 'game-icons:oak-leaf' },
   3: { name: 'Nieumarli', color: '#9c27b0', icon: 'game-icons:skull-crossed-bones' },
   4: { name: 'Weles', color: '#c62828', icon: 'game-icons:fire-dash' },
 }
 
 const ATK_TYPE_LABELS: Record<number, string> = {
-  0: 'Wrecz', 1: 'Zywiol', 2: 'Magia', 3: 'Dystans',
+  0: 'Wręcz', 1: 'Żywioł', 2: 'Magia', 3: 'Dystans',
 }
 
 const ATK_TYPE_COLORS: Record<number, string> = {
@@ -168,7 +168,7 @@ function getDomainColor(domainId: number): string {
               <div :style="`color: ${getDomainColor(card.idDomain)}`">{{ card.domain }}</div>
             </div>
             <div v-if="card.abilities?.length" class="detail-section">
-              <div class="detail-label">Zdolnosci</div>
+              <div class="detail-label">Zdolności</div>
               <div v-for="(ab, i) in card.abilities" :key="i" class="ability-line">
                 <span class="trigger-badge">{{ ab.trigger }}</span>
                 <span v-if="ab.cost" class="cost-badge">{{ ab.cost }} ZL</span>
@@ -215,7 +215,7 @@ function getDomainColor(domainId: number): string {
               <div class="effect-text enhanced">{{ card.enhancedEffect }}</div>
             </div>
             <div v-if="card.abilities?.length" class="detail-section">
-              <div class="detail-label">Zdolnosci</div>
+              <div class="detail-label">Zdolności</div>
               <div v-for="(ab, i) in card.abilities" :key="i" class="ability-line">
                 <span class="trigger-badge" :class="{ enhanced: ab.enhanced }">{{ ab.enhanced ? 'WZMOCNIONY' : ab.trigger }}</span>
                 {{ ab.text }}
