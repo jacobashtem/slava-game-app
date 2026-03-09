@@ -642,6 +642,7 @@ const activeEffectId = ref<string | null>(null)
   position: absolute; top: 50%; left: 50%; width: 20px; height: 20px;
   margin: -10px 0 0 -10px; border: 2px solid #a855f7; border-radius: 50%;
   opacity: 0; animation: magic-ring-expand 0.5s ease-out forwards;
+  will-change: transform;
 }
 @keyframes magic-burst {
   0%   { opacity: 0; transform: translate(0, 0) scale(0); }
@@ -650,9 +651,9 @@ const activeEffectId = ref<string | null>(null)
   100% { opacity: 0; transform: translate(calc(cos(var(--angle)) * 70px), calc(sin(var(--angle)) * 70px)) scale(0); }
 }
 @keyframes magic-ring-expand {
-  0%   { opacity: 0; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-width: 3px; }
-  30%  { opacity: 1; }
-  100% { opacity: 0; width: 140px; height: 140px; margin: -70px 0 0 -70px; border-width: 1px; }
+  0%   { opacity: 0; transform: scale(0.07); border-width: 3px; }
+  30%  { opacity: 1; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(7); border-width: 1px; }
 }
 
 /* Ranged arrow */
