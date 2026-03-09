@@ -38,8 +38,6 @@ describe('Howler audio', () => {
 
   it('Howl can be instantiated with sprite config', async () => {
     const { Howl } = await import('howler')
-    // Should not throw — just validates the constructor accepts sprite format
-    // (Won't actually play audio in test environment)
     const howl = new Howl({
       src: ['test.mp3'],
       sprite: {
@@ -52,7 +50,71 @@ describe('Howler audio', () => {
     expect(typeof howl.play).toBe('function')
     expect(typeof howl.stop).toBe('function')
     expect(typeof howl.volume).toBe('function')
-    howl.unload() // Clean up
+    howl.unload()
+  })
+
+  it('Howl supports html5 streaming mode', async () => {
+    const { Howl } = await import('howler')
+    const howl = new Howl({
+      src: ['test.mp3'],
+      html5: true,
+      volume: 0.3,
+    })
+    expect(howl).toBeDefined()
+    expect(typeof howl.fade).toBe('function')
+    expect(typeof howl.seek).toBe('function')
+    expect(typeof howl.duration).toBe('function')
+    expect(typeof howl.unload).toBe('function')
+    howl.unload()
+  })
+})
+
+describe('useAudio composable', () => {
+  it('exports useAudio function', async () => {
+    const mod = await import('../../composables/useAudio')
+    expect(typeof mod.useAudio).toBe('function')
+  })
+
+  it('returns all expected SFX functions', async () => {
+    const { useAudio } = await import('../../composables/useAudio')
+    const audio = useAudio()
+    // Core SFX
+    expect(typeof audio.sfxCardPlay).toBe('function')
+    expect(typeof audio.sfxDraw).toBe('function')
+    expect(typeof audio.sfxPhase).toBe('function')
+    expect(typeof audio.sfxGold).toBe('function')
+    expect(typeof audio.sfxGameOver).toBe('function')
+    expect(typeof audio.sfxAttack).toBe('function')
+    expect(typeof audio.sfxHit).toBe('function')
+    expect(typeof audio.sfxDeath).toBe('function')
+    // Type-specific attack/hit SFX
+    expect(typeof audio.sfxAttackMelee).toBe('function')
+    expect(typeof audio.sfxAttackElemental).toBe('function')
+    expect(typeof audio.sfxAttackMagic).toBe('function')
+    expect(typeof audio.sfxAttackRanged).toBe('function')
+    expect(typeof audio.sfxHitMelee).toBe('function')
+    expect(typeof audio.sfxHitElemental).toBe('function')
+    expect(typeof audio.sfxHitMagic).toBe('function')
+    expect(typeof audio.sfxHitRanged).toBe('function')
+    // Special SFX
+    expect(typeof audio.sfxCounterattack).toBe('function')
+    expect(typeof audio.sfxImmune).toBe('function')
+    expect(typeof audio.sfxActivate).toBe('function')
+    expect(typeof audio.sfxSeasonChange).toBe('function')
+    expect(typeof audio.sfxAdventure).toBe('function')
+    expect(typeof audio.sfxVictory).toBe('function')
+    expect(typeof audio.sfxDefeat).toBe('function')
+    // Controls
+    expect(typeof audio.setSFXEnabled).toBe('function')
+    expect(typeof audio.setVolume).toBe('function')
+  })
+
+  it('has same interface as useSFX (drop-in replacement)', async () => {
+    const { useSFX } = await import('../../composables/useSFX')
+    const { useAudio } = await import('../../composables/useAudio')
+    const sfxKeys = Object.keys(useSFX()).sort()
+    const audioKeys = Object.keys(useAudio()).sort()
+    expect(audioKeys).toEqual(sfxKeys)
   })
 })
 

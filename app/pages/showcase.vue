@@ -6,9 +6,9 @@
 definePageMeta({ ssr: false })
 import { ref, reactive, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useSFX } from '../../composables/useSFX'
+import { useAudio } from '../../composables/useAudio'
 
-const sfx = useSFX()
+const sfx = useAudio()
 
 // ===== MOCK CARD STATE (do animacji) =====
 const mockCard = reactive({

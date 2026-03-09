@@ -23,7 +23,7 @@ import CardBack from '../cards/CardBack.vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { BattleLine, GamePhase } from '../../game-engine/constants'
-import { useSFX } from '../../composables/useSFX'
+import { useAudio } from '../../composables/useAudio'
 
 const game = useGameStore()
 const ui = useUIStore()
@@ -126,7 +126,7 @@ const moranaCounter = computed(() => {
 })
 
 // ===== SFX WATCHERS =====
-const sfx = useSFX()
+const sfx = useAudio()
 // Attack SFX — type-specific
 watch(() => ui.animatingAttack, (v) => {
   if (!v) return

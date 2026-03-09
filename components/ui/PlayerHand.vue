@@ -355,8 +355,7 @@ const adventureTypeColor = (card: CardInstance) => {
 }
 
 .hand-card-wrap.selected {
-  outline: 2px solid #818cf8;
-  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #818cf8;
   border-radius: 8px;
   transform: rotate(0deg) translateY(-30px) scale(1.2) !important;
   z-index: 35 !important;
@@ -587,7 +586,7 @@ const adventureTypeColor = (card: CardInstance) => {
   }
   .hand-card-wrap.selected {
     transform: translateY(-14px) scale(1.1) !important;
-    outline-width: 1.5px;
+    box-shadow: 0 0 0 1.5px #818cf8;
   }
   .hand-card-wrap:hover::after {
     inset: -4px;

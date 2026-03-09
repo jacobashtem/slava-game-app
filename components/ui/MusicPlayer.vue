@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { Howl } from 'howler'
 
 // Dynamic import of song files
 const songModules = import.meta.glob('../../assets/songs/*.mp3', { eager: true, query: '?url', import: 'default' })
@@ -13,19 +14,19 @@ for (const [path, url] of Object.entries(songModules)) {
 // Sort by number
 tracks.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
 
-const audio = ref<HTMLAudioElement | null>(null)
+let currentHowl: Howl | null = null
 const isPlaying = ref(false)
 const currentTrack = ref(0)
 const volume = ref(0.3)
 const expanded = ref(false)
 const progress = ref(0)
+let progressInterval: ReturnType<typeof setInterval> | null = null
 
 // Shuffle without repeat: track which songs have been played
 const playedIndices = ref<Set<number>>(new Set())
 
 function pickRandomUnplayed(): number {
   if (tracks.length === 0) return 0
-  // If all tracks played, reset
   if (playedIndices.value.size >= tracks.length) {
     playedIndices.value.clear()
   }
@@ -34,15 +35,52 @@ function pickRandomUnplayed(): number {
   return pick ?? 0
 }
 
+function loadTrack(idx: number) {
+  // Fade out and unload current track
+  if (currentHowl) {
+    const old = currentHowl
+    old.fade(old.volume(), 0, 800)
+    setTimeout(() => old.unload(), 900)
+  }
+
+  const src = tracks[idx]?.url
+  if (!src) return
+
+  currentHowl = new Howl({
+    src: [src],
+    volume: volume.value,
+    html5: true, // streaming — no full download needed
+    onend: () => next(),
+    onplay: () => {
+      isPlaying.value = true
+      startProgressUpdate()
+    },
+    onpause: () => { isPlaying.value = false },
+    onstop: () => { isPlaying.value = false },
+  })
+}
+
+function startProgressUpdate() {
+  stopProgressUpdate()
+  progressInterval = setInterval(() => {
+    if (!currentHowl || !currentHowl.playing()) return
+    const seek = currentHowl.seek() as number
+    const dur = currentHowl.duration()
+    if (dur > 0) progress.value = seek / dur
+  }, 500)
+}
+
+function stopProgressUpdate() {
+  if (progressInterval) { clearInterval(progressInterval); progressInterval = null }
+}
+
 function play() {
-  if (!audio.value) return
-  audio.value.play().catch(() => {})
-  isPlaying.value = true
+  if (!currentHowl) loadTrack(currentTrack.value)
+  currentHowl?.play()
 }
 
 function pause() {
-  audio.value?.pause()
-  isPlaying.value = false
+  currentHowl?.pause()
 }
 
 function toggle() {
@@ -53,36 +91,21 @@ function next() {
   const nextIdx = pickRandomUnplayed()
   currentTrack.value = nextIdx
   playedIndices.value.add(nextIdx)
-  if (isPlaying.value) {
-    setTimeout(() => play(), 50)
-  }
+  progress.value = 0
+  loadTrack(nextIdx)
+  currentHowl?.play()
 }
 
 function prev() {
-  currentTrack.value = (currentTrack.value - 1 + tracks.length) % tracks.length
-  if (isPlaying.value) {
-    setTimeout(() => play(), 50)
-  }
-}
-
-function onEnded() {
-  next()
-}
-
-function updateProgress() {
-  if (!audio.value) return
-  const dur = audio.value.duration
-  if (dur && dur > 0) {
-    progress.value = audio.value.currentTime / dur
-  }
+  const prevIdx = (currentTrack.value - 1 + tracks.length) % tracks.length
+  currentTrack.value = prevIdx
+  progress.value = 0
+  loadTrack(prevIdx)
+  currentHowl?.play()
 }
 
 watch(volume, (v) => {
-  if (audio.value) audio.value.volume = v
-})
-
-watch(currentTrack, () => {
-  progress.value = 0
+  if (currentHowl) currentHowl.volume(v)
 })
 
 onMounted(() => {
@@ -90,31 +113,19 @@ onMounted(() => {
   const startIdx = pickRandomUnplayed()
   currentTrack.value = startIdx
   playedIndices.value.add(startIdx)
+  loadTrack(startIdx)
 
-  if (audio.value) {
-    audio.value.volume = volume.value
-  }
-
-  // Autoplay — browsers may block without user gesture, so retry on first user interaction
+  // Autoplay — Howler handles audio unlock automatically on user gesture
   setTimeout(() => {
-    if (audio.value) {
-      audio.value.play().then(() => {
-        isPlaying.value = true
-      }).catch(() => {
-        // Autoplay blocked — start on first user interaction
-        const startOnInteraction = () => {
-          play()
-          document.removeEventListener('click', startOnInteraction)
-          document.removeEventListener('keydown', startOnInteraction)
-        }
-        document.addEventListener('click', startOnInteraction, { once: false })
-        document.addEventListener('keydown', startOnInteraction, { once: false })
-      })
-    }
+    currentHowl?.play()
   }, 300)
 })
 
-const currentSrc = computed(() => tracks[currentTrack.value]?.url ?? '')
+onUnmounted(() => {
+  stopProgressUpdate()
+  if (currentHowl) { currentHowl.unload(); currentHowl = null }
+})
+
 const currentName = computed(() => tracks[currentTrack.value]?.name ?? '')
 </script>
 
@@ -148,13 +159,6 @@ const currentName = computed(() => tracks[currentTrack.value]?.name ?? '')
       />
     </template>
 
-    <audio
-      ref="audio"
-      :src="currentSrc"
-      preload="auto"
-      @ended="onEnded"
-      @timeupdate="updateProgress"
-    />
   </div>
 </template>
 
