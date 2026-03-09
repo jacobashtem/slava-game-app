@@ -20,7 +20,7 @@ const emit = defineEmits<{
 <template>
   <div :class="['deck-pile', { 'deck-pile--ai': isAI }]">
     <!-- Talia -->
-    <div class="pile-section" data-tip="Talia">
+    <div class="pile-section" v-tip="'Talia'">
       <div class="card-stack">
         <CardBack :small="true" />
         <span class="pile-count">{{ deckCount }}</span>
@@ -29,7 +29,7 @@ const emit = defineEmits<{
     </div>
 
     <!-- Cmentarz -->
-    <div class="pile-section pile-section--clickable" data-tip="Cmentarz (kliknij aby przeglądać)" @click="emit('open-graveyard')">
+    <div class="pile-section pile-section--clickable" v-tip="'Cmentarz (kliknij aby przeglądać)'" @click="emit('open-graveyard')">
       <div class="grave-icon-wrap">
         <Icon icon="game-icons:tombstone" class="grave-icon" />
         <span class="pile-count">{{ graveCount }}</span>
