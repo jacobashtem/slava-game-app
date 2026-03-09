@@ -170,4 +170,17 @@ const showAI = computed(() => game.aiTurnSummary.length > 0 && !game.isAIThinkin
   opacity: 0;
   transform: translateX(20px);
 }
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .summary-panel {
+    bottom: auto;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    max-height: 60vh;
+  }
+}
 </style>

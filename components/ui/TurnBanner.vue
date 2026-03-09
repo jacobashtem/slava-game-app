@@ -101,4 +101,13 @@ watch(() => game.currentTurn, (turn, prevTurn) => {
   opacity: 0;
   transform: translate(-50%, -50%) scale(1.1);
 }
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .turn-banner {
+    font-size: 18px;
+    padding: 10px 28px;
+    letter-spacing: 0.06em;
+  }
+}
 </style>

@@ -55,11 +55,13 @@ const seasonProgress = computed(() => {
 }
 
 .turn-side {
-  font-weight: 700;
-  font-size: 11px;
-  padding: 2px 8px;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 3px 10px;
   border-radius: 4px;
   white-space: nowrap;
+  font-family: var(--font-display, Georgia, serif);
+  letter-spacing: 0.04em;
 }
 
 .player-turn {
@@ -92,15 +94,18 @@ const seasonProgress = computed(() => {
 }
 
 .season-badge {
-  font-size: 9px;
-  color: #94a3b8;
-  padding: 1px 5px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-display, Georgia, serif);
+  color: #cbd5e1;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  text-shadow: 0 0 6px rgba(200, 168, 78, 0.3);
 }
 
 .season-dots {
@@ -110,8 +115,8 @@ const seasonProgress = computed(() => {
 }
 
 .dot {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
 }

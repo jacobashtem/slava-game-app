@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" fill="none">
+  <defs>
+    <radialGradient id="swBg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#431407"/>
+      <stop offset="100%" stop-color="#0a0604"/>
+    </radialGradient>
+    <radialGradient id="swGlow" cx="50%" cy="45%" r="35%">
+      <stop offset="0%" stop-color="#fb923c" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="260" rx="12" fill="url(#swBg)"/>
+  <rect width="200" height="260" rx="12" fill="url(#swGlow)"/>
+  <rect x="6" y="6" width="188" height="248" rx="9" stroke="#fb923c" stroke-opacity="0.15" stroke-width="1" fill="none"/>
+  <!-- Anvil -->
+  <g transform="translate(100,100)" fill="#fb923c">
+    <!-- Anvil body -->
+    <path d="M-30,5 L-25,-5 L-15,-10 L15,-10 L25,-5 L30,5 L25,8 L-25,8 Z" fill="#fb923c" opacity="0.3" stroke="#fb923c" stroke-width="1.5" stroke-opacity="0.6"/>
+    <!-- Anvil base -->
+    <path d="M-20,8 L-15,25 L15,25 L20,8" fill="#fb923c" opacity="0.2" stroke="#fb923c" stroke-width="1" stroke-opacity="0.4"/>
+    <!-- Anvil top surface highlight -->
+    <line x1="-12" y1="-10" x2="12" y2="-10" stroke="#fbbf24" stroke-width="1" opacity="0.4"/>
+  </g>
+  <!-- Hammer -->
+  <g transform="translate(100,70) rotate(-25)" opacity="0.5">
+    <!-- Handle -->
+    <line x1="0" y1="0" x2="0" y2="40" stroke="#fb923c" stroke-width="2.5"/>
+    <!-- Head -->
+    <rect x="-12" y="-5" width="24" height="10" rx="2" fill="#fb923c" opacity="0.4" stroke="#fb923c" stroke-width="1"/>
+    <rect x="-10" y="-3" width="20" height="6" rx="1" fill="#fbbf24" opacity="0.15"/>
+  </g>
+  <!-- Forge sparks -->
+  <g fill="#fbbf24">
+    <circle cx="75" cy="85" r="1.5" opacity="0.6"><animate attributeName="cy" values="85;60;85" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite"/></circle>
+    <circle cx="120" cy="80" r="1" opacity="0.5"><animate attributeName="cy" values="80;50;80" dur="2.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="2.5s" repeatCount="indefinite"/></circle>
+    <circle cx="90" cy="90" r="1.2" opacity="0.4"><animate attributeName="cy" values="90;55;90" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.4;0;0.4" dur="3s" repeatCount="indefinite"/></circle>
+    <circle cx="110" cy="88" r="0.8" opacity="0.5"><animate attributeName="cy" values="88;58;88" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="1.8s" repeatCount="indefinite"/></circle>
+    <circle cx="105" cy="82" r="1.3" opacity="0.3"><animate attributeName="cy" values="82;45;82" dur="3.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;0;0.3" dur="3.5s" repeatCount="indefinite"/></circle>
+  </g>
+  <!-- Forge glow at base -->
+  <ellipse cx="100" cy="135" rx="25" ry="8" fill="#fb923c" opacity="0.08"/>
+  <!-- Runic circle -->
+  <circle cx="100" cy="100" r="45" stroke="#fb923c" stroke-width="0.5" fill="none" opacity="0.15" stroke-dasharray="4 4"/>
+  <text x="100" y="215" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#fb923c" opacity="0.9">SWAROG</text>
+  <text x="100" y="235" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#fb923c" opacity="0.4">Niebianski Kowal</text>
+  <line x1="50" y1="245" x2="150" y2="245" stroke="#fb923c" stroke-opacity="0.15" stroke-width="0.5"/>
+</svg>

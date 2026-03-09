@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { CardInstance } from '../../game-engine/types'
 import { AttackType, CardPosition } from '../../game-engine/constants'
@@ -135,6 +135,8 @@ const emit = defineEmits<{
 const ui = useUIStore()
 // Kontratak — sprawdzamy bezpośrednio w UIStore, nie przez prop (unika problemów z reaktywnością)
 const isCounterattacking = computed(() => ui.counterAttackCardId === props.card.instanceId)
+// ODPORNY flash — atak zadał 0 obrażeń (soft-fail immunity)
+const isImmuneFlash = computed(() => ui.immuneCardId === props.card.instanceId)
 
 // ===== WSKAŹNIKI STANU (TIER 4 visual indicators) =====
 const isTaunt       = computed(() => !props.inHand && (cardData.value as any).effectId === 'blotnik_taunt' && !props.card.isSilenced)
@@ -229,7 +231,7 @@ const equippedArtifactBadge = computed(() => {
   if (props.inHand || !props.card.equippedArtifacts?.length) return null
   return props.card.equippedArtifacts.map((art: any) => {
     const mapped = artMap[art.effectId]
-    return mapped ?? { icon: '⚙', label: art.name ?? 'Artefakt' }
+    return { effectId: art.effectId, ...(mapped ?? { icon: '⚙', label: art.name ?? 'Artefakt' }) }
   })
 })
 
@@ -330,6 +332,10 @@ const isGrowing = computed(() => !props.inHand && !!props.card.metadata?.justGre
 // Resurrection flash (Kościej)
 const isResurrecting = computed(() => !props.inHand && !!props.card.metadata?.justResurrected)
 
+// Sticky death flag — once dying, never show card again (prevents flash after animation)
+const hasDied = ref(false)
+watch(() => props.isDying, (v) => { if (v) hasDied.value = true })
+
 const cardData = computed(() => props.card.cardData as any)
 const stats = computed(() => props.card.currentStats)
 // Różnica statystyk od bazowych (buffy/debuffy widoczne na karcie)
@@ -377,6 +383,7 @@ const cardClass = computed(() => [
     'is-attacking':    props.isAttacking,
     'is-hit':          props.isHit,
     'is-dying':        props.isDying,
+    'has-died':        hasDied.value,
     'is-valid-target': props.isValidTarget,
     'is-dimmed':       props.dimmed,
     'is-silenced':          props.card.isSilenced,
@@ -484,12 +491,14 @@ function onClick() {
         <span v-if="mlotCounter !== null" class="badge-tag badge-counter badge-mlot" v-tip="`Pozostało ataków Młota: ${mlotCounter}`">
           🔨 {{ mlotCounter }}
         </span>
-        <!-- Artefakty equipped -->
+        <!-- Artefakty equipped — hover pokazuje pełny podgląd karty przygody -->
         <span
           v-for="(art, ai) in (equippedArtifactBadge ?? [])"
           :key="'art-' + ai"
           class="badge-tag badge-artifact"
           v-tip="art.label"
+          @mouseenter.stop="ui.showTooltip('artifact:' + art.effectId)"
+          @mouseleave.stop="ui.hideTooltip()"
         >{{ art.icon }}</span>
         <!-- Trofea Czarnoksiężnika -->
         <span
@@ -545,12 +554,18 @@ function onClick() {
     </div>
 
     <!-- Aura badge — pasywny efekt tej istoty -->
-    <div v-if="!inHand && auraBadge" class="aura-badge" :title="auraBadge.label">
+    <div v-if="!inHand && auraBadge" class="aura-badge"
+      @mouseenter.stop="ui.showTooltip(card.instanceId)"
+      @mouseleave.stop="ui.hideTooltip()"
+    >
       {{ auraBadge.icon }}
     </div>
 
     <!-- Spy badge — karta wystawiona na pole wroga -->
-    <div v-if="isSpy" class="spy-badge" title="Szpieg — karta na polu wroga">
+    <div v-if="isSpy" class="spy-badge"
+      @mouseenter.stop="ui.showTooltip(card.instanceId)"
+      @mouseleave.stop="ui.hideTooltip()"
+    >
       <Icon icon="game-icons:spy" class="spy-icon" />
     </div>
 
@@ -610,11 +625,49 @@ function onClick() {
 
     <div v-if="isValidTarget" class="target-overlay" />
 
+    <!-- HIT VFX: type-specific effect on attacked card -->
+    <div v-if="isHit" class="hit-vfx">
+      <!-- MELEE: sword slash scar -->
+      <svg v-if="ui.animatingAttackType === 0 || ui.animatingAttackType === null" viewBox="0 0 110 154" class="slash-svg">
+        <line x1="10" y1="140" x2="100" y2="14" class="slash-line" />
+        <line x1="85" y1="140" x2="25" y2="40" class="slash-line slash-line-2" />
+      </svg>
+      <!-- ELEMENTAL: fire particles -->
+      <template v-if="ui.animatingAttackType === 1">
+        <div class="elem-fire" v-for="n in 10" :key="n" :style="{ '--ei': n }" />
+        <div class="elem-glow" />
+      </template>
+      <!-- MAGIC: arcane sparkles -->
+      <template v-if="ui.animatingAttackType === 2">
+        <div class="magic-sparkle" v-for="n in 8" :key="n" :style="{ '--mi': n }" />
+        <div class="magic-ring" />
+      </template>
+      <!-- RANGED: arrow streak -->
+      <template v-if="ui.animatingAttackType === 3">
+        <div class="arrow-streak" />
+        <div class="arrow-impact" />
+      </template>
+    </div>
+
+    <!-- DEATH FIRE: efekt płonięcia przy śmierci karty -->
+    <div v-if="isDying" class="death-fire">
+      <div class="fire-ember" v-for="n in 8" :key="n" :style="{ '--i': n }" />
+      <div class="fire-glow" />
+    </div>
+
     <!-- Kontratak: duża tarcza na twarzy karty -->
     <div v-show="ui.counterAttackCardId === card.instanceId" class="shield-overlay">
       🛡️
       <span class="shield-label">KONTRATAK</span>
     </div>
+
+    <!-- ODPORNY: atak zadał 0 obrażeń -->
+    <Transition name="immune-flash">
+      <div v-if="isImmuneFlash" class="immune-overlay">
+        ✋
+        <span class="immune-label">ODPORNY</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -629,16 +682,17 @@ function onClick() {
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.2s ease, opacity 0.15s ease;
   user-select: none;
   flex-shrink: 0;
   box-shadow: 0 4px 16px rgba(0,0,0,0.7);
   overflow: hidden;
+  will-change: transform;
+  contain: layout style paint;
 }
 
 .creature-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.7), 0 0 24px 2px color-mix(in srgb, var(--domain-color, #334155) 20%, transparent);
 }
 
 /* W ręce: parent (.hand-card-wrap) obsługuje hover — tu wyłączamy */
@@ -701,7 +755,11 @@ function onClick() {
 
 .is-attacking {
   box-shadow: 0 0 0 3px #f59e0b, 0 0 16px 4px #f59e0b;
-  animation: pulse-glow 0.8s ease infinite;
+  animation: attack-charge 0.8s ease infinite;
+}
+@keyframes attack-charge {
+  0%, 100% { outline: 3px solid #f59e0b; outline-offset: 0; opacity: 1; }
+  50%      { outline: 4px solid #fbbf24; outline-offset: 2px; opacity: 0.9; }
 }
 
 .is-valid-target {
@@ -711,8 +769,10 @@ function onClick() {
   box-shadow: 0 0 0 3px #ef4444, 0 0 20px 6px rgba(239,68,68,0.6);
 }
 
-.is-hit   { animation: shake 0.5s ease; }
-.is-dying { animation: death-fade 0.75s ease forwards; }
+.is-hit   { animation: hit-impact 0.5s ease; }
+.is-dying { animation: death-burn 0.9s ease forwards; }
+/* Po zakończeniu animacji śmierci — karta pozostaje niewidoczna */
+.has-died:not(.is-dying) { opacity: 0; pointer-events: none; }
 .is-dimmed { opacity: 0.45; pointer-events: none; }
 
 /* ===== HEADER ===== */
@@ -730,9 +790,8 @@ function onClick() {
   max-width: calc(100% - 4px);
   padding: 2px 5px;
   border-radius: 4px;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.75);
   border: 1px solid color-mix(in srgb, var(--domain-color, #334155) 25%, transparent);
-  backdrop-filter: blur(4px);
 }
 
 .card-name {
@@ -767,7 +826,6 @@ function onClick() {
   height: 22px;
   object-fit: contain;
   opacity: 0.9;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
 }
 
 /* ===== BODY ===== */
@@ -821,22 +879,22 @@ function onClick() {
   max-width: 100%;
 }
 .ae-pill {
-  font-size: 6px;
+  font-size: 8px;
   font-weight: 700;
   line-height: 1;
-  padding: 1px 2px;
+  padding: 1px 3px;
   border-radius: 2px;
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   cursor: help;
   white-space: nowrap;
 }
 .ae-icon {
-  font-size: 7px;
+  font-size: 9px;
 }
 .ae-label {
-  font-size: 5.5px;
+  font-size: 7px;
   letter-spacing: 0.01em;
 }
 .ae-buff {
@@ -930,7 +988,6 @@ function onClick() {
   font-size: 12px;
   line-height: 1;
   z-index: 3;
-  filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
   cursor: help;
 }
 
@@ -962,8 +1019,7 @@ function onClick() {
   margin-top: auto;
   position: relative;
   z-index: 1;
-  background: rgba(0,0,0,0.78);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.88);
   border-radius: 0 0 4px 4px;
 }
 
@@ -1043,8 +1099,8 @@ function onClick() {
   transform: rotate(90deg);
 }
 @keyframes shield-pulse {
-  from { box-shadow: 0 0 0 3px #60a5fa, 0 0 18px 6px rgba(96, 165, 250, 0.5); }
-  to   { box-shadow: 0 0 0 5px #93c5fd, 0 0 40px 16px rgba(96, 165, 250, 0.9), 0 0 6px 2px #fff; }
+  from { outline: 3px solid #60a5fa; outline-offset: 0; opacity: 0.85; }
+  to   { outline: 5px solid #93c5fd; outline-offset: 2px; opacity: 1; }
 }
 
 /* Overlay tarczy na twarzy karty */
@@ -1137,8 +1193,8 @@ function onClick() {
 .ability-slot-empty { flex: 1; }
 
 @keyframes effect-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-  50%       { box-shadow: 0 0 0 3px rgba(251,191,36,0.35); }
+  0%, 100% { outline: 2px solid transparent; outline-offset: 0; }
+  50%       { outline: 2px solid rgba(251,191,36,0.35); outline-offset: 1px; }
 }
 
 @keyframes pulse-glow {
@@ -1146,18 +1202,27 @@ function onClick() {
   50%       { box-shadow: 0 0 0 3px #f59e0b, 0 0 22px 8px rgba(245,158,11,0.8); }
 }
 
-@keyframes shake {
-  0%, 100% { translate: 0 0; }
-  20%       { translate: -5px 0; }
-  40%       { translate: 5px 0; }
-  60%       { translate: -3px 0; }
-  80%       { translate: 3px 0; }
+/* ===== HIT IMPACT — shake + red flash ===== */
+@keyframes hit-impact {
+  0%   { translate: 0 0; }
+  10%  { translate: -6px 2px; }
+  20%  { translate: 6px -1px; }
+  35%  { translate: -4px 0; }
+  50%  { translate: 4px 1px; }
+  65%  { translate: -2px 0; }
+  80%  { translate: 2px 0; }
+  100% { translate: 0 0; }
 }
 
-@keyframes death-fade {
+/* ===== DEATH BURN — karta kurczy się i znika ===== */
+@keyframes death-burn {
   0%   { opacity: 1; scale: 1; }
-  40%  { opacity: 0.7; scale: 1.08; filter: brightness(2) saturate(0); }
-  100% { opacity: 0; scale: 0.5; filter: brightness(3) saturate(0); }
+  15%  { opacity: 1; scale: 1.06; }
+  30%  { opacity: 0.85; scale: 1.02; }
+  50%  { opacity: 0.55; scale: 0.9; }
+  70%  { opacity: 0.3; scale: 0.7; }
+  85%  { opacity: 0.1; scale: 0.45; }
+  100% { opacity: 0; scale: 0.15; }
 }
 
 /* ===== PASYWNA AURA ===== */
@@ -1339,9 +1404,9 @@ function onClick() {
   animation: growth-flash 0.6s ease-out;
 }
 @keyframes growth-flash {
-  0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-  30%  { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.8), 0 0 20px 8px rgba(34, 197, 94, 0.5); }
-  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  0%   { outline: 3px solid transparent; outline-offset: 0; }
+  30%  { outline: 3px solid rgba(34, 197, 94, 0.8); outline-offset: 3px; }
+  100% { outline: 3px solid transparent; outline-offset: 0; }
 }
 
 /* ===== RESURRECTION FLASH (Kościej) ===== */
@@ -1349,9 +1414,387 @@ function onClick() {
   animation: resurrect-glow 1s ease-out;
 }
 @keyframes resurrect-glow {
-  0%   { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); filter: brightness(1); }
-  30%  { box-shadow: 0 0 0 8px rgba(167, 139, 250, 0.9), 0 0 30px 12px rgba(167, 139, 250, 0.5); filter: brightness(1.5); }
-  100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); filter: brightness(1); }
+  0%   { outline: 3px solid transparent; outline-offset: 0; opacity: 0.8; }
+  30%  { outline: 4px solid rgba(167, 139, 250, 0.9); outline-offset: 4px; opacity: 1; }
+  100% { outline: 3px solid transparent; outline-offset: 0; opacity: 1; }
 }
 
+/* ===== SLASH EFFECT — cięcie miecza na trafionym celu ===== */
+/* ===== HIT VFX CONTAINER ===== */
+.hit-vfx {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
+/* --- MELEE: double sword slash --- */
+.slash-svg { width: 100%; height: 100%; }
+.slash-line {
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px #ef4444);
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: slash-draw 0.4s ease-out forwards;
+}
+.slash-line-2 {
+  animation-delay: 0.12s;
+  stroke: #fca5a5;
+  filter: drop-shadow(0 0 4px #dc2626);
+}
+@keyframes slash-draw {
+  0%   { stroke-dashoffset: 200; opacity: 0; stroke-width: 1; }
+  20%  { opacity: 1; stroke-width: 4; }
+  60%  { stroke-dashoffset: 0; stroke-width: 3; }
+  80%  { opacity: 0.8; stroke-width: 2; }
+  100% { stroke-dashoffset: 0; opacity: 0; stroke-width: 0; }
+}
+
+/* --- ELEMENTAL: fire particles --- */
+.elem-fire {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fbbf24 30%, #ef4444 70%, transparent);
+  bottom: 10%;
+  left: calc(10% + var(--ei) * 8%);
+  opacity: 0;
+  animation: elem-rise 0.7s ease-out forwards;
+  animation-delay: calc(var(--ei) * 0.04s);
+}
+.elem-glow {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.4) 0%, transparent 70%);
+  animation: elem-glow-pulse 0.6s ease-out forwards;
+}
+@keyframes elem-rise {
+  0%   { opacity: 0; transform: translateY(0) scale(0.3); }
+  20%  { opacity: 1; transform: translateY(-10px) scale(1.2); }
+  60%  { opacity: 0.8; transform: translateY(-40px) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-70px) scale(0.2); }
+}
+@keyframes elem-glow-pulse {
+  0%   { opacity: 0; transform: scale(0.5); }
+  30%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+/* --- MAGIC: arcane sparkles + ring --- */
+.magic-sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #c084fc;
+  box-shadow: 0 0 6px #a855f7, 0 0 12px rgba(168, 85, 247, 0.5);
+  top: 50%;
+  left: 50%;
+  opacity: 0;
+  animation: magic-burst 0.6s ease-out forwards;
+  animation-delay: calc(var(--mi) * 0.05s);
+  --angle: calc(var(--mi) * 45deg);
+  transform-origin: center;
+}
+.magic-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #a855f7;
+  border-radius: 50%;
+  opacity: 0;
+  animation: magic-ring-expand 0.5s ease-out forwards;
+}
+@keyframes magic-burst {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0); }
+  30%  { opacity: 1; transform: translate(calc(cos(var(--angle)) * 20px), calc(sin(var(--angle)) * 20px)) scale(1.5); }
+  70%  { opacity: 0.7; transform: translate(calc(cos(var(--angle)) * 40px), calc(sin(var(--angle)) * 40px)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(cos(var(--angle)) * 55px), calc(sin(var(--angle)) * 55px)) scale(0); }
+}
+@keyframes magic-ring-expand {
+  0%   { opacity: 0; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-width: 3px; }
+  30%  { opacity: 1; }
+  100% { opacity: 0; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-width: 1px; }
+}
+
+/* --- RANGED: arrow streak + impact --- */
+.arrow-streak {
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #93c5fd, #3b82f6);
+  border-radius: 2px;
+  transform: translateY(-50%);
+  animation: arrow-fly 0.3s ease-out forwards;
+}
+.arrow-impact {
+  position: absolute;
+  top: 50%;
+  right: 30%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, transparent 70%);
+  opacity: 0;
+  animation: arrow-hit 0.4s ease-out 0.25s forwards;
+}
+@keyframes arrow-fly {
+  0%   { left: -40px; opacity: 0; width: 30px; }
+  30%  { opacity: 1; width: 50px; }
+  100% { left: 60%; opacity: 0; width: 20px; }
+}
+@keyframes arrow-hit {
+  0%   { opacity: 0; transform: scale(0.3); }
+  40%  { opacity: 1; transform: scale(2); }
+  100% { opacity: 0; transform: scale(3); }
+}
+
+/* ===== DEATH FIRE — iskry/żar przy śmierci ===== */
+.death-fire {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  pointer-events: none;
+  overflow: visible;
+}
+.fire-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 8px;
+  background: radial-gradient(ellipse at center bottom, rgba(251,146,60,0.6) 0%, rgba(239,68,68,0.3) 40%, transparent 70%);
+  animation: fire-glow-anim 0.9s ease-out forwards;
+}
+@keyframes fire-glow-anim {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  60%  { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+.fire-ember {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 4px 1px rgba(251,191,36,0.7);
+  bottom: 20%;
+  left: calc(10% + var(--i) * 10%);
+  animation: ember-rise 0.8s ease-out forwards;
+  animation-delay: calc(var(--i) * 0.06s);
+  opacity: 0;
+}
+@keyframes ember-rise {
+  0%   { opacity: 0; transform: translateY(0) scale(1); }
+  15%  { opacity: 1; }
+  50%  { opacity: 0.8; transform: translateY(-30px) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0); }
+}
+
+/* ===== ODPORNY FLASH — atak zadał 0 obrażeń ===== */
+.immune-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 52;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 48px;
+  border-radius: 5px;
+  pointer-events: none;
+  background: rgba(120, 80, 20, 0.78);
+  outline: 3px solid #f59e0b;
+  animation: immune-bg 0.35s ease-in-out infinite alternate;
+}
+.immune-label {
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 8px #f59e0b, 0 1px 3px rgba(0,0,0,0.9);
+  background: rgba(100, 60, 10, 0.9);
+  padding: 2px 5px;
+  border-radius: 3px;
+  line-height: 1.4;
+}
+@keyframes immune-bg {
+  from { background: rgba(120, 80, 20, 0.7); }
+  to   { background: rgba(140, 100, 30, 0.85); }
+}
+.immune-flash-enter-active {
+  transition: opacity 0.15s ease;
+}
+.immune-flash-leave-active {
+  transition: opacity 0.3s ease-out;
+}
+.immune-flash-enter-from {
+  opacity: 0;
+}
+.immune-flash-leave-to {
+  opacity: 0;
+}
+
+/* ====== MOBILE RESPONSIVE ====== */
+@media (max-width: 767px) {
+  .creature-card {
+    width: 62px;
+    height: 86px;
+    border-radius: 4px;
+    border-width: 1.5px;
+  }
+  .creature-card:hover {
+    transform: translateY(-2px);
+  }
+  .card-attack {
+    transform: rotate(90deg) scale(0.92);
+  }
+  .card-attack:hover {
+    transform: rotate(90deg) scale(0.92) translateY(-2px);
+  }
+
+  /* Full-bleed art on mobile — card is mostly art */
+  .card-art {
+    /* Already absolute + inset: 0 — full card */
+  }
+
+  /* Hide header — name badge takes up too much space at this size */
+  .card-header {
+    display: none;
+  }
+
+  /* Minimize body — only show essential badges */
+  .card-body {
+    flex: 0;
+    padding: 1px 2px 0;
+    gap: 1px;
+  }
+  .flying-row {
+    padding-right: 1px;
+  }
+  .flying-img {
+    width: 10px;
+    height: 10px;
+  }
+  .card-badges {
+    gap: 1px;
+  }
+  .badge-icon { font-size: 7px; }
+  .badge-tag { font-size: 7px; }
+  .badge-paralyze { font-size: 6px; padding: 0 1px; }
+  .badge-poison { font-size: 6px; }
+  .card-active-effects {
+    display: none;
+  }
+  .card-abilities {
+    display: none;
+  }
+  .position-badge {
+    display: none;
+  }
+  .ability-row {
+    display: none;
+  }
+
+  /* Compact footer: tiny stats at bottom overlaying art */
+  .card-footer {
+    padding: 2px 4px;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(2px);
+  }
+  .stat {
+    font-size: 13px;
+    gap: 2px;
+  }
+  .stat-img {
+    width: 10px;
+    height: 10px;
+  }
+  .stat-icon {
+    font-size: 10px;
+  }
+  .stat-delta {
+    font-size: 7px;
+  }
+
+  /* Name: tiny overlay at top of card */
+  .card-name-badge {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    right: 14px;
+    z-index: 5;
+    padding: 1px 3px;
+    border-radius: 2px;
+    display: block;
+  }
+  .card-name {
+    font-size: 6px;
+    padding: 0;
+    line-height: 1.1;
+    -webkit-line-clamp: 1;
+  }
+
+  /* Domain icon smaller */
+  .card-domain-img {
+    width: 12px;
+    height: 12px;
+    top: 1px;
+    right: 1px;
+  }
+  .card-domain-dot {
+    width: 6px;
+    height: 6px;
+    top: 2px;
+    right: 2px;
+  }
+
+  /* Gradient: gentler on mobile — show more art */
+  .creature-card::after {
+    height: 40%;
+    background: linear-gradient(transparent 0%, rgba(5,3,8,0.5) 40%, rgba(5,3,8,0.9) 100%);
+  }
+
+  .aura-badge {
+    transform: scale(0.6);
+    transform-origin: bottom left;
+    bottom: 22px;
+    left: 1px;
+  }
+  .spy-badge {
+    transform: scale(0.6);
+    transform-origin: top left;
+  }
+
+  /* Shield overlay smaller */
+  .shield-overlay {
+    font-size: 18px;
+  }
+  .shield-label {
+    font-size: 5px;
+  }
+
+  /* State overlays */
+  .state-overlay {
+    font-size: 10px;
+  }
+  .state-overlay-icon {
+    font-size: 16px;
+  }
+  .state-overlay-label {
+    font-size: 5px;
+  }
+}
 </style>

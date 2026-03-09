@@ -15,7 +15,10 @@ import AISummaryPanel from '../ui/AISummaryPanel.vue'
 import WeatherEffects from '../ui/WeatherEffects.vue'
 import MusicPlayer from '../ui/MusicPlayer.vue'
 import TurnBanner from '../ui/TurnBanner.vue'
+import GloryBar from '../ui/GloryBar.vue'
+import PanteonPanel from '../ui/PanteonPanel.vue'
 import InfoBox from '../ui/InfoBox.vue'
+import AttackVFX from '../ui/AttackVFX.vue'
 import CardBack from '../cards/CardBack.vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
@@ -97,6 +100,15 @@ const activeAuras = computed<ActiveAuraEntry[]>(() => {
   return result
 })
 
+// Event color by adventure type
+function eventColor(ev: any): string {
+  const t = ev.cardData?.adventureType
+  if (t === 0) return '#f59e0b'  // zdarzenie
+  if (t === 1) return '#6366f1'  // artefakt
+  if (t === 2) return '#10b981'  // lokacja
+  return '#94a3b8'
+}
+
 // Active event cards — rozdzielone na gracza i wroga
 const playerEventCards = computed(() => (game.state?.activeEvents ?? []).filter(e => e.owner === 'player1'))
 const enemyEventCards = computed(() => (game.state?.activeEvents ?? []).filter(e => e.owner === 'player2'))
@@ -115,11 +127,36 @@ const moranaCounter = computed(() => {
 
 // ===== SFX WATCHERS =====
 const sfx = useSFX()
-watch(() => ui.animatingAttack, (v) => { if (v) sfx.sfxAttack() })
-watch(() => ui.animatingHit, (v) => { if (v) sfx.sfxHit() })
+// Attack SFX — type-specific
+watch(() => ui.animatingAttack, (v) => {
+  if (!v) return
+  const atkType = ui.animatingAttackType
+  if (atkType === 0) sfx.sfxAttackMelee()
+  else if (atkType === 1) sfx.sfxAttackElemental()
+  else if (atkType === 2) sfx.sfxAttackMagic()
+  else if (atkType === 3) sfx.sfxAttackRanged()
+  else sfx.sfxAttack()
+})
+// Hit SFX — type-specific
+watch(() => ui.animatingHit, (v) => {
+  if (!v) return
+  const atkType = ui.animatingAttackType
+  if (atkType === 0) sfx.sfxHitMelee()
+  else if (atkType === 1) sfx.sfxHitElemental()
+  else if (atkType === 2) sfx.sfxHitMagic()
+  else if (atkType === 3) sfx.sfxHitRanged()
+  else sfx.sfxHit()
+})
 watch(() => ui.animatingDeath, (v) => { if (v.size > 0) sfx.sfxDeath() }, { deep: true })
-watch(() => game.winner, (v) => { if (v) sfx.sfxGameOver() })
+watch(() => game.winner, (v) => {
+  if (!v) return
+  if (v === 'player1') sfx.sfxVictory()
+  else sfx.sfxDefeat()
+})
 watch(() => game.currentPhase, () => sfx.sfxPhase())
+// Counter/Immune SFX
+watch(() => ui.counterAttackCardId, (v) => { if (v) sfx.sfxCounterattack() })
+watch(() => ui.immuneCardId, (v) => { if (v) sfx.sfxImmune() })
 
 // ===== KEYBOARD SHORTCUTS =====
 function onKeyDown(e: KeyboardEvent) {
@@ -181,6 +218,10 @@ const onPlayDescription = computed(() => {
         {{ { spring: '🌸 Wiosna', summer: '☀ Lato', autumn: '🍂 Jesień', winter: '❄ Zima' }[game.season] }}
       </div>
       <div class="top-bar-spacer" />
+      <!-- Slava: Glory Bar -->
+      <GloryBar />
+      <!-- Slava: Panteon -->
+      <PanteonPanel />
       <MusicPlayer />
       <PhaseControls />
       <button
@@ -201,24 +242,12 @@ const onPlayDescription = computed(() => {
           :hand-count="ai.hand.length"
           :grave-count="ai.graveyard.length"
           :gold="ai.gold"
+          :glory="ai.glory"
+          :game-mode="game.gameMode"
           :is-a-i="true"
           @open-graveyard="ui.openGraveyardViewer('player2')"
         />
-        <!-- AI active adventure cards -->
-        <div v-if="enemyEventCards.length > 0" class="sidebar-events">
-          <div
-            v-for="ev in enemyEventCards"
-            :key="'sev-' + ev.instanceId"
-            class="sidebar-event-chip"
-            v-tip="`${ev.cardData.name}${ev.roundsRemaining != null ? ' (' + ev.roundsRemaining + ' rund)' : ' (perm.)'}`"
-            @mouseenter="ui.showTooltip(ev.instanceId)"
-            @mouseleave="ui.hideTooltip()"
-          >
-            <span class="sev-icon">📜</span>
-            <span class="sev-name">{{ ev.cardData.name }}</span>
-            <span v-if="ev.roundsRemaining != null" class="sev-rounds">{{ ev.roundsRemaining }}</span>
-          </div>
-        </div>
+        <!-- Events moved to PlayerField between L1-L2 -->
       </div>
 
       <!-- POLE WALKI AI (3 kolumny: L3|L2|L1, L1 przy środku) -->
@@ -241,30 +270,79 @@ const onPlayDescription = computed(() => {
           :hand-count="player.hand.length"
           :grave-count="player.graveyard.length"
           :gold="player.gold"
+          :glory="player.glory"
+          :game-mode="game.gameMode"
           :is-a-i="false"
           :enhanced-active="ui.isEnhancedMode"
           @open-graveyard="ui.openGraveyardViewer('player1')"
           @toggle-enhanced="ui.toggleEnhancedMode()"
         />
-        <!-- Player active adventure cards -->
-        <div v-if="playerEventCards.length > 0" class="sidebar-events">
-          <div
-            v-for="ev in playerEventCards"
-            :key="'sev-' + ev.instanceId"
-            class="sidebar-event-chip sidebar-event-ally"
-            v-tip="`${ev.cardData.name}${ev.roundsRemaining != null ? ' (' + ev.roundsRemaining + ' rund)' : ' (perm.)'}`"
-            @mouseenter="ui.showTooltip(ev.instanceId)"
-            @mouseleave="ui.hideTooltip()"
-          >
-            <span class="sev-icon">📜</span>
-            <span class="sev-name">{{ ev.cardData.name }}</span>
-            <span v-if="ev.roundsRemaining != null" class="sev-rounds">{{ ev.roundsRemaining }}</span>
-          </div>
-        </div>
+        <!-- Events moved to PlayerField between L1-L2 -->
       </div>
     </div>
 
     <!-- Aura bar removed — passive effects shown on creature cards, events in sidebars -->
+
+    <!-- ===== MOBILE HUD: kompaktowe statsy pływające ===== -->
+    <div class="mobile-hud">
+      <!-- AI stats (left) -->
+      <div class="mhud-side mhud-ai">
+        <span class="mhud-label mhud-label-ai">AI</span>
+        <span class="mhud-stat" @click="ui.openGraveyardViewer('player2')">💀{{ ai.graveyard.length }}</span>
+        <span class="mhud-stat">🃏{{ ai.deck.length }}</span>
+        <span v-if="game.gameMode === 'slava'" class="mhud-stat mhud-glory">⚔{{ ai.glory }}</span>
+        <span v-else class="mhud-stat mhud-gold">🪙{{ ai.gold }}</span>
+      </div>
+      <!-- Toggle drawer -->
+      <button class="mhud-toggle" @click="ui.mobileDrawerOpen = !ui.mobileDrawerOpen">
+        ⚙
+      </button>
+      <!-- Player stats (right) -->
+      <div class="mhud-side mhud-player">
+        <span v-if="game.gameMode === 'slava'" class="mhud-stat mhud-glory" :class="{ 'mhud-enhanced': ui.isEnhancedMode }" @click="ui.toggleEnhancedMode()">⚔{{ player.glory }}</span>
+        <span v-else class="mhud-stat mhud-gold" :class="{ 'mhud-enhanced': ui.isEnhancedMode }" @click="ui.toggleEnhancedMode()">🪙{{ player.gold }}</span>
+        <span class="mhud-stat">🃏{{ player.deck.length }}</span>
+        <span class="mhud-stat" @click="ui.openGraveyardViewer('player1')">💀{{ player.graveyard.length }}</span>
+        <span class="mhud-label mhud-label-player">TY</span>
+      </div>
+    </div>
+
+    <!-- ===== MOBILE DRAWER: pełne info na żądanie ===== -->
+    <Transition name="drawer-slide">
+      <div v-if="ui.mobileDrawerOpen" class="mobile-drawer" @click.self="ui.mobileDrawerOpen = false">
+        <div class="drawer-content">
+          <div class="drawer-row">
+            <DeckPile
+              :deck-count="ai.deck.length"
+              :hand-count="ai.hand.length"
+              :grave-count="ai.graveyard.length"
+              :gold="ai.gold"
+              :glory="ai.glory"
+              :game-mode="game.gameMode"
+              :is-a-i="true"
+              @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer('player2') }"
+            />
+            <div class="drawer-divider" />
+            <DeckPile
+              :deck-count="player.deck.length"
+              :hand-count="player.hand.length"
+              :grave-count="player.graveyard.length"
+              :gold="player.gold"
+              :glory="player.glory"
+              :game-mode="game.gameMode"
+              :is-a-i="false"
+              :enhanced-active="ui.isEnhancedMode"
+              @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer('player1') }"
+              @toggle-enhanced="ui.toggleEnhancedMode()"
+            />
+          </div>
+          <button class="drawer-close" @click="ui.mobileDrawerOpen = false">Zamknij</button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ===== PODPOWIEDŹ ===== -->
+    <GameHint />
 
     <!-- ===== RĘKA GRACZA (dolny pasek) ===== -->
     <PlayerHand />
@@ -310,7 +388,7 @@ const onPlayDescription = computed(() => {
         <div class="onplay-box">
           <div class="onplay-title">Aktywacja zdolności</div>
           <div class="onplay-desc">
-            Czy chcesz wydać <strong>{{ ui.pendingActivation.cost }} ZŁ</strong> na aktywację zdolności
+            Czy chcesz wydać <strong>{{ ui.pendingActivation.cost }} {{ game.gameMode === 'slava' ? 'PS' : 'ZŁ' }}</strong> na aktywację zdolności
             <strong>{{ ui.pendingActivation.cardName }}</strong>?
           </div>
           <div class="onplay-btns">
@@ -344,6 +422,7 @@ const onPlayDescription = computed(() => {
     <AISummaryPanel />
     <GameOverModal />
     <GraveyardModal />
+    <AttackVFX />
   </div>
 
   <div v-else class="board-loading">
@@ -395,7 +474,7 @@ const onPlayDescription = computed(() => {
 }
 
 /* Layout children above the ::before/::after pseudo-elements */
-.top-bar, .board-main { position: relative; z-index: 1; }
+.top-bar, .board-main, .mobile-hud { position: relative; z-index: 1; }
 .player-hand { position: relative; z-index: 10; }
 
 /* ====== PASEK GÓRNY (minimalny) ====== */
@@ -404,32 +483,51 @@ const onPlayDescription = computed(() => {
   align-items: center;
   gap: 8px;
   padding: 2px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-  background: rgba(4,3,10,0.85);
-  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(200,168,78,0.08);
+  background: linear-gradient(90deg, rgba(4,3,10,0.9), rgba(15,12,25,0.85), rgba(4,3,10,0.9));
+  /* backdrop-filter removed for performance */
   flex-shrink: 0;
-  min-height: 30px;
+  min-height: 32px;
+  position: relative;
+}
+/* Ornament pod top barem */
+.top-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200,168,78,0.15) 20%, rgba(200,168,78,0.2) 50%, rgba(200,168,78,0.15) 80%, transparent);
+  pointer-events: none;
 }
 
 .top-bar-spacer { flex: 1; }
 
 .turn-badge {
-  font-size: 14px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 3px 14px;
+  letter-spacing: 0.12em;
+  padding: 3px 16px;
   border-radius: 5px;
   border: 1px solid;
+  position: relative;
 }
+/* Runiczna dekoracja po bokach */
+.turn-badge::before { content: '᛫'; margin-right: 6px; opacity: 0.4; font-size: 10px; }
+.turn-badge::after  { content: '᛫'; margin-left: 6px; opacity: 0.4; font-size: 10px; }
 .tb-player {
   color: #86efac;
-  background: rgba(134,239,172,0.08);
-  border-color: rgba(134,239,172,0.2);
+  background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%);
+  border-color: rgba(134,239,172,0.25);
+  text-shadow: 0 0 8px rgba(34,197,94,0.3);
 }
 .tb-ai {
   color: #fca5a5;
-  background: rgba(252,165,165,0.08);
-  border-color: rgba(252,165,165,0.2);
+  background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.04) 100%);
+  border-color: rgba(252,165,165,0.25);
+  text-shadow: 0 0 8px rgba(239,68,68,0.3);
   animation: ai-blink 1.2s ease infinite;
 }
 @keyframes ai-blink {
@@ -438,15 +536,16 @@ const onPlayDescription = computed(() => {
 }
 
 .season-badge {
-  font-size: 13px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 12px;
   font-weight: 700;
   color: #e2e8f0;
-  padding: 2px 10px;
+  padding: 2px 12px;
   border-radius: 4px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(200,168,78,0.04);
+  border: 1px solid rgba(200,168,78,0.12);
   white-space: nowrap;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .surrender-top-btn {
@@ -483,18 +582,34 @@ const onPlayDescription = computed(() => {
   align-self: flex-start;
   gap: 6px;
   padding: 6px 4px;
-  border-right: 1px solid rgba(255,255,255,0.03);
-  background: rgba(4,3,10,0.6);
-  backdrop-filter: blur(4px);
+  border-right: 1px solid rgba(200,168,78,0.08);
+  background: linear-gradient(180deg, rgba(4,3,10,0.92) 0%, rgba(10,8,20,0.88) 100%);
+  /* backdrop-filter removed for performance */
   flex-shrink: 0;
   width: 82px;
   border-radius: 0 0 8px 0;
+  position: relative;
+}
+/* Ornament: złota linia wzdłuż boku */
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  right: 0;
+  width: 1px;
+  height: 80%;
+  background: linear-gradient(180deg, transparent, rgba(200,168,78,0.15) 30%, rgba(200,168,78,0.15) 70%, transparent);
+  pointer-events: none;
 }
 
 .sidebar-player {
   border-right: none;
-  border-left: 1px solid rgba(255,255,255,0.03);
+  border-left: 1px solid rgba(200,168,78,0.08);
   border-radius: 0 0 0 8px;
+}
+.sidebar-player::after {
+  right: auto;
+  left: 0;
 }
 
 /* ====== SIDEBAR ACTIVE EVENTS ====== */
@@ -510,38 +625,68 @@ const onPlayDescription = computed(() => {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 5px;
-  border-radius: 4px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 4px 5px 4px 8px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   cursor: help;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+.sidebar-event-chip:hover {
+  border-color: color-mix(in srgb, var(--sev-color, #f59e0b) 60%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--sev-color, #f59e0b) 15%, transparent);
 }
 .sidebar-event-ally {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);
+  border-color: rgba(34, 197, 94, 0.25);
 }
 
-.sev-icon {
-  font-size: 10px;
-  flex-shrink: 0;
+/* Kolorowy accent pasek po lewej */
+.sev-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--sev-color, #f59e0b);
+  opacity: 0.7;
 }
+
 .sev-name {
+  font-family: var(--font-display, Georgia, serif);
   font-size: 8px;
   font-weight: 700;
-  color: #fde68a;
+  color: #e2e8f0;
   line-height: 1.2;
   word-break: break-word;
-}
-.sidebar-event-ally .sev-name {
-  color: #86efac;
+  flex: 1;
 }
 .sev-rounds {
-  font-size: 7px;
-  font-weight: 800;
-  background: rgba(0,0,0,0.4);
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 12px;
+  font-weight: 900;
   color: #fbbf24;
-  padding: 0 3px;
-  border-radius: 3px;
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+  flex-shrink: 0;
+  margin-left: auto;
+  line-height: 1;
+}
+.sev-rounds-low {
+  color: #ef4444;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+  animation: sev-urgent 1s ease-in-out infinite;
+}
+@keyframes sev-urgent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.sev-perm {
+  font-size: 10px;
+  font-weight: 700;
+  color: #a78bfa;
+  opacity: 0.6;
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -570,11 +715,12 @@ const onPlayDescription = computed(() => {
 }
 
 .divider-badge {
-  font-size: 14px;
-  color: rgba(200, 168, 78, 0.4);
-  padding: 4px 0;
+  font-size: 16px;
+  color: rgba(200, 168, 78, 0.35);
+  padding: 6px 0;
   writing-mode: vertical-rl;
-  text-shadow: 0 0 8px rgba(200, 168, 78, 0.2);
+  text-shadow: 0 0 12px rgba(200, 168, 78, 0.2);
+  animation: rune-glow 4s ease-in-out infinite;
 }
 
 /* ====== OVERLAY HINTS + AURAS (above board, don't affect layout) ====== */
@@ -726,7 +872,7 @@ const onPlayDescription = computed(() => {
   padding: 2px 10px;
   border-top: 1px solid rgba(200,168,78,0.06);
   background: rgba(4, 3, 10, 0.7);
-  backdrop-filter: blur(6px);
+  /* backdrop-filter removed for performance */
   flex-shrink: 0;
   min-height: 24px;
   overflow-x: auto;
@@ -773,9 +919,9 @@ const onPlayDescription = computed(() => {
   animation: aura-pulse 0.6s ease-out 2;
 }
 @keyframes aura-pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
-  30%  { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.7), 0 0 12px 4px rgba(251, 191, 36, 0.4); }
-  100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  0%   { outline: 2px solid transparent; outline-offset: 0; }
+  30%  { outline: 3px solid rgba(251, 191, 36, 0.7); outline-offset: 2px; }
+  100% { outline: 2px solid transparent; outline-offset: 0; }
 }
 
 .aura-rounds {
@@ -785,5 +931,235 @@ const onPlayDescription = computed(() => {
   padding: 0 3px;
   border-radius: 3px;
   margin-left: 2px;
+}
+
+/* ====================================================================
+   MOBILE HUD — ukryty na desktopie, widoczny na mobile
+   ==================================================================== */
+.mobile-hud {
+  display: none;
+}
+.mobile-drawer {
+  display: none;
+}
+
+/* ====================================================================
+   MOBILE RESPONSIVE — pionowa orientacja pola bitwy (< 768px)
+   ==================================================================== */
+@media (max-width: 767px) {
+  .game-board {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* === TOP BAR: kompaktowy === */
+  .top-bar {
+    padding: 2px 6px;
+    gap: 3px;
+    min-height: 26px;
+  }
+  .turn-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    letter-spacing: 0.04em;
+  }
+  .turn-badge::before, .turn-badge::after { display: none; }
+  .season-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+  .surrender-top-btn {
+    font-size: 11px;
+    padding: 2px 4px;
+  }
+
+  /* === SIDEBARY: UKRYTE na mobile === */
+  .sidebar {
+    display: none !important;
+  }
+
+  /* === MOBILE HUD: kompaktowy pasek statystyk === */
+  .mobile-hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 6px;
+    background: rgba(4,3,10,0.85);
+    /* backdrop-filter removed for performance */
+    border-bottom: 1px solid rgba(200,168,78,0.08);
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+  .mhud-side {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mhud-label {
+    font-family: var(--font-display, Georgia, serif);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .mhud-label-ai {
+    color: #fca5a5;
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.25);
+  }
+  .mhud-label-player {
+    color: #86efac;
+    background: rgba(34,197,94,0.12);
+    border: 1px solid rgba(34,197,94,0.25);
+  }
+  .mhud-stat {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 3px;
+    transition: background 0.15s;
+    white-space: nowrap;
+    line-height: 1;
+  }
+  .mhud-stat:active {
+    background: rgba(200,168,78,0.12);
+  }
+  .mhud-gold {
+    color: #fbbf24;
+  }
+  .mhud-glory {
+    color: #86efac;
+  }
+  .mhud-enhanced {
+    background: rgba(251,191,36,0.2);
+    border: 1px solid rgba(251,191,36,0.5);
+    box-shadow: 0 0 6px rgba(251,191,36,0.2);
+    animation: gold-active-glow 2s ease-in-out infinite;
+  }
+  .mhud-toggle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid rgba(200,168,78,0.2);
+    background: rgba(200,168,78,0.06);
+    color: rgba(200,168,78,0.5);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .mhud-toggle:active {
+    background: rgba(200,168,78,0.15);
+    color: rgba(200,168,78,0.8);
+  }
+
+  /* === MOBILE DRAWER: overlay z pełnym info === */
+  .mobile-drawer {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    background: rgba(0,0,0,0.7);
+    align-items: flex-end;
+    justify-content: center;
+    /* backdrop-filter removed for performance */
+  }
+  .drawer-content {
+    background: linear-gradient(180deg, #0f172a 0%, #0a0f1e 100%);
+    border-radius: 14px 14px 0 0;
+    border: 1px solid rgba(200,168,78,0.12);
+    border-bottom: none;
+    width: 100%;
+    max-width: 480px;
+    padding: 16px 12px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .drawer-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-around;
+    gap: 12px;
+  }
+  .drawer-divider {
+    width: 1px;
+    align-self: stretch;
+    background: linear-gradient(180deg, transparent, rgba(200,168,78,0.2), transparent);
+  }
+  .drawer-close {
+    align-self: center;
+    padding: 6px 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(200,168,78,0.2);
+    background: rgba(200,168,78,0.06);
+    color: rgba(200,168,78,0.6);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+  }
+  .drawer-close:active {
+    background: rgba(200,168,78,0.15);
+  }
+
+  /* Drawer slide animation */
+  .drawer-slide-enter-active { transition: opacity 0.25s ease-out; }
+  .drawer-slide-enter-active .drawer-content { transition: transform 0.25s ease-out; }
+  .drawer-slide-leave-active { transition: opacity 0.2s ease-in; }
+  .drawer-slide-leave-active .drawer-content { transition: transform 0.2s ease-in; }
+  .drawer-slide-enter-from { opacity: 0; }
+  .drawer-slide-enter-from .drawer-content { transform: translateY(100%); }
+  .drawer-slide-leave-to { opacity: 0; }
+  .drawer-slide-leave-to .drawer-content { transform: translateY(100%); }
+
+  /* === BOARD MAIN: pionowa orientacja, FILL viewport === */
+  .board-main {
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* === SEPARATOR ŚRODKOWY: poziomy, minimalny === */
+  .center-divider {
+    flex-direction: row;
+    width: 100%;
+    padding: 0 12px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .divider-line {
+    height: 1px;
+    width: auto;
+    flex: 1;
+    background: linear-gradient(90deg, transparent, rgba(200,168,78,0.25) 30%, rgba(200,168,78,0.35) 50%, rgba(200,168,78,0.25) 70%, transparent);
+  }
+  .divider-badge {
+    writing-mode: horizontal-tb;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+
+  /* === PLAY LIMIT TOAST === */
+  .play-limit-toast {
+    bottom: 100px;
+    font-size: 11px;
+    padding: 6px 14px;
+  }
+
+  /* === ONPLAY CONFIRM BOX === */
+  .onplay-box {
+    max-width: 92vw;
+    padding: 14px;
+  }
 }
 </style>

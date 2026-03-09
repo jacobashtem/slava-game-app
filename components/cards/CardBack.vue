@@ -35,4 +35,12 @@ defineProps<{ small?: boolean }>()
 .card-back-symbol {
   display: none;
 }
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .card-back.small {
+    width: 42px;
+    height: 58px;
+  }
+}
 </style>

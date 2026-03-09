@@ -82,4 +82,15 @@ const ui = useUIStore()
   opacity: 0;
   transform: translateY(-8px) scale(0.95);
 }
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .infobox-container {
+    top: 30px;
+  }
+  .infobox {
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+}
 </style>

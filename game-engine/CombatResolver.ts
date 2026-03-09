@@ -9,6 +9,7 @@ import type { PlayerSide } from './types'
 import { cloneGameState, addLog, moveToGraveyard } from './GameStateUtils'
 import { canAttack, removeFromField, getEnemyFrontLine, getOwnFrontLine } from './LineManager'
 import { getEffect } from './EffectRegistry'
+import { trackKill, trackDamageDealt } from './GloryManager'
 
 // ===================================================================
 // GŁÓWNA FUNKCJA ATAKU
@@ -133,6 +134,9 @@ export function resolveAttack(
     'damage',
     [attackerInstanceId, defenderInstanceId]
   ))
+
+  // Sława: track damage dealt for holiday conditions
+  trackDamageDealt(newState, currentAttacker.owner as PlayerSide, damageToDefender)
 
   // 6. Trigger: ON_DAMAGE_RECEIVED na obrońcy (np. Bugaj) + ON_DAMAGE_DEALT na atakującym
   const onDamageRecResult = triggerEffect(newState, currentDefender, EffectTrigger.ON_DAMAGE_RECEIVED, currentAttacker, damageToDefender)
@@ -418,11 +422,15 @@ export function resolveAttack(
 
       // Trofeum: dodaj do trofeów właściciela atakującego (tryb Slava!)
       const attackerPlayer = newState.players[currentAttacker?.owner ?? attacker.owner]
+      const killerSide = (currentAttacker?.owner ?? attacker.owner) as PlayerSide
       const defenderCardRemoved = removeFromField(newState, defenderInstanceId)
       if (defenderCardRemoved) {
         defenderCardRemoved.line = null
         newState.players[defenderCardRemoved.owner].graveyard.push(defenderCardRemoved)
         attackerPlayer?.trophies.push(defenderCardRemoved)
+
+        // Sława: track kill for trophy bonus calculation
+        trackKill(newState, killerSide, defenderCardRemoved)
 
         // Kościej (#43): wskrzesza się po śmierci od Wręcz (1. raz gratis)
         if (defenderCardRemoved.metadata.kosciejResurrected) {

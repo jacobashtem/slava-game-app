@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" fill="none">
+  <defs>
+    <radialGradient id="mBg" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#0c3547"/>
+      <stop offset="100%" stop-color="#040a10"/>
+    </radialGradient>
+    <radialGradient id="mGlow" cx="50%" cy="40%" r="35%">
+      <stop offset="0%" stop-color="#67e8f9" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="260" rx="12" fill="url(#mBg)"/>
+  <rect width="200" height="260" rx="12" fill="url(#mGlow)"/>
+  <rect x="6" y="6" width="188" height="248" rx="9" stroke="#67e8f9" stroke-opacity="0.15" stroke-width="1" fill="none"/>
+  <!-- Ice crown / snowflake -->
+  <g transform="translate(100,90)" stroke="#67e8f9" fill="none">
+    <!-- Main snowflake arms -->
+    <g stroke-width="2" opacity="0.7">
+      <line x1="0" y1="-30" x2="0" y2="30"/>
+      <line x1="-26" y1="-15" x2="26" y2="15"/>
+      <line x1="-26" y1="15" x2="26" y2="-15"/>
+    </g>
+    <!-- Branches -->
+    <g stroke-width="1.2" opacity="0.5">
+      <line x1="0" y1="-20" x2="-8" y2="-28"/>
+      <line x1="0" y1="-20" x2="8" y2="-28"/>
+      <line x1="0" y1="20" x2="-8" y2="28"/>
+      <line x1="0" y1="20" x2="8" y2="28"/>
+      <line x1="-17" y1="-10" x2="-25" y2="-5"/>
+      <line x1="-17" y1="-10" x2="-20" y2="-20"/>
+      <line x1="17" y1="10" x2="25" y2="5"/>
+      <line x1="17" y1="10" x2="20" y2="20"/>
+      <line x1="-17" y1="10" x2="-25" y2="5"/>
+      <line x1="-17" y1="10" x2="-20" y2="20"/>
+      <line x1="17" y1="-10" x2="25" y2="-5"/>
+      <line x1="17" y1="-10" x2="20" y2="-20"/>
+    </g>
+    <!-- Center -->
+    <circle r="6" fill="#67e8f9" opacity="0.15"/>
+    <circle r="3" fill="#a5f3fc" opacity="0.3"/>
+  </g>
+  <!-- Frozen figure silhouette -->
+  <g opacity="0.25" fill="#67e8f9">
+    <ellipse cx="100" cy="150" rx="20" ry="5"/>
+    <path d="M85,150 Q80,130 90,125 Q95,122 100,115 Q105,122 110,125 Q120,130 115,150 Z"/>
+  </g>
+  <!-- Ice shards -->
+  <g fill="#67e8f9" opacity="0.3">
+    <polygon points="40,170 44,145 48,170"/>
+    <polygon points="152,170 156,148 160,170"/>
+    <polygon points="55,180 58,160 61,180"/>
+    <polygon points="139,180 142,158 145,180"/>
+  </g>
+  <!-- Snowfall particles -->
+  <circle cx="50" cy="40" r="1.5" fill="#a5f3fc" opacity="0.4"><animate attributeName="cy" values="40;200;40" dur="8s" repeatCount="indefinite"/></circle>
+  <circle cx="80" cy="30" r="1" fill="#67e8f9" opacity="0.3"><animate attributeName="cy" values="30;220;30" dur="10s" repeatCount="indefinite"/></circle>
+  <circle cx="130" cy="50" r="1.2" fill="#a5f3fc" opacity="0.35"><animate attributeName="cy" values="50;210;50" dur="9s" repeatCount="indefinite"/></circle>
+  <circle cx="160" cy="35" r="0.8" fill="#67e8f9" opacity="0.25"><animate attributeName="cy" values="35;230;35" dur="11s" repeatCount="indefinite"/></circle>
+  <text x="100" y="215" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="#67e8f9" opacity="0.9">MARZANNA</text>
+  <text x="100" y="235" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#67e8f9" opacity="0.4">Bogini Zimy i Smierci</text>
+  <line x1="50" y1="245" x2="150" y2="245" stroke="#67e8f9" stroke-opacity="0.15" stroke-width="0.5"/>
+</svg>

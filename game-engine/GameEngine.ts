@@ -23,9 +23,24 @@ import {
   activateCreatureEffect,
   drawCardManually,
 } from './TurnManager'
-import { GOLD_EDITION_RULES, EffectTrigger } from './constants'
+import { GOLD_EDITION_RULES, SLAVA_RULES, EffectTrigger } from './constants'
 import { buildAlphaDeck } from './DeckBuilder'
 import { getEffect } from './EffectRegistry'
+import {
+  createInitialSlavaState,
+  checkSlavaWinCondition,
+  grantPassiveIncome,
+  grantTrophyBonus,
+  checkHoliday,
+  processSeasonChange,
+  resetTurnTracking,
+  checkBreakthrough,
+  executeDivineFavor,
+  startAuction,
+  placeBid,
+  resolveAuction,
+  aiAuctionDecision,
+} from './GloryManager'
 
 import istotypData from '../data/Slava_Vol2_Istoty.json'
 import przygodyData from '../data/Slava_Vol2_KartyPrzygody.json'
@@ -112,6 +127,98 @@ export class GameEngine {
     this.state = this.runStartPhase(this.state)
 
     this.notifyStateChange()
+    return cloneGameState(this.state)
+  }
+
+  // ===== TRYB SŁAWA! =====
+
+  startSlavaGame(playerDomainFilter?: number[]): GameState {
+    this.arenaMode = false
+    this.state = createInitialGameState('slava')
+
+    // Sława zawsze zaczyna od rundy 1 (Zima)
+    this.state.roundNumber = 1
+
+    // Zbuduj talie (losowe, pełna pula)
+    const playerConfig = playerDomainFilter
+      ? { ...GOLD_EDITION_DECK_CONFIG, domainFilter: playerDomainFilter }
+      : undefined
+    const deck1 = buildRandomDeck(this.factory, 'player1', playerConfig)
+    const deck2 = buildRandomDeck(this.factory, 'player2')
+
+    this.state.players.player1.deck = deck1
+    this.state.players.player2.deck = deck2
+
+    // Dobierz karty startowe
+    drawCards(this.state.players.player1, SLAVA_RULES.STARTING_HAND)
+    drawCards(this.state.players.player2, SLAVA_RULES.STARTING_HAND)
+
+    // W Sława: brak złota, PS startowe = 0 (income +1/turę)
+    this.state.players.player1.gold = 0
+    this.state.players.player2.gold = 0
+    this.state.players.player1.glory = 0
+    this.state.players.player2.glory = 0
+
+    // Inicjalizuj SlavaState
+    this.state.slavaData = createInitialSlavaState(this.state.roundNumber)
+
+    const startLog = addLog(this.state, '⚔ TRYB SŁAWA! Cel: zdobądź 10 Punktów Sławy!', 'system')
+    this.state.actionLog.push(startLog)
+    this.onLogEntry?.(startLog)
+
+    // Season setup logs
+    const seasonLogs = processSeasonChange(this.state)
+    this.pushLogs(seasonLogs)
+
+    this.state = this.runStartPhase(this.state)
+
+    this.notifyStateChange()
+    return cloneGameState(this.state)
+  }
+
+  // ===== SLAVA: LICYTACJA O BOŻĄ ŁASKĘ =====
+
+  playerInvokeGod(godId: number, enhanced: boolean, bid: number): GameState {
+    this.assertPlayerTurn()
+    if (this.state.gameMode !== 'slava' || !this.state.slavaData) {
+      throw new Error('Boże Łaski dostępne tylko w trybie Sława!')
+    }
+
+    const god = this.state.slavaData.gods.find(g => g.id === godId)
+    if (!god) throw new Error('Nieznany bóg!')
+    if (god.usedThisCycle) throw new Error('Bóg już użyty w tej porze roku!')
+    if (this.state.players.player1.glory < bid) throw new Error('Za mało PS!')
+
+    const newState = cloneGameState(this.state)
+    const auction = startAuction(godId, enhanced, 'player1', bid)
+
+    // AI od razu odpowiada
+    const aiResponse = aiAuctionDecision(newState, auction)
+    if (aiResponse.bid) {
+      placeBid(auction, 'player2', aiResponse.amount)
+      // Ustaw pending interaction — gracz musi przebić lub spasować
+      newState.slavaData!.activeAuction = auction
+      newState.pendingInteraction = {
+        type: 'auction_bid',
+        sourceInstanceId: `god-${godId}`,
+        respondingPlayer: 'player1',
+        metadata: {
+          godId,
+          enhanced,
+          currentBid: aiResponse.amount,
+          currentBidder: 'player2',
+          godName: god.name,
+        },
+      }
+      this.applyStateAndLog(newState, [addLog(newState, `AI przebija licytację o ${god.name}: ${aiResponse.amount} PS!`, 'glory')])
+    } else {
+      // AI pasuje → gracz wygrywa
+      const resolveLogs = resolveAuction(newState, auction)
+      const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player1')
+      this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+      this.checkWinAndNotify()
+    }
+
     return cloneGameState(this.state)
   }
 
@@ -793,6 +900,52 @@ export class GameEngine {
       return cloneGameState(this.state)
     }
 
+    // Auction bid — licytacja o Bożą Łaskę (tryb Sława)
+    if (interaction.type === 'auction_bid') {
+      const meta = interaction.metadata ?? {}
+      const godId = meta.godId as number
+      const enhanced = meta.enhanced as boolean
+      const auction = newState.slavaData?.activeAuction
+
+      if (choice === 'pass' || !auction) {
+        // Gracz pasuje → AI wygrywa licytację
+        if (auction) {
+          const resolveLogs = resolveAuction(newState, auction)
+          const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player2')
+          this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+        } else {
+          this.applyStateAndLog(newState, [])
+        }
+      } else {
+        // Gracz przebija
+        const bidAmount = parseInt(choice, 10)
+        if (auction && !isNaN(bidAmount) && bidAmount > auction.currentHighBid) {
+          placeBid(auction, 'player1', bidAmount)
+          // AI odpowiada
+          const aiResp = aiAuctionDecision(newState, auction)
+          if (aiResp.bid) {
+            placeBid(auction, 'player2', aiResp.amount)
+            newState.pendingInteraction = {
+              type: 'auction_bid',
+              sourceInstanceId: `god-${godId}`,
+              respondingPlayer: 'player1',
+              metadata: { godId, enhanced, currentBid: aiResp.amount, currentBidder: 'player2' },
+            }
+            this.applyStateAndLog(newState, [addLog(newState, `AI przebija: ${aiResp.amount} PS!`, 'glory')])
+          } else {
+            // AI pasuje → gracz wygrywa
+            const resolveLogs = resolveAuction(newState, auction)
+            const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player1')
+            this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+          }
+        } else {
+          this.applyStateAndLog(newState, [addLog(newState, 'Nieprawidłowa stawka!', 'system')])
+        }
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
     // Pozostałe typy — fallback
     this.applyStateAndLog(newState, [])
     return cloneGameState(this.state)
@@ -868,6 +1021,19 @@ export class GameEngine {
   private runStartPhase(state: GameState): GameState {
     let s = state
 
+    // Sława: process season change at round start (player1 turn)
+    if (s.gameMode === 'slava' && s.slavaData && s.currentTurn === 'player1') {
+      const seasonLogs = processSeasonChange(s)
+      this.pushLogs(seasonLogs)
+    }
+
+    // Sława: pasywny dochód +1 PS na każdej turze
+    if (s.gameMode === 'slava') {
+      const incomeLogs = grantPassiveIncome(s)
+      this.pushLogs(incomeLogs)
+      resetTurnTracking(s)
+    }
+
     const { newState: afterStart, log: startLog } = processStartPhase(s)
     s = afterStart
     this.pushLogs(startLog)
@@ -898,6 +1064,23 @@ export class GameEngine {
 
   private checkWinAndNotify(): void {
     if (this.arenaMode) return
+
+    // Slava: sprawdź PS >= 10
+    if (this.state.gameMode === 'slava') {
+      const slavaWinner = checkSlavaWinCondition(this.state)
+      if (slavaWinner) {
+        this.state.winner = slavaWinner
+        const winnerLabel = slavaWinner === 'player1' ? 'GRACZ' : 'AI'
+        const glory = this.state.players[slavaWinner].glory
+        const log = addLog(this.state, `⚔ KONIEC GRY! ${winnerLabel} zdobywa ${glory} PS! SŁAWA!`, 'system')
+        this.state.actionLog.push(log)
+        this.onLogEntry?.(log)
+        this.notifyStateChange()
+        return
+      }
+    }
+
+    // Gold Edition: sprawdź wyczerpanie talii/pola
     const winner = checkWinCondition(this.state)
     if (winner) {
       this.state.winner = winner

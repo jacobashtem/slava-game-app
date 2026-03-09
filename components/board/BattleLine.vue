@@ -29,12 +29,13 @@ const isEnemyAttackTarget = computed(() =>
   !props.isPlayerSide && ui.isSelectingTarget
 )
 
-const lineLabel = computed(() => ({
-  [BL.FRONT]: 'L1',
-  [BL.RANGED]: 'L2',
-  [BL.SUPPORT]: 'L3',
-}[props.line]))
+const lineLabels: Record<number, { name: string; realm: string; rune: string }> = {
+  [BL.FRONT]:   { name: 'L1', realm: 'JAWIA', rune: '᛭' },
+  [BL.RANGED]:  { name: 'L2', realm: 'PRAWIA', rune: 'ᛟ' },
+  [BL.SUPPORT]: { name: 'L3', realm: 'NAWIA', rune: 'ᛉ' },
+}
 
+const lineInfo = computed(() => lineLabels[props.line] ?? { name: '?', realm: '?', rune: '?' })
 
 const MAX_SLOTS = 3
 const ghostSlots = computed(() => Math.max(0, MAX_SLOTS - props.cards.length))
@@ -42,13 +43,11 @@ const ghostSlots = computed(() => Math.max(0, MAX_SLOTS - props.cards.length))
 // ===== KLIK NA LINIĘ (wystawianie z ręki) =====
 function onLineClick(e: MouseEvent) {
   if (!ui.isPlacingCard || !ui.selectedCardId) return
-  // Wystawianie na pole wroga (Wieszczy, Bieda) — klik na linię wroga
   if (ui.placingOnEnemyField) {
-    if (props.isPlayerSide) return // klik na własne linie zignoruj
+    if (props.isPlayerSide) return
   } else {
-    if (!props.isPlayerSide) return // normalnie: tylko własne linie
+    if (!props.isPlayerSide) return
   }
-  // Nie reaguj gdy klik był na karcie (CreatureCard obsługuje to)
   const target = e.target as HTMLElement
   if (target.closest('.creature-card')) return
   game.playCreature(ui.selectedCardId, props.line)
@@ -59,13 +58,12 @@ function onLineClick(e: MouseEvent) {
 function onCardClick(card: CardInstance) {
   if (!game.isPlayerTurn) return
 
-  // Przygoda czeka na cel (artefakt, zdarzenie z targetem)
   if (ui.pendingArtifactId && game.currentPhase === GamePhase.PLAY) {
     const targetType = ui.pendingAdventureTargetType
     const isValidSide = targetType === 'any'
       || (targetType === 'ally' && props.isPlayerSide)
       || (targetType === 'enemy' && !props.isPlayerSide)
-      || (!targetType && props.isPlayerSide) // fallback: artefakty = sojusznik
+      || (!targetType && props.isPlayerSide)
     if (isValidSide) {
       try {
         game.playAdventure(ui.pendingArtifactId, card.instanceId, ui.pendingAdventureEnhanced)
@@ -77,9 +75,7 @@ function onCardClick(card: CardInstance) {
   }
 
   if (props.isPlayerSide) {
-
     if (game.currentPhase === GamePhase.COMBAT) {
-      // W COMBAT: karta w obronie nie może atakować — zmiana pozycji przez badge
       if (card.position === CardPosition.DEFENSE) {
         ui.showPlayLimitToast('Istota jest w obronie — zmień pozycję na atak.')
         return
@@ -88,7 +84,6 @@ function onCardClick(card: CardInstance) {
         ui.showPlayLimitToast('Ta istota nie może atakować (efekt statusu).')
         return
       }
-      // Leśnica: może atakować 2 razy
       const isLesnica = (card.cardData as any).effectId === 'lesnica_double_attack'
       const attacksThisTurn = (card.metadata.attacksThisTurn as number) ?? 0
       if (isLesnica && attacksThisTurn >= 2) {
@@ -99,10 +94,8 @@ function onCardClick(card: CardInstance) {
         ui.showPlayLimitToast('Ta istota już atakowała w tej turze.')
         return
       }
-      // Kikimora: jej atak NIE liczy się do limitu
       const isKikimora = (card.cardData as any).effectId === 'kikimora_free_attack'
       if (!isKikimora && !((card.metadata.freeAttacksLeft as number) > 0)) {
-        // Limit: atak na turę (z wyjątkami)
         const p1Creatures = game.state ? getAllCreaturesOnField(game.state, 'player1') : []
         const normalAttacksUsed = p1Creatures
           .filter(c => (c.cardData as any).effectId !== 'kikimora_free_attack')
@@ -128,9 +121,7 @@ function onCardClick(card: CardInstance) {
       }
       ui.setValidAttackTargets(targets)
     }
-    // PLAY faza: klik = zmień pozycję (obsługiwane przez togglePositionOnClick prop)
   } else {
-    // Klik na wrogą kartę → atak (softFail rozwiązywane w silniku)
     if (ui.isSelectingTarget && ui.attackingCardId) {
       if (ui.validAttackTargets.has(card.instanceId)) {
         game.attack(ui.attackingCardId, card.instanceId)
@@ -140,7 +131,6 @@ function onCardClick(card: CardInstance) {
   }
 }
 
-// Zmiana pozycji (emitowana przez CreatureCard gdy togglePositionOnClick)
 function onChangePosition(card: CardInstance) {
   if (!game.isPlayerTurn) return
   const newPos = card.position === CardPosition.ATTACK ? CardPosition.DEFENSE : CardPosition.ATTACK
@@ -169,12 +159,10 @@ function getValidTargets(attacker: CardInstance): string[] {
     .map(e => e.instanceId)
 }
 
-// Wszystkie wrogie istoty — softFail rozwiązywane w silniku (0 DMG + kontratak)
 function getAllTargets(): string[] {
   if (!game.state) return []
   return getAllCreaturesOnField(game.state, 'player2')
     .filter(e => {
-      // Tylko hard-fail (matecznik, obrona, taunt) blokuje wybór celu
       const check = canAttack(game.state!,
         getAllCreaturesOnField(game.state!, 'player1').find(c => c.instanceId === ui.attackingCardId)!,
         e)
@@ -183,7 +171,7 @@ function getAllTargets(): string[] {
     .map(e => e.instanceId)
 }
 
-// ===== DRAG & DROP (przenoszenie między liniami) =====
+// ===== DRAG & DROP =====
 let _draggingId = ''
 
 function onDragStart(e: DragEvent, card: CardInstance) {
@@ -230,9 +218,15 @@ function onLineDrop(e: DragEvent) {
     @dragleave="onDragLeave"
     @drop="onLineDrop"
   >
+    <!-- Runic line header -->
     <div class="line-header">
-      <span class="line-label">{{ lineLabel }}</span>
+      <span class="line-rune">{{ lineInfo.rune }}</span>
+      <span class="line-label">{{ lineInfo.name }}</span>
+      <span class="line-realm">{{ lineInfo.realm }}</span>
     </div>
+
+    <!-- Ornamental top border -->
+    <div class="line-ornament" />
 
     <div class="cards-col">
       <div
@@ -268,12 +262,21 @@ function onLineDrop(e: DragEvent) {
         />
       </div>
 
-      <!-- Ghost slots: only on player side -->
+      <!-- Ghost slots -->
       <template v-if="isPlayerSide">
         <div
           v-for="i in ghostSlots"
           :key="`ghost-${i}`"
           :class="['ghost-slot', { 'ghost-active': isDropTarget }]"
+        >
+          <div class="ghost-rune">{{ lineInfo.rune }}</div>
+        </div>
+      </template>
+      <template v-else>
+        <div
+          v-for="i in ghostSlots"
+          :key="`ghost-enemy-${i}`"
+          class="ghost-slot ghost-enemy"
         />
       </template>
     </div>
@@ -289,80 +292,115 @@ function onLineDrop(e: DragEvent) {
   min-width: 100px;
   height: 100%;
   padding: 2px 4px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.03);
-  background: rgba(0, 0, 0, 0.1);
-  transition: border-color 0.2s, background 0.2s;
+  background: rgba(0, 0, 0, 0.12);
+  transition: border-color 0.3s, background 0.3s;
   position: relative;
   gap: 2px;
   overflow: visible;
 }
 
-/* Per-zone color tinting */
+/* Per-zone styling with atmospheric gradients */
 .battle-line.line-1 {
-  background: var(--bg-jawia);
-  border-color: rgba(180, 130, 60, 0.12);
+  background: linear-gradient(180deg, rgba(200, 160, 60, 0.06) 0%, rgba(180, 130, 60, 0.02) 100%);
+  border-color: rgba(200, 160, 60, 0.15);
+  box-shadow: inset 0 0 20px rgba(200, 160, 60, 0.03);
 }
 .battle-line.line-2 {
-  background: var(--bg-prawia);
-  border-color: rgba(99, 102, 241, 0.10);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.05) 0%, rgba(79, 70, 229, 0.02) 100%);
+  border-color: rgba(99, 102, 241, 0.12);
+  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.03);
 }
 .battle-line.line-3 {
-  background: var(--bg-nawia);
-  border-color: rgba(88, 28, 135, 0.12);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, rgba(88, 28, 135, 0.02) 100%);
+  border-color: rgba(139, 92, 246, 0.12);
+  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.03);
 }
 
 .battle-line.highlighted {
-  border-color: rgba(99, 102, 241, 0.7);
-  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.85);
+  background: rgba(99, 102, 241, 0.15);
   cursor: pointer;
-  box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.08);
+  outline: 2px solid rgba(129, 140, 248, 0.5);
+  outline-offset: -1px;
 }
 
-/* Strona wroga — ciemniejsze, czerwonawe tło */
+/* Enemy side */
 .battle-line.enemy-line {
   background: rgba(239, 68, 68, 0.03);
   border-color: rgba(239, 68, 68, 0.08);
 }
 .battle-line.enemy-line.line-1 {
-  background: rgba(239, 68, 68, 0.04);
-  border-color: rgba(239, 68, 68, 0.10);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 50, 50, 0.02) 100%);
+  border-color: rgba(239, 68, 68, 0.12);
+  box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.03);
 }
 .battle-line.enemy-line.line-2 {
-  background: rgba(200, 50, 50, 0.03);
-  border-color: rgba(200, 50, 50, 0.08);
+  background: linear-gradient(180deg, rgba(200, 50, 50, 0.04) 0%, rgba(180, 40, 40, 0.01) 100%);
+  border-color: rgba(200, 50, 50, 0.10);
 }
 .battle-line.enemy-line.line-3 {
-  background: rgba(160, 30, 60, 0.03);
-  border-color: rgba(160, 30, 60, 0.08);
+  background: linear-gradient(180deg, rgba(160, 30, 60, 0.04) 0%, rgba(140, 20, 50, 0.01) 100%);
+  border-color: rgba(160, 30, 60, 0.10);
 }
 
-.battle-line.enemy-targeting {
-  cursor: crosshair;
-}
-.battle-line.enemy-targeting .card-wrap {
-  cursor: crosshair;
-}
+.battle-line.enemy-targeting { cursor: crosshair; }
+.battle-line.enemy-targeting .card-wrap { cursor: crosshair; }
 
+/* ===== LINE HEADER — Runic style ===== */
 .line-header {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  padding: 2px 0;
+  padding: 1px 0;
+  width: 100%;
+  justify-content: center;
+}
+
+.line-rune {
+  font-size: 10px;
+  opacity: 0.4;
+  animation: rune-glow 4s ease-in-out infinite;
 }
 
 .line-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   font-family: monospace;
 }
 
-.line-1 .line-label { color: rgba(200, 160, 70, 0.6); }
-.line-2 .line-label { color: rgba(99, 102, 241, 0.5); }
-.line-3 .line-label { color: rgba(168, 85, 247, 0.5); }
+.line-realm {
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.3;
+}
+
+/* Line label colors */
+.line-1 .line-label { color: rgba(200, 160, 70, 0.7); }
+.line-1 .line-rune  { color: rgba(200, 160, 70, 0.5); }
+.line-1 .line-realm { color: rgba(200, 160, 70, 0.3); }
+
+.line-2 .line-label { color: rgba(129, 140, 248, 0.6); }
+.line-2 .line-rune  { color: rgba(129, 140, 248, 0.5); }
+.line-2 .line-realm { color: rgba(129, 140, 248, 0.3); }
+
+.line-3 .line-label { color: rgba(168, 85, 247, 0.6); }
+.line-3 .line-rune  { color: rgba(168, 85, 247, 0.5); }
+.line-3 .line-realm { color: rgba(168, 85, 247, 0.3); }
+
+/* Ornamental line between header and cards */
+.line-ornament {
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold-dim) 30%, var(--gold-dim) 70%, transparent 100%);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
 
 .cards-col {
   display: flex;
@@ -375,7 +413,6 @@ function onLineDrop(e: DragEvent) {
 
 .card-wrap {
   position: relative;
-  /* Fixed outer box to prevent layout jump when card rotates (attack=90deg) */
   width: 110px;
   min-height: 154px;
   display: flex;
@@ -390,61 +427,150 @@ function onLineDrop(e: DragEvent) {
   top: -10px;
   left: 50%;
   z-index: 30;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 900;
   color: #ef4444;
-  text-shadow: 0 0 10px rgba(239, 68, 68, 0.9), 0 2px 6px rgba(0, 0, 0, 0.95);
+  text-shadow:
+    0 0 10px rgba(239, 68, 68, 0.9),
+    0 0 20px rgba(239, 68, 68, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.95);
   pointer-events: none;
   white-space: nowrap;
-  font-family: monospace;
+  font-family: var(--font-display, Georgia, serif);
   letter-spacing: -0.5px;
   animation: dmg-float 1.6s ease forwards;
 }
 @keyframes dmg-float {
-  0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.2); }
-  15%  { transform: translateX(-50%) translateY(-6px) scale(1.4); }
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.3); }
+  15%  { transform: translateX(-50%) translateY(-8px) scale(1.5); }
   40%  { opacity: 1; }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-55px) scale(0.9); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-60px) scale(0.8); }
 }
 
-
-/* Ghost slot: card outline showing available space */
+/* ===== GHOST SLOTS — Runic stone tablets ===== */
 .ghost-slot {
   width: 86px;
   height: 120px;
   border-radius: 6px;
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(200, 168, 78, 0.08);
+  background:
+    radial-gradient(ellipse at center, rgba(200, 168, 78, 0.02) 0%, transparent 70%),
+    rgba(255, 255, 255, 0.01);
   flex-shrink: 0;
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
-/* Aktywny ghost = gracz wybrał kartę z ręki, te sloty pulsują i są klikalne */
-.ghost-slot.ghost-active {
-  border: 2px dashed rgba(99, 102, 241, 0.7);
-  background: rgba(99, 102, 241, 0.1);
-  cursor: pointer;
-  animation: slot-pulse 1.2s ease-in-out infinite;
-  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.15), 0 0 8px rgba(99, 102, 241, 0.2);
+.ghost-rune {
+  font-size: 20px;
+  opacity: 0.08;
+  color: var(--gold);
+  user-select: none;
 }
-.ghost-slot.ghost-active::after {
-  content: '+';
-  font-size: 28px;
-  font-weight: 300;
-  color: rgba(99, 102, 241, 0.7);
-  line-height: 1;
+
+/* Enemy ghost slots — darker, no rune */
+.ghost-enemy {
+  border-color: rgba(239, 68, 68, 0.06);
+  background: rgba(239, 68, 68, 0.01);
+}
+
+/* Active ghost = placing card */
+.ghost-slot.ghost-active {
+  border: 2px solid rgba(200, 168, 78, 0.6);
+  background: rgba(200, 168, 78, 0.1);
+  cursor: pointer;
+  animation: rune-slot-pulse 2s ease-in-out infinite;
+}
+.ghost-slot.ghost-active .ghost-rune {
+  opacity: 0.45;
+  animation: rune-glow 2s ease-in-out infinite;
 }
 .ghost-slot.ghost-active:hover {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.9);
-  box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.25), 0 0 16px rgba(99, 102, 241, 0.35);
+  background: rgba(200, 168, 78, 0.18);
+  border-color: rgba(200, 168, 78, 0.85);
+  outline: 2px solid rgba(200, 168, 78, 0.3);
+  outline-offset: 2px;
+}
+.ghost-slot.ghost-active:hover .ghost-rune {
+  opacity: 0.7;
 }
 
-@keyframes slot-pulse {
-  0%, 100% { border-color: rgba(99, 102, 241, 0.5); background: rgba(99, 102, 241, 0.06); }
-  50% { border-color: rgba(99, 102, 241, 0.9); background: rgba(99, 102, 241, 0.14); }
+@keyframes rune-slot-pulse {
+  0%, 100% { border-color: rgba(200, 168, 78, 0.3); }
+  50%      { border-color: rgba(200, 168, 78, 0.6); }
+}
+
+/* ====== MOBILE RESPONSIVE ====== */
+@media (max-width: 767px) {
+  .battle-line {
+    min-width: 0;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    padding: 1px 2px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  /* Line header: thin vertical strip */
+  .line-header {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    flex-direction: column;
+    padding: 2px 1px;
+    width: auto;
+    min-width: 14px;
+    flex-shrink: 0;
+    gap: 1px;
+  }
+  .line-label { font-size: 7px; letter-spacing: 0.06em; }
+  .line-rune { font-size: 7px; }
+  .line-realm { display: none; }
+
+  .line-ornament {
+    width: 1px;
+    height: 80%;
+    align-self: center;
+    background: linear-gradient(180deg, transparent, var(--gold-dim, rgba(200,168,78,0.15)), transparent);
+    flex-shrink: 0;
+  }
+
+  /* Cards row: horizontal scroll, no wrap, no overlap */
+  .cards-col {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 3px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    padding: 2px 0;
+    flex: 1;
+    min-width: 0;
+  }
+  .cards-col::-webkit-scrollbar { display: none; }
+
+  .card-wrap {
+    width: 64px;
+    min-height: 90px;
+    flex-shrink: 0;
+  }
+
+  .ghost-slot {
+    width: 48px;
+    height: 68px;
+    border-radius: 4px;
+  }
+  .ghost-rune { font-size: 12px; }
+
+  .damage-number {
+    font-size: 16px;
+    top: -6px;
+  }
 }
 </style>

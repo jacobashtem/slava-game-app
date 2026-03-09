@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import CreatureCard from '../cards/CreatureCard.vue'
 import { Icon } from '@iconify/vue'
 import type { CardInstance } from '../../game-engine/types'
@@ -11,6 +11,17 @@ import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 import { getEffect } from '../../game-engine/EffectRegistry'
+
+// Mobile detection — disable hover tooltips, use info button instead
+const isMobile = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches)
+if (typeof window !== 'undefined') {
+  window.matchMedia('(max-width: 767px)').addEventListener('change', (e) => { isMobile.value = e.matches })
+}
+
+function onInfoClick(e: Event, card: CardInstance) {
+  e.stopPropagation()
+  ui.showTooltip(card.instanceId)
+}
 
 const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaImg }
 
@@ -176,6 +187,21 @@ function onPlayAdventure(card: CardInstance, useEnhanced: boolean) {
   game.playAdventure(card.instanceId, undefined, useEnhanced)
 }
 
+// Fan layout: karty ułożone w łuk
+function fanStyle(idx: number, total: number) {
+  if (total <= 1) return {}
+  const maxAngle = Math.min(total * 4, 28) // max spread angle
+  const mid = (total - 1) / 2
+  const offset = idx - mid
+  const angle = offset * (maxAngle / Math.max(total - 1, 1))
+  const lift = -Math.abs(offset) * 6 // outer cards lower
+  return {
+    '--fan-angle': `${angle}deg`,
+    '--fan-lift': `${lift}px`,
+    'z-index': idx, // leftmost cards below
+  } as Record<string, string | number>
+}
+
 const adventureTypeLabel = (card: CardInstance) => {
   const type = (card.cardData as any).adventureType
   return type === 0 ? 'Zdarzenie' : type === 1 ? 'Artefakt' : 'Lokacja'
@@ -190,15 +216,19 @@ const adventureTypeColor = (card: CardInstance) => {
 <template>
   <div class="player-hand">
     <div class="hand-cards">
-      <!-- Karty na ręce -->
+      <!-- Karty na ręce — fan layout -->
       <div
-        v-for="card in hand"
+        v-for="(card, idx) in hand"
         :key="card.instanceId"
         :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId }]"
+        :style="fanStyle(idx, hand.length)"
         @click="onCardClick(card)"
-        @mouseenter="ui.showTooltip(card.instanceId)"
-        @mouseleave="ui.hideTooltip()"
+        @mouseenter="!isMobile && ui.showTooltip(card.instanceId)"
+        @mouseleave="!isMobile && ui.hideTooltip()"
       >
+        <!-- Mobile: info button for tooltip -->
+        <button v-if="isMobile" class="mobile-info-btn" @click.stop="onInfoClick($event, card)">ℹ</button>
+
         <!-- Istota -->
         <CreatureCard
           v-if="card.cardData.cardType === 'creature'"
@@ -276,38 +306,51 @@ const adventureTypeColor = (card: CardInstance) => {
 
 .hand-cards {
   display: flex;
-  gap: 6px;
+  gap: 0;
   align-items: flex-end;
   justify-content: center;
-  padding: 16px 24px 8px;
+  padding: 36px 32px 12px;
   overflow: visible;
-  background: linear-gradient(to top, rgba(4,3,10,0.92) 0%, rgba(4,3,10,0.7) 60%, rgba(4,3,10,0.2) 85%, transparent 100%);
-  border-radius: 24px 24px 0 0;
-  min-height: 168px;
+  background: linear-gradient(to top, rgba(4,3,10,0.95) 0%, rgba(4,3,10,0.75) 50%, rgba(4,3,10,0.25) 80%, transparent 100%);
+  border-radius: 28px 28px 0 0;
+  min-height: 174px;
+  perspective: 600px;
 }
 
 .hand-card-wrap {
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), z-index 0s, box-shadow 0.3s ease;
-  margin-left: -14px;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  margin-left: -18px;
   position: relative;
   border-radius: 8px;
+  transform-origin: center bottom;
+  transform: rotate(var(--fan-angle, 0deg)) translateY(var(--fan-lift, 0px));
 }
 .hand-card-wrap:first-child {
   margin-left: 0;
 }
 .hand-card-wrap:hover {
-  transform: translateY(-18px) scale(1.15);
-  z-index: 20;
+  transform: rotate(0deg) translateY(-28px) scale(1.18) !important;
+  z-index: 30 !important;
+}
+/* Invisible hit area below card — prevents jitter when card lifts on hover */
+.hand-card-wrap::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  bottom: -8px;
+  top: -32px;
+  pointer-events: auto;
+  z-index: -1;
 }
 .hand-card-wrap:hover::after {
   content: '';
   position: absolute;
   inset: -6px;
-  border-radius: 12px;
-  background: radial-gradient(ellipse, rgba(196,64,64,0.2), transparent 70%);
-  filter: blur(6px);
+  border-radius: 14px;
+  background: radial-gradient(ellipse, rgba(200,168,78,0.12), transparent 70%);
   pointer-events: none;
 }
 
@@ -315,8 +358,8 @@ const adventureTypeColor = (card: CardInstance) => {
   outline: 2px solid #818cf8;
   outline-offset: 2px;
   border-radius: 8px;
-  transform: translateY(-22px) scale(1.18);
-  z-index: 25;
+  transform: rotate(0deg) translateY(-30px) scale(1.2) !important;
+  z-index: 35 !important;
 }
 
 /* Adventure card */
@@ -505,5 +548,113 @@ const adventureTypeColor = (card: CardInstance) => {
   font-weight: 800;
   color: rgba(99, 102, 241, 0.8);
   letter-spacing: 0.1em;
+}
+
+/* Mobile info button (hidden on desktop) */
+.mobile-info-btn {
+  display: none;
+}
+
+/* ====== MOBILE RESPONSIVE ====== */
+@media (max-width: 767px) {
+  .player-hand {
+    height: auto;
+    min-height: 0;
+  }
+  .hand-cards {
+    padding: 8px 8px 6px;
+    min-height: 96px;
+    gap: 0;
+    border-radius: 14px 14px 0 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+  .hand-cards::-webkit-scrollbar { display: none; }
+
+  /* Wyłącz fan layout na mobile — horizontal scroll zamiast */
+  .hand-card-wrap {
+    margin-left: -14px;
+    transform: none !important;
+    position: relative;
+  }
+  .hand-card-wrap:first-child {
+    margin-left: 0;
+  }
+  .hand-card-wrap:hover {
+    transform: translateY(-12px) scale(1.08) !important;
+  }
+  .hand-card-wrap.selected {
+    transform: translateY(-14px) scale(1.1) !important;
+    outline-width: 1.5px;
+  }
+  .hand-card-wrap:hover::after {
+    inset: -4px;
+  }
+
+  /* Mobile info button: small circle in top-right corner */
+  .mobile-info-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    z-index: 40;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.85);
+    border: 1px solid rgba(129, 140, 248, 0.6);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0;
+    cursor: pointer;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+
+  .adventure-card,
+  .draw-card {
+    width: 62px;
+    height: 86px;
+    border-radius: 4px;
+  }
+  .adv-name {
+    font-size: 9px;
+  }
+  .adv-header {
+    padding: 3px 3px 0;
+  }
+  .adv-type-label {
+    font-size: 6px;
+  }
+  .adv-type-img {
+    width: 10px;
+    height: 10px;
+  }
+  .adv-btn-basic {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  .adv-btn-enhanced {
+    font-size: 7px;
+    padding: 1px 3px;
+  }
+  .adv-footer {
+    padding: 2px 3px 3px;
+    gap: 2px;
+  }
+  .adv-action-row {
+    gap: 2px;
+  }
+  .draw-card-icon {
+    font-size: 20px;
+  }
+  .draw-card-label {
+    font-size: 9px;
+  }
 }
 </style>

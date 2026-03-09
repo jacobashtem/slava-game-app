@@ -20,6 +20,20 @@ const volume = ref(0.3)
 const expanded = ref(false)
 const progress = ref(0)
 
+// Shuffle without repeat: track which songs have been played
+const playedIndices = ref<Set<number>>(new Set())
+
+function pickRandomUnplayed(): number {
+  if (tracks.length === 0) return 0
+  // If all tracks played, reset
+  if (playedIndices.value.size >= tracks.length) {
+    playedIndices.value.clear()
+  }
+  const available = tracks.map((_, i) => i).filter(i => !playedIndices.value.has(i))
+  const pick = available[Math.floor(Math.random() * available.length)]
+  return pick ?? 0
+}
+
 function play() {
   if (!audio.value) return
   audio.value.play().catch(() => {})
@@ -36,7 +50,9 @@ function toggle() {
 }
 
 function next() {
-  currentTrack.value = (currentTrack.value + 1) % tracks.length
+  const nextIdx = pickRandomUnplayed()
+  currentTrack.value = nextIdx
+  playedIndices.value.add(nextIdx)
   if (isPlaying.value) {
     setTimeout(() => play(), 50)
   }
@@ -70,9 +86,32 @@ watch(currentTrack, () => {
 })
 
 onMounted(() => {
+  // Start with a random track
+  const startIdx = pickRandomUnplayed()
+  currentTrack.value = startIdx
+  playedIndices.value.add(startIdx)
+
   if (audio.value) {
     audio.value.volume = volume.value
   }
+
+  // Autoplay — browsers may block without user gesture, so retry on first user interaction
+  setTimeout(() => {
+    if (audio.value) {
+      audio.value.play().then(() => {
+        isPlaying.value = true
+      }).catch(() => {
+        // Autoplay blocked — start on first user interaction
+        const startOnInteraction = () => {
+          play()
+          document.removeEventListener('click', startOnInteraction)
+          document.removeEventListener('keydown', startOnInteraction)
+        }
+        document.addEventListener('click', startOnInteraction, { once: false })
+        document.addEventListener('keydown', startOnInteraction, { once: false })
+      })
+    }
+  }, 300)
 })
 
 const currentSrc = computed(() => tracks[currentTrack.value]?.url ?? '')
@@ -225,5 +264,12 @@ const currentName = computed(() => tracks[currentTrack.value]?.name ?? '')
   background: #a78bfa;
   border: none;
   cursor: pointer;
+}
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .music-player {
+    display: none;
+  }
 }
 </style>

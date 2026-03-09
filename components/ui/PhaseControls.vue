@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { GamePhase } from '../../game-engine/constants'
@@ -30,21 +31,17 @@ function handlePhase() {
   }
 }
 
-const btnLabel = computed(() => {
+const btnConfig = computed(() => {
   switch (game.currentPhase) {
-    case GamePhase.START:   return '▶ DOBIERZ'
-    case GamePhase.DRAW:    return '⚔ DO BOJU'
-    case GamePhase.PLAY:    return skipCombat.value ? '⏭ ZAKOŃCZ' : '⚔ ATAKUJ'
-    case GamePhase.COMBAT:  return '⏭ ZAKOŃCZ'
-    case GamePhase.END:     return '⏭ ZAKOŃCZ'
-    default: return '▶ DALEJ'
+    case GamePhase.START:  return { label: 'DOBIERZ',  icon: 'game-icons:card-draw', type: 'next' }
+    case GamePhase.DRAW:   return { label: 'DO BOJU',  icon: 'game-icons:crossed-swords', type: 'next' }
+    case GamePhase.PLAY:   return skipCombat.value
+      ? { label: 'ZAKOŃCZ', icon: 'game-icons:hourglass', type: 'end' }
+      : { label: 'ATAKUJ',  icon: 'game-icons:sword-clash', type: 'combat' }
+    case GamePhase.COMBAT: return { label: 'ZAKOŃCZ', icon: 'game-icons:hourglass', type: 'end' }
+    case GamePhase.END:    return { label: 'ZAKOŃCZ', icon: 'game-icons:hourglass', type: 'end' }
+    default:               return { label: 'DALEJ',   icon: 'game-icons:forward', type: 'next' }
   }
-})
-
-const btnType = computed(() => {
-  if (game.currentPhase === GamePhase.COMBAT || game.currentPhase === GamePhase.END || skipCombat.value) return 'end'
-  if (game.currentPhase === GamePhase.PLAY) return 'combat'
-  return 'next'
 })
 </script>
 
@@ -55,12 +52,18 @@ const btnType = computed(() => {
       :disabled="!game.isPlayerTurn || !!game.winner"
       class="ctrl-btn ctrl-pass"
       @click="() => { ui.clearSelection(); game.endTurn() }"
-    >PAS</button>
+    >
+      <Icon icon="game-icons:fast-forward-button" class="btn-icon" />
+      PAS
+    </button>
     <button
       :disabled="!game.isPlayerTurn || !!game.winner"
-      :class="['ctrl-btn', `ctrl-${btnType}`]"
+      :class="['ctrl-btn', `ctrl-${btnConfig.type}`]"
       @click="handlePhase"
-    >{{ btnLabel }}</button>
+    >
+      <Icon :icon="btnConfig.icon" class="btn-icon" />
+      {{ btnConfig.label }}
+    </button>
   </div>
 </template>
 
@@ -68,24 +71,45 @@ const btnType = computed(() => {
 .phase-controls {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .ctrl-btn {
-  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 22px;
   border: 1px solid;
   border-radius: 5px;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
   font-family: var(--font-display, Georgia, serif);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.ctrl-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
 }
 
 .ctrl-btn:disabled {
-  opacity: 0.25;
+  opacity: 0.2;
   cursor: not-allowed;
   transform: none !important;
 }
@@ -93,52 +117,81 @@ const btnType = computed(() => {
 .ctrl-btn:hover:not(:disabled) {
   transform: translateY(-1px);
 }
+.ctrl-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
 
 /* Next phase (dobierz, do boju) */
 .ctrl-next {
   color: #c4b5fd;
-  background: rgba(167,139,250,0.1);
-  border-color: rgba(167,139,250,0.3);
+  background: linear-gradient(180deg, rgba(167,139,250,0.15) 0%, rgba(139,92,246,0.08) 100%);
+  border-color: rgba(167,139,250,0.35);
+  box-shadow: 0 2px 8px rgba(139,92,246,0.15);
 }
 .ctrl-next:hover:not(:disabled) {
-  background: rgba(167,139,250,0.2);
-  border-color: rgba(167,139,250,0.5);
+  background: linear-gradient(180deg, rgba(167,139,250,0.25) 0%, rgba(139,92,246,0.15) 100%);
+  border-color: rgba(167,139,250,0.6);
+  box-shadow: 0 4px 16px rgba(139,92,246,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 /* Combat (atakuj) */
 .ctrl-combat {
   color: #fbbf24;
-  background: rgba(251,191,36,0.1);
-  border-color: rgba(251,191,36,0.3);
+  background: linear-gradient(180deg, rgba(251,191,36,0.15) 0%, rgba(217,119,6,0.08) 100%);
+  border-color: rgba(251,191,36,0.35);
+  box-shadow: 0 2px 8px rgba(251,191,36,0.15);
 }
 .ctrl-combat:hover:not(:disabled) {
-  background: rgba(251,191,36,0.2);
-  border-color: rgba(251,191,36,0.5);
+  background: linear-gradient(180deg, rgba(251,191,36,0.25) 0%, rgba(217,119,6,0.15) 100%);
+  border-color: rgba(251,191,36,0.6);
+  box-shadow: 0 4px 16px rgba(251,191,36,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 /* End turn */
 .ctrl-end {
   color: #86efac;
-  background: rgba(134,239,172,0.08);
-  border-color: rgba(134,239,172,0.25);
+  background: linear-gradient(180deg, rgba(134,239,172,0.12) 0%, rgba(34,197,94,0.06) 100%);
+  border-color: rgba(134,239,172,0.3);
+  box-shadow: 0 2px 8px rgba(34,197,94,0.1);
 }
 .ctrl-end:hover:not(:disabled) {
-  background: rgba(134,239,172,0.18);
-  border-color: rgba(134,239,172,0.4);
+  background: linear-gradient(180deg, rgba(134,239,172,0.22) 0%, rgba(34,197,94,0.12) 100%);
+  border-color: rgba(134,239,172,0.5);
+  box-shadow: 0 4px 16px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 /* Pass */
 .ctrl-pass {
   color: #94a3b8;
-  background: rgba(100,116,139,0.08);
-  border-color: rgba(100,116,139,0.25);
-  font-size: 12px;
+  background: rgba(100,116,139,0.06);
+  border-color: rgba(100,116,139,0.2);
+  font-size: 11px;
+  padding: 5px 12px;
+  letter-spacing: 0.08em;
 }
 .ctrl-pass:hover:not(:disabled) {
-  background: rgba(100,116,139,0.18);
+  background: rgba(100,116,139,0.15);
+  border-color: rgba(100,116,139,0.4);
 }
-.ctrl-pass:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .phase-controls {
+    gap: 3px;
+  }
+  .ctrl-btn {
+    font-size: 9px;
+    padding: 4px 8px;
+    gap: 3px;
+    letter-spacing: 0.06em;
+  }
+  .btn-icon {
+    width: 12px;
+    height: 12px;
+  }
+  .ctrl-pass {
+    font-size: 8px;
+    padding: 3px 6px;
+  }
 }
 </style>

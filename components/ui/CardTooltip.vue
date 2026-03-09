@@ -33,6 +33,13 @@ const creatureImgs = Object.fromEntries(
 const ui = useUIStore()
 const game = useGameStore()
 
+// Mobile detection
+const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+
+function dismissTooltip() {
+  ui.hideTooltip()
+}
+
 function findCard(instanceId: string): CardInstance | null {
   if (!game.state) return null
   const all = [
@@ -54,6 +61,24 @@ function findCard(instanceId: string): CardInstance | null {
       isRevealed: true, activeEffects: [], equippedArtifacts: [], turnsInPlay: 0,
       currentStats: { attack: 0, defense: 0, maxAttack: 0, maxDefense: 0 },
     } as unknown as CardInstance
+  }
+  // Artifact lookup: instanceId = "artifact:<effectId>"
+  if (instanceId.startsWith('artifact:')) {
+    const artEffectId = instanceId.slice('artifact:'.length)
+    for (const side of ['player1', 'player2'] as const) {
+      for (const line of Object.values(game.state.players[side].field.lines)) {
+        for (const card of line as CardInstance[]) {
+          const art = card.equippedArtifacts?.find((a: any) => a.effectId === artEffectId)
+          if (art) {
+            return {
+              instanceId, cardData: art, owner: side,
+              isRevealed: true, activeEffects: [], equippedArtifacts: [], turnsInPlay: 0,
+              currentStats: { attack: 0, defense: 0, maxAttack: 0, maxDefense: 0 },
+            } as unknown as CardInstance
+          }
+        }
+      }
+    }
   }
   return null
 }
@@ -158,8 +183,16 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 </script>
 
 <template>
+  <!-- Mobile: backdrop to dismiss tooltip -->
+  <Transition name="pv-backdrop-fade">
+    <div v-if="card && data && isMobile" class="pv-mobile-backdrop" @click="dismissTooltip" />
+  </Transition>
+
   <Transition name="pv-fade">
     <div v-if="card && data" class="card-preview" :style="{ '--dc': borderColor }">
+
+      <!-- Mobile close button -->
+      <button v-if="isMobile" class="pv-mobile-close" @click="dismissTooltip">✕</button>
 
       <!-- Animated shimmer border -->
       <div class="pv-shimmer-border" />
@@ -178,7 +211,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 
           <!-- Drobinki ognia -->
           <div class="pv-fire-particles">
-            <span v-for="i in 15" :key="'fp'+i" class="pv-fire-dot" :style="{ left: (8 + ((i * 41) % 84)) + '%', animationDuration: (1.8 + (i * 0.19) % 2) + 's', animationDelay: ((i * 0.29) % 3) + 's', width: (1.5 + (i % 4) * 0.6) + 'px', height: (1.5 + (i % 4) * 0.6) + 'px', '--dot-color': ['#ff3300','#ff5500','#ff8800','#ffaa00'][i % 4] }" />
+            <span v-for="i in 8" :key="'fp'+i" class="pv-fire-dot" :style="{ left: (8 + ((i * 41) % 84)) + '%', animationDuration: (1.8 + (i * 0.19) % 2) + 's', animationDelay: ((i * 0.29) % 3) + 's', width: (1.5 + (i % 4) * 0.6) + 'px', height: (1.5 + (i % 4) * 0.6) + 'px', '--dot-color': ['#ff3300','#ff5500','#ff8800','#ffaa00'][i % 4] }" />
           </div>
 
           <!-- Domain badge (top-left) -->
@@ -204,17 +237,26 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
           </div>
         </div>
 
-        <!-- Art section for non-creature (adventure cards) -->
-        <div class="pv-art-section" v-else>
-          <img :src="defaultAdvImg" class="pv-art" />
-          <div class="pv-art-vignette" />
-          <div class="pv-art-gradient" />
-          <div class="pv-domain-badge">
-            <img v-if="!isCreature && adventureTypeImgs[data.adventureType]" :src="adventureTypeImgs[data.adventureType]" class="pv-domain-img" />
-            <span class="pv-domain-label" style="color: #818cf8bb">{{ adventureTypeLabel.toUpperCase() }}</span>
+        <!-- Art section for non-creature (adventure cards) — miniature card style -->
+        <div class="pv-adv-card" v-else :style="{ '--adv-color': data.adventureType === 0 ? '#f59e0b' : data.adventureType === 1 ? '#6366f1' : data.adventureType === 2 ? '#10b981' : '#94a3b8' }">
+          <!-- Top type bar -->
+          <div class="pv-adv-type-bar">
+            <img v-if="adventureTypeImgs[data.adventureType]" :src="adventureTypeImgs[data.adventureType]" class="pv-adv-type-img" />
+            <Icon v-else icon="game-icons:scroll-unfurled" class="pv-adv-type-icon" />
+            <span class="pv-adv-type-label">{{ adventureTypeLabel.toUpperCase() }}</span>
+            <span v-if="data.persistence" class="pv-adv-persist">
+              {{ data.persistence === 'permanent' ? '∞ TRWAŁY' : data.persistence === 'duration' ? '⏳ CZASOWY' : data.persistence === 'conditional' ? '⛓ WARUNKOWY' : '⚡ NATYCHMIASTOWY' }}
+            </span>
           </div>
-          <div class="pv-name-badge">
-            <div class="pv-name">{{ data.name.toUpperCase() }}</div>
+          <!-- Art -->
+          <div class="pv-adv-art-wrap">
+            <img :src="defaultAdvImg" class="pv-art" style="filter: hue-rotate(200deg) saturate(0.7) brightness(0.8);" />
+            <div class="pv-art-vignette" />
+            <div class="pv-art-gradient" />
+            <!-- Name overlay -->
+            <div class="pv-adv-name-overlay">
+              <div class="pv-name">{{ data.name.toUpperCase() }}</div>
+            </div>
           </div>
         </div>
 
@@ -425,9 +467,8 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   gap: 6px;
   padding: 4px 10px;
   border-radius: 8px;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.8);
   border: 1px solid color-mix(in srgb, var(--dc) 30%, transparent);
-  backdrop-filter: blur(6px);
 }
 .pv-domain-img {
   width: 20px;
@@ -448,9 +489,8 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   max-width: calc(100% - 100px);
   padding: 6px 12px;
   border-radius: 8px;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.8);
   border: 1px solid color-mix(in srgb, var(--dc) 20%, transparent);
-  backdrop-filter: blur(6px);
 }
 .pv-name {
   font-family: var(--font-display, Georgia, serif);
@@ -477,9 +517,8 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   gap: 5px;
   padding: 3px 8px;
   border-radius: 6px;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.8);
   border: 1px solid;
-  backdrop-filter: blur(4px);
 }
 .pv-attr-icon {
   width: 18px;
@@ -493,6 +532,57 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.15em;
+}
+
+/* ===== ADVENTURE CARD MINIATURE ===== */
+.pv-adv-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pv-adv-type-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--adv-color) 12%, #0a0406);
+  border-bottom: 1px solid color-mix(in srgb, var(--adv-color) 25%, transparent);
+}
+.pv-adv-type-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.pv-adv-type-icon {
+  font-size: 16px;
+  color: var(--adv-color);
+}
+.pv-adv-type-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--adv-color);
+}
+.pv-adv-persist {
+  margin-left: auto;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--adv-color) 70%, #94a3b8);
+  text-transform: uppercase;
+}
+.pv-adv-art-wrap {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+.pv-adv-name-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 14px;
+  background: linear-gradient(transparent, rgba(10,4,6,0.95) 60%);
 }
 
 /* CONTENT */
@@ -734,5 +824,123 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 .pv-fade-leave-to {
   opacity: 0;
   transform: translateY(4px) scale(0.98);
+}
+
+/* Mobile backdrop */
+.pv-mobile-backdrop {
+  display: none;
+}
+.pv-mobile-close {
+  display: none;
+}
+
+/* Backdrop transition */
+.pv-backdrop-fade-enter-active { transition: opacity 0.2s; }
+.pv-backdrop-fade-leave-active { transition: opacity 0.15s; }
+.pv-backdrop-fade-enter-from,
+.pv-backdrop-fade-leave-to { opacity: 0; }
+
+/* ====== MOBILE RESPONSIVE — full-screen card preview ====== */
+@media (max-width: 767px) {
+  /* Dark backdrop behind tooltip */
+  .pv-mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 149;
+    background: rgba(0,0,0,0.7);
+    pointer-events: auto;
+  }
+
+  /* Close button */
+  .pv-mobile-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 160;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(200,168,78,0.3);
+    color: #f0ede8;
+    font-size: 16px;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  /* Full-screen centered card preview */
+  .card-preview {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    bottom: auto;
+    width: 92vw;
+    max-width: 360px;
+    max-height: 85vh;
+    border-radius: 12px;
+    overflow: hidden;
+    pointer-events: auto;
+    z-index: 155;
+  }
+  .pv-shimmer-border {
+    border-radius: 12px;
+  }
+  .pv-glow {
+    display: none;
+  }
+  .pv-inner {
+    border-radius: 12px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .pv-art-section {
+    height: 200px;
+  }
+  .pv-adv-card .pv-adv-art-wrap {
+    height: 140px;
+  }
+  .pv-name {
+    font-size: 15px;
+  }
+  .pv-content {
+    padding: 8px 12px 16px;
+    gap: 6px;
+  }
+  .pv-ability-text {
+    font-size: 11px;
+  }
+  .pv-stat-num {
+    font-size: 20px;
+  }
+  .pv-stat-icon {
+    font-size: 18px;
+  }
+  .pv-stat {
+    padding: 5px 12px;
+  }
+  .pv-lore {
+    font-size: 11px;
+  }
+
+  /* Transition: scale in from center */
+  .pv-fade-enter-from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  .pv-fade-leave-to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  .pv-fade-enter-active {
+    transition: opacity 0.2s, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .pv-fade-leave-active {
+    transition: opacity 0.15s, transform 0.15s ease-in;
+  }
 }
 </style>

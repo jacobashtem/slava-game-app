@@ -43,12 +43,22 @@ export const useGameStore = defineStore('game', () => {
   const actionLog = computed(() => state.value?.actionLog ?? [])
   const roundNumber = computed(() => state.value?.roundNumber ?? 1)
   const season = computed<'spring' | 'summer' | 'autumn' | 'winter'>(() => {
+    // Sława: sezon z slavaData (4 rundy/porę, start Zima)
+    if (state.value?.gameMode === 'slava' && state.value.slavaData) {
+      const seasonMap = ['winter', 'spring', 'summer', 'autumn'] as const
+      return seasonMap[state.value.slavaData.currentSeason] ?? 'winter'
+    }
+    // Gold Edition: 3 rundy/porę
     const r = roundNumber.value
     if (r <= 3) return 'spring'
     if (r <= 6) return 'summer'
     if (r <= 9) return 'autumn'
     return 'winter'
   })
+  const gameMode = computed(() => state.value?.gameMode ?? 'gold')
+  const slavaData = computed(() => state.value?.slavaData ?? null)
+  const playerGlory = computed(() => state.value?.players.player1.glory ?? 0)
+  const aiGlory = computed(() => state.value?.players.player2.glory ?? 0)
   const isPlayerTurn = computed(() => currentTurn.value === 'player1' && !isAIThinking.value)
   const playerCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(playerTurnLogStart.value).slice(-6))
   const aiCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(aiTurnLogStart.value).slice(-6))
@@ -97,6 +107,30 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function startSlavaGame() {
+    isArenaMode.value = false
+    arenaFocusedName.value = ''
+    aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
+    const domainFilter = selectedDomains.value.length > 0 ? selectedDomains.value : undefined
+    state.value = engine.startSlavaGame(domainFilter)
+    gameStarted.value = true
+    playerTurnLogStart.value = state.value.actionLog.length
+
+    if (state.value.players[state.value.currentTurn].isAI) {
+      runAITurn()
+    }
+  }
+
+  // ===== SLAVA: INVOKE GOD =====
+  function invokeGod(godId: number, enhanced: boolean, bid: number) {
+    if (!state.value) return
+    try {
+      state.value = engine.playerInvokeGod(godId, enhanced, bid)
+    } catch (err) {
+      console.warn('[gameStore] invokeGod error:', err)
+    }
+  }
+
   // ===== AKCJE GRACZA =====
   function playCreature(cardInstanceId: string, line: BattleLine) {
     if (!isPlayerTurn.value) return
@@ -136,6 +170,10 @@ export const useGameStore = defineStore('game', () => {
       // NIE czyścimy tutaj — karta pozostaje widoczna przez całą animację ataku
     }
 
+    // Typ ataku napastnika → VFX/SFX
+    const attacker = findCardOnField('player1', attackerInstanceId)
+    ui.animatingAttackType = attacker ? ((attacker.cardData as any).attackType ?? null) : null
+
     // Animacja ataku: napastnik miga, obrońca podświetlony
     ui.triggerAttackAnimation(attackerInstanceId, defenderInstanceId)
     await delay(900)
@@ -164,6 +202,12 @@ export const useGameStore = defineStore('game', () => {
       const dmgToAttacker = Math.max(0, atkDefBefore - atkDefAfter)
       if (dmgToDefender > 0) ui.triggerDamageNumber(defenderInstanceId, dmgToDefender)
       if (dmgToAttacker > 0) ui.triggerDamageNumber(attackerInstanceId, dmgToAttacker)
+
+      // ODPORNY flash — atak zadał 0 obrażeń, pokaż przed kontratakiem
+      if (dmgToDefender === 0) {
+        ui.triggerImmuneFlash(defenderInstanceId)
+        await delay(1000)
+      }
 
       // Kontratak — DEF atakującego spadła = kontratak nastąpił
       if (dmgToAttacker > 0) {
@@ -488,7 +532,11 @@ export const useGameStore = defineStore('game', () => {
                   } catch {}
                 }
 
-                // 3. Attack animation
+                // 3. Attack type → VFX/SFX
+                const aiAtkCard = findCardOnField('player2', decision.cardInstanceId)
+                ui.animatingAttackType = aiAtkCard ? ((aiAtkCard.cardData as any).attackType ?? null) : null
+
+                // 3b. Attack animation
                 ui.triggerAttackAnimation(decision.cardInstanceId, decision.targetInstanceId)
                 await delay(900)
 
@@ -531,6 +579,12 @@ export const useGameStore = defineStore('game', () => {
                 const dmgToAi = Math.max(0, aiAtkDefBefore - aiAtkDefAfter)
                 if (dmgToTgt > 0) ui.triggerDamageNumber(decision.targetInstanceId, dmgToTgt)
                 if (dmgToAi > 0) ui.triggerDamageNumber(decision.cardInstanceId, dmgToAi)
+
+                // ODPORNY flash — AI atak zadał 0 obrażeń
+                if (dmgToTgt === 0) {
+                  ui.triggerImmuneFlash(decision.targetInstanceId)
+                  await delay(1000)
+                }
 
                 // Kontratak gracza — DEF atakującego AI spadła = gracz kontratakował
                 if (dmgToAi > 0) {
@@ -793,6 +847,7 @@ export const useGameStore = defineStore('game', () => {
     // actions
     startGame,
     startAlphaGame,
+    startSlavaGame,
     setupArenaMode,
     setDifficulty,
     setDomains,
@@ -813,6 +868,12 @@ export const useGameStore = defineStore('game', () => {
     surrender,
     dismissAISummary,
     dismissPlayerSummary,
+    invokeGod,
+    // computed (slava)
+    gameMode,
+    slavaData,
+    playerGlory,
+    aiGlory,
     // helpers
     getCreaturesOnField,
     getHand,

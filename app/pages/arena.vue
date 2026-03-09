@@ -73,34 +73,38 @@ function getDomainColor(data: any): string {
 
 <template>
   <div class="arena-wrapper">
-    <!-- SIDEBAR: lista kart -->
+    <!-- SIDEBAR -->
     <div class="arena-sidebar">
+      <!-- Header -->
       <div class="sidebar-header">
         <NuxtLink to="/" class="arena-back-btn">
-          <Icon icon="game-icons:exit-door" /> Menu
+          <Icon icon="game-icons:return-arrow" />
         </NuxtLink>
         <div class="sidebar-title">
-          <Icon icon="game-icons:card-joker" />
-          Arena
+          <Icon icon="game-icons:card-joker" class="title-icon" />
+          <span>Arena testowa</span>
         </div>
       </div>
 
       <!-- Search + filters -->
       <div class="sidebar-filters">
-        <input
-          v-model="searchQuery"
-          class="sidebar-search"
-          placeholder="Szukaj karty..."
-        />
+        <div class="search-wrap">
+          <Icon icon="mdi:magnify" class="search-icon" />
+          <input
+            v-model="searchQuery"
+            class="sidebar-search"
+            placeholder="Szukaj karty..."
+          />
+        </div>
         <div class="filter-tabs">
           <button :class="['ftab', { active: typeFilter === 'all' }]" @click="typeFilter = 'all'">
-            Wszystkie ({{ arena.catalog.length }})
+            Wszystkie <span class="ftab-count">{{ arena.catalog.length }}</span>
           </button>
           <button :class="['ftab', { active: typeFilter === 'creature' }]" @click="typeFilter = 'creature'">
-            Istoty
+            <Icon icon="game-icons:werewolf" /> Istoty
           </button>
           <button :class="['ftab', { active: typeFilter === 'adventure' }]" @click="typeFilter = 'adventure'">
-            Przygody
+            <Icon icon="game-icons:scroll-unfurled" /> Przygody
           </button>
         </div>
       </div>
@@ -108,10 +112,10 @@ function getDomainColor(data: any): string {
       <!-- Prev/Next buttons -->
       <div class="nav-btns">
         <button class="nav-btn" @click="selectPrev" :disabled="!arena.focusedEntry">
-          <Icon icon="game-icons:arrow-dunk" style="transform: rotate(180deg)" /> Poprzednia
+          <Icon icon="mdi:chevron-up" /> Poprzednia
         </button>
         <button class="nav-btn" @click="selectNext">
-          Nastepna <Icon icon="game-icons:arrow-dunk" />
+          Następna <Icon icon="mdi:chevron-down" />
         </button>
       </div>
 
@@ -147,17 +151,20 @@ function getDomainColor(data: any): string {
         </div>
 
         <div v-if="filteredCards.length === 0" class="no-results">
-          Brak wynikow
+          <Icon icon="game-icons:card-random" class="no-icon" />
+          <span>Brak wyników</span>
         </div>
       </div>
     </div>
 
-    <!-- MAIN: plansza gry -->
+    <!-- MAIN -->
     <div class="arena-main">
-      <!-- Info bar gdy karta wybrana -->
+      <!-- Info bar -->
       <div v-if="arena.focusedEntry && arena.isReady" class="arena-info-bar">
-        <span class="fi-name">{{ arena.focusedEntry.name }}</span>
-        <span class="fi-id">{{ arena.focusedEntry.effectId }}</span>
+        <div class="fi-left">
+          <span class="fi-name">{{ arena.focusedEntry.name }}</span>
+          <span class="fi-id">{{ arena.focusedEntry.effectId }}</span>
+        </div>
         <span v-if="arena.currentHint" class="fi-hint">
           <Icon icon="game-icons:info" class="hint-icon" />
           {{ arena.currentHint }}
@@ -167,13 +174,20 @@ function getDomainColor(data: any): string {
         </button>
       </div>
 
-      <!-- Plansza gry -->
+      <!-- Board -->
       <div class="arena-board-container">
         <GameBoard v-if="arena.isReady" />
         <div v-else class="arena-placeholder">
-          <Icon icon="game-icons:card-random" class="placeholder-icon" />
-          <p>Wybierz karte z listy po lewej, aby rozpoczac test.</p>
-          <p class="placeholder-sub">Kliknij dowolna karte lub uzyj przyciskow Poprzednia/Nastepna.</p>
+          <div class="placeholder-content">
+            <Icon icon="game-icons:card-random" class="placeholder-icon" />
+            <h2>Arena testowa</h2>
+            <p>Wybierz kartę z listy, aby rozpocząć test.</p>
+            <p class="placeholder-hint">Kliknij dowolną kartę lub użyj przycisków nawigacji.</p>
+            <div class="placeholder-keys">
+              <span class="key-hint"><Icon icon="mdi:chevron-up" /> Poprzednia</span>
+              <span class="key-hint"><Icon icon="mdi:chevron-down" /> Następna</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -185,7 +199,7 @@ function getDomainColor(data: any): string {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background: var(--bg-board, #0f172a);
+  background: #070b14;
 }
 
 /* ===== SIDEBAR ===== */
@@ -194,8 +208,8 @@ function getDomainColor(data: any): string {
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  background: rgba(0, 0, 0, 0.4);
-  border-right: 1px solid rgba(139, 92, 246, 0.25);
+  background: rgba(10, 15, 30, 0.95);
+  border-right: 1px solid rgba(200, 168, 78, 0.1);
   z-index: 10;
 }
 
@@ -203,84 +217,107 @@ function getDomainColor(data: any): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .arena-back-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  color: #94a3b8;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #64748b;
   text-decoration: none;
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  white-space: nowrap;
-  transition: color 0.15s, border-color 0.15s;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.15s;
   flex-shrink: 0;
 }
-.arena-back-btn:hover { color: #e2e8f0; border-color: rgba(255, 255, 255, 0.25); }
+.arena-back-btn:hover { color: #e2e8f0; border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); }
 
 .sidebar-title {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #a78bfa;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #e2e8f0;
+  letter-spacing: 0.03em;
 }
 
-/* Filters */
+.title-icon { font-size: 18px; color: #c8a84e; }
+
+/* ===== FILTERS ===== */
 .sidebar-filters {
-  padding: 8px 10px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-wrap {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #475569;
+  pointer-events: none;
 }
 
 .sidebar-search {
   width: 100%;
-  padding: 6px 8px;
-  border-radius: 5px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04);
+  padding: 7px 8px 7px 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
   color: #e2e8f0;
   font-size: 12px;
   outline: none;
+  transition: border-color 0.15s;
 }
-.sidebar-search:focus { border-color: #6366f1; }
-.sidebar-search::placeholder { color: #475569; }
+.sidebar-search:focus { border-color: rgba(200, 168, 78, 0.4); }
+.sidebar-search::placeholder { color: #334155; }
 
 .filter-tabs {
   display: flex;
-  gap: 3px;
+  gap: 4px;
 }
 
 .ftab {
   flex: 1;
-  padding: 4px 6px;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 5px;
   border: 1px solid transparent;
-  background: rgba(255,255,255,0.03);
-  color: #64748b;
+  background: rgba(255, 255, 255, 0.02);
+  color: #475569;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.12s;
   text-align: center;
 }
-.ftab.active { border-color: #4f46e5; color: #a5b4fc; background: rgba(99, 102, 241, 0.1); }
-.ftab:hover:not(.active) { background: rgba(255,255,255,0.05); }
+.ftab.active { border-color: rgba(200, 168, 78, 0.3); color: #c8a84e; background: rgba(200, 168, 78, 0.06); }
+.ftab:hover:not(.active) { background: rgba(255, 255, 255, 0.04); color: #64748b; }
+.ftab-count { opacity: 0.5; font-weight: 400; }
 
-/* Nav buttons */
+/* ===== NAV BUTTONS ===== */
 .nav-btns {
   display: flex;
   gap: 4px;
-  padding: 6px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .nav-btn {
@@ -289,20 +326,20 @@ function getDomainColor(data: any): string {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 5px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  background: rgba(139, 92, 246, 0.06);
-  color: #a78bfa;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(200, 168, 78, 0.15);
+  background: rgba(200, 168, 78, 0.04);
+  color: #c8a84e;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.12s;
 }
-.nav-btn:hover:not(:disabled) { background: rgba(139, 92, 246, 0.15); }
-.nav-btn:disabled { opacity: 0.3; cursor: default; }
+.nav-btn:hover:not(:disabled) { background: rgba(200, 168, 78, 0.12); }
+.nav-btn:disabled { opacity: 0.25; cursor: default; }
 
-/* Card list */
+/* ===== CARD LIST ===== */
 .card-list {
   flex: 1;
   overflow-y: auto;
@@ -314,38 +351,38 @@ function getDomainColor(data: any): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 6px 12px;
   cursor: pointer;
   border-left: 3px solid transparent;
   transition: background 0.1s, border-color 0.1s;
-  min-height: 30px;
+  min-height: 32px;
 }
-.card-item:hover { background: rgba(255,255,255,0.04); }
+.card-item:hover { background: rgba(255, 255, 255, 0.03); }
 .card-item.active {
-  background: rgba(99, 102, 241, 0.12);
-  border-left-color: #6366f1;
+  background: rgba(200, 168, 78, 0.08);
+  border-left-color: #c8a84e;
 }
 .card-item.active .card-item-name { color: #e2e8f0; }
 
 .card-num {
   font-size: 10px;
   font-family: monospace;
-  color: #475569;
+  color: #334155;
   min-width: 24px;
   text-align: right;
   flex-shrink: 0;
 }
 
 .domain-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .adv-type-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -355,34 +392,38 @@ function getDomainColor(data: any): string {
 
 .card-item-name {
   font-size: 12px;
-  color: #94a3b8;
+  color: #64748b;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.1s;
 }
 
 .card-item-stats {
   font-size: 11px;
   font-family: monospace;
-  color: #64748b;
+  color: #475569;
   flex-shrink: 0;
 }
 
 .card-item-type {
   font-size: 9px;
-  color: #475569;
+  color: #334155;
   flex-shrink: 0;
 }
 
 .no-results {
-  padding: 20px;
-  text-align: center;
-  color: #475569;
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 20px;
+  color: #334155;
 }
+.no-icon { font-size: 28px; opacity: 0.3; }
 
-/* ===== MAIN ===== */
+/* ===== MAIN AREA ===== */
 .arena-main {
   flex: 1;
   display: flex;
@@ -395,16 +436,24 @@ function getDomainColor(data: any): string {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 5px 12px;
-  background: rgba(0, 0, 0, 0.5);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-  min-height: 34px;
+  padding: 6px 14px;
+  background: rgba(10, 15, 30, 0.8);
+  border-bottom: 1px solid rgba(200, 168, 78, 0.1);
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+.fi-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 .fi-name {
-  font-size: 13px;
-  font-weight: 700;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 14px;
+  font-weight: 800;
   color: #e2e8f0;
   white-space: nowrap;
 }
@@ -412,9 +461,9 @@ function getDomainColor(data: any): string {
   font-size: 10px;
   font-family: monospace;
   color: #34d399;
-  background: rgba(52, 211, 153, 0.08);
-  padding: 1px 5px;
-  border-radius: 3px;
+  background: rgba(52, 211, 153, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
   white-space: nowrap;
 }
 .fi-hint {
@@ -422,7 +471,7 @@ function getDomainColor(data: any): string {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #94a3b8;
+  color: #64748b;
   font-style: italic;
   flex: 1;
   min-width: 0;
@@ -430,25 +479,26 @@ function getDomainColor(data: any): string {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.hint-icon { font-size: 12px; color: #60a5fa; flex-shrink: 0; }
+.hint-icon { font-size: 12px; color: #475569; flex-shrink: 0; }
 
 .arena-reset-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  color: #fbbf24;
-  padding: 4px 10px;
+  background: rgba(200, 168, 78, 0.06);
+  border: 1px solid rgba(200, 168, 78, 0.2);
+  color: #c8a84e;
+  padding: 5px 12px;
   border-radius: 5px;
   font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
   margin-left: auto;
 }
-.arena-reset-btn:hover { background: rgba(251, 191, 36, 0.22); }
+.arena-reset-btn:hover { background: rgba(200, 168, 78, 0.15); }
 
 /* Board container */
 .arena-board-container {
@@ -463,20 +513,53 @@ function getDomainColor(data: any): string {
 /* Placeholder */
 .arena-placeholder {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 12px;
-  color: #475569;
 }
-.placeholder-icon { font-size: 64px; opacity: 0.4; }
-.arena-placeholder p { font-size: 15px; margin: 0; }
-.placeholder-sub { font-size: 12px !important; color: #334155; }
+
+.placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+}
+
+.placeholder-icon { font-size: 56px; opacity: 0.2; color: #c8a84e; }
+
+.placeholder-content h2 {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 20px;
+  font-weight: 800;
+  color: #475569;
+  margin: 0;
+}
+
+.placeholder-content p { font-size: 14px; margin: 0; color: #334155; }
+.placeholder-hint { font-size: 12px !important; color: #1e293b !important; }
+
+.placeholder-keys {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.key-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #1e293b;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
+}
 
 /* Scrollbar styling */
-.card-list::-webkit-scrollbar { width: 6px; }
+.card-list::-webkit-scrollbar { width: 5px; }
 .card-list::-webkit-scrollbar-track { background: transparent; }
-.card-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-.card-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+.card-list::-webkit-scrollbar-thumb { background: rgba(200, 168, 78, 0.1); border-radius: 3px; }
+.card-list::-webkit-scrollbar-thumb:hover { background: rgba(200, 168, 78, 0.25); }
 </style>

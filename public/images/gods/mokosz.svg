@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" fill="none">
+  <defs>
+    <radialGradient id="mkBg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#052e16"/>
+      <stop offset="100%" stop-color="#020a06"/>
+    </radialGradient>
+    <radialGradient id="mkGlow" cx="50%" cy="40%" r="35%">
+      <stop offset="0%" stop-color="#86efac" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="260" rx="12" fill="url(#mkBg)"/>
+  <rect width="200" height="260" rx="12" fill="url(#mkGlow)"/>
+  <rect x="6" y="6" width="188" height="248" rx="9" stroke="#86efac" stroke-opacity="0.15" stroke-width="1" fill="none"/>
+  <!-- Earth/Mother symbol - circle with cross -->
+  <g transform="translate(100,88)">
+    <circle r="30" stroke="#86efac" stroke-width="2" fill="none" opacity="0.4"/>
+    <circle r="22" stroke="#4ade80" stroke-width="1" fill="none" opacity="0.25"/>
+    <circle r="15" fill="#86efac" opacity="0.08"/>
+    <!-- Earth cross -->
+    <line x1="0" y1="-22" x2="0" y2="22" stroke="#86efac" stroke-width="1.5" opacity="0.4"/>
+    <line x1="-22" y1="0" x2="22" y2="0" stroke="#86efac" stroke-width="1.5" opacity="0.4"/>
+    <!-- Center seed -->
+    <circle r="5" fill="#86efac" opacity="0.2"/>
+    <circle r="2.5" fill="#bbf7d0" opacity="0.4"/>
+  </g>
+  <!-- Wheat/Plants on sides -->
+  <g stroke="#4ade80" stroke-width="1.5" fill="none" opacity="0.4">
+    <!-- Left wheat -->
+    <path d="M50,180 Q48,160 55,145 Q58,135 53,120"/>
+    <ellipse cx="53" cy="118" rx="3" ry="6" fill="#4ade80" opacity="0.3"/>
+    <ellipse cx="48" cy="123" rx="2.5" ry="5" fill="#4ade80" opacity="0.25"/>
+    <ellipse cx="58" cy="123" rx="2.5" ry="5" fill="#4ade80" opacity="0.25"/>
+    <!-- Right wheat -->
+    <path d="M150,180 Q152,160 145,145 Q142,135 147,120"/>
+    <ellipse cx="147" cy="118" rx="3" ry="6" fill="#4ade80" opacity="0.3"/>
+    <ellipse cx="142" cy="123" rx="2.5" ry="5" fill="#4ade80" opacity="0.25"/>
+    <ellipse cx="152" cy="123" rx="2.5" ry="5" fill="#4ade80" opacity="0.25"/>
+  </g>
+  <!-- Vine/root patterns -->
+  <g stroke="#86efac" stroke-width="1" fill="none" opacity="0.2">
+    <path d="M60,185 Q70,175 65,165 Q60,155 70,150"/>
+    <path d="M140,185 Q130,175 135,165 Q140,155 130,150"/>
+    <!-- Small leaves -->
+    <circle cx="70" cy="150" r="2" fill="#86efac" opacity="0.2"/>
+    <circle cx="130" cy="150" r="2" fill="#86efac" opacity="0.2"/>
+  </g>
+  <!-- Floating seeds/particles -->
+  <circle cx="75" cy="55" r="1.5" fill="#86efac" opacity="0.4"><animate attributeName="opacity" values="0.2;0.5;0.2" dur="3s" repeatCount="indefinite"/></circle>
+  <circle cx="125" cy="50" r="1" fill="#bbf7d0" opacity="0.3"><animate attributeName="opacity" values="0.1;0.4;0.1" dur="4s" repeatCount="indefinite"/></circle>
+  <circle cx="100" cy="160" r="1.2" fill="#4ade80" opacity="0.3"><animate attributeName="opacity" values="0.1;0.5;0.1" dur="2.5s" repeatCount="indefinite"/></circle>
+  <text x="100" y="215" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#86efac" opacity="0.9">MOKOSZ</text>
+  <text x="100" y="235" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#86efac" opacity="0.4">Matka Ziemia</text>
+  <line x1="50" y1="245" x2="150" y2="245" stroke="#86efac" stroke-opacity="0.15" stroke-width="0.5"/>
+</svg>

@@ -89,6 +89,56 @@ export const GOLD_EDITION_RULES = {
   CARDS_DRAWN_PER_TURN: 1,
 } as const
 
+// ===== TRYB SŁAWA! =====
+
+export enum Season {
+  WINTER = 0,
+  SPRING = 1,
+  SUMMER = 2,
+  AUTUMN = 3,
+}
+
+export const SLAVA_RULES = {
+  GLORY_TARGET: 10,
+  PASSIVE_INCOME_PER_TURN: 1,
+  TROPHY_THRESHOLD: 9,        // suma bazowej DEF zabitych >= 9 → +1 PS
+  BREAKTHROUGH_REWARD: 1,     // +1 PS za przełamanie
+  BREAKTHROUGH_PENALTY: 1,    // -1 PS dla obrońcy
+  SEASON_LENGTH_ROUNDS: 4,    // zmiana pory co 4 rundy
+  ENHANCED_ADVENTURE_COST: 1, // ulepszenie przygody w Sława = 1 PS
+  MIN_AUCTION_BID: 1,
+  STARTING_HAND: 5,
+  DECK_SIZE: 30,
+  MAX_FIELD_CREATURES: 5,
+  PLAY_LIMIT_CREATURES: 1,
+  PLAY_LIMIT_ADVENTURES: 99,
+  ADVENTURE_COST: 0,
+  CARDS_DRAWN_PER_TURN: 1,
+} as const
+
+export const SEASON_NAMES: Record<Season, string> = {
+  [Season.WINTER]: 'Zima',
+  [Season.SPRING]: 'Wiosna',
+  [Season.SUMMER]: 'Lato',
+  [Season.AUTUMN]: 'Jesień',
+}
+
+// Pora roku → domena premiowana (sezonowy buff)
+export const SEASON_BONUS_DOMAIN: Record<Season, Domain> = {
+  [Season.WINTER]: Domain.UNDEAD,   // +1 DEF
+  [Season.SPRING]: Domain.PERUN,    // +1 ATK
+  [Season.SUMMER]: Domain.ZYVI,     // +1 ATK
+  [Season.AUTUMN]: Domain.WELES,    // enhanced za 0 PS
+}
+
+// Przy zmianie pory → paraliżowana domena (1 rundę)
+export const SEASON_PARALYSIS_DOMAIN: Record<Season, Domain> = {
+  [Season.WINTER]: Domain.PERUN,    // Jesień→Zima: Perun paraliż
+  [Season.SPRING]: Domain.WELES,    // Zima→Wiosna: Weles paraliż
+  [Season.SUMMER]: Domain.UNDEAD,   // Wiosna→Lato: Nieumarli paraliż
+  [Season.AUTUMN]: Domain.ZYVI,     // Lato→Jesień: Żywi paraliż
+}
+
 export const DOMAIN_COLORS = {
   [Domain.PERUN]: '#f5c542',
   [Domain.ZYVI]: '#4caf50',

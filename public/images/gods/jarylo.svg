@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" fill="none">
+  <defs>
+    <radialGradient id="jBg" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#422006"/>
+      <stop offset="100%" stop-color="#0c0804"/>
+    </radialGradient>
+    <radialGradient id="jGlow" cx="50%" cy="38%" r="30%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="260" rx="12" fill="url(#jBg)"/>
+  <rect width="200" height="260" rx="12" fill="url(#jGlow)"/>
+  <rect x="6" y="6" width="188" height="248" rx="9" stroke="#fbbf24" stroke-opacity="0.15" stroke-width="1" fill="none"/>
+  <!-- Sun disc -->
+  <g transform="translate(100,90)">
+    <circle r="35" fill="#fbbf24" opacity="0.08"/>
+    <circle r="28" fill="#fbbf24" opacity="0.06"/>
+    <circle r="20" stroke="#fbbf24" stroke-width="2" fill="none" opacity="0.5"/>
+    <circle r="14" stroke="#fde68a" stroke-width="1.5" fill="none" opacity="0.35"/>
+    <circle r="8" fill="#fbbf24" opacity="0.25"/>
+    <circle r="4" fill="#fef3c7" opacity="0.5"/>
+    <!-- Sun rays - long -->
+    <g stroke="#fbbf24" stroke-width="1.5" opacity="0.5">
+      <line x1="0" y1="-24" x2="0" y2="-42"/>
+      <line x1="0" y1="24" x2="0" y2="42"/>
+      <line x1="-24" y1="0" x2="-42" y2="0"/>
+      <line x1="24" y1="0" x2="42" y2="0"/>
+    </g>
+    <!-- Sun rays - diagonal -->
+    <g stroke="#fbbf24" stroke-width="1" opacity="0.35">
+      <line x1="-17" y1="-17" x2="-30" y2="-30"/>
+      <line x1="17" y1="-17" x2="30" y2="-30"/>
+      <line x1="-17" y1="17" x2="-30" y2="30"/>
+      <line x1="17" y1="17" x2="30" y2="30"/>
+    </g>
+    <!-- Wavy rays -->
+    <g stroke="#fde68a" stroke-width="1" fill="none" opacity="0.3">
+      <path d="M-12,-22 Q-8,-35 -15,-45"/>
+      <path d="M12,-22 Q8,-35 15,-45"/>
+      <path d="M-12,22 Q-8,35 -15,45"/>
+      <path d="M12,22 Q8,35 15,45"/>
+    </g>
+  </g>
+  <!-- Wheat stalks -->
+  <g stroke="#fbbf24" stroke-width="1.5" fill="none" opacity="0.35">
+    <path d="M65,185 Q60,165 70,148 Q75,138 70,125"/>
+    <path d="M135,185 Q140,165 130,148 Q125,138 130,125"/>
+    <!-- Wheat heads -->
+    <g fill="#fbbf24" opacity="0.5">
+      <ellipse cx="70" cy="123" rx="3" ry="6"/>
+      <ellipse cx="65" cy="128" rx="2.5" ry="5"/>
+      <ellipse cx="75" cy="128" rx="2.5" ry="5"/>
+      <ellipse cx="130" cy="123" rx="3" ry="6"/>
+      <ellipse cx="125" cy="128" rx="2.5" ry="5"/>
+      <ellipse cx="135" cy="128" rx="2.5" ry="5"/>
+    </g>
+  </g>
+  <!-- Sparkles -->
+  <circle cx="55" cy="55" r="1.5" fill="#fde68a" opacity="0.5"><animate attributeName="opacity" values="0.2;0.6;0.2" dur="2s" repeatCount="indefinite"/></circle>
+  <circle cx="145" cy="50" r="1" fill="#fbbf24" opacity="0.4"><animate attributeName="opacity" values="0.1;0.5;0.1" dur="3s" repeatCount="indefinite"/></circle>
+  <circle cx="100" cy="45" r="1.2" fill="#fef3c7" opacity="0.3"><animate attributeName="opacity" values="0.1;0.4;0.1" dur="2.5s" repeatCount="indefinite"/></circle>
+  <text x="100" y="215" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#fbbf24" opacity="0.9">JARYLO</text>
+  <text x="100" y="235" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#fbbf24" opacity="0.4">Bog Wiosny i Slonca</text>
+  <line x1="50" y1="245" x2="150" y2="245" stroke="#fbbf24" stroke-opacity="0.15" stroke-width="0.5"/>
+</svg>

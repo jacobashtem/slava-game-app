@@ -58,8 +58,33 @@ function cardDomainColor(card: any) {
 }
 
 // Tytuł i opis w zależności od typu
+// Auction bid state
+const auctionBidAmount = ref(1)
+const auctionMeta = computed(() => {
+  const meta = interaction.value?.metadata
+  if (!meta) return null
+  return {
+    godName: meta.godName as string ?? 'Bóg',
+    godId: meta.godId as number ?? 0,
+    enhanced: meta.enhanced as boolean ?? false,
+    currentBid: meta.currentBid as number ?? 1,
+    currentBidder: meta.currentBidder as string ?? 'AI',
+  }
+})
+
+watch(() => auctionMeta.value?.currentBid, (newBid) => {
+  if (newBid != null) auctionBidAmount.value = newBid + 1
+})
+
+const playerGlory = computed(() => {
+  const state = game.state
+  if (!state) return 0
+  return state.players.player1.glory ?? 0
+})
+
 const title = computed(() => {
   const t = interaction.value?.type
+  if (t === 'auction_bid') return 'Licytacja — Łaska Boga'
   if (t === 'alkonost_target') return 'Hipnoza Alkonosta'
   if (t === 'chowaniec_intercept') return 'Chowaniec — Przejąć atak?'
   if (t === 'kresnik_buff') return 'Kresnik — Wybierz premię'
@@ -78,6 +103,11 @@ const description = computed(() => {
   const t = interaction.value?.type
   const atk = attackerCard.value
   const src = sourceCard.value
+  if (t === 'auction_bid') {
+    const a = auctionMeta.value
+    if (!a) return ''
+    return `AI przebija licytację o ${a.enhanced ? 'WZMOCNIONĄ' : 'bazową'} moc ${a.godName}. Aktualna stawka: ${a.currentBid} PS. Przebij lub przepuść.`
+  }
   if (t === 'alkonost_target') {
     return `${(atk?.cardData as any)?.name ?? 'Atakujący'} musi zaatakować sojusznika ${(src?.cardData as any)?.name ?? 'Alkonosta'}. Kliknij cel.`
   }
@@ -234,6 +264,62 @@ function pickTarget(choice: string) {
           <button class="pi-yn-no" @click="pickTarget('no')">
             <Icon icon="game-icons:cancel" /> Niech odejdzie
           </button>
+        </div>
+
+        <!-- AUKCJA: Licytacja boga (tryb Sława!) -->
+        <div v-if="interaction?.type === 'auction_bid' && auctionMeta" class="pi-auction">
+          <div class="pi-auction-god">
+            <img
+              v-if="auctionMeta.godId"
+              :src="`/images/gods/${['','weles','swarozyc','marzanna','jarylo','mokosz','perun','swarog','rod'][auctionMeta.godId] ?? 'weles'}.svg`"
+              class="pi-auction-portrait"
+              :alt="auctionMeta.godName"
+            />
+            <div class="pi-auction-info">
+              <div class="pi-auction-god-name">{{ auctionMeta.godName }}</div>
+              <div class="pi-auction-power-type">
+                {{ auctionMeta.enhanced ? 'WZMOCNIONA MOC' : 'BAZOWA MOC' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="pi-auction-bid-info">
+            <div class="pi-auction-current">
+              <span class="pi-auction-label">Stawka AI:</span>
+              <span class="pi-auction-amount">{{ auctionMeta.currentBid }} PS</span>
+            </div>
+            <div class="pi-auction-yours">
+              <span class="pi-auction-label">Twoje PS:</span>
+              <span class="pi-auction-glory">{{ playerGlory }}</span>
+            </div>
+          </div>
+
+          <div class="pi-auction-controls">
+            <div class="pi-auction-bid-row">
+              <span class="pi-auction-label">Twoja stawka:</span>
+              <button class="pi-auction-adj" @click="auctionBidAmount = Math.max(auctionMeta.currentBid + 1, auctionBidAmount - 1)">
+                <Icon icon="game-icons:plain-arrow" style="transform: rotate(180deg); font-size: 10px;" />
+              </button>
+              <span class="pi-auction-bid-val">{{ auctionBidAmount }}</span>
+              <span class="pi-auction-bid-unit">PS</span>
+              <button class="pi-auction-adj" @click="auctionBidAmount = Math.min(playerGlory, auctionBidAmount + 1)">
+                <Icon icon="game-icons:plain-arrow" style="font-size: 10px;" />
+              </button>
+            </div>
+          </div>
+
+          <div class="pi-yn">
+            <button
+              class="pi-yn-yes"
+              :disabled="auctionBidAmount > playerGlory || auctionBidAmount <= auctionMeta.currentBid"
+              @click="pickTarget(String(auctionBidAmount))"
+            >
+              <Icon icon="game-icons:laurel-crown" /> Przebij ({{ auctionBidAmount }} PS)
+            </button>
+            <button class="pi-yn-no" @click="pickTarget('pass')">
+              <Icon icon="game-icons:cancel" /> Przepuść
+            </button>
+          </div>
         </div>
 
       </div>
@@ -485,6 +571,131 @@ function pickTarget(choice: string) {
   transform: translateY(-1px);
 }
 
+/* ===== AUCTION ===== */
+.pi-auction {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pi-auction-god {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(200, 168, 78, 0.06);
+  border: 1px solid rgba(200, 168, 78, 0.15);
+}
+
+.pi-auction-portrait {
+  width: 56px;
+  height: 72px;
+  border-radius: 6px;
+  border: 1px solid rgba(200, 168, 78, 0.3);
+  object-fit: cover;
+}
+
+.pi-auction-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pi-auction-god-name {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #c8a84e;
+}
+
+.pi-auction-power-type {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #a78bfa;
+}
+
+.pi-auction-bid-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pi-auction-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pi-auction-amount {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: #fca5a5;
+  margin-left: 6px;
+}
+
+.pi-auction-glory {
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: #86efac;
+  margin-left: 6px;
+}
+
+.pi-auction-controls {
+  display: flex;
+  justify-content: center;
+}
+
+.pi-auction-bid-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pi-auction-adj {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid rgba(200, 168, 78, 0.25);
+  background: rgba(200, 168, 78, 0.08);
+  color: #c8a84e;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.pi-auction-adj:hover {
+  background: rgba(200, 168, 78, 0.18);
+}
+
+.pi-auction-bid-val {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 900;
+  color: #fbbf24;
+  min-width: 36px;
+  text-align: center;
+}
+
+.pi-auction-bid-unit {
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(200, 168, 78, 0.5);
+  letter-spacing: 0.08em;
+}
+
+.pi-yn-yes:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
 /* Transition */
 .pi-fade-enter-active,
 .pi-fade-leave-active {
@@ -494,5 +705,14 @@ function pickTarget(choice: string) {
 .pi-fade-leave-to {
   opacity: 0;
   transform: scale(0.96);
+}
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .pi-box {
+    max-width: 92vw;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
 }
 </style>

@@ -1,7 +1,9 @@
 <template>
-  <div>
+  <div class="app-root">
     <NuxtRouteAnnouncer />
     <NuxtPage />
+    <!-- Global noise texture overlay for depth -->
+    <div class="noise-overlay" />
   </div>
 </template>
 
@@ -58,14 +60,17 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html, body, #__nuxt {
+html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+}
+
+#__nuxt {
+  min-height: 100%;
   background: var(--bg-deep);
   color: var(--text-primary);
   font-family: 'Inter', system-ui, sans-serif;
-  overflow: hidden;
 }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -102,4 +107,43 @@ html, body, #__nuxt {
 .anim-hit     { animation: shake 0.4s ease; }
 .anim-death   { animation: death-fade 0.5s ease forwards; }
 .anim-pulse   { animation: pulse-glow 1s ease infinite; }
+
+/* ===== NOISE TEXTURE OVERLAY ===== */
+.app-root { position: relative; min-height: 100%; background: var(--bg-deep); }
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ===== GOLD ORNAMENTAL LINE (reusable) ===== */
+.gold-ornament {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent);
+  opacity: 0.2;
+}
+.gold-ornament-v {
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent);
+  opacity: 0.2;
+}
+
+/* ===== RUNIC GLOW KEYFRAME ===== */
+@keyframes rune-glow {
+  0%, 100% { opacity: 0.3; text-shadow: 0 0 4px currentColor; }
+  50%      { opacity: 0.7; text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+}
+
+@keyframes ember-float {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+  20%  { opacity: 1; }
+  80%  { opacity: 0.6; }
+  100% { opacity: 0; transform: translateY(-40px) scale(0); }
+}
 </style>

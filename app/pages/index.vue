@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ ssr: false })
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 import type { AIDifficulty } from '../../game-engine/AIPlayer'
@@ -14,125 +14,198 @@ const selectedDomains = ref<number[]>([...(game.selectedDomains ?? [])])
 
 function toggleDomain(domain: number) {
   const idx = selectedDomains.value.indexOf(domain)
-  if (idx >= 0) {
-    selectedDomains.value.splice(idx, 1)
-  } else {
-    selectedDomains.value.push(domain)
-  }
+  if (idx >= 0) selectedDomains.value.splice(idx, 1)
+  else selectedDomains.value.push(domain)
 }
 
-function startNewGame() {
-  game.setDifficulty(difficulty.value)
-  game.setDomains(selectedDomains.value)
-  game.startGame()
-  navigateTo('/game')
-}
-
-function startAlphaGame() {
+function startGoldEdition() {
   game.setDifficulty(difficulty.value)
   game.setDomains(selectedDomains.value)
   game.startAlphaGame()
   navigateTo('/game')
 }
 
+function startSlavaMode() {
+  game.setDifficulty(difficulty.value)
+  game.setDomains(selectedDomains.value)
+  game.startSlavaGame()
+  navigateTo('/game')
+}
+
 const domains = [
-  { id: Domain.PERUN, name: DOMAIN_NAMES[Domain.PERUN], color: DOMAIN_COLORS[Domain.PERUN], icon: 'game-icons:lightning-storm' },
-  { id: Domain.ZYVI, name: DOMAIN_NAMES[Domain.ZYVI], color: DOMAIN_COLORS[Domain.ZYVI], icon: 'game-icons:oak-leaf' },
-  { id: Domain.UNDEAD, name: DOMAIN_NAMES[Domain.UNDEAD], color: DOMAIN_COLORS[Domain.UNDEAD], icon: 'game-icons:skull-crossed-bones' },
-  { id: Domain.WELES, name: DOMAIN_NAMES[Domain.WELES], color: DOMAIN_COLORS[Domain.WELES], icon: 'game-icons:fire-dash' },
+  { id: Domain.PERUN, name: DOMAIN_NAMES[Domain.PERUN], color: DOMAIN_COLORS[Domain.PERUN], icon: 'game-icons:lightning-storm', desc: 'Wojownicy bogów' },
+  { id: Domain.ZYVI, name: DOMAIN_NAMES[Domain.ZYVI], color: DOMAIN_COLORS[Domain.ZYVI], icon: 'game-icons:oak-leaf', desc: 'Ludzie i natura' },
+  { id: Domain.UNDEAD, name: DOMAIN_NAMES[Domain.UNDEAD], color: DOMAIN_COLORS[Domain.UNDEAD], icon: 'game-icons:skull-crossed-bones', desc: 'Upiory i duchy' },
+  { id: Domain.WELES, name: DOMAIN_NAMES[Domain.WELES], color: DOMAIN_COLORS[Domain.WELES], icon: 'game-icons:fire-dash', desc: 'Demony zaświatów' },
 ]
+
+// ===== ATMOSPHERIC PARTICLES =====
+const embers = ref<{ x: number; delay: number; dur: number; size: number }[]>([])
+onMounted(() => {
+  embers.value = Array.from({ length: 24 }, () => ({
+    x: Math.random() * 100,
+    delay: Math.random() * 15,
+    dur: 10 + Math.random() * 12,
+    size: 2 + Math.random() * 3,
+  }))
+})
+
+// Settings
+const showSettings = ref(false)
 </script>
 
 <template>
   <div class="main-menu">
-    <div class="menu-bg" />
+    <!-- Background layers -->
+    <div class="bg-layer">
+      <div class="bg-dark-fog" />
+      <div class="bg-fire-glow" />
+      <div class="bg-vignette" />
+      <!-- Rising embers -->
+      <div
+        v-for="(e, i) in embers" :key="i"
+        class="ember"
+        :style="{
+          left: e.x + '%',
+          width: e.size + 'px',
+          height: e.size + 'px',
+          animationDelay: e.delay + 's',
+          animationDuration: e.dur + 's',
+        }"
+      />
+    </div>
 
-    <div class="menu-content">
-      <div class="logo-section">
-        <div class="logo-emblem">
-          <Icon icon="game-icons:triquetra" class="emblem-icon" />
-        </div>
-        <h1 class="game-title">SŁAWA</h1>
-        <p class="game-subtitle">Vol. 2 — Złota Edycja</p>
-        <p class="game-tagline">Słowiańska gra karciana</p>
-      </div>
+    <!-- Content -->
+    <div class="menu-scroll">
+      <div class="menu-content">
+        <!-- HEADER: emblem + title -->
+        <div class="logo-block">
+          <!-- Slavic ornament top -->
+          <div class="orn-row">
+            <svg viewBox="0 0 120 8" class="orn-svg"><path d="M0 4 Q15 0 30 4 Q45 8 60 4 Q75 0 90 4 Q105 8 120 4" fill="none" stroke="rgba(200,168,78,0.25)" stroke-width="1"/></svg>
+          </div>
 
-      <!-- USTAWIENIA -->
-      <div class="settings-section">
-        <!-- Trudnosc AI -->
-        <div class="setting-group">
-          <label class="setting-label">Trudność AI</label>
-          <div class="toggle-group">
-            <button
-              :class="['toggle-btn', { active: difficulty === 'easy' }]"
-              @click="difficulty = 'easy'"
-            >Łatwa</button>
-            <button
-              :class="['toggle-btn', { active: difficulty === 'medium' }]"
-              @click="difficulty = 'medium'"
-            >Średnia</button>
-            <button
-              :class="['toggle-btn', { active: difficulty === 'hard' }]"
-              @click="difficulty = 'hard'"
-            >Trudna</button>
+          <div class="emblem">
+            <div class="emblem-outer" />
+            <div class="emblem-inner" />
+            <Icon icon="game-icons:triquetra" class="emblem-symbol" />
+          </div>
+
+          <h1 class="title">SŁAWA</h1>
+          <p class="subtitle">Vol. 2 — Złota Edycja</p>
+          <p class="tagline">Słowiańska gra karciana</p>
+
+          <div class="orn-row">
+            <svg viewBox="0 0 120 8" class="orn-svg"><path d="M0 4 Q15 8 30 4 Q45 0 60 4 Q75 8 90 4 Q105 0 120 4" fill="none" stroke="rgba(200,168,78,0.25)" stroke-width="1"/></svg>
           </div>
         </div>
 
-        <!-- Domena gracza -->
-        <div class="setting-group">
-          <label class="setting-label">Twoja domena <span class="hint">(brak wyboru = losowa)</span></label>
-          <div class="domain-picks">
-            <button
-              v-for="d in domains" :key="d.id"
-              :class="['domain-btn', { active: selectedDomains.includes(d.id) }]"
-              :style="selectedDomains.includes(d.id) ? `border-color: ${d.color}; color: ${d.color}; background: ${d.color}18` : ''"
-              @click="toggleDomain(d.id)"
-            >
-              <Icon :icon="d.icon" class="domain-icon" />
-              {{ d.name }}
-            </button>
-          </div>
+        <!-- TWO GAME MODES -->
+        <div class="modes-row">
+          <!-- GOLD EDITION -->
+          <button class="mode-card mode-gold" @click="startGoldEdition">
+            <div class="mode-glow" />
+            <Icon icon="game-icons:crown-coin" class="mode-icon" />
+            <div class="mode-text">
+              <span class="mode-name">Złota Edycja</span>
+              <span class="mode-desc">Zbalansowane karty, dopracowane efekty</span>
+            </div>
+            <div class="mode-badge">REKOMENDOWANE</div>
+          </button>
+
+          <!-- SLAVA! -->
+          <button class="mode-card mode-slava" @click="startSlavaMode">
+            <div class="mode-glow mode-glow-red" />
+            <Icon icon="game-icons:sword-clash" class="mode-icon" />
+            <div class="mode-text">
+              <span class="mode-name">Sława!</span>
+              <span class="mode-desc">Punkty Sławy, Panteon Bogów, Święta</span>
+            </div>
+          </button>
         </div>
-      </div>
 
-      <div class="menu-buttons">
-        <button class="menu-btn primary" @click="startNewGame">
-          <Icon icon="game-icons:sword-clash" class="btn-icon" />
-          Nowa Gra
-          <span class="game-mode-badge">losowa talia</span>
+        <!-- SETTINGS (collapsible) -->
+        <button class="settings-toggle" @click="showSettings = !showSettings">
+          <Icon icon="game-icons:battle-gear" class="st-icon" />
+          <span>Ustawienia bitwy</span>
+          <Icon :icon="showSettings ? 'mdi:chevron-up' : 'mdi:chevron-down'" class="st-chev" />
         </button>
 
-        <button class="menu-btn alpha" @click="startAlphaGame">
-          <Icon icon="game-icons:shield-echoes" class="btn-icon" />
-          Alpha Gra
-          <span class="game-mode-badge">tylko sprawdzone karty</span>
-        </button>
+        <Transition name="panel-slide">
+          <div v-if="showSettings" class="settings-panel">
+            <!-- Difficulty -->
+            <div class="sg">
+              <label class="sg-label">
+                <Icon icon="game-icons:brain" />
+                Trudność AI
+              </label>
+              <div class="sg-btns">
+                <button v-for="d in [
+                  { val: 'easy', label: 'Łatwa', icon: 'game-icons:feather' },
+                  { val: 'medium', label: 'Średnia', icon: 'game-icons:shield-echoes' },
+                  { val: 'hard', label: 'Trudna', icon: 'game-icons:skull-crack' },
+                ]" :key="d.val"
+                  :class="['sg-btn', { active: difficulty === d.val }]"
+                  @click="difficulty = d.val as AIDifficulty"
+                >
+                  <Icon :icon="d.icon" />
+                  {{ d.label }}
+                </button>
+              </div>
+            </div>
 
-        <NuxtLink to="/arena" class="menu-btn arena">
-          <Icon icon="game-icons:card-joker" class="btn-icon" />
-          Arena — Testuj karty
-        </NuxtLink>
+            <!-- Domains -->
+            <div class="sg">
+              <label class="sg-label">
+                <Icon icon="game-icons:triquetra" />
+                Twoja domena <span class="sg-hint">(brak = losowa)</span>
+              </label>
+              <div class="domain-grid">
+                <button
+                  v-for="d in domains" :key="d.id"
+                  :class="['dom-btn', { active: selectedDomains.includes(d.id) }]"
+                  :style="{ '--dc': d.color }"
+                  @click="toggleDomain(d.id)"
+                >
+                  <Icon :icon="d.icon" class="dom-icon" />
+                  <span class="dom-name">{{ d.name }}</span>
+                  <span class="dom-desc">{{ d.desc }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
 
-        <NuxtLink to="/gallery" class="menu-btn gallery">
-          <Icon icon="game-icons:card-pickup" class="btn-icon" />
-          Kolekcja kart
-          <span class="game-mode-badge">182 karty</span>
-        </NuxtLink>
+        <!-- NAVIGATION -->
+        <div class="nav-row">
+          <NuxtLink to="/arena" class="nav-tile">
+            <Icon icon="game-icons:card-joker" class="nt-icon" />
+            <span class="nt-label">Arena</span>
+            <span class="nt-desc">Testuj karty</span>
+          </NuxtLink>
+          <NuxtLink to="/showcase" class="nav-tile">
+            <Icon icon="game-icons:sparkles" class="nt-icon" />
+            <span class="nt-label">Efekty</span>
+            <span class="nt-desc">Pokaz VFX/SFX</span>
+          </NuxtLink>
+          <NuxtLink to="/gallery" class="nav-tile">
+            <Icon icon="game-icons:card-pickup" class="nt-icon" />
+            <span class="nt-label">Kolekcja</span>
+            <span class="nt-desc">182 karty</span>
+          </NuxtLink>
+          <NuxtLink to="/rules" class="nav-tile">
+            <Icon icon="game-icons:book-cover" class="nt-icon" />
+            <span class="nt-label">Zasady</span>
+            <span class="nt-desc">Jak grać?</span>
+          </NuxtLink>
+        </div>
 
-        <NuxtLink to="/rules" class="menu-btn secondary">
-          <Icon icon="game-icons:book-cover" class="btn-icon" />
-          Jak grać?
-        </NuxtLink>
-      </div>
-
-      <div class="edition-info">
-        <div class="edition-badge">Złota Edycja</div>
-        <div class="edition-rules">
-          <span>5 startowych kart</span>
-          <span>&middot;</span>
-          <span>5 ZŁ na start</span>
-          <span>&middot;</span>
-          <span>Talia 30 kart</span>
+        <!-- FOOTER -->
+        <div class="footer">
+          <div class="footer-badge">
+            <Icon icon="game-icons:two-coins" />
+            Złota Edycja — 182 kart — 4 domeny
+          </div>
         </div>
       </div>
     </div>
@@ -140,287 +213,433 @@ const domains = [
 </template>
 
 <style scoped>
+/* ===== FULL SCREEN ===== */
 .main-menu {
   position: relative;
   width: 100vw;
   height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
-  background: var(--bg-board);
+  background: #04030a;
 }
 
-.menu-bg {
+/* ===== BACKGROUND ===== */
+.bg-layer {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 30% 50%, rgba(79, 70, 229, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 70% 50%, rgba(124, 58, 237, 0.10) 0%, transparent 60%);
+  overflow: hidden;
   pointer-events: none;
 }
 
-.menu-content {
+.bg-dark-fog {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 100% 70% at 50% 100%, rgba(120, 40, 15, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(60, 20, 80, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 80% 40%, rgba(40, 15, 10, 0.1) 0%, transparent 50%);
+}
+
+.bg-fire-glow {
+  position: absolute;
+  bottom: -20%;
+  left: 30%;
+  width: 40%;
+  height: 40%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200, 80, 20, 0.06) 0%, transparent 70%);
+  animation: fire-breathe 6s ease-in-out infinite;
+}
+
+@keyframes fire-breathe {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+/* Rising embers */
+.ember {
+  position: absolute;
+  bottom: -10px;
+  border-radius: 50%;
+  background: rgba(200, 100, 30, 0.6);
+  animation: ember-rise linear infinite;
+  will-change: transform;
+}
+
+@keyframes ember-rise {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  5%   { opacity: 0.8; }
+  50%  { transform: translateY(calc(-50vh)) translateX(10px); opacity: 0.5; }
+  80%  { opacity: 0.2; }
+  100% { transform: translateY(calc(-100vh - 20px)) translateX(-5px); opacity: 0; }
+}
+
+/* ===== SCROLLABLE CONTENT ===== */
+.menu-scroll {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
   z-index: 1;
+  display: flex;
+  justify-content: center;
+  scrollbar-width: none;
 }
+.menu-scroll::-webkit-scrollbar { display: none; }
 
-.logo-section {
+.menu-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 22px;
+  padding: 40px 20px 50px;
+  max-width: 440px;
+  width: 100%;
 }
 
-.logo-emblem {
+/* ===== LOGO BLOCK ===== */
+.logo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.orn-row {
+  width: 200px;
+  display: flex;
+  justify-content: center;
+}
+.orn-svg { width: 100%; height: 8px; }
+
+.emblem {
+  position: relative;
   width: 80px;
   height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
-  border: 2px solid rgba(139, 92, 246, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
-  box-shadow: 0 0 32px rgba(139, 92, 246, 0.25);
+  margin: 10px 0 6px;
 }
 
-.emblem-icon {
-  font-size: 40px;
-  color: #a78bfa;
+.emblem-outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(200, 168, 78, 0.25);
+  animation: spin 25s linear infinite;
+}
+.emblem-outer::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid rgba(120, 40, 15, 0.2);
 }
 
-.game-title {
-  font-size: 52px;
+.emblem-inner {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 1px dashed rgba(200, 168, 78, 0.12);
+  animation: spin 18s linear infinite reverse;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.emblem-symbol {
+  font-size: 38px;
+  color: #c8a84e;
+  filter: drop-shadow(0 0 10px rgba(200, 100, 30, 0.4));
+  z-index: 1;
+}
+
+.title {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 54px;
   font-weight: 900;
-  letter-spacing: 0.25em;
-  color: #e2e8f0;
+  letter-spacing: 0.28em;
+  color: #ddd6c1;
   margin: 0;
-  text-shadow: 0 0 24px rgba(139, 92, 246, 0.4);
+  text-shadow:
+    0 0 40px rgba(200, 100, 30, 0.25),
+    0 0 80px rgba(200, 80, 20, 0.1),
+    0 2px 12px rgba(0, 0, 0, 0.8);
 }
 
-.game-subtitle {
-  font-size: 16px;
-  color: #a78bfa;
-  letter-spacing: 0.15em;
-  margin: 0;
+.subtitle {
+  font-size: 12px;
+  color: rgba(200, 168, 78, 0.6);
+  letter-spacing: 0.18em;
+  margin: 2px 0 0;
   text-transform: uppercase;
+  font-weight: 700;
 }
 
-.game-tagline {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 0;
-  font-style: italic;
-  letter-spacing: 0.05em;
-}
-
-/* ===== SETTINGS ===== */
-
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: 340px;
-}
-
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.setting-label {
+.tagline {
   font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 600;
-}
-
-.hint {
-  font-weight: 400;
+  color: rgba(148, 130, 100, 0.4);
+  margin: 0;
   font-style: italic;
-  text-transform: none;
-  letter-spacing: 0;
+  letter-spacing: 0.08em;
 }
 
-.toggle-group {
+/* ===== GAME MODES ===== */
+.modes-row {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
 }
 
-.toggle-btn {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #334155;
-  background: rgba(255,255,255,0.03);
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.toggle-btn.active {
-  border-color: #6366f1;
-  color: #a5b4fc;
-  background: rgba(99, 102, 241, 0.12);
-}
-
-.toggle-btn:hover:not(.active) {
-  border-color: #475569;
-  background: rgba(255,255,255,0.05);
-}
-
-.domain-picks {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.domain-btn {
+.mode-card {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
-  border-radius: 6px;
-  border: 1px solid #334155;
-  background: rgba(255,255,255,0.03);
-  color: #94a3b8;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.2s, border-color 0.2s;
+  overflow: hidden;
+  text-align: left;
+  width: 100%;
+}
+
+.mode-card:hover {
+  transform: translateY(-2px);
+}
+
+.mode-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Gold Edition */
+.mode-gold {
+  background: linear-gradient(135deg, rgba(200, 168, 78, 0.08) 0%, rgba(120, 60, 20, 0.1) 100%);
+  border-color: rgba(200, 168, 78, 0.25);
+  color: #e2e8f0;
+}
+.mode-gold:hover {
+  border-color: rgba(200, 168, 78, 0.5);
+}
+.mode-gold .mode-glow {
+  background: radial-gradient(ellipse at 20% 50%, rgba(200, 168, 78, 0.06), transparent 60%);
+  animation: btn-glow-pulse 3s ease-in-out infinite;
+}
+.mode-gold .mode-icon {
+  font-size: 32px;
+  color: #c8a84e;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+/* Slava! */
+.mode-slava {
+  background: linear-gradient(135deg, rgba(180, 40, 20, 0.08) 0%, rgba(80, 20, 10, 0.1) 100%);
+  border-color: rgba(180, 60, 30, 0.2);
+  color: #e2e8f0;
+}
+.mode-slava:hover {
+  border-color: rgba(200, 80, 40, 0.45);
+}
+.mode-slava .mode-glow-red {
+  background: radial-gradient(ellipse at 20% 50%, rgba(180, 50, 20, 0.05), transparent 60%);
+}
+.mode-slava .mode-icon {
+  font-size: 28px;
+  color: #c45030;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+@keyframes btn-glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.mode-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1;
+  flex: 1;
+}
+
+.mode-name {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.mode-desc {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.6);
+  line-height: 1.3;
+}
+
+.mode-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: rgba(200, 168, 78, 0.6);
+  background: rgba(200, 168, 78, 0.08);
+  border: 1px solid rgba(200, 168, 78, 0.15);
+  padding: 1px 6px;
+  border-radius: 3px;
+  z-index: 1;
+}
+
+/* ===== SETTINGS TOGGLE ===== */
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.015);
+  color: #64748b;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 }
+.settings-toggle:hover { background: rgba(255, 255, 255, 0.03); color: #94a3b8; }
+.st-icon { font-size: 14px; }
+.st-chev { margin-left: auto; font-size: 16px; opacity: 0.4; }
 
-.domain-btn:hover:not(.active) {
-  border-color: #475569;
-  background: rgba(255,255,255,0.05);
-}
+/* Settings panel transition */
+.panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.25s ease; overflow: hidden; }
+.panel-slide-enter-from, .panel-slide-leave-to { max-height: 0; opacity: 0; }
+.panel-slide-enter-to, .panel-slide-leave-from { max-height: 380px; opacity: 1; }
 
-.domain-icon { font-size: 16px; }
-
-/* ===== BUTTONS ===== */
-
-.menu-buttons {
+.settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 220px;
-  width: 340px;
-}
-
-.menu-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 32px;
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  background: rgba(10, 8, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s, opacity 0.15s, box-shadow 0.15s;
-  border: none;
-  letter-spacing: 0.05em;
-  text-decoration: none;
 }
 
-.menu-btn.primary {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4);
+.sg { display: flex; flex-direction: column; gap: 7px; }
+.sg-label {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(148, 130, 100, 0.5);
+}
+.sg-hint { font-weight: 400; font-style: italic; text-transform: none; letter-spacing: 0; opacity: 0.6; }
+
+.sg-btns { display: flex; gap: 5px; }
+.sg-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 7px 8px; border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.015);
+  color: #475569; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.sg-btn.active {
+  border-color: rgba(200, 168, 78, 0.3);
+  color: #c8a84e;
+  background: rgba(200, 168, 78, 0.06);
+}
+.sg-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.03); }
+
+.domain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.dom-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 6px; border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.015);
+  color: #475569; cursor: pointer; transition: all 0.15s;
+  text-align: center;
+}
+.dom-btn.active {
+  border-color: color-mix(in srgb, var(--dc) 40%, transparent);
+  background: color-mix(in srgb, var(--dc) 6%, transparent);
+}
+.dom-btn.active .dom-icon { color: var(--dc); }
+.dom-btn.active .dom-name { color: var(--dc); }
+.dom-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.03); }
+.dom-icon { font-size: 18px; transition: color 0.15s; }
+.dom-name { font-size: 11px; font-weight: 700; color: #64748b; }
+.dom-desc { font-size: 8px; color: #334155; }
+
+/* ===== NAVIGATION ===== */
+.nav-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  width: 100%;
 }
 
-.menu-btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.5);
-}
-
-.game-mode-badge {
-  font-size: 9px;
-  font-weight: 400;
-  opacity: 0.7;
-  margin-left: 4px;
-  font-style: italic;
-}
-
-.menu-btn.alpha {
-  background: rgba(251, 191, 36, 0.1);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-}
-.menu-btn.alpha:hover {
-  transform: translateY(-2px);
-  background: rgba(251, 191, 36, 0.18);
-  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.2);
-}
-
-.menu-btn.arena {
-  background: rgba(52, 211, 153, 0.1);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.3);
-}
-.menu-btn.arena:hover {
-  transform: translateY(-2px);
-  background: rgba(52, 211, 153, 0.18);
-  box-shadow: 0 6px 20px rgba(52, 211, 153, 0.2);
-}
-
-.menu-btn.gallery {
-  background: rgba(168, 85, 247, 0.1);
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.3);
-}
-.menu-btn.gallery:hover {
-  transform: translateY(-2px);
-  background: rgba(168, 85, 247, 0.18);
-  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.2);
-}
-
-.menu-btn.secondary {
-  background: rgba(255,255,255,0.05);
-  color: #94a3b8;
-  border: 1px solid #334155;
-}
-.menu-btn.secondary:hover {
-  transform: translateY(-2px);
-  background: rgba(255,255,255,0.08);
-  border-color: #475569;
-}
-
-.btn-icon { font-size: 18px; }
-
-.edition-info {
+.nav-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
+  padding: 12px 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.01);
+  color: #475569;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.nav-tile:hover {
+  background: rgba(200, 168, 78, 0.04);
+  border-color: rgba(200, 168, 78, 0.12);
+  color: #c8a84e;
 }
 
-.edition-badge {
-  font-size: 11px;
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  padding: 3px 12px;
-  border-radius: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
+.nt-icon { font-size: 20px; }
+.nt-label { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; }
+.nt-desc { font-size: 8px; opacity: 0.5; }
 
-.edition-rules {
+/* ===== FOOTER ===== */
+.footer {
+  margin-top: 4px;
   display: flex;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--text-muted);
+  justify-content: center;
+}
+
+.footer-badge {
+  display: flex;
   align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: rgba(148, 130, 100, 0.3);
+  letter-spacing: 0.06em;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 480px) {
+  .menu-content { gap: 16px; padding: 24px 16px 40px; }
+  .title { font-size: 38px; letter-spacing: 0.2em; }
+  .emblem { width: 64px; height: 64px; }
+  .emblem-symbol { font-size: 30px; }
+  .orn-row { width: 160px; }
+  .mode-card { padding: 12px 14px; }
+  .mode-name { font-size: 15px; }
+  .mode-gold .mode-icon { font-size: 26px; }
+  .mode-slava .mode-icon { font-size: 24px; }
+  .nav-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>

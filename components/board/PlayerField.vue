@@ -1,29 +1,50 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import BattleLine from './BattleLine.vue'
-import { BattleLine as BL } from '../../game-engine/constants'
-import type { PlayerState } from '../../game-engine/types'
+import { BattleLine as BL, AdventureType } from '../../game-engine/constants'
+import type { PlayerState, ActiveEventCard } from '../../game-engine/types'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 
-defineProps<{
+const props = defineProps<{
   playerState: PlayerState
   isPlayerSide: boolean
 }>()
 
 const game = useGameStore()
 const ui = useUIStore()
-const activeEvents = computed(() => game.state?.activeEvents ?? [])
 
-function durationLabel(event: any): string {
-  if (event.cardData.persistence === 'permanent') return 'Trwały'
-  if (event.cardData.persistence === 'duration') return event.roundsRemaining !== null ? `${event.roundsRemaining}r` : '∞'
-  if (event.cardData.persistence === 'conditional') return 'Warunek'
-  return ''
+// Filtruj zdarzenia: pokaż wszystkie OPRÓCZ lokacji (adventureType 2) — lokacje wpływają globalnie, nie idą do linii AKTYWNE
+const activeEvents = computed(() => {
+  const all = game.state?.activeEvents ?? []
+  return all.filter(ev => ev.cardData.adventureType !== AdventureType.LOCATION)
+})
+
+// Persistence → icon/label/color
+function persistenceInfo(ev: ActiveEventCard) {
+  const p = ev.cardData.persistence
+  if (p === 'permanent') return { icon: 'game-icons:infinity', label: 'Trwały', color: '#a78bfa' }
+  if (p === 'duration')  return { icon: 'game-icons:hourglass', label: ev.roundsRemaining !== null ? `${ev.roundsRemaining}` : '∞', color: '#fbbf24' }
+  if (p === 'conditional') return { icon: 'game-icons:breaking-chain', label: 'War.', color: '#f87171' }
+  return { icon: 'game-icons:scroll-unfurled', label: '', color: '#94a3b8' }
 }
 
-function ownerLabel(event: any): string {
-  return event.owner === 'player1' ? 'Ty' : 'AI'
+// Adventure type → color accent
+function adventureColor(ev: ActiveEventCard) {
+  const t = (ev.cardData as any).adventureType
+  if (t === 0) return '#f59e0b'  // zdarzenie — amber
+  if (t === 1) return '#6366f1'  // artefakt — indigo
+  if (t === 2) return '#10b981'  // lokacja — emerald
+  return '#94a3b8'
+}
+
+function ownerLabel(ev: ActiveEventCard): string {
+  return ev.owner === 'player1' ? 'TY' : 'AI'
+}
+
+function ownerColor(ev: ActiveEventCard): string {
+  return ev.owner === 'player1' ? '#4ade80' : '#f87171'
 }
 </script>
 
@@ -50,19 +71,42 @@ function ownerLabel(event: any): string {
       :is-player-side="isPlayerSide"
     />
 
-    <!-- Aktywne zdarzenia: widoczne tylko na planszy gracza, między L1 a L2 -->
-    <div v-if="isPlayerSide && activeEvents.length > 0" class="events-zone">
+    <!-- Aktywne zdarzenia: między L1 a L2, widoczne na OBU polach — zawsze widoczna strefa -->
+    <div class="events-zone">
+      <div class="events-zone-label">
+        <Icon icon="game-icons:scroll-unfurled" class="ez-label-icon" />
+        <span>AKTYWNE</span>
+      </div>
+      <div v-if="activeEvents.length === 0" class="events-empty">—</div>
       <div
         v-for="ev in activeEvents"
         :key="ev.instanceId"
-        class="event-mini-card"
+        class="event-scroll"
+        :style="{ '--ev-color': adventureColor(ev), '--ev-owner-color': ownerColor(ev) }"
         @mouseenter="ui.showTooltip(ev.instanceId)"
         @mouseleave="ui.hideTooltip()"
       >
-        <div class="ev-name">{{ ev.cardData.name }}</div>
-        <div class="ev-meta">
-          <span class="ev-owner">{{ ownerLabel(ev) }}</span>
-          <span class="ev-dur">{{ durationLabel(ev) }}</span>
+        <!-- Kolorowy accent bar po lewej -->
+        <div class="ev-accent" />
+
+        <!-- Górna część: nazwa + owner -->
+        <div class="ev-header">
+          <span class="ev-name">{{ ev.cardData.name }}</span>
+          <span class="ev-owner" :style="{ color: ownerColor(ev) }">{{ ownerLabel(ev) }}</span>
+        </div>
+
+        <!-- Dolna część: persistence icon + counter -->
+        <div class="ev-footer">
+          <Icon :icon="persistenceInfo(ev).icon" class="ev-persist-icon" :style="{ color: persistenceInfo(ev).color }" />
+          <!-- Duży widoczny licznik rund -->
+          <span
+            v-if="ev.roundsRemaining != null"
+            class="ev-counter"
+            :class="{ 'ev-counter-low': ev.roundsRemaining <= 1 }"
+          >{{ ev.roundsRemaining }}</span>
+          <span v-else class="ev-persist-label" :style="{ color: persistenceInfo(ev).color }">
+            {{ persistenceInfo(ev).label }}
+          </span>
         </div>
       </div>
     </div>
@@ -100,29 +144,31 @@ function ownerLabel(event: any): string {
 .field-label {
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.15em;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 2px;
+  padding: 0 3px;
   flex-shrink: 0;
   user-select: none;
-  opacity: 0.5;
 }
 
 .field-label--player {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.04);
-  border-right: 1px solid rgba(34, 197, 94, 0.15);
+  color: rgba(134, 239, 172, 0.6);
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.06) 0%, rgba(34, 197, 94, 0.02) 100%);
+  border-right: 2px solid rgba(34, 197, 94, 0.2);
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
 }
 
 .field-label--enemy {
-  color: #fca5a5;
-  background: rgba(239, 68, 68, 0.04);
-  border-left: 1px solid rgba(239, 68, 68, 0.15);
+  color: rgba(252, 165, 165, 0.6);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.06) 0%, rgba(239, 68, 68, 0.02) 100%);
+  border-left: 2px solid rgba(239, 68, 68, 0.2);
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
 }
 
 /* ===== STREFA AKTYWNYCH ZDARZEŃ ===== */
@@ -130,62 +176,220 @@ function ownerLabel(event: any): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
-  padding: 6px 3px;
-  width: 70px;
+  padding: 4px 3px;
+  width: 110px;
   flex-shrink: 0;
-  border-left: 1px dashed rgba(99, 102, 241, 0.25);
-  border-right: 1px dashed rgba(99, 102, 241, 0.25);
+  border-left: 1px solid rgba(200, 168, 78, 0.1);
+  border-right: 1px solid rgba(200, 168, 78, 0.1);
   overflow-y: auto;
+  scrollbar-width: none;
+  background: rgba(0, 0, 0, 0.15);
 }
+.events-zone::-webkit-scrollbar { display: none; }
 
-.event-mini-card {
-  width: 62px;
-  border-radius: 4px;
-  border: 1px solid rgba(99, 102, 241, 0.45);
-  background: rgba(30, 27, 75, 0.7);
-  padding: 4px 5px;
-  cursor: default;
-  transition: border-color 0.15s, background 0.15s;
+/* Label: AKTYWNE */
+.events-zone-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: rgba(200, 168, 78, 0.5);
+  text-transform: uppercase;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(200, 168, 78, 0.08);
+  width: 100%;
+  justify-content: center;
   flex-shrink: 0;
 }
+.ez-label-icon {
+  width: 10px;
+  height: 10px;
+  opacity: 0.5;
+}
 
-.event-mini-card:hover {
-  border-color: rgba(139, 92, 246, 0.8);
-  background: rgba(99, 102, 241, 0.15);
+/* Pusty placeholder gdy brak aktywnych */
+.events-empty {
+  font-size: 10px;
+  color: rgba(200, 168, 78, 0.15);
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* Karta przygody — zwój */
+.event-scroll {
+  width: 102px;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--ev-color) 35%, transparent);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(10, 10, 30, 0.95) 100%);
+  padding: 0;
+  cursor: help;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.event-scroll:hover {
+  border-color: color-mix(in srgb, var(--ev-color) 70%, transparent);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 12px 1px color-mix(in srgb, var(--ev-color) 20%, transparent);
+  transform: scale(1.05);
+  z-index: 5;
+}
+
+/* Kolorowy accent bar po lewej */
+.ev-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ev-color);
+  opacity: 0.7;
+}
+
+/* Górna część: nazwa + owner */
+.ev-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2px;
+  padding: 4px 5px 2px 7px;
 }
 
 .ev-name {
-  font-size: 8px;
-  font-weight: 700;
-  color: #c7d2fe;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 14px;
+  font-weight: 800;
+  color: #e2e8f0;
   line-height: 1.2;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-}
-
-.ev-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 3px;
-  gap: 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  flex: 1;
 }
 
 .ev-owner {
-  font-size: 7px;
-  color: #475569;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+  text-shadow: 0 0 4px currentColor;
 }
 
-.ev-dur {
-  font-size: 7px;
+/* Dolna część: ikona persistence + licznik */
+.ev-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 5px 4px 7px;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.ev-persist-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+/* Duży widoczny licznik rund */
+.ev-counter {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 16px;
+  font-weight: 900;
+  color: #fbbf24;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.5), 0 1px 3px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+  animation: counter-glow 2s ease-in-out infinite;
+}
+
+.ev-counter-low {
+  color: #ef4444;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6), 0 1px 3px rgba(0, 0, 0, 0.8);
+  animation: counter-urgent 1s ease-in-out infinite;
+}
+
+@keyframes counter-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+@keyframes counter-urgent {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+.ev-persist-label {
+  font-size: 8px;
   font-weight: 700;
-  color: #a78bfa;
-  background: rgba(167, 139, 250, 0.12);
-  padding: 1px 3px;
-  border-radius: 2px;
+  letter-spacing: 0.05em;
+}
+
+/* ====== MOBILE RESPONSIVE ====== */
+@media (max-width: 767px) {
+  .player-field {
+    flex-direction: column !important;
+    height: auto;
+    flex: 1;
+    min-height: 0;
+    gap: 1px;
+  }
+  .player-field--player {
+    flex-direction: column-reverse !important;
+    border-bottom: none;
+  }
+  .player-field--enemy {
+    border-bottom: none;
+  }
+
+  /* Label ukryty na mobile — oszczędność miejsca, pozycja oczywista */
+  .field-label {
+    display: none;
+  }
+
+  /* Events zone: poziomy, kompaktowy */
+  .events-zone {
+    flex-direction: row;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid rgba(200,168,78,0.08);
+    border-bottom: 1px solid rgba(200,168,78,0.08);
+    padding: 2px 4px;
+    scrollbar-width: none;
+    gap: 3px;
+  }
+  .events-zone::-webkit-scrollbar { display: none; }
+  .events-zone-label {
+    writing-mode: vertical-rl;
+    padding: 0 2px 0 0;
+    border-bottom: none;
+    border-right: 1px solid rgba(200,168,78,0.06);
+    width: auto;
+    font-size: 5px;
+  }
+  .event-scroll {
+    width: 52px;
+    min-width: 52px;
+  }
+  .ev-name { font-size: 6px; }
+  .ev-owner { font-size: 5px; }
+  .ev-counter { font-size: 12px; }
+  .ev-persist-icon { width: 9px; height: 9px; }
+  .ev-header { padding: 2px 3px 1px 5px; }
+  .ev-footer { padding: 1px 3px 2px 5px; }
 }
 </style>

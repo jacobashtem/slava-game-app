@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" fill="none">
+  <defs>
+    <radialGradient id="pBg" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#0c1e3d"/>
+      <stop offset="100%" stop-color="#040810"/>
+    </radialGradient>
+    <radialGradient id="pGlow" cx="50%" cy="40%" r="30%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="260" rx="12" fill="url(#pBg)"/>
+  <rect width="200" height="260" rx="12" fill="url(#pGlow)"/>
+  <rect x="6" y="6" width="188" height="248" rx="9" stroke="#60a5fa" stroke-opacity="0.15" stroke-width="1" fill="none"/>
+  <!-- Lightning bolt - main -->
+  <g opacity="0.8">
+    <path d="M108,40 L90,90 L105,88 L85,140 L100,137 L80,190" stroke="#60a5fa" stroke-width="3.5" fill="none" stroke-linejoin="round">
+      <animate attributeName="opacity" values="0.8;1;0.6;1;0.8" dur="3s" repeatCount="indefinite"/>
+    </path>
+    <!-- Glow layer -->
+    <path d="M108,40 L90,90 L105,88 L85,140 L100,137 L80,190" stroke="#93c5fd" stroke-width="6" fill="none" stroke-linejoin="round" opacity="0.15"/>
+    <!-- Inner bright -->
+    <path d="M108,40 L90,90 L105,88 L85,140 L100,137 L80,190" stroke="#dbeafe" stroke-width="1" fill="none" stroke-linejoin="round" opacity="0.5"/>
+  </g>
+  <!-- Secondary bolt -->
+  <g opacity="0.4">
+    <path d="M135,55 L125,85 L132,83 L118,120" stroke="#60a5fa" stroke-width="2" fill="none" stroke-linejoin="round">
+      <animate attributeName="opacity" values="0.4;0.7;0.2;0.5;0.4" dur="4s" repeatCount="indefinite"/>
+    </path>
+  </g>
+  <!-- Axe symbol (Perun's axe) -->
+  <g transform="translate(140,155)" opacity="0.3">
+    <line x1="0" y1="-20" x2="0" y2="20" stroke="#60a5fa" stroke-width="2"/>
+    <path d="M0,-15 Q15,-12 18,-5 Q15,2 0,5" fill="#60a5fa" opacity="0.3" stroke="#60a5fa" stroke-width="1"/>
+  </g>
+  <!-- Storm clouds -->
+  <g fill="#60a5fa" opacity="0.1">
+    <ellipse cx="70" cy="35" rx="25" ry="10"/>
+    <ellipse cx="90" cy="30" rx="20" ry="12"/>
+    <ellipse cx="120" cy="33" rx="22" ry="9"/>
+    <ellipse cx="140" cy="38" rx="18" ry="8"/>
+  </g>
+  <!-- Electric sparks -->
+  <circle cx="95" cy="90" r="2" fill="#93c5fd" opacity="0.5"><animate attributeName="opacity" values="0;0.7;0;0.5;0" dur="2s" repeatCount="indefinite"/></circle>
+  <circle cx="88" cy="140" r="1.5" fill="#60a5fa" opacity="0.4"><animate attributeName="opacity" values="0;0.6;0;0.4;0" dur="1.5s" repeatCount="indefinite"/></circle>
+  <circle cx="82" cy="188" r="2.5" fill="#93c5fd" opacity="0.3"><animate attributeName="opacity" values="0;0.5;0;0.3;0" dur="2.5s" repeatCount="indefinite"/></circle>
+  <text x="100" y="215" text-anchor="middle" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#60a5fa" opacity="0.9">PERUN</text>
+  <text x="100" y="235" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#60a5fa" opacity="0.4">Wladca Piorunow</text>
+  <line x1="50" y1="245" x2="150" y2="245" stroke="#60a5fa" stroke-opacity="0.15" stroke-width="0.5"/>
+</svg>

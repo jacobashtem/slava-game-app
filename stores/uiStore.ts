@@ -35,6 +35,8 @@ export const useUIStore = defineStore('ui', () => {
   const revealingCardId = ref<string | null>(null)
   // Karta aktualnie kontratakvująca (ikona tarczy)
   const counterAttackCardId = ref<string | null>(null)
+  // Typ ataku aktualnie animowanego (do VFX i SFX)
+  const animatingAttackType = ref<number | null>(null) // AttackType enum: 0=MELEE,1=ELEM,2=MAGIC,3=RANGED
   // Floating damage numbers: instanceId → kwota obrażeń
   const hitAmounts = reactive<Record<string, number>>({})
   // Przygoda czekająca na wybór celu istoty (artefakt LUB zdarzenie z targetem)
@@ -65,6 +67,9 @@ export const useUIStore = defineStore('ui', () => {
 
   // Flash na aktywnej karcie przygody (event chip glow)
   const flashingEventId = ref<string | null>(null)
+
+  // Mobile: drawer panel (deck/graveyard/gold info)
+  const mobileDrawerOpen = ref(false)
 
   // ===== COMPUTED =====
   const isSelectingTarget = computed(() => mode.value === 'attacking' && attackingCardId.value !== null)
@@ -117,6 +122,7 @@ export const useUIStore = defineStore('ui', () => {
     setTimeout(() => {
       animatingAttack.value = null
       animatingHit.value = null
+      animatingAttackType.value = null
     }, 900)
   }
 
@@ -132,6 +138,13 @@ export const useUIStore = defineStore('ui', () => {
     setTimeout(() => {
       delete hitAmounts[instanceId]
     }, 1600)
+  }
+
+  // "ODPORNY" flash when attack deals 0 damage (soft-fail: flying, immunity, etc.)
+  const immuneCardId = ref<string | null>(null)
+  function triggerImmuneFlash(instanceId: string) {
+    immuneCardId.value = instanceId
+    setTimeout(() => { immuneCardId.value = null }, 1200)
   }
 
   function showTooltip(instanceId: string) {
@@ -221,6 +234,7 @@ export const useUIStore = defineStore('ui', () => {
     animatingDeath,
     revealingCardId,
     counterAttackCardId,
+    animatingAttackType,
     hitAmounts,
     triggerDamageNumber,
     highlightedLines,
@@ -240,6 +254,7 @@ export const useUIStore = defineStore('ui', () => {
     showInfoBox,
     flashingEventId,
     flashEventCard,
+    mobileDrawerOpen,
     isSelectingTarget,
     isPlacingCard,
     isMovingCard,
@@ -250,6 +265,8 @@ export const useUIStore = defineStore('ui', () => {
     clearSelection,
     triggerAttackAnimation,
     triggerDeathAnimation,
+    immuneCardId,
+    triggerImmuneFlash,
     showTooltip,
     hideTooltip,
     openGameOver,

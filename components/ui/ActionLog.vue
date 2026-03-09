@@ -1,16 +1,31 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 
 const game = useGameStore()
 
-function entryClass(type: string) {
-  if (type === 'attack' || type === 'combat') return 'log-attack'
-  if (type === 'death') return 'log-death'
-  if (type === 'play') return 'log-play'
-  if (type === 'phase') return 'log-phase'
-  if (type === 'system') return 'log-system'
-  return 'log-default'
+type LogItem = { message: string; type: string }
+const playerLogs = computed((): LogItem[] => (game.playerCurrentLogs ?? []) as LogItem[])
+const aiLogs = computed((): LogItem[] => (game.aiCurrentLogs ?? []) as LogItem[])
+
+const typeConfig: Record<string, { icon: string; color: string }> = {
+  attack:  { icon: 'game-icons:crossed-swords', color: '#fb923c' },
+  combat:  { icon: 'game-icons:sword-clash',    color: '#fb923c' },
+  death:   { icon: 'game-icons:skull-crossed-bones', color: '#ef4444' },
+  play:    { icon: 'game-icons:card-play',       color: '#4ade80' },
+  phase:   { icon: 'game-icons:hourglass',       color: '#a78bfa' },
+  system:  { icon: 'game-icons:scroll-unfurled', color: '#fbbf24' },
+  effect:  { icon: 'game-icons:magic-swirl',     color: '#c084fc' },
+  draw:    { icon: 'game-icons:card-draw',       color: '#60a5fa' },
+  default: { icon: 'game-icons:perspective-dice-six', color: '#64748b' },
 }
+
+function getConfig(type: string | undefined) {
+  return typeConfig[type ?? 'default'] ?? typeConfig.default
+}
+function logColor(entry: LogItem | undefined): string { return getConfig(entry?.type)?.color ?? '#64748b' }
+function logIcon(entry: LogItem | undefined): string { return getConfig(entry?.type)?.icon ?? 'game-icons:perspective-dice-six' }
 </script>
 
 <template>
@@ -20,29 +35,33 @@ function entryClass(type: string) {
       <span class="log-label log-label-player">TY</span>
       <TransitionGroup name="log-slide" tag="div" class="log-entries">
         <span
-          v-for="(entry, i) in game.playerCurrentLogs"
+          v-for="(entry, i) in playerLogs"
           :key="entry.message + i"
-          :class="['log-entry', entryClass(entry.type)]"
+          class="log-entry"
+          :style="{ '--log-color': logColor(entry) }"
         >
-          {{ entry.message }}
+          <Icon :icon="logIcon(entry)" class="log-icon" />
+          <span class="log-text">{{ entry.message }}</span>
         </span>
       </TransitionGroup>
     </div>
 
-    <div class="log-divider" />
+    <div class="log-divider">᛭</div>
 
     <!-- PRAWA KOLUMNA: logi tury AI -->
     <div class="log-col log-col-ai">
-      <span class="log-label log-label-ai">AI</span>
       <TransitionGroup name="log-slide" tag="div" class="log-entries">
         <span
-          v-for="(entry, i) in game.aiCurrentLogs"
+          v-for="(entry, i) in aiLogs"
           :key="entry.message + i"
-          :class="['log-entry', entryClass(entry.type)]"
+          class="log-entry"
+          :style="{ '--log-color': logColor(entry) }"
         >
-          {{ entry.message }}
+          <Icon :icon="logIcon(entry)" class="log-icon" />
+          <span class="log-text">{{ entry.message }}</span>
         </span>
       </TransitionGroup>
+      <span class="log-label log-label-ai">AI</span>
     </div>
   </div>
 </template>
@@ -55,6 +74,7 @@ function entryClass(type: string) {
   overflow: hidden;
   min-width: 0;
   width: 100%;
+  padding: 2px 4px;
 }
 
 .log-col {
@@ -70,38 +90,40 @@ function entryClass(type: string) {
 .log-col-ai     { justify-content: flex-end; }
 
 .log-label {
+  font-family: var(--font-display, Georgia, serif);
   font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   flex-shrink: 0;
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 3px;
-  opacity: 0.7;
 }
 
 .log-label-player {
   color: #86efac;
-  background: rgba(134,239,172,0.08);
-  border: 1px solid rgba(134,239,172,0.15);
+  background: rgba(134,239,172,0.1);
+  border: 1px solid rgba(134,239,172,0.2);
+  text-shadow: 0 0 6px rgba(134,239,172,0.3);
 }
 
 .log-label-ai {
-  color: #818cf8;
-  background: rgba(129,140,248,0.08);
-  border: 1px solid rgba(129,140,248,0.15);
+  color: #fca5a5;
+  background: rgba(252,165,165,0.1);
+  border: 1px solid rgba(252,165,165,0.2);
+  text-shadow: 0 0 6px rgba(252,165,165,0.3);
 }
 
 .log-divider {
-  width: 1px;
-  height: 20px;
-  background: rgba(255,255,255,0.08);
+  font-size: 10px;
+  color: rgba(200, 168, 78, 0.25);
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .log-entries {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   flex-wrap: nowrap;
   overflow: hidden;
@@ -113,24 +135,39 @@ function entryClass(type: string) {
 }
 
 .log-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10px;
   padding: 2px 7px;
-  border-radius: 3px;
+  border-radius: 4px;
   white-space: nowrap;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.05);
   flex-shrink: 0;
+  color: var(--log-color, #94a3b8);
+  background: color-mix(in srgb, var(--log-color, #94a3b8) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--log-color, #94a3b8) 18%, transparent);
 }
 
-.log-attack { color: #fca5a5; }
-.log-death  { color: #f87171; }
-.log-play   { color: #86efac; }
-.log-phase  { color: #a78bfa; font-weight: 600; }
-.log-system { color: #fbbf24; }
-.log-default { color: #94a3b8; }
+.log-icon {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
 
-.log-slide-enter-active { transition: all 0.25s ease; }
-.log-slide-enter-from   { opacity: 0; transform: translateY(-6px); }
+.log-text {
+  line-height: 1.3;
+}
+
+.log-slide-enter-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.log-slide-enter-from   { opacity: 0; transform: translateY(-8px) scale(0.9); }
 .log-slide-leave-active { transition: all 0.2s ease; position: absolute; }
-.log-slide-leave-to     { opacity: 0; }
+.log-slide-leave-to     { opacity: 0; transform: translateX(-10px); }
+
+/* ====== MOBILE RESPONSIVE ====== */
+@media (max-width: 767px) {
+  .action-log {
+    display: none;
+  }
+}
 </style>

@@ -77,9 +77,11 @@ const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null 
   text-align: center;
   font-size: 11px;
   font-weight: 500;
-  padding: 5px 16px;
+  padding: 6px 16px 8px;
   flex-shrink: 0;
   letter-spacing: 0.02em;
+  position: relative;
+  z-index: 2;
 }
 
 .hint-info {
@@ -114,4 +116,13 @@ const hint = computed((): { text: string; type: 'info' | 'warn' | 'ok' } | null 
 
 .hint-fade-enter-active, .hint-fade-leave-active { transition: opacity 0.2s; }
 .hint-fade-enter-from, .hint-fade-leave-to { opacity: 0; }
+
+/* ====== MOBILE ====== */
+@media (max-width: 767px) {
+  .game-hint {
+    font-size: 9px;
+    padding: 2px 8px;
+    line-height: 1.3;
+  }
+}
 </style>

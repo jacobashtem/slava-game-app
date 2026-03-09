@@ -10,7 +10,8 @@ import { drawCard, drawCards } from './DeckBuilder'
 import { placeCreatureOnField, canPlayCreature, canPlaceInLine } from './LineManager'
 import { resolveAttack } from './CombatResolver'
 import { getEffect, canActivateEffect } from './EffectRegistry'
-import { GOLD_EDITION_RULES } from './constants'
+import { GOLD_EDITION_RULES, SLAVA_RULES } from './constants'
+import { grantTrophyBonus, checkHoliday, getEnhancedAdventureCost, applySeasonalBuffToNewCreature, checkBreakthrough } from './GloryManager'
 
 // ===================================================================
 // FAZY TURY
@@ -275,8 +276,15 @@ export function playAdventure(
     throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest przygodą.`)
   }
 
-  // Koszt: podstawowy = DARMOWY, ulepszony = 1 ZŁ
-  const adventureCost = useEnhanced ? GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST : 0
+  // Koszt: podstawowy = DARMOWY, ulepszony = 1 ZŁ/PS (zależnie od trybu)
+  let adventureCost = 0
+  if (useEnhanced) {
+    if (newState.gameMode === 'slava') {
+      adventureCost = getEnhancedAdventureCost(newState, newState.currentTurn)
+    } else {
+      adventureCost = GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST
+    }
+  }
 
   // Tęsknica: blokuje enhanced adventures
   if (useEnhanced) {
@@ -289,11 +297,19 @@ export function playAdventure(
     }
   }
 
-  if (adventureCost > 0 && currentPlayer.gold < adventureCost) {
-    throw new Error(`[TurnManager] Brak Złocisza. Potrzebujesz ${adventureCost} ZŁ na ulepszony efekt.`)
+  if (newState.gameMode === 'slava') {
+    // Sława: koszt w PS (glory)
+    if (adventureCost > 0 && currentPlayer.glory < adventureCost) {
+      throw new Error(`[TurnManager] Brak PS. Potrzebujesz ${adventureCost} PS na ulepszony efekt.`)
+    }
+    currentPlayer.glory -= adventureCost
+  } else {
+    // Gold: koszt w ZŁ
+    if (adventureCost > 0 && currentPlayer.gold < adventureCost) {
+      throw new Error(`[TurnManager] Brak Złocisza. Potrzebujesz ${adventureCost} ZŁ na ulepszony efekt.`)
+    }
+    currentPlayer.gold -= adventureCost
   }
-
-  currentPlayer.gold -= adventureCost
   currentPlayer.adventuresPlayedThisTurn += 1
 
   // Usuń z ręki
@@ -369,7 +385,11 @@ export function playAdventure(
     currentPlayer.hand.push(card)
     log.push(addLog(newState, `Zlot Czarownic blokuje zaklęcie ${card.cardData.name} — ${zlotEvent.roundsRemaining} blokad pozostało (Zlot Czarownic anuluje 3 kolejne przygody wroga).`, 'effect'))
     currentPlayer.adventuresPlayedThisTurn--
-    currentPlayer.gold += useEnhanced ? GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST : 0
+    if (newState.gameMode === 'slava') {
+      currentPlayer.glory += adventureCost
+    } else {
+      currentPlayer.gold += adventureCost
+    }
     return { newState, log }
   }
 
@@ -510,13 +530,20 @@ export function activateCreatureEffect(
     }
   }
 
-  // Sprawdź i pobierz koszt ZŁ
+  // Sprawdź i pobierz koszt (ZŁ w Gold, PS w Sława)
   const cost = isFreeActivation ? 0 : (effect.activationCost ?? 0)
   const owner = newState.players[newState.currentTurn]
-  if (owner.gold < cost) {
-    throw new Error(`Brak Złocisza. Masz ${owner.gold} ZŁ, potrzebujesz ${cost}.`)
+  if (newState.gameMode === 'slava') {
+    if (owner.glory < cost) {
+      throw new Error(`Brak PS. Masz ${owner.glory} PS, potrzebujesz ${cost}.`)
+    }
+    owner.glory -= cost
+  } else {
+    if (owner.gold < cost) {
+      throw new Error(`Brak Złocisza. Masz ${owner.gold} ZŁ, potrzebujesz ${cost}.`)
+    }
+    owner.gold -= cost
   }
-  owner.gold -= cost
 
   // Znajdź cel (jeśli podano)
   let targetCard: CardInstance | undefined
@@ -535,8 +562,12 @@ export function activateCreatureEffect(
     newState = result.newState
     log.push(...result.log)
   } catch (err) {
-    // Activation failed — refund gold
-    owner.gold += cost // zwróć złoto jeśli błąd
+    // Activation failed — refund
+    if (newState.gameMode === 'slava') {
+      owner.glory += cost
+    } else {
+      owner.gold += cost
+    }
   }
 
   // Zaktualizuj metadane cooldownu (szukamy karty w zaktualizowanym stanie)
@@ -651,7 +682,18 @@ export function performAttack(
     }
   }
 
+  // Zapamiętaj linię obrońcy przed atakiem (do checkBreakthrough)
+  const defenderCard = findCardAnywhere(state, defenderInstanceId)
+  const defenderLineBefore = defenderCard?.line ?? null
+
   const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId, { forceBrzeginaSkip: options?.forceBrzeginaSkip })
+
+  // Sława: sprawdź przełamanie linii (atak na pustą linię wroga → +1/-1 PS)
+  if (result.defenderDied && defenderLineBefore != null) {
+    const attackerSide = (result.attacker.owner ?? 'player1') as import('./types').PlayerSide
+    const breakthroughLog = checkBreakthrough(newState, attackerSide, defenderLineBefore)
+    result.log.push(...breakthroughLog)
+  }
 
   // Kościej: po walce sprawdź czy w cmentarzu gracza jest Kościej z flagą kosciejCanPaidResurrect
   for (const side of ['player1', 'player2'] as const) {
@@ -764,6 +806,14 @@ export function processEndPhase(state: GameState): { newState: GameState; log: L
 
   // Trigger ON_TURN_END dla kart aktualnego gracza
   newState = processTurnEndEffects(newState, log)
+
+  // Sława: trofea + święto check na koniec tury
+  if (newState.gameMode === 'slava') {
+    const trophyLogs = grantTrophyBonus(newState)
+    log.push(...trophyLogs)
+    const holidayLogs = checkHoliday(newState)
+    log.push(...holidayLogs)
+  }
 
   // Zmień turę
   const nextPlayer: PlayerSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'

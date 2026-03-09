@@ -54,8 +54,8 @@ const particleChar = computed(() => ({
   font-size: var(--size, 10px);
   opacity: var(--opacity, 0.2);
   animation: particle-fall var(--duration, 8s) linear var(--delay, 0s) infinite;
-  filter: blur(0.5px);
   user-select: none;
+  will-change: transform, opacity;
 }
 
 @keyframes particle-fall {
@@ -77,15 +77,14 @@ const particleChar = computed(() => ({
 
 /* Wiosna: delikatne płatki */
 .weather-spring .particle {
-  filter: blur(0.3px) drop-shadow(0 0 2px rgba(255, 182, 193, 0.3));
+  opacity: calc(var(--opacity, 0.2) * 0.9);
 }
 
 /* Lato: świetliki */
 .weather-summer .particle {
-  filter: none;
   animation-name: firefly-float;
   color: #fbbf24;
-  text-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+  text-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
 }
 
 @keyframes firefly-float {
@@ -111,7 +110,6 @@ const particleChar = computed(() => ({
 
 /* Jesien: liście */
 .weather-autumn .particle {
-  filter: blur(0.2px) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   animation-name: leaf-fall;
 }
 
@@ -138,7 +136,6 @@ const particleChar = computed(() => ({
 /* Zima: śnieg */
 .weather-winter .particle {
   color: #e2e8f0;
-  filter: blur(0.3px) drop-shadow(0 0 3px rgba(255, 255, 255, 0.4));
   animation-name: snow-fall;
 }
 
@@ -159,6 +156,13 @@ const particleChar = computed(() => ({
   100% {
     transform: translateY(calc(100vh + 20px)) translateX(calc(var(--x-drift, 20px) * 1.3));
     opacity: 0;
+  }
+}
+
+/* Reduce particles on mobile for performance */
+@media (max-width: 767px) {
+  .weather-container .weather-particle:nth-child(n+8) {
+    display: none;
   }
 }
 </style>

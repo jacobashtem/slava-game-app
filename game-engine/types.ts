@@ -1,6 +1,7 @@
 import type {
   AttackType, Domain, CardPosition, GamePhase,
-  AdventureType, BattleLine, EffectTrigger, EffectPriority
+  AdventureType, BattleLine, EffectTrigger, EffectPriority,
+  Season,
 } from './constants'
 
 // ===== RAW JSON DATA SHAPES =====
@@ -184,6 +185,10 @@ export type PendingInteractionType =
   | 'on_play_target'           // ON_PLAY z wymaganym celem (np. Jaroszek)
   | 'brzegina_shield'          // Brzegina: czy użyć tarczy za ZŁ?
   | 'kosciej_resurrect'        // Kościej: czy wskrzesić za ZŁ?
+  // Tryb Sława!
+  | 'auction_bid'              // Licytacja o Bożą Łaskę
+  | 'divine_favor_target'      // Wybór celu mocy boga
+  | 'swarozyc_split_damage'    // Swarożyc: rozdziel 15 obrażeń
 
 export interface PendingInteraction {
   type: PendingInteractionType
@@ -218,6 +223,8 @@ export interface GameState {
   awaitingOnPlayConfirmation: string | null  // instanceId karty
   // Oczekująca interakcja gracza (blokuje grę do czasu odpowiedzi)
   pendingInteraction?: PendingInteraction
+  // Dane trybu Sława! (null/undefined w Gold Edition)
+  slavaData?: SlavaState
 }
 
 // ===== COMBAT =====
@@ -241,7 +248,7 @@ export interface LogEntry {
   turn: number
   phase: GamePhase
   message: string
-  type: 'attack' | 'damage' | 'death' | 'play' | 'effect' | 'system' | 'gold' | 'draw'
+  type: 'attack' | 'damage' | 'death' | 'play' | 'effect' | 'system' | 'gold' | 'draw' | 'glory'
   involvedCards?: string[]  // instanceId kart których dotyczy wpis
 }
 
@@ -297,11 +304,15 @@ export interface EffectDefinition {
 // ===== AI =====
 
 export interface AIDecision {
-  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'end_turn'
+  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'end_turn' | 'activate_effect' | 'invoke_god'
   cardInstanceId?: string
   targetInstanceId?: string
   targetLine?: BattleLine
   targetPosition?: CardPosition
+  // Slava-specific
+  godId?: number
+  enhanced?: boolean
+  bidAmount?: number
 }
 
 // ===== PRECEDENT (Księga Precedensów) =====
@@ -321,3 +332,65 @@ export type PrecedentResolution =
   | 'ACTIVE_WINS'          // efekt aktywny wygrywa nad pasywnym
   | 'PASSIVE_WINS'         // efekt pasywny wygrywa
   | 'CUSTOM'               // custom resolver function
+
+// ===== TRYB SŁAWA! — TYPY =====
+
+export interface GodData {
+  id: number
+  name: string
+  powerID: string           // effectId bazowej mocy
+  enhancedPowerID: string   // effectId wzmocnionej mocy
+  cost: number
+  usedThisCycle: boolean    // czy użyty w aktualnym cyklu pory roku
+}
+
+export interface HolidayMission {
+  seasonId: Season
+  name: string
+  condition: (state: GameState, side: PlayerSide) => boolean
+  reward: number  // PS
+  completed: Record<PlayerSide, boolean>  // raz per cykl pory roku
+}
+
+export interface AuctionState {
+  godId: number
+  enhanced: boolean
+  bids: { side: PlayerSide; amount: number }[]
+  currentHighBidder: PlayerSide
+  currentHighBid: number
+  resolved: boolean
+}
+
+export interface SlavaState {
+  // Sezon (obliczany z rundy, ale trzymamy dla UI)
+  currentSeason: Season
+  previousSeason: Season | null
+  seasonRound: number        // 1-4 w ramach aktualnej pory
+
+  // Bogowie dostępni w aktualnej porze
+  gods: GodData[]
+
+  // Aktywne święto
+  holiday: HolidayMission | null
+
+  // Sezonowe buffy nałożone (do usunięcia przy zmianie pory)
+  seasonalBuffsApplied: boolean
+
+  // Paraliż domeny (1 runda po zmianie pory)
+  paralyzedDomain: Domain | null
+  paralysisRoundsLeft: number
+
+  // Licytacja (aktywna lub null)
+  activeAuction: AuctionState | null
+
+  // Tracking per turn: damage dealt (dla Święta Kupały)
+  damageDealtThisTurn: Record<PlayerSide, number>
+
+  // Tracking per turn: killed enemy base DEF (dla trofeów)
+  killedEnemyDefenseThisTurn: Record<PlayerSide, number>
+}
+
+// Rozszerzenie GameState o dane Sława (opcjonalne — null w Gold Edition)
+export interface GameStateSlavaExtension {
+  slavaData?: SlavaState
+}
