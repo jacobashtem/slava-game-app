@@ -1319,8 +1319,23 @@ registerEffect({
     const newState = cloneGameState(state)
     const card = findCardInState(newState, source.instanceId)
     if (card) {
-      // Nadpisz effectId — od teraz Czarnoksiężnik działa jak zabity
-      (card.cardData as any).effectId = stolenEffectId
+      // NIE nadpisuj effectId — Czarnoksiężnik musi zachować swoje ON_KILL żeby kraść kolejne
+      // Zamiast tego dodaj skradziony efekt jako activeEffect (jeśli ma sens)
+      const stolenEffect = getEffect(stolenEffectId)
+      if (stolenEffect) {
+        card.activeEffects = card.activeEffects ?? []
+        // Dodaj jako permanentny activeEffect (nie duplikuj)
+        if (!card.activeEffects.some(ae => ae.effectId === stolenEffectId)) {
+          card.activeEffects.push({
+            effectId: stolenEffectId,
+            sourceInstanceId: source.instanceId,
+            trigger: (stolenEffect.trigger[0] as EffectTrigger) ?? EffectTrigger.PASSIVE,
+            remainingTurns: null, // permanentny
+            stackId: `stolen_${stolenEffectId}_${source.instanceId}`,
+            metadata: {},
+          })
+        }
+      }
       // Zapisz trofeum (dla UI — badge z listą przejętych zdolności)
       if (!card.metadata.trophies) card.metadata.trophies = []
       ;(card.metadata.trophies as any[]).push({
@@ -1330,7 +1345,7 @@ registerEffect({
         attack: target.currentStats.attack,
         defense: target.currentStats.maxDefense,
       })
-      const log = addLog(newState, `${source.cardData.name} przejmuje zdolności "${target.cardData.name}"!`, 'effect')
+      const log = addLog(newState, `${source.cardData.name} przejmuje zdolności "${target.cardData.name}"! (Trofeum ${(card.metadata.trophies as any[]).length})`, 'effect')
       return effectResult(newState, [log])
     }
     return effectResult(newState)

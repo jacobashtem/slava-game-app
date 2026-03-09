@@ -15,6 +15,7 @@ import AISummaryPanel from '../ui/AISummaryPanel.vue'
 import WeatherEffects from '../ui/WeatherEffects.vue'
 import MusicPlayer from '../ui/MusicPlayer.vue'
 import TurnBanner from '../ui/TurnBanner.vue'
+import InfoBox from '../ui/InfoBox.vue'
 import CardBack from '../cards/CardBack.vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
@@ -96,8 +97,21 @@ const activeAuras = computed<ActiveAuraEntry[]>(() => {
   return result
 })
 
-// Active event cards (Zlot Czarownic, Twierdza, etc.)
+// Active event cards — rozdzielone na gracza i wroga
+const playerEventCards = computed(() => (game.state?.activeEvents ?? []).filter(e => e.owner === 'player1'))
+const enemyEventCards = computed(() => (game.state?.activeEvents ?? []).filter(e => e.owner === 'player2'))
 const activeEventCards = computed(() => game.state?.activeEvents ?? [])
+
+// Łaska Morany counter — ile jeszcze istot zostanie zabitych
+const moranaCounter = computed(() => {
+  if (!game.state) return null
+  const p1Count = (game.state.players.player1 as any).moranaKillCount as number | undefined
+  const p2Count = (game.state.players.player2 as any).moranaKillCount as number | undefined
+  const entries: { side: 'player1' | 'player2'; count: number }[] = []
+  if (p1Count && p1Count > 0) entries.push({ side: 'player1', count: p1Count })
+  if (p2Count && p2Count > 0) entries.push({ side: 'player2', count: p2Count })
+  return entries.length > 0 ? entries : null
+})
 
 // ===== SFX WATCHERS =====
 const sfx = useSFX()
@@ -157,18 +171,24 @@ const onPlayDescription = computed(() => {
     <!-- ===== EFEKTY POGODOWE ===== -->
     <WeatherEffects :season="game.season" />
 
-    <!-- ===== PASEK GÓRNY ===== -->
+    <!-- ===== PASEK GÓRNY (minimalny) ===== -->
     <div class="top-bar">
-      <div class="top-bar-left">
-        <TurnIndicator />
+      <div :class="['turn-badge', game.isPlayerTurn ? 'tb-player' : 'tb-ai']">
+        {{ game.isPlayerTurn ? 'TWOJA TURA' : 'TURA WROGA' }}
       </div>
-      <div class="top-bar-center">
-        <ActionLog />
+      <div class="top-bar-spacer" />
+      <div class="season-badge" v-tip="'Aktualna pora roku'">
+        {{ { spring: '🌸 Wiosna', summer: '☀ Lato', autumn: '🍂 Jesień', winter: '❄ Zima' }[game.season] }}
       </div>
-      <div class="top-bar-right">
-        <MusicPlayer />
-        <PhaseControls />
-      </div>
+      <div class="top-bar-spacer" />
+      <MusicPlayer />
+      <PhaseControls />
+      <button
+        v-if="!game.winner"
+        class="surrender-top-btn"
+        @click="ui.confirmingSurrender = true"
+        v-tip="'Poddaj grę i wróć do menu'"
+      >🏳</button>
     </div>
 
     <!-- ===== GŁÓWNA PLANSZA (lewa-prawa) ===== -->
@@ -184,21 +204,21 @@ const onPlayDescription = computed(() => {
           :is-a-i="true"
           @open-graveyard="ui.openGraveyardViewer('player2')"
         />
-        <!-- AI hand: stacked card backs -->
-        <div v-if="ai.hand.length > 0" class="ai-hand-backs">
-          <CardBack v-for="i in Math.min(ai.hand.length, 6)" :key="i" :small="true" class="ai-back" />
-          <span v-if="ai.hand.length > 6" class="ai-hand-extra">+{{ ai.hand.length - 6 }}</span>
+        <!-- AI active adventure cards -->
+        <div v-if="enemyEventCards.length > 0" class="sidebar-events">
+          <div
+            v-for="ev in enemyEventCards"
+            :key="'sev-' + ev.instanceId"
+            class="sidebar-event-chip"
+            v-tip="`${ev.cardData.name}${ev.roundsRemaining != null ? ' (' + ev.roundsRemaining + ' rund)' : ' (perm.)'}`"
+            @mouseenter="ui.showTooltip(ev.instanceId)"
+            @mouseleave="ui.hideTooltip()"
+          >
+            <span class="sev-icon">📜</span>
+            <span class="sev-name">{{ ev.cardData.name }}</span>
+            <span v-if="ev.roundsRemaining != null" class="sev-rounds">{{ ev.roundsRemaining }}</span>
+          </div>
         </div>
-        <span v-else class="empty-hand-label">Pusta ręka</span>
-        <div class="sidebar-spacer" />
-        <button
-          v-if="!game.winner"
-          class="surrender-side-btn"
-          @click="ui.confirmingSurrender = true"
-          v-tip="'Poddaj grę'"
-        >
-          🏳
-        </button>
       </div>
 
       <!-- POLE WALKI AI (3 kolumny: L3|L2|L1, L1 przy środku) -->
@@ -226,33 +246,25 @@ const onPlayDescription = computed(() => {
           @open-graveyard="ui.openGraveyardViewer('player1')"
           @toggle-enhanced="ui.toggleEnhancedMode()"
         />
+        <!-- Player active adventure cards -->
+        <div v-if="playerEventCards.length > 0" class="sidebar-events">
+          <div
+            v-for="ev in playerEventCards"
+            :key="'sev-' + ev.instanceId"
+            class="sidebar-event-chip sidebar-event-ally"
+            v-tip="`${ev.cardData.name}${ev.roundsRemaining != null ? ' (' + ev.roundsRemaining + ' rund)' : ' (perm.)'}`"
+            @mouseenter="ui.showTooltip(ev.instanceId)"
+            @mouseleave="ui.hideTooltip()"
+          >
+            <span class="sev-icon">📜</span>
+            <span class="sev-name">{{ ev.cardData.name }}</span>
+            <span v-if="ev.roundsRemaining != null" class="sev-rounds">{{ ev.roundsRemaining }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ===== WSKAZÓWKA KONTEKSTOWA + AURY (overlayowane nad planszą) ===== -->
-    <div class="board-overlays">
-      <GameHint />
-      <div v-if="activeAuras.length || activeEventCards.length" class="aura-bar">
-      <span
-        v-for="(a, i) in activeAuras"
-        :key="'aura-' + i"
-        class="aura-chip"
-        :class="a.side === 'player1' ? 'aura-ally' : 'aura-enemy'"
-        v-tip="`${a.cardName}: ${a.desc}`"
-      >
-        {{ a.icon }} {{ a.label }}
-      </span>
-      <span
-        v-for="ev in activeEventCards"
-        :key="'ev-' + ev.instanceId"
-        class="aura-chip aura-event"
-        v-tip="`${ev.cardData.name} (${ev.roundsRemaining != null ? ev.roundsRemaining + ' rund' : 'permanentna'})`"
-      >
-        📜 {{ ev.cardData.name }}
-        <span v-if="ev.roundsRemaining != null" class="aura-rounds">{{ ev.roundsRemaining }}</span>
-      </span>
-      </div>
-    </div>
+    <!-- Aura bar removed — passive effects shown on creature cards, events in sidebars -->
 
     <!-- ===== RĘKA GRACZA (dolny pasek) ===== -->
     <PlayerHand />
@@ -327,17 +339,19 @@ const onPlayDescription = computed(() => {
     </Transition>
 
     <TurnBanner />
+    <InfoBox />
     <CardTooltip />
     <AISummaryPanel />
     <GameOverModal />
     <GraveyardModal />
-    <PendingInteractionModal />
   </div>
 
   <div v-else class="board-loading">
     <div class="loading-spinner" />
     Ładowanie gry...
   </div>
+
+  <PendingInteractionModal />
 </template>
 
 <style scoped>
@@ -381,24 +395,76 @@ const onPlayDescription = computed(() => {
 }
 
 /* Layout children above the ::before/::after pseudo-elements */
-.top-bar, .board-main, .player-hand { position: relative; z-index: 1; }
+.top-bar, .board-main { position: relative; z-index: 1; }
+.player-hand { position: relative; z-index: 10; }
 
-/* ====== PASEK GÓRNY ====== */
+/* ====== PASEK GÓRNY (minimalny) ====== */
 .top-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(4px);
+  padding: 2px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  background: rgba(4,3,10,0.85);
+  backdrop-filter: blur(6px);
   flex-shrink: 0;
-  min-height: 44px;
+  min-height: 30px;
 }
 
-.top-bar-left { flex: 0 0 auto; }
-.top-bar-center { flex: 1; min-width: 0; }
-.top-bar-right { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.top-bar-spacer { flex: 1; }
+
+.turn-badge {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 14px;
+  border-radius: 5px;
+  border: 1px solid;
+}
+.tb-player {
+  color: #86efac;
+  background: rgba(134,239,172,0.08);
+  border-color: rgba(134,239,172,0.2);
+}
+.tb-ai {
+  color: #fca5a5;
+  background: rgba(252,165,165,0.08);
+  border-color: rgba(252,165,165,0.2);
+  animation: ai-blink 1.2s ease infinite;
+}
+@keyframes ai-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.season-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.surrender-top-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 4px;
+  color: rgba(239, 68, 68, 0.35);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.surrender-top-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+}
 
 /* ====== GŁÓWNA PLANSZA ====== */
 .board-main {
@@ -414,47 +480,70 @@ const onPlayDescription = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 8px 4px;
-  border-right: 1px solid rgba(255,255,255,0.04);
-  background: rgba(0,0,0,0.25);
+  align-self: flex-start;
+  gap: 6px;
+  padding: 6px 4px;
+  border-right: 1px solid rgba(255,255,255,0.03);
+  background: rgba(4,3,10,0.6);
+  backdrop-filter: blur(4px);
   flex-shrink: 0;
-  width: 80px;
+  width: 82px;
+  border-radius: 0 0 8px 0;
 }
 
 .sidebar-player {
   border-right: none;
-  border-left: 1px solid rgba(255,255,255,0.04);
+  border-left: 1px solid rgba(255,255,255,0.03);
+  border-radius: 0 0 0 8px;
 }
 
-/* AI hand backs */
-.ai-hand-backs {
+/* ====== SIDEBAR ACTIVE EVENTS ====== */
+.sidebar-events {
   display: flex;
   flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 0 2px;
+}
+
+.sidebar-event-chip {
+  display: flex;
   align-items: center;
-  gap: 2px;
-  flex-wrap: wrap;
+  gap: 3px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  cursor: help;
+}
+.sidebar-event-ally {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
-.ai-back {
-  margin-top: -20px;
+.sev-icon {
+  font-size: 10px;
+  flex-shrink: 0;
 }
-.ai-back:first-child {
-  margin-top: 0;
-}
-
-.ai-hand-extra {
-  font-size: 9px;
+.sev-name {
+  font-size: 8px;
   font-weight: 700;
-  color: #94a3b8;
-  margin-top: 2px;
+  color: #fde68a;
+  line-height: 1.2;
+  word-break: break-word;
 }
-
-.empty-hand-label {
-  font-size: 9px;
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
+.sidebar-event-ally .sev-name {
+  color: #86efac;
+}
+.sev-rounds {
+  font-size: 7px;
+  font-weight: 800;
+  background: rgba(0,0,0,0.4);
+  color: #fbbf24;
+  padding: 0 3px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* ====== SEPARATOR ŚRODKOWY (pionowy) ====== */
@@ -491,10 +580,10 @@ const onPlayDescription = computed(() => {
 /* ====== OVERLAY HINTS + AURAS (above board, don't affect layout) ====== */
 .board-overlays {
   position: absolute;
-  bottom: 150px; /* sits above the hand */
+  bottom: 174px; /* sits above the hand */
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: 20;
   pointer-events: none;
   display: flex;
   flex-direction: column;
@@ -548,25 +637,6 @@ const onPlayDescription = computed(() => {
 }
 
 /* ===== SURRENDER (sidebar) ===== */
-.sidebar-spacer { flex: 1; }
-
-.surrender-side-btn {
-  padding: 5px 6px;
-  background: transparent;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 4px;
-  color: rgba(239, 68, 68, 0.35);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.15s;
-  line-height: 1;
-  position: relative;
-}
-.surrender-side-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.5);
-}
 
 .toast-fade-enter-active { transition: all 0.25s ease; }
 .toast-fade-enter-from { opacity: 0; transform: translateX(-50%) translateY(10px); }
@@ -654,9 +724,9 @@ const onPlayDescription = computed(() => {
   align-items: center;
   gap: 6px;
   padding: 2px 10px;
-  border-top: 1px solid rgba(255,255,255,0.04);
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
+  border-top: 1px solid rgba(200,168,78,0.06);
+  background: rgba(4, 3, 10, 0.7);
+  backdrop-filter: blur(6px);
   flex-shrink: 0;
   min-height: 24px;
   overflow-x: auto;
@@ -693,6 +763,21 @@ const onPlayDescription = computed(() => {
   border: 1px solid rgba(251, 191, 36, 0.35);
   color: #fde68a;
 }
+.aura-event-ally {
+  border-left: 3px solid rgba(34, 197, 94, 0.6);
+}
+.aura-event-enemy {
+  border-left: 3px solid rgba(239, 68, 68, 0.6);
+}
+.aura-flash {
+  animation: aura-pulse 0.6s ease-out 2;
+}
+@keyframes aura-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  30%  { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.7), 0 0 12px 4px rgba(251, 191, 36, 0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+}
+
 .aura-rounds {
   font-size: 8px;
   font-weight: 700;

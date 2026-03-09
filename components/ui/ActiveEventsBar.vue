@@ -39,7 +39,7 @@ function ownerLabel(event: ActiveEventCard): string {
           v-for="event in events"
           :key="event.instanceId"
           class="event-chip"
-          :data-tip="event.cardData.effectDescription"
+          v-tip="event.cardData.effectDescription"
         >
           <span class="event-name">{{ event.cardData.name }}</span>
           <span class="event-owner">({{ ownerLabel(event) }})</span>
@@ -91,37 +91,6 @@ function ownerLabel(event: ActiveEventCard): string {
   white-space: nowrap;
   cursor: default;
   position: relative;
-}
-.event-chip:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  background: #0f172a;
-  color: #e2e8f0;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #475569;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
-  width: max-content;
-  max-width: 260px;
-  pointer-events: none;
-}
-.event-chip:hover::before {
-  content: '';
-  position: absolute;
-  bottom: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 200;
-  border: 4px solid transparent;
-  border-top-color: #334155;
-  pointer-events: none;
 }
 
 .event-chip:hover {

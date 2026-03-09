@@ -81,7 +81,7 @@ function ownerLabel(event: any): string {
   display: flex;
   flex-direction: row;   /* AI default: L3 | L2 | L1, FRONT rightmost (nearest divider) */
   flex: 1;
-  gap: 4px;
+  gap: 2px;
   min-height: 0;
   height: 100%;
 }

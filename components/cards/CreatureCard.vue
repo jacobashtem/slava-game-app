@@ -5,6 +5,7 @@ import type { CardInstance } from '../../game-engine/types'
 import { AttackType, CardPosition } from '../../game-engine/constants'
 import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
+import { parseTokens } from '../../composables/useTokenIcons'
 
 // Grafiki stworzeń: automatycznie wczytuje assets/cards/creature/{id}.png
 const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
@@ -33,17 +34,17 @@ const triggerLabels: Record<string, string> = {
   ON_PLAY: 'WEJŚCIE',
   ACTION: 'AKCJA',
   AURA: 'AURA',
-  REACTION: 'REAKCJA',
+  REACTION: 'ODWET',
   ON_DEATH: 'POŻEGNANIE',
   ON_KILL: 'ZABÓJSTWO',
   ON_TURN_START: 'AURA',
   ON_TURN_END: 'AURA',
   ON_ANY_DEATH: 'CZUJNOŚĆ',
-  ON_ATTACK: 'CZUJNOŚĆ',
+  ON_ATTACK: 'NATARCIE',
   ON_ENEMY_PLAY: 'CZUJNOŚĆ',
   ENEMY_ACTION: 'CZUJNOŚĆ',
   PASSIVE: 'AURA',
-  ON_DAMAGE_DEALT: 'ODWET',
+  ON_DAMAGE_DEALT: 'NATARCIE',
   ON_DAMAGE_RECEIVED: 'ODWET',
   ON_ACTIVATE: 'AKCJA',
   ON_ALLY_ATTACKED: 'CZUJNOŚĆ',
@@ -55,10 +56,28 @@ const tagColors: Record<string, string> = {
   'AKCJA': '#a855f7',
   'AURA': '#3b82f6',
   'ODWET': '#f97316',
+  'NATARCIE': '#ef4444',
   'ZABÓJSTWO': '#ef4444',
   'POŻEGNANIE': '#6b7280',
   'CZUJNOŚĆ': '#eab308',
-  'REAKCJA': '#f97316',
+}
+
+// Passive aura icons — shown directly on the creature card
+const passiveAuraIcons: Record<string, { icon: string; label: string }> = {
+  'matoha_anti_magic':       { icon: '🚫', label: 'Anty-Magia' },
+  'chmurnik_ground_flying':  { icon: '⬇', label: 'Uziemienie' },
+  'guslarka_bonus_vs_demon': { icon: '✝', label: 'vs Demony' },
+  'zerca_welesa_demon_buff': { icon: '🔥', label: 'Demoniczny' },
+  'polewik_buff_neighbors':  { icon: '🌾', label: 'Wsparcie' },
+  'szeptunka_damage_reduction': { icon: '🤫', label: 'Szept' },
+  'chlop_extra_attack':      { icon: '⚔', label: '+1 Atak' },
+  'tesknica_block_enhance':  { icon: '🔒', label: 'Blokada' },
+  'bieda_spy_block_draw':    { icon: '💀', label: 'Bieda' },
+  'licho_block_draw':        { icon: '👁', label: 'Licho' },
+  'bzionek_spell_intercept': { icon: '🛡', label: 'Anty-Czar' },
+  'czarownica_redirect_spell': { icon: '🔄', label: 'Odwrót' },
+  'lapiduch_demon_hunter':   { icon: '⚔', label: 'Łowca' },
+  'zupan_no_field_limit':    { icon: '👑', label: 'Bez limitu' },
 }
 
 function getTriggerColor(trigger: string): string {
@@ -67,6 +86,17 @@ function getTriggerColor(trigger: string): string {
 }
 
 const abilities = computed(() => (cardData.value.abilities ?? []) as Array<{trigger: string; text: string}>)
+
+// Passive aura badge for this creature
+const auraBadge = computed(() => {
+  if (!props.card || props.card.isSilenced) return null
+  return passiveAuraIcons[cardData.value.effectId] ?? null
+})
+
+// Parse ability text tokens into renderable segments
+function getTokenSegments(text: string) {
+  return parseTokens(text, cardData.value.attackType as number)
+}
 
 const props = defineProps<{
   card: CardInstance
@@ -314,10 +344,10 @@ const isHidden = computed(() =>
 )
 
 const domainColor = computed(() => ({
-  1: '#f5c542',
-  2: '#4caf50',
-  3: '#9c27b0',
-  4: '#c62828',
+  1: '#d4a843',
+  2: '#4a9e4a',
+  3: '#8b5fc7',
+  4: '#c44040',
 }[cardData.value.domain as number] ?? '#64748b'))
 
 const attackIcon = computed(() => ({
@@ -390,20 +420,18 @@ function onClick() {
     @mouseenter="emit('mouseenter', card)"
     @mouseleave="emit('mouseleave')"
   >
-    <!-- Górny pasek: nazwa + ikona + nazwa domeny -->
+    <!-- Górny pasek: nazwa w ramce + ikona domeny -->
     <div class="card-header">
-      <span class="card-name">{{ cardData.name }}</span>
-      <div class="card-domain-group">
-        <img v-if="domainImgs[cardData.domain]" :src="domainImgs[cardData.domain]" class="card-domain-img" />
-        <div v-else class="card-domain-dot" :style="{ background: domainColor }" />
-        <span class="card-domain-name" :style="{ color: domainColor }">{{ domainName }}</span>
+      <div class="card-name-badge">
+        <span class="card-name">{{ cardData.name.toUpperCase() }}</span>
       </div>
+      <img v-if="domainImgs[cardData.domain]" :src="domainImgs[cardData.domain]" class="card-domain-img" />
+      <div v-else class="card-domain-dot" :style="{ background: domainColor }" />
     </div>
 
-    <!-- Grafika stworzenia (jeśli istnieje) -->
+    <!-- Grafika stworzenia (fallback: Tugaryn) -->
     <img
-      v-if="creatureImgs[cardData.id]"
-      :src="creatureImgs[cardData.id]"
+      :src="creatureImgs[cardData.id] ?? creatureImgs[117]"
       class="card-art"
       aria-hidden="true"
     />
@@ -506,6 +534,11 @@ function onClick() {
       </div>
     </div>
 
+    <!-- Aura badge — pasywny efekt tej istoty -->
+    <div v-if="!inHand && auraBadge" class="aura-badge" :title="auraBadge.label">
+      {{ auraBadge.icon }}
+    </div>
+
     <!-- Lista zdolności (abilities[]) — widoczna na polu, compact -->
     <div v-if="!inHand && abilities.length" class="card-abilities">
       <div v-for="(ab, i) in abilities" :key="i" class="ability-entry">
@@ -514,7 +547,13 @@ function onClick() {
           class="ab-trigger"
           :style="{ background: getTriggerColor(ab.trigger) + '33', color: getTriggerColor(ab.trigger), borderColor: getTriggerColor(ab.trigger) + '55' }"
         >{{ triggerLabels[ab.trigger] }}</span>
-        <span class="ab-text">{{ ab.text.replace(/\[.*?\]/g, '').trim() }}</span>
+        <span class="ab-text">
+          <template v-for="(seg, si) in getTokenSegments(ab.text)" :key="si">
+            <span v-if="seg.type === 'text'">{{ seg.value }}</span>
+            <img v-else-if="seg.img" :src="seg.img" class="token-icon" :title="seg.label" />
+            <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+          </template>
+        </span>
       </div>
     </div>
 
@@ -567,22 +606,24 @@ function onClick() {
 <style scoped>
 .creature-card {
   position: relative;
-  width: 96px;
-  height: 134px;
+  width: 110px;
+  height: 154px;
   border-radius: 6px;
-  border: 2px solid var(--domain-color, #334155);
-  background: var(--bg-card);
+  border: 2px solid color-mix(in srgb, var(--domain-color, #334155) 35%, transparent);
+  background: #0a0406;
   display: flex;
   flex-direction: column;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   user-select: none;
   flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+  overflow: hidden;
 }
 
 .creature-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.5), 0 0 6px 1px var(--domain-color, #334155);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.7), 0 0 24px 2px color-mix(in srgb, var(--domain-color, #334155) 20%, transparent);
 }
 
 /* W ręce: parent (.hand-card-wrap) obsługuje hover — tu wyłączamy */
@@ -613,13 +654,17 @@ function onClick() {
   justify-content: center;
   cursor: default;
   position: relative;
-  transition: transform 0.35s ease;
+}
+.card-hidden:hover {
+  transform: none;
+  box-shadow: none;
 }
 .card-hidden.card-attack {
   transform: rotate(90deg);
 }
 .card-hidden.card-attack:hover {
   transform: rotate(90deg);
+  box-shadow: none;
 }
 
 .hidden-pattern {
@@ -658,58 +703,56 @@ function onClick() {
 /* ===== HEADER ===== */
 .card-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 3px 5px 2px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  min-height: 22px;
+  align-items: flex-start;
+  padding: 3px 3px 2px;
+  min-height: 26px;
   position: relative;
   z-index: 1;
-  background: rgba(0,0,0,0.45);
+}
+
+.card-name-badge {
+  display: inline-flex;
+  max-width: calc(100% - 4px);
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid color-mix(in srgb, var(--domain-color, #334155) 25%, transparent);
+  backdrop-filter: blur(4px);
 }
 
 .card-name {
-  font-size: 9px;
-  font-weight: 600;
-  color: #e2e8f0;
-  line-height: 1.2;
-  flex: 1;
-  min-width: 0;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 16px;
+  font-weight: 800;
+  color: #f0ede8;
+  line-height: 1.05;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-domain-group {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  letter-spacing: 0.03em;
+  word-break: break-word;
 }
 
 .card-domain-dot {
-  width: 7px;
-  height: 7px;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .card-domain-img {
-  width: 16px;
-  height: 16px;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
-  flex-shrink: 0;
   opacity: 0.9;
-}
-
-.card-domain-name {
-  font-size: 6px;
-  font-weight: 700;
-  white-space: nowrap;
-  max-width: 36px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: 0.03em;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
 }
 
 /* ===== BODY ===== */
@@ -718,10 +761,10 @@ function onClick() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 3px;
-  padding: 2px;
-  position: relative; /* żeby być nad .card-art */
+  padding: 2px 2px 4px;
+  position: relative;
   z-index: 1;
 }
 
@@ -746,7 +789,7 @@ function onClick() {
 }
 
 .badge-icon    { font-size: 11px; }
-.stat-img      { width: 12px; height: 12px; object-fit: contain; opacity: 0.9; flex-shrink: 0; }
+.stat-img      { width: 20px; height: 20px; object-fit: contain; opacity: 0.9; flex-shrink: 0; }
 .badge-fly      { color: #7dd3fc; }
 .badge-immune   { color: #a78bfa; }
 .badge-silenced { color: #94a3b8; }
@@ -813,19 +856,13 @@ function onClick() {
   border-radius: 3px;
   letter-spacing: 0.03em;
 }
-.pos-attack  { color: #fca5a5; background: rgba(252,165,165,0.12); border: 1px solid rgba(252,165,165,0.3); }
-.pos-defense { color: #93c5fd; background: rgba(147,197,253,0.12); border: 1px solid rgba(147,197,253,0.3); }
+.pos-attack  { color: rgba(252,165,165,0.7); background: rgba(252,165,165,0.08); border: 1px solid rgba(252,165,165,0.15); }
+.pos-defense { color: rgba(147,197,253,0.7); background: rgba(147,197,253,0.08); border: 1px solid rgba(147,197,253,0.15); }
 .pos-icon    { font-size: 8px; }
 
 /* ===== ABILITIES LIST ===== */
 .card-abilities {
-  padding: 2px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow-y: auto;
-  max-height: 36px;
-  flex-shrink: 0;
+  display: none; /* Zdolności widoczne tylko w CardTooltip — czysta karta na polu */
 }
 .ability-entry {
   display: flex;
@@ -854,34 +891,64 @@ function onClick() {
   -webkit-box-orient: vertical;
 }
 
+/* Token inline icons */
+.token-icon {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  vertical-align: middle;
+  margin: -1px 0;
+}
+.token-icon-svg {
+  display: inline;
+  width: 10px;
+  height: 10px;
+  vertical-align: middle;
+  margin: -1px 0;
+}
+
+/* Aura badge — small indicator on creature cards with passive effects */
+.aura-badge {
+  position: absolute;
+  bottom: 28px;
+  left: 3px;
+  font-size: 12px;
+  line-height: 1;
+  z-index: 3;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
+  cursor: help;
+}
+
 /* ===== FOOTER ===== */
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 2px 5px 3px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 6px 10px 6px;
+  margin-top: auto;
   position: relative;
   z-index: 1;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(4px);
+  border-radius: 0 0 4px 4px;
 }
 
 .stat {
   display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: monospace;
+  gap: 4px;
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-display, Georgia, serif);
 }
 
-.stat.atk { color: #fca5a5; }
-.stat.def { color: #86efac; }
-.stat-icon    { font-size: 10px; }
+.stat.atk { color: #fb923c; text-shadow: 0 0 12px rgba(251,146,60,0.4); }
+.stat.def { color: #60a5fa; text-shadow: 0 0 12px rgba(96,165,250,0.4); }
+.stat-icon    { font-size: 18px; }
 .stat-damaged { color: #ef4444 !important; }
 .stat-buffed  { color: #4ade80 !important; text-shadow: 0 0 4px rgba(74,222,128,0.5); }
 .stat-delta {
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 700;
   margin-left: -1px;
 }
@@ -890,19 +957,37 @@ function onClick() {
 
 .card-art {
   position: absolute;
-  top: 24px;    /* pod headerem */
-  bottom: 26px; /* nad footerem */
-  left: 0;
-  right: 0;
+  inset: 0;
   width: 100%;
-  height: calc(100% - 50px);
+  height: 100%;
   object-fit: cover;
   object-position: center top;
   pointer-events: none;
-  border-radius: 0;
-  /* gradient na dole żeby footer był czytelny */
-  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  border-radius: 4px;
+  z-index: 0;
+}
+/* Vignette overlay na arcie */
+.creature-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 4px;
+  background: radial-gradient(ellipse 95% 85% at 50% 40%, transparent 35%, rgba(0,0,0,0.35) 100%);
+  pointer-events: none;
+}
+/* Gradient na dole pod staty — od przezroczystego do pełnej czerni */
+.creature-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 55%;
+  z-index: 0;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(transparent 0%, rgba(5,3,8,0.4) 30%, rgba(5,3,8,0.8) 60%, rgba(5,3,8,0.97) 100%);
+  pointer-events: none;
 }
 
 .target-overlay {

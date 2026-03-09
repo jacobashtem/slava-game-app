@@ -36,6 +36,7 @@ export function parseCreatureCard(raw: RawCreatureCard): CreatureCardData {
     effectId: (raw as any).effectId ?? CREATURE_EFFECT_MAP[raw.id] ?? `creature_${raw.id}_no_effect`,
     effectDescription: (raw as any).effectDescription ?? raw.effect ?? '',
     lore: raw.lore,
+    abilities: (raw as any).abilities ?? [],
   }
 }
 
@@ -53,6 +54,7 @@ export function parseAdventureCard(raw: RawAdventureCard): AdventureCardData {
     persistence: raw.persistence ?? 'instant',
     durationRounds: raw.durationRounds,
     conditionEnd: raw.conditionEnd,
+    abilities: (raw as any).abilities ?? [],
   }
 }
 

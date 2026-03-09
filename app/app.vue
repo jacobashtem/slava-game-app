@@ -6,22 +6,38 @@
 </template>
 
 <style>
+@font-face {
+  font-family: 'Kanyon';
+  src: url('../assets/fonts/Kanyon-Regular.woff') format('woff'),
+       url('../assets/fonts/Kanyon-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --bg-deep: #0a0a1a;
-  --bg-card: #111827;
-  --bg-field: #0d1117;
-  --bg-line: #161b27;
-  --bg-board: #0a0a1a;
+  --font-display: 'Kanyon', Georgia, 'Times New Roman', serif;
+  --font-body: system-ui, -apple-system, sans-serif;
+  --bg-deep: #04030a;
+  --bg-card: #0a0406;
+  --bg-field: #06050a;
+  --bg-line: #0e0a14;
+  --bg-board: #04030a;
 
-  --perun: #f5c542;
-  --zyvi: #4caf50;
-  --undead: #9c27b0;
-  --weles: #c62828;
+  --perun: #d4a843;
+  --zyvi: #4a9e4a;
+  --undead: #8b5fc7;
+  --weles: #c44040;
 
-  /* Strefy kosmologiczne (Nawia / Jawia / Prawia) */
-  --bg-nawia: rgba(88, 28, 135, 0.08);    /* L3 — Nawia (zaświaty, duch) */
-  --bg-jawia: rgba(180, 130, 60, 0.06);   /* L1 — Jawia (świat śmiertelnych) */
-  --bg-prawia: rgba(99, 102, 241, 0.06);  /* L2 — Prawia (boskie) */
+  --attack-color: #fb923c;
+  --defense-color: #60a5fa;
+  --gold: #c8a84e;
+  --gold-dim: rgba(200, 168, 78, 0.3);
+
+  /* Strefy linii — uproszczone (bez Nawia/Jawia/Prawia) */
+  --bg-nawia: rgba(88, 28, 135, 0.06);
+  --bg-jawia: rgba(180, 130, 60, 0.04);
+  --bg-prawia: rgba(99, 102, 241, 0.04);
 
   /* Kolory linii */
   --line-front: #ef4444;

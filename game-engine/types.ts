@@ -48,6 +48,13 @@ export interface CardStats {
 
 // ===== CARD DATA (po przetworzeniu z JSON) =====
 
+export interface AbilityEntry {
+  trigger: string
+  text: string
+  cost?: number
+  limit?: string
+}
+
 export interface CreatureCardData {
   id: number
   cardType: 'creature'
@@ -59,6 +66,7 @@ export interface CreatureCardData {
   effectId: string
   effectDescription: string  // tekst do UI
   lore: string
+  abilities: AbilityEntry[]
 }
 
 export interface AdventureCardData {
@@ -74,6 +82,7 @@ export interface AdventureCardData {
   persistence: 'instant' | 'permanent' | 'duration' | 'conditional'
   durationRounds?: number | null
   conditionEnd?: string
+  abilities: AbilityEntry[]
 }
 
 export type CardData = CreatureCardData | AdventureCardData

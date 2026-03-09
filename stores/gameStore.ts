@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { GameEngine } from '../game-engine/GameEngine'
 import { AIPlayer } from '../game-engine/AIPlayer'
 import type { AIDifficulty } from '../game-engine/AIPlayer'
@@ -716,6 +716,56 @@ export const useGameStore = defineStore('game', () => {
     }
     return false
   }
+
+  // ===== INFO BOX: śledzenie ważnych zdarzeń z logów =====
+  let _lastLogLen = 0
+  const infoPatterns: { pattern: RegExp; icon: string; type: 'effect' | 'info' | 'warning' }[] = [
+    { pattern: /Kluwa się.*dobiera (\d+) kart/i, icon: '🥚', type: 'effect' },
+    { pattern: /Likantropia.*absorb|wchłania/i, icon: '🐺', type: 'effect' },
+    { pattern: /Wskrze(sza|szony|szenie)/i, icon: '💀', type: 'effect' },
+    { pattern: /Przejmuje zdolnoś/i, icon: '🧙', type: 'effect' },
+    { pattern: /trwale unieruchomion/i, icon: '⚡', type: 'warning' },
+    { pattern: /Złoto.*zrabowane|Kradnie.*złot/i, icon: '💰', type: 'warning' },
+    { pattern: /Nowy sezon:/i, icon: '🌿', type: 'info' },
+    { pattern: /przechwytuje zaklęcie|Przekierowuje zaklęcie/i, icon: '🛡', type: 'effect' },
+    { pattern: /Paraliż.*całe pole|masowy paraliż/i, icon: '⚡', type: 'warning' },
+    { pattern: /zabija najsłabsz/i, icon: '☠', type: 'warning' },
+    { pattern: /przeskakuje do|Teleportacja/i, icon: '✨', type: 'effect' },
+    { pattern: /Sobowtór.*kopiuje/i, icon: '👤', type: 'effect' },
+    { pattern: /Strela.*przechwyc/i, icon: '⚡', type: 'effect' },
+  ]
+
+  watch(state, (s) => {
+    if (!s) return
+    const log = s.actionLog
+    if (log.length <= _lastLogLen) {
+      _lastLogLen = log.length
+      return
+    }
+    const ui = useUIStore()
+    const newEntries = log.slice(_lastLogLen)
+    _lastLogLen = log.length
+
+    for (const entry of newEntries) {
+      if (entry.type !== 'effect') continue
+      for (const p of infoPatterns) {
+        if (p.pattern.test(entry.message)) {
+          const msg = entry.message.length > 80 ? entry.message.slice(0, 77) + '...' : entry.message
+          ui.showInfoBox(msg, p.icon, p.type)
+          break
+        }
+      }
+
+      // Flash event card chips when their effect triggers
+      const activeEvents = s.activeEvents ?? []
+      for (const ev of activeEvents) {
+        if (entry.message.includes(ev.cardData.name)) {
+          ui.flashEventCard(ev.instanceId)
+          break
+        }
+      }
+    }
+  }, { deep: true })
 
   return {
     // state

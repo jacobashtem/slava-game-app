@@ -37,8 +37,11 @@ export const useUIStore = defineStore('ui', () => {
   const counterAttackCardId = ref<string | null>(null)
   // Floating damage numbers: instanceId → kwota obrażeń
   const hitAmounts = reactive<Record<string, number>>({})
-  // Artefakt czekający na wybór celu istoty
+  // Przygoda czekająca na wybór celu istoty (artefakt LUB zdarzenie z targetem)
   const pendingArtifactId = ref<string | null>(null)
+  const pendingAdventureEnhanced = ref(false)
+  // Typ celu przygody: 'ally' = własna istota, 'enemy' = wroga, 'any' = dowolna, 'field' = dowolna na polu
+  const pendingAdventureTargetType = ref<'ally' | 'enemy' | 'any' | null>(null)
   // Tryb ulepszenia: kliknięto monety → kolejna karta przygody zagrana jako enhanced
   const isEnhancedMode = ref(false)
   // Potwierdzenie poddania gry
@@ -55,6 +58,13 @@ export const useUIStore = defineStore('ui', () => {
 
   // Karta wystawiana na pole wroga (Wieszczy, Bieda)
   const placingOnEnemyField = ref(false)
+
+  // Info-box notifications (ważne zdarzenia gry)
+  const infoBoxes = ref<{ id: number; text: string; icon: string; type: 'info' | 'effect' | 'warning' }[]>([])
+  let _infoId = 0
+
+  // Flash na aktywnej karcie przygody (event chip glow)
+  const flashingEventId = ref<string | null>(null)
 
   // ===== COMPUTED =====
   const isSelectingTarget = computed(() => mode.value === 'attacking' && attackingCardId.value !== null)
@@ -161,15 +171,34 @@ export const useUIStore = defineStore('ui', () => {
     mode.value = 'moving'
   }
 
-  function setPendingArtifact(instanceId: string) {
+  function setPendingArtifact(instanceId: string, targetType: 'ally' | 'enemy' | 'any' = 'ally', enhanced = false) {
     pendingArtifactId.value = instanceId
+    pendingAdventureTargetType.value = targetType
+    pendingAdventureEnhanced.value = enhanced
     selectedCardId.value = instanceId
     mode.value = 'placing'
   }
 
   function clearPendingArtifact() {
     pendingArtifactId.value = null
+    pendingAdventureTargetType.value = null
+    pendingAdventureEnhanced.value = false
     clearSelection()
+  }
+
+  function flashEventCard(instanceId: string) {
+    flashingEventId.value = instanceId
+    setTimeout(() => {
+      if (flashingEventId.value === instanceId) flashingEventId.value = null
+    }, 1200)
+  }
+
+  function showInfoBox(text: string, icon = '📜', type: 'info' | 'effect' | 'warning' = 'effect') {
+    const id = ++_infoId
+    infoBoxes.value.push({ id, text, icon, type })
+    setTimeout(() => {
+      infoBoxes.value = infoBoxes.value.filter(b => b.id !== id)
+    }, 3500)
   }
 
   function toggleEnhancedMode() {
@@ -201,10 +230,16 @@ export const useUIStore = defineStore('ui', () => {
     graveyardViewerSide,
     playLimitToast,
     pendingArtifactId,
+    pendingAdventureEnhanced,
+    pendingAdventureTargetType,
     isEnhancedMode,
     confirmingSurrender,
     pendingActivation,
     placingOnEnemyField,
+    infoBoxes,
+    showInfoBox,
+    flashingEventId,
+    flashEventCard,
     isSelectingTarget,
     isPlacingCard,
     isMovingCard,

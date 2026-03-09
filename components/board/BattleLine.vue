@@ -35,13 +35,8 @@ const lineLabel = computed(() => ({
   [BL.SUPPORT]: 'L3',
 }[props.line]))
 
-const lineName = computed(() => ({
-  [BL.FRONT]: 'Jawia',
-  [BL.RANGED]: 'Prawia',
-  [BL.SUPPORT]: 'Nawia',
-}[props.line]))
 
-const MAX_SLOTS = 5
+const MAX_SLOTS = 3
 const ghostSlots = computed(() => Math.max(0, MAX_SLOTS - props.cards.length))
 
 // ===== KLIK NA LINIĘ (wystawianie z ręki) =====
@@ -64,16 +59,24 @@ function onLineClick(e: MouseEvent) {
 function onCardClick(card: CardInstance) {
   if (!game.isPlayerTurn) return
 
-  if (props.isPlayerSide) {
-    // Artefakt czeka na cel
-    if (ui.pendingArtifactId && game.currentPhase === GamePhase.PLAY) {
+  // Przygoda czeka na cel (artefakt, zdarzenie z targetem)
+  if (ui.pendingArtifactId && game.currentPhase === GamePhase.PLAY) {
+    const targetType = ui.pendingAdventureTargetType
+    const isValidSide = targetType === 'any'
+      || (targetType === 'ally' && props.isPlayerSide)
+      || (targetType === 'enemy' && !props.isPlayerSide)
+      || (!targetType && props.isPlayerSide) // fallback: artefakty = sojusznik
+    if (isValidSide) {
       try {
-        game.playAdventure(ui.pendingArtifactId, card.instanceId)
+        game.playAdventure(ui.pendingArtifactId, card.instanceId, ui.pendingAdventureEnhanced)
       } finally {
         ui.clearPendingArtifact()
       }
       return
     }
+  }
+
+  if (props.isPlayerSide) {
 
     if (game.currentPhase === GamePhase.COMBAT) {
       // W COMBAT: karta w obronie nie może atakować — zmiana pozycji przez badge
@@ -117,9 +120,9 @@ function onCardClick(card: CardInstance) {
         }
       }
       ui.selectAttacker(card.instanceId)
-      const targets = getValidTargets(card)
+      const targets = getAllTargets()
       if (targets.length === 0) {
-        ui.showPlayLimitToast('Ta istota nie ma dostępnych celów. Sprawdź typ ataku i linię.')
+        ui.showPlayLimitToast('Brak wrogich istot na polu.')
         ui.clearSelection()
         return
       }
@@ -127,17 +130,11 @@ function onCardClick(card: CardInstance) {
     }
     // PLAY faza: klik = zmień pozycję (obsługiwane przez togglePositionOnClick prop)
   } else {
-    // Klik na wrogą kartę → atak
+    // Klik na wrogą kartę → atak (softFail rozwiązywane w silniku)
     if (ui.isSelectingTarget && ui.attackingCardId) {
       if (ui.validAttackTargets.has(card.instanceId)) {
         game.attack(ui.attackingCardId, card.instanceId)
         ui.clearSelection()
-      } else {
-        const attacker = game.findCardOnField('player1', ui.attackingCardId)
-        if (attacker && game.state) {
-          const check = canAttack(game.state, attacker, card)
-          if (!check.valid) ui.showPlayLimitToast(check.reason ?? 'Nieprawidłowy cel.')
-        }
       }
     }
   }
@@ -169,6 +166,20 @@ function getValidTargets(attacker: CardInstance): string[] {
   if (!game.state) return []
   return getAllCreaturesOnField(game.state, 'player2')
     .filter(e => canAttack(game.state!, attacker, e).valid)
+    .map(e => e.instanceId)
+}
+
+// Wszystkie wrogie istoty — softFail rozwiązywane w silniku (0 DMG + kontratak)
+function getAllTargets(): string[] {
+  if (!game.state) return []
+  return getAllCreaturesOnField(game.state, 'player2')
+    .filter(e => {
+      // Tylko hard-fail (matecznik, obrona, taunt) blokuje wybór celu
+      const check = canAttack(game.state!,
+        getAllCreaturesOnField(game.state!, 'player1').find(c => c.instanceId === ui.attackingCardId)!,
+        e)
+      return check.valid || check.softFail
+    })
     .map(e => e.instanceId)
 }
 
@@ -221,7 +232,6 @@ function onLineDrop(e: DragEvent) {
   >
     <div class="line-header">
       <span class="line-label">{{ lineLabel }}</span>
-      <span class="line-name">{{ lineName }}</span>
     </div>
 
     <div class="cards-col">
@@ -278,13 +288,13 @@ function onLineDrop(e: DragEvent) {
   flex: 1;
   min-width: 100px;
   height: 100%;
-  padding: 4px 4px;
+  padding: 2px 4px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.1);
   transition: border-color 0.2s, background 0.2s;
   position: relative;
-  gap: 4px;
+  gap: 2px;
   overflow: visible;
 }
 
@@ -350,21 +360,9 @@ function onLineDrop(e: DragEvent) {
   font-family: monospace;
 }
 
-.line-name {
-  font-size: 8px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  opacity: 0.5;
-}
-
 .line-1 .line-label { color: rgba(200, 160, 70, 0.6); }
-.line-1 .line-name  { color: rgba(200, 160, 70, 0.4); }
 .line-2 .line-label { color: rgba(99, 102, 241, 0.5); }
-.line-2 .line-name  { color: rgba(99, 102, 241, 0.35); }
 .line-3 .line-label { color: rgba(168, 85, 247, 0.5); }
-.line-3 .line-name  { color: rgba(168, 85, 247, 0.35); }
 
 .cards-col {
   display: flex;
@@ -378,8 +376,8 @@ function onLineDrop(e: DragEvent) {
 .card-wrap {
   position: relative;
   /* Fixed outer box to prevent layout jump when card rotates (attack=90deg) */
-  width: 96px;
-  min-height: 134px;
+  width: 110px;
+  min-height: 154px;
   display: flex;
   align-items: center;
   justify-content: center;

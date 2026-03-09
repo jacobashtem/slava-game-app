@@ -50,6 +50,10 @@ export class GameEngine {
     this.arenaMode = false
     this.state = createInitialGameState('gold')
 
+    // Losowa pora roku startowa (runda 1, 4, 7 lub 10)
+    const seasonStarts = [1, 4, 7, 10]
+    this.state.roundNumber = seasonStarts[Math.floor(Math.random() * seasonStarts.length)]!
+
     const playerConfig = playerDomainFilter
       ? { ...GOLD_EDITION_DECK_CONFIG, domainFilter: playerDomainFilter }
       : undefined
@@ -78,6 +82,10 @@ export class GameEngine {
   startGame(gameMode: 'gold' | 'slava' = 'gold', playerDomainFilter?: number[]): GameState {
     this.arenaMode = false
     this.state = createInitialGameState(gameMode)
+
+    // Losowa pora roku startowa (runda 1, 4, 7 lub 10)
+    const seasonStarts = [1, 4, 7, 10]
+    this.state.roundNumber = seasonStarts[Math.floor(Math.random() * seasonStarts.length)]!
 
     // Zbuduj talie
     const playerConfig = playerDomainFilter
@@ -312,9 +320,6 @@ export class GameEngine {
    */
   playerDrawCard(): GameState {
     this.assertPlayerTurn()
-    if (this.state.currentPhase !== GamePhase.PLAY && this.state.currentPhase !== GamePhase.COMBAT) {
-      throw new Error('Możesz dobierać karty tylko w fazie wystawiania lub walki.')
-    }
     const { newState, log } = drawCardManually(this.state)
     this.applyStateAndLog(newState, log)
     return cloneGameState(this.state)

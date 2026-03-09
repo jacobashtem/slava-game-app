@@ -13,7 +13,6 @@ const hasEnemiesOnField = computed(() => {
   return getAllCreaturesOnField(game.state, 'player2').length > 0
 })
 
-// W PLAY phase: jeśli brak wrogów → od razu "Zakończ turę"
 const skipCombat = computed(() =>
   game.currentPhase === GamePhase.PLAY && !hasEnemiesOnField.value
 )
@@ -31,16 +30,22 @@ function handlePhase() {
   }
 }
 
-function phaseButtonLabel() {
+const btnLabel = computed(() => {
   switch (game.currentPhase) {
-    case GamePhase.START:   return 'Dobierz →'
-    case GamePhase.DRAW:    return 'Wystawiaj →'
-    case GamePhase.PLAY:    return skipCombat.value ? 'Zakończ turę' : 'Atakuj →'
-    case GamePhase.COMBAT:  return 'Zakończ turę'
-    case GamePhase.END:     return 'Zakończ turę'
-    default: return 'Dalej →'
+    case GamePhase.START:   return '▶ DOBIERZ'
+    case GamePhase.DRAW:    return '⚔ DO BOJU'
+    case GamePhase.PLAY:    return skipCombat.value ? '⏭ ZAKOŃCZ' : '⚔ ATAKUJ'
+    case GamePhase.COMBAT:  return '⏭ ZAKOŃCZ'
+    case GamePhase.END:     return '⏭ ZAKOŃCZ'
+    default: return '▶ DALEJ'
   }
-}
+})
+
+const btnType = computed(() => {
+  if (game.currentPhase === GamePhase.COMBAT || game.currentPhase === GamePhase.END || skipCombat.value) return 'end'
+  if (game.currentPhase === GamePhase.PLAY) return 'combat'
+  return 'next'
+})
 </script>
 
 <template>
@@ -48,18 +53,14 @@ function phaseButtonLabel() {
     <button
       v-if="game.currentPhase === GamePhase.PLAY && hasEnemiesOnField"
       :disabled="!game.isPlayerTurn || !!game.winner"
-      class="pass-btn"
+      class="ctrl-btn ctrl-pass"
       @click="() => { ui.clearSelection(); game.endTurn() }"
-    >
-      Pas
-    </button>
+    >PAS</button>
     <button
       :disabled="!game.isPlayerTurn || !!game.winner"
-      class="phase-btn"
+      :class="['ctrl-btn', `ctrl-${btnType}`]"
       @click="handlePhase"
-    >
-      {{ phaseButtonLabel() }}
-    </button>
+    >{{ btnLabel }}</button>
   </div>
 </template>
 
@@ -67,45 +68,77 @@ function phaseButtonLabel() {
 .phase-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.phase-btn {
-  padding: 5px 14px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  border: none;
+.ctrl-btn {
+  padding: 6px 16px;
+  border: 1px solid;
   border-radius: 5px;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition: all 0.15s ease;
   white-space: nowrap;
+  font-family: var(--font-display, Georgia, serif);
 }
 
-.phase-btn:hover:not(:disabled) {
-  opacity: 0.9;
+.ctrl-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.ctrl-btn:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.pass-btn {
-  padding: 5px 10px;
-  background: rgba(100,116,139,0.1);
-  border: 1px solid rgba(100,116,139,0.35);
-  border-radius: 5px;
-  color: #94a3b8;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
+/* Next phase (dobierz, do boju) */
+.ctrl-next {
+  color: #c4b5fd;
+  background: rgba(167,139,250,0.1);
+  border-color: rgba(167,139,250,0.3);
 }
-.pass-btn:hover:not(:disabled) { background: rgba(100,116,139,0.22); }
-.pass-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.ctrl-next:hover:not(:disabled) {
+  background: rgba(167,139,250,0.2);
+  border-color: rgba(167,139,250,0.5);
+}
 
-.phase-btn:disabled {
-  opacity: 0.3;
+/* Combat (atakuj) */
+.ctrl-combat {
+  color: #fbbf24;
+  background: rgba(251,191,36,0.1);
+  border-color: rgba(251,191,36,0.3);
+}
+.ctrl-combat:hover:not(:disabled) {
+  background: rgba(251,191,36,0.2);
+  border-color: rgba(251,191,36,0.5);
+}
+
+/* End turn */
+.ctrl-end {
+  color: #86efac;
+  background: rgba(134,239,172,0.08);
+  border-color: rgba(134,239,172,0.25);
+}
+.ctrl-end:hover:not(:disabled) {
+  background: rgba(134,239,172,0.18);
+  border-color: rgba(134,239,172,0.4);
+}
+
+/* Pass */
+.ctrl-pass {
+  color: #94a3b8;
+  background: rgba(100,116,139,0.08);
+  border-color: rgba(100,116,139,0.25);
+  font-size: 12px;
+}
+.ctrl-pass:hover:not(:disabled) {
+  background: rgba(100,116,139,0.18);
+}
+.ctrl-pass:disabled {
+  opacity: 0.2;
   cursor: not-allowed;
-  transform: none;
 }
 </style>

@@ -5,6 +5,7 @@ import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import type { CardInstance } from '../../game-engine/types'
 import { BattleLine, AttackType, Domain } from '../../game-engine/constants'
+import { parseTokens } from '../../composables/useTokenIcons'
 
 import domainImg1 from '~/assets/cards/domain-1.png'
 import domainImg2 from '~/assets/cards/domain-2.png'
@@ -16,13 +17,12 @@ import attackTypeImg3 from '~/assets/cards/attackType3.png'
 import flyingImg from '~/assets/cards/isFlying.png'
 import lokacjaImg from '~/assets/cards/lokacja.png'
 import artefaktImg from '~/assets/cards/artefakt.png'
+import defaultAdvImg from '~/assets/cards/creature/117.png'
 
 const domainImgs: Record<number, string> = { 1: domainImg1, 2: domainImg2, 3: domainImg3, 4: domainImg4 }
-// attackType: 0=MELEE(brak pliku), 1=ELEMENTAL, 2=MAGIC, 3=RANGED
 const attackTypeImgs: Record<number, string> = { 1: attackTypeImg1, 2: attackTypeImg2, 3: attackTypeImg3 }
 const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaImg }
 
-// Grafiki stworzeń — ten sam glob co w CreatureCard
 const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
 const creatureImgs = Object.fromEntries(
   Object.entries(_creatureImgModules)
@@ -47,29 +47,20 @@ function findCard(instanceId: string): CardInstance | null {
   ]
   const found = all.find(c => c.instanceId === instanceId)
   if (found) return found
-
-  // Sprawdź aktywne zdarzenia (karty przygód leżące w polu)
   const ev = game.state.activeEvents.find(e => e.instanceId === instanceId)
   if (ev) {
     return {
-      instanceId: ev.instanceId,
-      cardData: ev.cardData,
-      owner: ev.owner,
-      isRevealed: true,
-      activeEffects: [],
-      equippedArtifacts: [],
-      turnsInPlay: 0,
+      instanceId: ev.instanceId, cardData: ev.cardData, owner: ev.owner,
+      isRevealed: true, activeEffects: [], equippedArtifacts: [], turnsInPlay: 0,
       currentStats: { attack: 0, defense: 0, maxAttack: 0, maxDefense: 0 },
     } as unknown as CardInstance
   }
-
   return null
 }
 
 const card = computed(() => {
   if (!ui.tooltipCardId) return null
   const c = findCard(ui.tooltipCardId)
-  // Don't reveal hidden enemy cards via tooltip
   if (c && !c.isRevealed && c.owner === 'player2') return null
   return c
 })
@@ -89,10 +80,10 @@ const attackTypeInfo = computed(() => {
 const domainInfo = computed(() => {
   const d = data.value?.domain as Domain
   return {
-    [Domain.PERUN]:  { name: 'Perun',     color: '#f5c542' },
-    [Domain.ZYVI]:   { name: 'Żywi',      color: '#4caf50' },
-    [Domain.UNDEAD]: { name: 'Nieumarli', color: '#9c27b0' },
-    [Domain.WELES]:  { name: 'Weles',     color: '#c62828' },
+    [Domain.PERUN]:  { name: 'Perun',     color: '#d4a843' },
+    [Domain.ZYVI]:   { name: 'Żywi',      color: '#4a9e4a' },
+    [Domain.UNDEAD]: { name: 'Nieumarli', color: '#8b5fc7' },
+    [Domain.WELES]:  { name: 'Weles',     color: '#c44040' },
   }[d] ?? { name: '', color: '#64748b' }
 })
 
@@ -101,52 +92,46 @@ const adventureTypeLabel = computed(() => {
   return t === 0 ? 'Zdarzenie' : t === 1 ? 'Artefakt' : t === 2 ? 'Lokacja' : ''
 })
 
-// Sprawdź czy DEF różni się od bazowej (obrażenia)
-const defDamaged = computed(() =>
-  isCreature.value &&
-  card.value &&
-  card.value.currentStats.defense < card.value.currentStats.maxDefense
-)
-const atkDamaged = computed(() =>
-  isCreature.value &&
-  card.value &&
-  card.value.currentStats.attack < card.value.currentStats.maxAttack
-)
+// Stat deltas
+const baseAtk = computed(() => isCreature.value ? (data.value?.stats?.attack ?? 0) : 0)
+const baseDef = computed(() => isCreature.value ? (data.value?.stats?.defense ?? 0) : 0)
+const atkDelta = computed(() => (!isCreature.value || !card.value) ? 0 : card.value.currentStats.attack - baseAtk.value)
+const defDelta = computed(() => (!isCreature.value || !card.value) ? 0 : card.value.currentStats.defense - baseDef.value)
+const atkDamaged = computed(() => isCreature.value && card.value && atkDelta.value < 0)
+const atkBuffed = computed(() => isCreature.value && card.value && atkDelta.value > 0)
+const defDamaged = computed(() => isCreature.value && card.value && defDelta.value < 0)
+const defBuffed = computed(() => isCreature.value && card.value && defDelta.value > 0)
 
-// Trigger label mapping (same as CreatureCard)
+// Active effect names
+const activeEffectNameMap: Record<string, string> = {
+  sztandar_mocy_buff: 'Sztandar Mocy (+2 ATK)', twierdza_def_buff: 'Twierdza (-3 DMG)',
+  bazyliszek_paralyze: 'Paraliż', zagorkinia_curse_drain: 'Klątwa Żagorkini',
+  likantropia_absorb: 'Likantropia', czarnoksieznik_steal_abilities: 'Skradzione zdolności',
+  wieszczy_spy_burn: 'Szpieg', bieda_spy_block_draw: 'Bieda',
+  homen_convert_on_death: 'Homunculus', trucizna_poison: 'Trucizna', zmora_grow_sacrifice: 'Zmora',
+}
+function getEffectName(effectId: string): string {
+  return activeEffectNameMap[effectId] ?? effectId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+// Trigger labels
 const ttTriggerLabels: Record<string, string> = {
   ON_PLAY: 'WEJŚCIE', ACTION: 'AKCJA', AURA: 'AURA', REACTION: 'ODWET',
   ON_DEATH: 'POŻEGNANIE', ON_KILL: 'ZABÓJSTWO', ON_TURN_START: 'AURA',
-  ON_TURN_END: 'AURA', ON_ANY_DEATH: 'CZUJNOŚĆ', ON_ATTACK: 'CZUJNOŚĆ',
+  ON_TURN_END: 'AURA', ON_ANY_DEATH: 'CZUJNOŚĆ', ON_ATTACK: 'NATARCIE',
   ON_ENEMY_PLAY: 'CZUJNOŚĆ', ENEMY_ACTION: 'CZUJNOŚĆ', PASSIVE: 'AURA',
-  ON_DAMAGE_DEALT: 'ODWET', ON_DAMAGE_RECEIVED: 'ODWET', ON_ACTIVATE: 'AKCJA',
+  ON_DAMAGE_DEALT: 'NATARCIE', ON_DAMAGE_RECEIVED: 'ODWET', ON_ACTIVATE: 'AKCJA',
   ON_ALLY_ATTACKED: 'CZUJNOŚĆ',
 }
-
 const ttTriggerColors: Record<string, string> = {
-  'WEJŚCIE': '#22c55e',
-  'AKCJA': '#a855f7',
-  'AURA': '#3b82f6',
-  'ODWET': '#f97316',
-  'ZABÓJSTWO': '#ef4444',
-  'POŻEGNANIE': '#6b7280',
-  'CZUJNOŚĆ': '#eab308',
+  'WEJŚCIE': '#22c55e', 'AKCJA': '#a855f7', 'AURA': '#3b82f6', 'ODWET': '#f97316',
+  'NATARCIE': '#ef4444', 'ZABÓJSTWO': '#ef4444', 'POŻEGNANIE': '#6b7280', 'CZUJNOŚĆ': '#eab308',
 }
 
-// Tag colors for [TAG] badges in descriptions
-const tagColors: Record<string, string> = {
-  'WEJŚCIE': '#22c55e',
-  'AKCJA': '#a855f7',
-  'AURA': '#3b82f6',
-  'ODWET': '#f97316',
-  'ZABÓJSTWO': '#ef4444',
-  'POŻEGNANIE': '#6b7280',
-  'CZUJNOŚĆ': '#eab308',
-}
-
+const tagColors = ttTriggerColors
 function parseTaggedDescription(desc: string): Array<{ type: 'tag' | 'text'; value: string; color?: string }> {
   const parts: Array<{ type: 'tag' | 'text'; value: string; color?: string }> = []
-  const regex = /\[(WEJŚCIE|AKCJA|AURA|ODWET|ZABÓJSTWO|POŻEGNANIE|CZUJNOŚĆ)\]/g
+  const regex = /\[(WEJŚCIE|AKCJA|AURA|ODWET|NATARCIE|ZABÓJSTWO|POŻEGNANIE|CZUJNOŚĆ)\]/g
   let lastIndex = 0
   let match: RegExpExecArray | null
   while ((match = regex.exec(desc)) !== null) {
@@ -163,471 +148,591 @@ function parseTaggedDescription(desc: string): Array<{ type: 'tag' | 'text'; val
   }
   return parts
 }
-
 const parsedEffectDescription = computed(() => {
   if (!data.value?.effectDescription) return []
   return parseTaggedDescription(data.value.effectDescription)
 })
+
+// Border color based on domain
+const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '#6366f1')
 </script>
 
 <template>
-  <Transition name="tooltip-fade">
-    <div v-if="card && data" class="card-tooltip">
+  <Transition name="pv-fade">
+    <div v-if="card && data" class="card-preview" :style="{ '--dc': borderColor }">
 
-      <!-- Nagłówek -->
-      <div class="tt-header" :style="{ '--tc': isCreature ? domainInfo.color : '#6366f1' }">
-        <span class="tt-name">{{ data.name }}</span>
-        <div class="tt-header-right">
-          <img v-if="isCreature && domainImgs[data.domain]" :src="domainImgs[data.domain]" class="tt-domain-img" />
-          <img v-else-if="!isCreature && adventureTypeImgs[data.adventureType]" :src="adventureTypeImgs[data.adventureType]" class="tt-domain-img" />
-          <span v-if="isCreature" class="tt-domain">{{ domainInfo.name }}</span>
-          <span v-else class="tt-adventure-type">{{ adventureTypeLabel }}</span>
-        </div>
-      </div>
+      <!-- Animated shimmer border -->
+      <div class="pv-shimmer-border" />
 
-      <!-- Grafika stworzenia -->
-      <div v-if="isCreature && creatureImgs[data.id]" class="tt-art-wrap">
-        <img :src="creatureImgs[data.id]" class="tt-art" />
-        <img
-          v-if="data.isFlying && !card.isGrounded"
-          :src="flyingImg"
-          class="tt-art-flying"
-          alt="Latający"
-        />
-      </div>
+      <!-- Outer glow -->
+      <div class="pv-glow" />
 
-      <!-- Statystyki istoty -->
-      <template v-if="isCreature">
-        <div class="tt-stats-row">
-          <!-- ATK -->
-          <div class="tt-stat-block">
-            <img v-if="attackTypeImgs[data.attackType]" :src="attackTypeImgs[data.attackType]" class="tt-attack-img" />
-            <Icon v-else :icon="attackTypeInfo.icon" class="tt-stat-icon" :style="{ color: attackTypeInfo.color }" />
-            <span class="tt-stat-val" :class="{ damaged: atkDamaged }">{{ card.currentStats.attack }}</span>
-            <span v-if="atkDamaged" class="tt-stat-base">/{{ card.currentStats.maxAttack }}</span>
+      <!-- Inner content -->
+      <div class="pv-inner">
+
+        <!-- ART SECTION (top 38%) -->
+        <div class="pv-art-section" v-if="isCreature">
+          <img :src="creatureImgs[data.id] ?? defaultAdvImg" class="pv-art" />
+          <div class="pv-art-vignette" />
+          <div class="pv-art-gradient" />
+
+          <!-- Drobinki ognia -->
+          <div class="pv-fire-particles">
+            <span v-for="i in 15" :key="'fp'+i" class="pv-fire-dot" :style="{ left: (8 + ((i * 41) % 84)) + '%', animationDuration: (1.8 + (i * 0.19) % 2) + 's', animationDelay: ((i * 0.29) % 3) + 's', width: (1.5 + (i % 4) * 0.6) + 'px', height: (1.5 + (i % 4) * 0.6) + 'px', '--dot-color': ['#ff3300','#ff5500','#ff8800','#ffaa00'][i % 4] }" />
           </div>
-          <div class="tt-stat-sep">vs</div>
-          <!-- DEF -->
-          <div class="tt-stat-block">
-            <Icon icon="game-icons:shield" class="tt-stat-icon" style="color: #86efac" />
-            <span class="tt-stat-val" :class="{ damaged: defDamaged }">{{ card.currentStats.defense }}</span>
-            <span v-if="defDamaged" class="tt-stat-base">/{{ card.currentStats.maxDefense }}</span>
+
+          <!-- Domain badge (top-left) -->
+          <div class="pv-domain-badge">
+            <img v-if="domainImgs[data.domain]" :src="domainImgs[data.domain]" class="pv-domain-img" />
+            <span class="pv-domain-label" :style="{ color: domainInfo.color + 'bb' }">{{ domainInfo.name.toUpperCase() }}</span>
           </div>
-        </div>
 
-        <!-- Aktywne statusy (bez WRĘCZ i LATAJĄCY — widoczne na karcie i w statach) -->
-        <div v-if="card.isSilenced || card.isImmune || card.cannotAttack || card.poisonRoundsLeft" class="tt-traits">
-          <span v-if="card.isSilenced" class="tt-trait tt-trait-status">Uciszony</span>
-          <span v-if="card.isImmune" class="tt-trait tt-trait-immune">Odporny</span>
-          <span v-if="card.cannotAttack" class="tt-trait tt-trait-status">Nie może atakować</span>
-          <span v-if="card.poisonRoundsLeft" class="tt-trait tt-trait-status">☠ Trucizna ({{ card.poisonRoundsLeft }}t)</span>
-        </div>
-      </template>
+          <!-- Name badge (top-right) -->
+          <div class="pv-name-badge">
+            <div class="pv-name">{{ data.name.toUpperCase() }}</div>
+          </div>
 
-      <!-- Abilities z triggerami (jeśli dostępne) -->
-      <template v-if="data.abilities && data.abilities.length">
-        <div class="tt-abilities">
-          <div v-for="(ab, i) in data.abilities" :key="i" class="tt-ability-entry">
-            <span
-              class="tt-ab-trigger"
-              :style="{ background: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '22', color: ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc', borderColor: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '55' }"
-            >{{ ttTriggerLabels[ab.trigger] ?? ab.trigger }}</span>
-            <span class="tt-ab-text">{{ ab.text }}</span>
+          <!-- Attribute badges (bottom-left of art) -->
+          <div class="pv-attr-badges">
+            <div class="pv-attr-badge" :style="{ borderColor: attackTypeInfo.color + '30' }" v-tip="attackTypeInfo.label">
+              <img v-if="attackTypeImgs[data.attackType]" :src="attackTypeImgs[data.attackType]" class="pv-attr-icon" />
+              <Icon v-else :icon="attackTypeInfo.icon" class="pv-attr-icon-svg" :style="{ color: attackTypeInfo.color }" />
+            </div>
+            <div v-if="data.isFlying && !card.isGrounded" class="pv-attr-badge" style="border-color: rgba(56,189,248,0.2)" v-tip="'Latający'">
+              <img :src="flyingImg" class="pv-attr-icon" />
+            </div>
           </div>
         </div>
-      </template>
-      <!-- Fallback: stary opis efektu (z tagami) -->
-      <div v-else-if="data.effectDescription" class="tt-effect">
-        <template v-for="(part, pi) in parsedEffectDescription" :key="pi">
-          <span
-            v-if="part.type === 'tag'"
-            class="tt-effect-tag"
-            :style="{ background: part.color + '22', color: part.color, borderColor: part.color + '66' }"
-          >{{ part.value }}</span>
-          <span v-else>{{ part.value }}</span>
-        </template>
-      </div>
 
-      <!-- Karta Przygody: ulepszony efekt -->
-      <div v-if="!isCreature && data.enhancedEffectDescription" class="tt-effect tt-enhanced">
-        <span class="tt-enhanced-label">Ulepszony:</span> {{ data.enhancedEffectDescription }}
-      </div>
+        <!-- Art section for non-creature (adventure cards) -->
+        <div class="pv-art-section" v-else>
+          <img :src="defaultAdvImg" class="pv-art" />
+          <div class="pv-art-vignette" />
+          <div class="pv-art-gradient" />
+          <div class="pv-domain-badge">
+            <img v-if="!isCreature && adventureTypeImgs[data.adventureType]" :src="adventureTypeImgs[data.adventureType]" class="pv-domain-img" />
+            <span class="pv-domain-label" style="color: #818cf8bb">{{ adventureTypeLabel.toUpperCase() }}</span>
+          </div>
+          <div class="pv-name-badge">
+            <div class="pv-name">{{ data.name.toUpperCase() }}</div>
+          </div>
+        </div>
 
-      <!-- Lore -->
-      <div v-if="data.lore" class="tt-lore" v-html="data.lore" />
+        <!-- CONTENT SECTION -->
+        <div class="pv-content">
 
-      <!-- Wyposażone artefakty -->
-      <div v-if="card.equippedArtifacts && card.equippedArtifacts.length > 0" class="tt-artifacts">
-        <div class="tt-section-label">Artefakty:</div>
-        <div v-for="art in card.equippedArtifacts" :key="art.id" class="tt-artifact">
-          <span class="tt-art-name">⚙ {{ art.name }}</span>
-          <span v-if="art.effectDescription" class="tt-art-desc">{{ art.effectDescription }}</span>
+          <!-- Abilities (triggers + text) -->
+          <template v-if="data.abilities && data.abilities.length">
+            <div class="pv-abilities">
+              <div v-for="(ab, i) in data.abilities" :key="i" class="pv-ability">
+                <span
+                  v-if="ab.text.startsWith('+')"
+                  class="pv-trigger-badge"
+                  :style="{ background: '#eab30818', color: '#fbbf24', borderColor: '#eab30844' }"
+                >ULEPSZENIE</span>
+                <span
+                  v-else
+                  class="pv-trigger-badge"
+                  :style="{ background: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '18', color: ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc', borderColor: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '44' }"
+                >{{ ttTriggerLabels[ab.trigger] ?? ab.trigger }}</span>
+                <span class="pv-ability-text">
+                  <template v-for="(seg, si) in parseTokens(ab.text, data?.attackType)" :key="si">
+                    <span v-if="seg.type === 'text'">{{ seg.value }}</span>
+                    <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
+                    <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+                  </template>
+                </span>
+              </div>
+            </div>
+          </template>
+          <div v-else-if="data.effectDescription" class="pv-effect-desc">
+            <template v-for="(part, pi) in parsedEffectDescription" :key="pi">
+              <span
+                v-if="part.type === 'tag'"
+                class="pv-trigger-badge pv-inline-tag"
+                :style="{ background: part.color + '18', color: part.color, borderColor: part.color + '44' }"
+              >{{ part.value }}</span>
+              <span v-else>{{ part.value }}</span>
+            </template>
+          </div>
+
+          <!-- Enhanced effect (adventures) — only if no abilities[] (legacy fallback) -->
+          <div v-if="!isCreature && data.enhancedEffectDescription && !(data.abilities && data.abilities.length)" class="pv-enhanced">
+            <span class="pv-enhanced-label">Ulepszony:</span> {{ data.enhancedEffectDescription }}
+          </div>
+
+          <!-- Traits (silenced, immune, etc.) -->
+          <div v-if="isCreature && (card.isSilenced || card.isImmune || card.cannotAttack || card.poisonRoundsLeft)" class="pv-traits">
+            <span v-if="card.isSilenced" class="pv-trait pv-trait-bad">Uciszony</span>
+            <span v-if="card.isImmune" class="pv-trait pv-trait-good">Odporny</span>
+            <span v-if="card.cannotAttack" class="pv-trait pv-trait-bad">Nie może atakować</span>
+            <span v-if="card.poisonRoundsLeft" class="pv-trait pv-trait-bad">☠ Trucizna ({{ card.poisonRoundsLeft }}t)</span>
+          </div>
+
+          <!-- STATS BAR -->
+          <div v-if="isCreature" class="pv-stats-bar">
+            <div class="pv-stat pv-stat-atk">
+              <img v-if="attackTypeImgs[data.attackType]" :src="attackTypeImgs[data.attackType]" class="pv-stat-img" />
+              <Icon v-else :icon="attackTypeInfo.icon" class="pv-stat-icon" :style="{ color: '#fb923c' }" />
+              <span class="pv-stat-num" :class="{ 'pv-damaged': atkDamaged, 'pv-buffed': atkBuffed }">{{ card.currentStats.attack }}</span>
+              <span v-if="atkDelta !== 0" class="pv-stat-delta" :class="{ 'pv-delta-up': atkDelta > 0, 'pv-delta-down': atkDelta < 0 }">{{ atkDelta > 0 ? '+' : '' }}{{ atkDelta }}</span>
+              <span v-if="atkDelta !== 0" class="pv-stat-base">({{ baseAtk }})</span>
+            </div>
+            <div class="pv-stat pv-stat-def">
+              <Icon icon="game-icons:shield" class="pv-stat-icon" style="color: #60a5fa" />
+              <span class="pv-stat-num" :class="{ 'pv-damaged': defDamaged, 'pv-buffed': defBuffed }">{{ card.currentStats.defense }}</span>
+              <span v-if="defDelta !== 0" class="pv-stat-delta" :class="{ 'pv-delta-up': defDelta > 0, 'pv-delta-down': defDelta < 0 }">{{ defDelta > 0 ? '+' : '' }}{{ defDelta }}</span>
+              <span v-if="defDelta !== 0" class="pv-stat-base">({{ baseDef }})</span>
+            </div>
+          </div>
+
+          <!-- Equipped artifacts -->
+          <div v-if="card.equippedArtifacts && card.equippedArtifacts.length > 0" class="pv-section">
+            <div class="pv-section-label">Artefakty</div>
+            <div v-for="art in card.equippedArtifacts" :key="art.id" class="pv-artifact">
+              <span class="pv-art-name">⚙ {{ art.name }}</span>
+              <span v-if="art.effectDescription" class="pv-art-desc">{{ art.effectDescription }}</span>
+            </div>
+          </div>
+
+          <!-- Active effects -->
+          <div v-if="card.activeEffects.length > 0" class="pv-section">
+            <div class="pv-section-label">Aktywne efekty</div>
+            <div v-for="(eff, i) in card.activeEffects" :key="i" class="pv-effect-entry">
+              <span class="pv-effect-dot">✦</span>
+              <span class="pv-effect-name">{{ getEffectName(eff.effectId) }}</span>
+              <span v-if="eff.remainingTurns !== null" class="pv-effect-dur">({{ eff.remainingTurns }}t)</span>
+              <span v-else class="pv-effect-perm">∞</span>
+            </div>
+          </div>
+
+          <!-- Lore -->
+          <div v-if="data.lore" class="pv-lore" v-html="data.lore" />
+
+          <!-- Turns on field -->
+          <div v-if="card.turnsInPlay > 0" class="pv-turns">Na polu: {{ card.turnsInPlay }} tur</div>
         </div>
       </div>
-
-      <!-- Aktywne efekty (buffy/debuffy) -->
-      <div v-if="card.activeEffects.length > 0" class="tt-active-effects">
-        <div
-          v-for="(eff, i) in card.activeEffects"
-          :key="i"
-          class="tt-eff-entry"
-        >
-          <span class="tt-eff-id">{{ eff.effectId }}</span>
-          <span v-if="eff.remainingTurns !== null" class="tt-eff-dur">({{ eff.remainingTurns }}t)</span>
-        </div>
-      </div>
-
-      <!-- Tury na polu -->
-      <div v-if="card.turnsInPlay > 0" class="tt-turns">
-        Na polu: {{ card.turnsInPlay }} tur
-      </div>
-
     </div>
   </Transition>
 </template>
 
 <style scoped>
-.card-tooltip {
+.card-preview {
   position: fixed;
-  bottom: 160px;
-  left: 12px;
-  background: #0c1220;
-  border: 1px solid var(--tc, #334155);
-  border-radius: 8px;
-  padding: 0;
-  width: 200px;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+  bottom: 10px;
+  left: 10px;
+  width: 340px;
+  max-height: calc(100vh - 40px);
   z-index: 150;
   pointer-events: none;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
 }
 
-.tt-header {
-  padding: 7px 10px 5px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
+/* Animated shimmer border */
+.pv-shimmer-border {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--dc), color-mix(in srgb, var(--dc) 60%, #ff6b35), color-mix(in srgb, var(--dc) 40%, #ffaa00), color-mix(in srgb, var(--dc) 60%, #ff6b35), var(--dc));
+  background-size: 300% 300%;
+  animation: shimmerBorder 5s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.45;
+}
+@keyframes shimmerBorder {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 300% 300%; }
 }
 
-.tt-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: #e2e8f0;
-  flex: 1;
+/* Outer glow */
+.pv-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 16px;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--dc) 15%, transparent), transparent 70%);
+  filter: blur(10px);
+  pointer-events: none;
 }
 
-.tt-domain {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--tc, #94a3b8);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.tt-adventure-type {
-  font-size: 9px;
-  color: #818cf8;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.tt-header-right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.tt-domain-img {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  opacity: 0.9;
-  flex-shrink: 0;
-}
-
-.tt-attack-img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  opacity: 0.9;
-  flex-shrink: 0;
-}
-
-.tt-trait-img {
-  width: 11px;
-  height: 11px;
-  object-fit: contain;
-  opacity: 0.85;
-}
-
-/* Grafika stworzenia */
-.tt-art-wrap {
-  width: 100%;
-  height: 120px;
-  overflow: hidden;
+.pv-inner {
   position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0a0406;
+  box-shadow: 0 0 60px color-mix(in srgb, var(--dc) 12%, transparent), 0 20px 60px rgba(0,0,0,0.9);
 }
 
-.tt-art {
+/* ART SECTION */
+.pv-art-section {
+  position: relative;
+  height: 260px;
+  overflow: hidden;
+}
+.pv-art {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center top;
   display: block;
-  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
-
-.tt-art-flying {
+.pv-art-vignette {
   position: absolute;
-  top: 6px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
+  inset: 0;
+  background: radial-gradient(ellipse 85% 80% at 50% 35%, transparent 30%, rgba(10,4,6,0.45) 100%);
+}
+.pv-art-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: linear-gradient(transparent, #0a0406);
+}
+
+/* Fire particles */
+.pv-fire-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.pv-fire-dot {
+  position: absolute;
+  bottom: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--dot-color), transparent);
+  box-shadow: 0 0 4px var(--dot-color);
+  opacity: 0;
+  animation: pvFireRise ease-out infinite;
+}
+@keyframes pvFireRise {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  8%   { opacity: 0.8; }
+  100% { transform: translateY(-100px) translateX(-6px) scale(0.1); opacity: 0; }
+}
+
+/* Domain badge */
+.pv-domain-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid color-mix(in srgb, var(--dc) 30%, transparent);
+  backdrop-filter: blur(6px);
+}
+.pv-domain-img {
+  width: 20px;
+  height: 20px;
   object-fit: contain;
-  opacity: 0.95;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
+}
+.pv-domain-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
 }
 
-/* Statystyki */
-.tt-stats-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px 10px 4px;
+/* Name badge */
+.pv-name-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  max-width: calc(100% - 100px);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid color-mix(in srgb, var(--dc) 20%, transparent);
+  backdrop-filter: blur(6px);
 }
-
-.tt-stat-block {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.tt-stat-icon {
-  font-size: 13px;
-}
-
-.tt-stat-val {
-  font-size: 16px;
+.pv-name {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 17px;
   font-weight: 800;
-  font-family: monospace;
+  color: #f0ede8;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+  line-height: 1.2;
+}
+
+/* Attribute badges (bottom of art) */
+.pv-attr-badges {
+  position: absolute;
+  bottom: 12px;
+  left: 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+.pv-attr-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid;
+  backdrop-filter: blur(4px);
+}
+.pv-attr-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.pv-attr-icon-svg {
+  font-size: 16px;
+}
+.pv-attr-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+/* CONTENT */
+.pv-content {
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Abilities */
+.pv-abilities {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pv-ability {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.pv-trigger-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+.pv-ability-text {
+  font-size: 12px;
+  color: rgba(235,225,215,0.9);
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.55;
+}
+
+/* Token inline icons in tooltip */
+.tt-token-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin: -2px 1px;
+}
+.tt-token-icon-svg {
+  display: inline;
+  width: 15px;
+  height: 15px;
+  vertical-align: middle;
+  margin: -2px 1px;
+}
+
+/* Effect description fallback */
+.pv-effect-desc {
+  font-size: 12px;
+  color: rgba(235,225,215,0.85);
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.55;
+}
+.pv-inline-tag {
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* Enhanced */
+.pv-enhanced {
+  font-size: 11px;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+.pv-enhanced-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fbbf24;
+}
+
+/* Traits */
+.pv-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pv-trait {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-weight: 600;
+}
+.pv-trait-bad {
+  color: #f87171;
+  border-color: rgba(248,113,113,0.3);
+  background: rgba(248,113,113,0.08);
+}
+.pv-trait-good {
+  color: #a78bfa;
+  border-color: rgba(167,139,250,0.3);
+  background: rgba(167,139,250,0.08);
+}
+
+/* STATS BAR */
+.pv-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+.pv-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.5);
+}
+.pv-stat-atk { border: 1.5px solid rgba(251,146,60,0.2); }
+.pv-stat-def { border: 1.5px solid rgba(96,165,250,0.2); }
+.pv-stat-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+.pv-stat-icon {
+  font-size: 20px;
+}
+.pv-stat-num {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-display, Georgia, serif);
   color: #e2e8f0;
 }
-
-.tt-stat-val.damaged {
-  color: #ef4444;
+.pv-stat-atk .pv-stat-num { color: #fb923c; text-shadow: 0 0 14px rgba(251,146,60,0.3); }
+.pv-stat-def .pv-stat-num { color: #60a5fa; text-shadow: 0 0 14px rgba(96,165,250,0.3); }
+.pv-damaged { color: #ef4444 !important; }
+.pv-buffed { color: #4ade80 !important; text-shadow: 0 0 8px rgba(74,222,128,0.4) !important; }
+.pv-stat-delta {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
 }
-
-.tt-stat-base {
+.pv-delta-up { color: #4ade80; }
+.pv-delta-down { color: #f87171; }
+.pv-stat-base {
   font-size: 10px;
   color: #475569;
   font-family: monospace;
-  margin-top: 2px;
 }
 
-.tt-stat-sep {
-  font-size: 9px;
-  color: #334155;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Cechy */
-.tt-traits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  padding: 0 8px 6px;
-}
-
-.tt-trait {
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  border: 1px solid currentColor;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  opacity: 0.85;
-}
-
-.tt-trait-fly {
-  color: #7dd3fc;
-  border-color: rgba(125, 211, 252, 0.35);
-}
-
-.tt-trait-status {
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.35);
-}
-
-.tt-trait-immune {
-  color: #a78bfa;
-  border-color: rgba(167, 139, 250, 0.35);
-}
-
-/* Abilities list */
-.tt-abilities {
-  padding: 5px 10px;
-  border-top: 1px solid rgba(255,255,255,0.04);
+/* Sections (artifacts, effects) */
+.pv-section {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.tt-ability-entry {
-  display: flex;
-  gap: 5px;
-  align-items: flex-start;
-  line-height: 1.4;
-}
-.tt-ab-trigger {
-  font-size: 8px;
-  font-weight: 700;
+.pv-section-label {
+  font-size: 9px;
   text-transform: uppercase;
-  border: 1px solid;
-  border-radius: 3px;
-  padding: 1px 4px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-.tt-ab-text {
-  font-size: 10px;
-  color: #cbd5e1;
-  line-height: 1.4;
-}
-
-/* Efekt (fallback) */
-.tt-effect {
-  font-size: 10px;
-  color: #94a3b8;
-  line-height: 1.5;
-  font-style: italic;
-  padding: 5px 10px;
-  border-top: 1px solid rgba(255,255,255,0.04);
-}
-
-.tt-enhanced {
-  color: #fbbf24 !important;
-  font-style: normal;
-}
-.tt-enhanced-label {
-  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: #475569;
   font-weight: 700;
-  text-transform: uppercase;
-  color: #fbbf24;
-  letter-spacing: 0.03em;
 }
-
-.tt-effect-tag {
-  display: inline-block;
-  font-size: 8px;
-  font-weight: 700;
-  font-style: normal;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border: 1px solid;
-  border-radius: 3px;
-  padding: 0 3px;
-  margin-right: 3px;
-  vertical-align: middle;
-  line-height: 1.5;
-}
-
-/* Aktywne efekty */
-.tt-active-effects {
-  padding: 4px 10px;
-  border-top: 1px solid rgba(255,255,255,0.04);
+.pv-artifact {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 6px;
+  padding: 5px 8px;
 }
-
-.tt-eff-entry {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
-}
-
-.tt-eff-id {
-  color: #86efac;
-  font-family: monospace;
-}
-
-.tt-eff-dur {
-  color: #64748b;
-}
-
-/* Artefakty */
-.tt-artifacts {
-  padding: 5px 10px;
-  border-top: 1px solid rgba(255,255,255,0.04);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tt-section-label {
-  font-size: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #475569;
-  font-weight: 700;
-}
-
-.tt-artifact {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 4px;
-  padding: 3px 6px;
-}
-
-.tt-art-name {
-  font-size: 10px;
+.pv-art-name {
+  font-size: 11px;
   font-weight: 600;
   color: #a5b4fc;
 }
-
-.tt-art-desc {
-  font-size: 9px;
+.pv-art-desc {
+  font-size: 10px;
   color: #64748b;
   font-style: italic;
 }
 
-/* Lore */
-.tt-lore {
-  font-size: 9px;
-  color: #475569;
-  line-height: 1.5;
+/* Active effects */
+.pv-effect-entry {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pv-effect-dot { color: #a78bfa; font-size: 9px; }
+.pv-effect-name { color: #c4b5fd; font-size: 10px; }
+.pv-effect-dur { color: #64748b; font-size: 9px; }
+.pv-effect-perm { color: #475569; font-size: 9px; }
+
+/* LORE */
+.pv-lore {
+  font-size: 12px;
+  color: #c4956a;
+  line-height: 1.65;
   font-style: italic;
-  padding: 4px 10px 5px;
-  border-top: 1px solid rgba(255,255,255,0.03);
+  font-family: Georgia, 'Times New Roman', serif;
+  padding-left: 14px;
+  border-left: 3px solid rgba(196,140,80,0.3);
 }
 
-/* Tury na polu */
-.tt-turns {
-  padding: 3px 10px 5px;
-  font-size: 9px;
+/* Separator before lore */
+.pv-lore::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--dc) 12%, transparent), transparent);
+  margin-bottom: 8px;
+  margin-left: -14px;
+}
+
+.pv-turns {
+  font-size: 10px;
   color: #475569;
-  border-top: 1px solid rgba(255,255,255,0.04);
   font-family: monospace;
 }
 
-/* Animacja */
-.tooltip-fade-enter-active, .tooltip-fade-leave-active {
-  transition: opacity 0.15s, transform 0.15s;
+/* ANIMATION */
+.pv-fade-enter-active {
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
 }
-.tooltip-fade-enter-from, .tooltip-fade-leave-to {
+.pv-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.pv-fade-enter-from {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(8px) scale(0.97);
+}
+.pv-fade-leave-to {
+  opacity: 0;
+  transform: translateY(4px) scale(0.98);
 }
 </style>

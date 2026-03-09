@@ -41,7 +41,7 @@ const emit = defineEmits<{
     <div
       v-if="gold !== undefined"
       :class="['pile-section', 'gold-section', { 'gold-section--active': !isAI && enhancedActive, 'gold-section--low': !isAI && (gold ?? 0) < 1 }]"
-      :data-tip="isAI ? 'Złocisze przeciwnika' : ((gold ?? 0) >= 1 ? 'Kliknij aby zagrać kartę wzmocnioną (1 ZŁ)' : 'Za mało złota na wzmocnienie (potrzebujesz 1 ZŁ)')"
+      v-tip="isAI ? 'Złocisze przeciwnika' : ((gold ?? 0) >= 1 ? 'Kliknij aby zagrać kartę wzmocnioną (1 ZŁ)' : 'Za mało złota na wzmocnienie (potrzebujesz 1 ZŁ)')"
       @click="!isAI && (gold ?? 0) >= 1 ? emit('toggle-enhanced') : undefined"
       :style="isAI ? {} : { cursor: 'pointer' }"
     >
@@ -71,41 +71,6 @@ const emit = defineEmits<{
   align-items: center;
   gap: 3px;
   position: relative;
-}
-.pile-section[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  background: #0f172a;
-  color: #e2e8f0;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #475569;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
-  width: max-content;
-  max-width: 220px;
-  pointer-events: none;
-}
-.gold-section[data-tip]:hover::after {
-  bottom: auto;
-  top: calc(100% + 6px);
-}
-.gold-section[data-tip]:hover::before {
-  content: '';
-  position: absolute;
-  top: calc(100% + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 200;
-  border: 4px solid transparent;
-  border-bottom-color: #334155;
-  pointer-events: none;
 }
 
 .card-stack {

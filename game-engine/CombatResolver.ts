@@ -31,7 +31,8 @@ export function resolveAttack(
 
   // 1. Walidacja zasięgu
   const validation = canAttack(newState, attacker, defender)
-  if (!validation.valid) {
+  const isSoftFail = !validation.valid && validation.softFail
+  if (!validation.valid && !validation.softFail) {
     throw new Error(`[CombatResolver] Nieprawidłowy atak: ${validation.reason}`)
   }
 
@@ -90,9 +91,15 @@ export function resolveAttack(
     }
   }
 
-  // 3. Oblicz obrażenia atakującego
+  // 3. Oblicz obrażenia atakującego (softFail = atak chybiony, 0 DMG ale kontratak działa)
   const damageCalc = calculateDamage(newState, currentAttacker, currentDefender)
-  let damageToDefender = damageCalc.damage
+  let damageToDefender = isSoftFail ? 0 : damageCalc.damage
+  if (isSoftFail) {
+    log.push(addLog(newState,
+      `${currentAttacker.cardData.name} atakuje ${currentDefender.cardData.name} — ${validation.reason ?? 'chybiony!'}`,
+      'effect', [attackerInstanceId, defenderInstanceId]
+    ))
+  }
   log.push(...damageCalc.bonusLog)
 
   // 4. Sprawdź prewencję obrażeń (np. Brzegina)
@@ -146,19 +153,53 @@ export function resolveAttack(
 
   // Guard: karty mogły zniknąć z pola po efektach ON_DAMAGE (np. Wisielec bounce)
   if (!currentAttacker || !currentDefender) {
-    if (currentAttacker) {
+    let earlyDefenderDied = !currentDefender
+    let earlyAttackerDied = !currentAttacker
+
+    // Jeśli obrońca nadal jest na polu ale ma DEF <= 0 → zabij go (np. Wisielec po bounce atakującego)
+    if (currentDefender && currentDefender.currentStats.defense <= 0) {
+      earlyDefenderDied = true
+      moveToGraveyard(newState, currentDefender)
+      log.push(addLog(newState, `${currentDefender.cardData.name} ginie! (DEF: ${currentDefender.currentStats.defense})`, 'death', [defenderInstanceId]))
+      // ON_DEATH trigger
+      const deathResult = triggerEffect(newState, currentDefender, EffectTrigger.ON_DEATH)
+      newState = deathResult.newState
+      log.push(...deathResult.log)
+      // ON_ANY_DEATH trigger
+      for (const side of ['player1', 'player2'] as const) {
+        for (const line of Object.values(newState.players[side].field.lines)) {
+          for (const c of line as any[]) {
+            if (c.instanceId === currentDefender.instanceId) continue
+            const anyDeathResult = triggerEffect(newState, c, EffectTrigger.ON_ANY_DEATH, currentDefender)
+            newState = anyDeathResult.newState
+            log.push(...anyDeathResult.log)
+          }
+        }
+      }
+    }
+
+    // Jeśli atakujący nadal jest na polu ale ma DEF <= 0 → zabij go
+    if (currentAttacker && currentAttacker.currentStats.defense <= 0) {
+      earlyAttackerDied = true
+      moveToGraveyard(newState, currentAttacker)
+      log.push(addLog(newState, `${currentAttacker.cardData.name} ginie! (DEF: ${currentAttacker.currentStats.defense})`, 'death', [attackerInstanceId]))
+      const deathResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_DEATH)
+      newState = deathResult.newState
+      log.push(...deathResult.log)
+    } else if (currentAttacker) {
       currentAttacker.hasAttackedThisTurn = true
       if ((currentAttacker.cardData as any).effectId === 'lesnica_double_attack') {
         currentAttacker.metadata.attacksThisTurn = ((currentAttacker.metadata.attacksThisTurn as number) ?? 0) + 1
       }
     }
+
     return {
       newState,
       result: {
         attacker: currentAttacker ?? attacker,
         defender: currentDefender ?? defender,
         damageToDefender, damageToAttacker: 0,
-        defenderDied: !currentDefender, attackerDied: !currentAttacker,
+        defenderDied: earlyDefenderDied, attackerDied: earlyAttackerDied,
         counterattackOccurred: false, effectsTriggered, log,
       },
     }

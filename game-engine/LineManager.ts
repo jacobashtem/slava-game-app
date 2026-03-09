@@ -99,8 +99,8 @@ export function canPlayCreature(state: GameState, side: PlayerSide): boolean {
  */
 export function canPlaceInLine(state: GameState, side: PlayerSide, line: BattleLine): boolean {
   const creatures = getLine(state, side, line)
-  // Każda linia może mieć max 5 istot (lub bez limitu z Arkoną)
-  const maxPerLine = 5
+  // Każda linia może mieć max 3 istoty (lub bez limitu z Arkoną)
+  const maxPerLine = 3
   return creatures.length < maxPerLine
 }
 
@@ -114,7 +114,7 @@ export function canAttack(
   state: GameState,
   attacker: CardInstance,
   target: CardInstance
-): { valid: boolean; reason?: string } {
+): { valid: boolean; reason?: string; softFail?: boolean } {
   if (attacker.position !== CardPosition.ATTACK) {
     return { valid: false, reason: 'Atakujący jest w pozycji obrony.' }
   }
@@ -168,7 +168,7 @@ export function canAttack(
   // Sprawdź czy cel jest latający i czy atakujący może bić latające
   const targetFlying = isFlying(target)
   if (targetFlying && attackType === AttackType.MELEE && !isFlying(attacker)) {
-    return { valid: false, reason: 'Atak Wręcz nie może bić latających istot.' }
+    return { valid: false, reason: 'Atak Wręcz nie może bić latających istot.', softFail: true }
   }
 
   // Sprawdź Błotnik — jeśli wróg ma Błotnika w zasięgu, musi go atakować
@@ -187,55 +187,54 @@ export function canAttack(
 
   // Buka (#97): wrogowie ze słabszym ATK muszą być w obronie (nie mogą atakować Buki)
   if (targetEffectId === 'buka_force_defense' && attacker.currentStats.attack < target.currentStats.attack) {
-    return { valid: false, reason: `${target.cardData.name}: Twoja istota jest za słaba, żeby ją atakować.` }
+    return { valid: false, reason: `${target.cardData.name}: Twoja istota jest za słaba, żeby ją atakować.`, softFail: true }
   }
 
   // Matoha (#17): wrogie istoty z typem Magia nie mogą atakować (sprawdzone po stronie atakującego)
-  // (Matoha jest na polu obrońcy — sprawdź czy obrońca ma sojusznika Matohę)
   const hasMaToha = getAllCreaturesOnField(state, defenderSide)
     .some(c => (c.cardData as any).effectId === 'matoha_anti_magic')
   if (hasMaToha && attackType === AttackType.MAGIC) {
-    return { valid: false, reason: 'Matoha blokuje ataki Magii.' }
+    return { valid: false, reason: 'Matoha blokuje ataki Magii.', softFail: true }
   }
 
   // Wilkołak (#87): odporny na Wręcz < 7
   if (targetEffectId === 'wilkolak_melee_immune' && attackType === AttackType.MELEE && attacker.currentStats.attack < 7) {
-    return { valid: false, reason: `${target.cardData.name}: Wilkołak jest odporny na Wręcz < 7.` }
+    return { valid: false, reason: `${target.cardData.name}: Wilkołak jest odporny na Wręcz < 7.`, softFail: true }
   }
 
   // Stukacz (#83): wrogowie z wyższym ATK nie mogą go atakować
   if (targetEffectId === 'stukacz_strong_immune' && attacker.currentStats.attack > target.currentStats.attack) {
-    return { valid: false, reason: `${target.cardData.name}: Stukacz odpiera ataki silniejszych istot.` }
+    return { valid: false, reason: `${target.cardData.name}: Stukacz odpiera ataki silniejszych istot.`, softFail: true }
   }
 
   // Dydko (#101): silniejsi I równi nie mogą go uderzać
   if (targetEffectId === 'dydko_strong_immune' && attacker.currentStats.attack >= target.currentStats.attack) {
-    return { valid: false, reason: `${target.cardData.name}: Dydko unika ataków równych i silniejszych.` }
+    return { valid: false, reason: `${target.cardData.name}: Dydko unika ataków równych i silniejszych.`, softFail: true }
   }
 
   // Kudłak (#73): odporny jeśli zadał obrażenia w tej rundzie
   if (targetEffectId === 'kudlak_conditional_immunity') {
     if ((target.metadata.kudlakDealtDamageThisRound as number) === state.roundNumber) {
-      return { valid: false, reason: `${target.cardData.name}: Kudłak jest nietykalny w rundzie, w której atakował.` }
+      return { valid: false, reason: `${target.cardData.name}: Kudłak jest nietykalny w rundzie, w której atakował.`, softFail: true }
     }
   }
 
   // Łapiduch (#27): może atakować TYLKO demony (Weles, idDomain=4)
   const attackerEffectId = (attacker.cardData as any).effectId
   if (attackerEffectId === 'lapiduch_demon_hunter' && (target.cardData as any).idDomain !== 4) {
-    return { valid: false, reason: `${attacker.cardData.name}: Łapiduch może atakować jedynie demony (Weles).` }
+    return { valid: false, reason: `${attacker.cardData.name}: Łapiduch może atakować jedynie demony (Weles).`, softFail: true }
   }
 
   // Tur (#55): odporny na Dystans i Magię
   if (targetEffectId === 'tur_ranged_magic_immune'
       && (attackType === AttackType.RANGED || attackType === AttackType.MAGIC)) {
-    return { valid: false, reason: `${target.cardData.name}: Tur jest odporny na Dystans i Magię.` }
+    return { valid: false, reason: `${target.cardData.name}: Tur jest odporny na Dystans i Magię.`, softFail: true }
   }
 
   // Grad (#104): odporny na Wręcz i Dystans — tylko Magia i Żywioł mogą go trafić
   if (targetEffectId === 'grad_magic_element_only'
       && attackType !== AttackType.MAGIC && attackType !== AttackType.ELEMENTAL) {
-    return { valid: false, reason: `${target.cardData.name}: Grad jest odporny na ten typ ataku — tylko Magia i Żywioł mogą go trafić.` }
+    return { valid: false, reason: `${target.cardData.name}: Grad jest odporny na ten typ ataku.`, softFail: true }
   }
 
   // Mavka (#111): sojusznicy w tej samej linii co Mavka nie mogą być celem ataków
@@ -245,14 +244,14 @@ export function canAttack(
           && c.line === target.line
           && !c.isSilenced)
   if (hasMavkaShield) {
-    return { valid: false, reason: `${target.cardData.name} jest chroniony przez Mavkę!` }
+    return { valid: false, reason: `${target.cardData.name} jest chroniony przez Mavkę!`, softFail: true }
   }
 
   // Smocze Jajo (#113): blokuje wrogie ataki Żywiołem po stronie posiadacza
   const hasJajoShield = getAllCreaturesOnField(state, defenderSide)
     .some(c => (c.cardData as any).effectId === 'smocze_jajo_hatch' && !c.isSilenced)
   if (hasJajoShield && attackType === AttackType.ELEMENTAL) {
-    return { valid: false, reason: 'Smocze Jajo chroni przed atakami Żywiołu!' }
+    return { valid: false, reason: 'Smocze Jajo chroni przed atakami Żywiołu!', softFail: true }
   }
 
   return { valid: true }
@@ -263,7 +262,7 @@ function checkAttackRange(
   attackType: AttackType,
   attacker: CardInstance,
   target: CardInstance
-): { valid: boolean; reason?: string } {
+): { valid: boolean; reason?: string; softFail?: boolean } {
   const attackerSide = attacker.owner
   const targetLine = target.line
 
