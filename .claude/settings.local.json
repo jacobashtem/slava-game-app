@@ -35,7 +35,10 @@
       "Bash(npm ls:*)",
       "Bash(/tmp/check_todos.sh:*)",
       "Bash(jq:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(/tmp/find_adventures.sh:*)",
+      "Bash(do:*)",
+      "Bash(mv:*)"
     ]
   }
 }

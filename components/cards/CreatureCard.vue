@@ -93,6 +93,16 @@ const auraBadge = computed(() => {
   return passiveAuraIcons[cardData.value.effectId] ?? null
 })
 
+// Spy badge — cards played on enemy field
+const spyEffectIds = new Set([
+  'wieszczy_spy_burn',
+  'bieda_spy_block_draw',
+])
+const isSpy = computed(() => {
+  if (!props.card || props.inHand) return false
+  return spyEffectIds.has(cardData.value.effectId)
+})
+
 // Parse ability text tokens into renderable segments
 function getTokenSegments(text: string) {
   return parseTokens(text, cardData.value.attackType as number)
@@ -539,6 +549,11 @@ function onClick() {
       {{ auraBadge.icon }}
     </div>
 
+    <!-- Spy badge — karta wystawiona na pole wroga -->
+    <div v-if="isSpy" class="spy-badge" title="Szpieg — karta na polu wroga">
+      <Icon icon="game-icons:spy" class="spy-icon" />
+    </div>
+
     <!-- Lista zdolności (abilities[]) — widoczna na polu, compact -->
     <div v-if="!inHand && abilities.length" class="card-abilities">
       <div v-for="(ab, i) in abilities" :key="i" class="ability-entry">
@@ -917,6 +932,25 @@ function onClick() {
   z-index: 3;
   filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
   cursor: help;
+}
+
+/* Spy badge — card played on enemy field */
+.spy-badge {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 3;
+  background: rgba(239, 68, 68, 0.7);
+  border: 1px solid rgba(239, 68, 68, 0.9);
+  border-radius: 3px;
+  padding: 2px;
+  line-height: 1;
+  cursor: help;
+}
+.spy-icon {
+  width: 12px;
+  height: 12px;
+  color: #fff;
 }
 
 /* ===== FOOTER ===== */
