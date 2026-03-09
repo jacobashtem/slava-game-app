@@ -38,6 +38,7 @@ const modalBoxEl = ref<HTMLElement | null>(null)
 const glowEl = ref<HTMLElement | null>(null)
 const iconEl = ref<HTMLElement | null>(null)
 const titleEl = ref<HTMLElement | null>(null)
+const particlesEl = ref<HTMLElement | null>(null)
 
 watch(() => game.winner, (w) => {
   if (!w) return
@@ -62,8 +63,68 @@ watch(() => game.winner, (w) => {
     if (glowEl.value) {
       gsap.to(glowEl.value, { scale: 1.1, opacity: 0.4, duration: 2, yoyo: true, repeat: -1, ease: 'sine.inOut', delay: 1 })
     }
+
+    // Victory: confetti burst / Defeat: smoke wisps
+    if (particlesEl.value) {
+      spawnResultParticles(particlesEl.value, w === 'player1')
+    }
   })
 })
+
+function spawnResultParticles(container: HTMLElement, isVictory: boolean) {
+  const count = isVictory ? 30 : 12
+  const colors = isVictory
+    ? ['#fbbf24', '#f59e0b', '#34d399', '#818cf8', '#fb923c', '#f87171']
+    : ['#334155', '#475569', '#1e293b', '#64748b']
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div')
+    el.style.cssText = `position:absolute;border-radius:${isVictory ? '2px' : '50%'};pointer-events:none;`
+    const size = isVictory ? (4 + Math.random() * 6) : (3 + Math.random() * 8)
+    el.style.width = `${size}px`
+    el.style.height = `${isVictory ? size * 0.6 : size}px`
+    el.style.background = colors[Math.floor(Math.random() * colors.length)]!
+    el.style.left = '50%'
+    el.style.top = '50%'
+    container.appendChild(el)
+
+    if (isVictory) {
+      // Confetti: burst outward in all directions
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5
+      const dist = 120 + Math.random() * 180
+      gsap.fromTo(el,
+        { x: 0, y: 0, rotation: 0, opacity: 1, scale: 0.5 },
+        {
+          x: Math.cos(angle) * dist,
+          y: Math.sin(angle) * dist - 40,
+          rotation: 'random(-360, 360)',
+          opacity: 0,
+          scale: 'random(0.8, 1.5)',
+          duration: 1.2 + Math.random() * 0.8,
+          ease: 'power2.out',
+          delay: 0.3 + Math.random() * 0.3,
+          onComplete: () => el.remove(),
+        }
+      )
+    } else {
+      // Defeat: slow rising smoke wisps
+      gsap.fromTo(el,
+        { x: (Math.random() - 0.5) * 100, y: 20, opacity: 0.4, scale: 1 },
+        {
+          y: -80 - Math.random() * 60,
+          x: `+=${(Math.random() - 0.5) * 40}`,
+          opacity: 0,
+          scale: 2 + Math.random(),
+          filter: 'blur(3px)',
+          duration: 2 + Math.random() * 1.5,
+          ease: 'power1.out',
+          delay: 0.5 + Math.random() * 0.8,
+          onComplete: () => el.remove(),
+        }
+      )
+    }
+  }
+}
 
 onUnmounted(() => {
   if (glowEl.value) gsap.killTweensOf(glowEl.value)
@@ -88,6 +149,9 @@ function restart() {
     <div v-if="game.winner" class="modal-overlay">
       <!-- Radial glow behind modal -->
       <div ref="glowEl" :class="['modal-glow', isWin ? 'glow-win' : 'glow-lose']" />
+
+      <!-- Particle burst container -->
+      <div ref="particlesEl" class="result-particles" />
 
       <div ref="modalBoxEl" :class="['modal-box', isWin ? 'box-win' : 'box-lose']">
         <!-- Top ornament -->
@@ -175,6 +239,16 @@ function restart() {
 }
 .glow-win  { background: radial-gradient(circle, #fbbf24 0%, transparent 70%); }
 .glow-lose { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
+
+.result-particles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 201;
+}
 
 .modal-box {
   position: relative;

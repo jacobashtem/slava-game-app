@@ -340,31 +340,82 @@ watch(() => props.isDying, (v) => { if (v) hasDied.value = true })
 // ===== GSAP ANIMATION REFS =====
 const cardEl = ref<HTMLElement | null>(null)
 
-// GSAP: Hit impact — replaces CSS @keyframes hit-impact
+// GSAP: Hit impact — attack-type-aware VFX
 watch(() => props.isHit, (v) => {
   if (!v || !cardEl.value) return
+  const el = cardEl.value!
+  const atkType = ui.animatingAttackType
   nextTick(() => {
-    gsap.fromTo(cardEl.value!,
-      { x: 0, y: 0 },
-      {
-        x: 'random(-6, 6)', y: 'random(-2, 2)',
-        duration: 0.06, repeat: 6, yoyo: true,
-        ease: 'power1.inOut',
-        onComplete: () => { gsap.set(cardEl.value!, { x: 0, y: 0 }) }
-      }
-    )
+    const tl = gsap.timeline({
+      onComplete: () => { gsap.set(el, { x: 0, y: 0, scale: 1, rotation: 0, filter: 'none' }) }
+    })
+
+    if (atkType === AttackType.MELEE) {
+      // Melee: heavy slam — big shake + red flash
+      tl.to(el, { x: -8, duration: 0.04, ease: 'power2.out' })
+        .to(el, { x: 8, duration: 0.04 })
+        .to(el, { x: -5, y: -3, duration: 0.04 })
+        .to(el, { x: 5, y: 2, duration: 0.04 })
+        .to(el, { x: -3, y: 1, duration: 0.04 })
+        .to(el, { x: 0, y: 0, duration: 0.06 })
+      tl.fromTo(el, { filter: 'brightness(1)' },
+        { filter: 'brightness(1.8) saturate(1.4)', duration: 0.08, yoyo: true, repeat: 1 }, 0)
+      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(239,68,68,0)' },
+        { boxShadow: 'inset 0 0 20px 4px rgba(239,68,68,0.5)', duration: 0.12, yoyo: true, repeat: 1 }, 0)
+
+    } else if (atkType === AttackType.ELEMENTAL) {
+      // Elemental: fiery glow + wobble
+      tl.to(el, { rotation: -4, duration: 0.06 })
+        .to(el, { rotation: 4, duration: 0.06 })
+        .to(el, { rotation: -2, duration: 0.06 })
+        .to(el, { rotation: 0, duration: 0.08, ease: 'elastic.out(1,0.5)' })
+      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(251,146,60,0)' },
+        { boxShadow: '0 0 24px 8px rgba(251,146,60,0.7), inset 0 0 16px 2px rgba(255,100,0,0.4)',
+          duration: 0.2, yoyo: true, repeat: 1, ease: 'power2.out' }, 0)
+      tl.fromTo(el, { filter: 'brightness(1)' },
+        { filter: 'brightness(1.6) sepia(0.3)', duration: 0.15, yoyo: true, repeat: 1 }, 0)
+
+    } else if (atkType === AttackType.MAGIC) {
+      // Magic: arcane pulse — scale throb + purple glow + blur
+      tl.to(el, { scale: 0.94, duration: 0.08, ease: 'power2.in' })
+        .to(el, { scale: 1.06, duration: 0.1, ease: 'power2.out' })
+        .to(el, { scale: 1, duration: 0.2, ease: 'elastic.out(1,0.4)' })
+      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(168,85,247,0)' },
+        { boxShadow: '0 0 30px 10px rgba(168,85,247,0.6), 0 0 60px 20px rgba(139,92,246,0.3)',
+          duration: 0.25, yoyo: true, repeat: 1, ease: 'power2.out' }, 0)
+      tl.fromTo(el, { filter: 'brightness(1)' },
+        { filter: 'brightness(1.4) hue-rotate(20deg)', duration: 0.2, yoyo: true, repeat: 1 }, 0)
+
+    } else if (atkType === AttackType.RANGED) {
+      // Ranged: sharp push-back + cyan flash
+      tl.to(el, { x: 6, scale: 0.96, duration: 0.06, ease: 'power3.out' })
+        .to(el, { x: -2, scale: 1.02, duration: 0.08 })
+        .to(el, { x: 0, scale: 1, duration: 0.12, ease: 'back.out(2)' })
+      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(103,232,249,0)' },
+        { boxShadow: '0 0 16px 4px rgba(103,232,249,0.6)', duration: 0.12, yoyo: true, repeat: 1 }, 0)
+
+    } else {
+      // Fallback: basic shake
+      tl.fromTo(el, { x: 0, y: 0 },
+        { x: 'random(-6, 6)', y: 'random(-2, 2)', duration: 0.06, repeat: 6, yoyo: true, ease: 'power1.inOut' })
+    }
   })
 })
 
-// GSAP: Death burn — replaces CSS @keyframes death-burn
+// GSAP: Death burn — enhanced with scale pulse + color drain
 watch(() => props.isDying, (v) => {
   if (!v || !cardEl.value) return
   nextTick(() => {
+    const el = cardEl.value!
     gsap.timeline()
-      .to(cardEl.value!, { scale: 1.08, filter: 'brightness(2) saturate(1.5)', duration: 0.15 })
-      .to(cardEl.value!, { scale: 0.92, opacity: 0.7, filter: 'brightness(1.2)', duration: 0.2 })
-      .to(cardEl.value!, { scale: 0.5, opacity: 0.15, filter: 'brightness(0.4)', rotation: 'random(-8, 8)', duration: 0.3 })
-      .to(cardEl.value!, { scale: 0.05, opacity: 0, rotation: 'random(-15, 15)', duration: 0.25, ease: 'power2.in' })
+      // Phase 1: bright flash
+      .to(el, { scale: 1.1, filter: 'brightness(2.5) saturate(2)', boxShadow: '0 0 30px 10px rgba(255,200,50,0.5)', duration: 0.12 })
+      // Phase 2: shrink with color drain
+      .to(el, { scale: 0.9, opacity: 0.65, filter: 'brightness(1) saturate(0.3) grayscale(0.5)', boxShadow: '0 0 15px 5px rgba(100,0,0,0.4)', duration: 0.2 })
+      // Phase 3: crumble
+      .to(el, { scale: 0.4, opacity: 0.1, filter: 'brightness(0.3) grayscale(1) blur(2px)', rotation: 'random(-12, 12)', duration: 0.35, ease: 'power2.in' })
+      // Phase 4: vanish
+      .to(el, { scale: 0, opacity: 0, rotation: 'random(-20, 20)', duration: 0.2, ease: 'power3.in' })
   })
 })
 
@@ -1179,7 +1230,7 @@ function onClick() {
   border-radius: 5px;
   pointer-events: none;
   background: rgba(30, 90, 200, 0.78);
-  outline: 3px solid #60a5fa;
+  box-shadow: 0 0 0 3px #60a5fa;
   animation: shield-bg 0.35s ease-in-out infinite alternate;
 }
 .shield-label {
@@ -1201,8 +1252,7 @@ function onClick() {
 /* Klikalny badge pozycji */
 .pos-clickable {
   cursor: pointer;
-  outline: 1px dashed currentColor;
-  outline-offset: 1px;
+  box-shadow: 0 0 0 1px currentColor;
 }
 .pos-clickable:hover {
   filter: brightness(1.4);
@@ -1641,7 +1691,7 @@ function onClick() {
   border-radius: 5px;
   pointer-events: none;
   background: rgba(120, 80, 20, 0.78);
-  outline: 3px solid #f59e0b;
+  box-shadow: 0 0 0 3px #f59e0b;
   animation: immune-bg 0.35s ease-in-out infinite alternate;
 }
 .immune-label {
