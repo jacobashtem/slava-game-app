@@ -112,7 +112,7 @@ function cardImg(card: any): string | null {
   align-items: center;
   justify-content: center;
   z-index: 200;
-  backdrop-filter: blur(6px);
+  /* backdrop-filter removed for perf */
 }
 
 .grave-modal {

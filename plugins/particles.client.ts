@@ -1,14 +1,11 @@
 /**
- * tsParticles Nuxt plugin — client-only.
- * Initializes the slim engine (covers 90% of presets: move, opacity, color, size, rotate).
+ * tsParticles plugin — DISABLED.
+ * Replaced by canvas-based WeatherEffects.vue (zero dependencies).
+ * tsParticles caused lifecycle errors:
+ *   "Cannot read properties of null (reading 'emitsOptions')"
+ *   "Cannot set properties of null (setting '__vnode')"
+ * Keeping file to avoid import errors; packages can be removed from package.json.
  */
-import Particles from '@tsparticles/vue3'
-import { loadSlim } from '@tsparticles/slim'
-
-export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.vueApp.use(Particles, {
-    init: async (engine: any) => {
-      await loadSlim(engine)
-    },
-  })
+export default defineNuxtPlugin(() => {
+  // No-op: tsParticles no longer used
 })

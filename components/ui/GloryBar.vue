@@ -93,7 +93,7 @@ const holiday = computed(() => {
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(200, 168, 78, 0.15);
   border-radius: 6px;
-  backdrop-filter: blur(4px);
+  /* backdrop-filter removed for perf */
   flex-wrap: wrap;
 }
 

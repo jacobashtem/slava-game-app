@@ -224,7 +224,7 @@ function restart() {
   align-items: center;
   justify-content: center;
   z-index: 200;
-  backdrop-filter: blur(8px);
+  /* backdrop-filter removed — causes full-screen GPU blur, tanks fps */
 }
 
 .modal-glow {
@@ -232,13 +232,14 @@ function restart() {
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  filter: blur(100px);
+  /* Static pre-blurred gradient instead of runtime filter: blur(100px) */
   opacity: 0.3;
   pointer-events: none;
   /* GSAP handles glow breathing animation */
 }
-.glow-win  { background: radial-gradient(circle, #fbbf24 0%, transparent 70%); }
-.glow-lose { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
+/* Pre-blurred gradients: wider spread replaces runtime filter:blur */
+.glow-win  { background: radial-gradient(circle, rgba(251,191,36,0.5) 0%, rgba(251,191,36,0.1) 30%, transparent 60%); }
+.glow-lose { background: radial-gradient(circle, rgba(239,68,68,0.5) 0%, rgba(239,68,68,0.1) 30%, transparent 60%); }
 
 .result-particles {
   position: absolute;

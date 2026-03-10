@@ -171,8 +171,7 @@ const currentName = computed(() => tracks[currentTrack.value]?.name ?? '')
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 2px 6px;
-  backdrop-filter: blur(4px);
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .music-player.expanded {

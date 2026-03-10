@@ -336,7 +336,6 @@ function pickTarget(choice: string) {
   align-items: center;
   justify-content: center;
   z-index: 300;
-  backdrop-filter: blur(3px);
 }
 
 .pi-box {

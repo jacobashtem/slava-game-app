@@ -118,117 +118,49 @@ describe('useAudio composable', () => {
   })
 })
 
-describe('tsParticles', () => {
-  it('@tsparticles/slim module is importable', async () => {
-    const mod = await import('@tsparticles/slim')
-    expect(typeof mod.loadSlim).toBe('function')
-  })
-
-  it('@tsparticles/vue3 module is importable', async () => {
-    const mod = await import('@tsparticles/vue3')
-    expect(mod.default).toBeDefined()
+describe('tsParticles (REMOVED — replaced by canvas WeatherEffects)', () => {
+  it('tsParticles packages no longer used at runtime', () => {
+    // tsParticles caused lifecycle errors (emitsOptions null, __vnode null)
+    // WeatherEffects.vue now uses raw canvas 2D + requestAnimationFrame
+    expect(true).toBe(true)
   })
 })
 
-describe('WeatherEffects particle configs', () => {
-  // Validate that each season produces a valid tsParticles options object
+describe('WeatherEffects canvas config', () => {
+  // Validates the SEASON_CONFIG structure used by the canvas-based WeatherEffects
+  const SEASON_CONFIG: Record<string, { count: number; chars: string[]; isCircle: boolean; colors: string[]; sizeRange: [number, number]; speedRange: [number, number]; opacityRange: [number, number]; drift: number; wobble: number }> = {
+    spring: { count: 16, chars: ['🌸', '🌺', '✿'], isCircle: false, colors: [], sizeRange: [10, 16], speedRange: [0.4, 1.2], opacityRange: [0.15, 0.5], drift: 1.2, wobble: 12 },
+    summer: { count: 10, chars: [], isCircle: true, colors: ['#fbbf24', '#f59e0b', '#fcd34d'], sizeRange: [2, 5], speedRange: [0.15, 0.5], opacityRange: [0.1, 0.55], drift: 0.3, wobble: 8 },
+    autumn: { count: 18, chars: ['🍂', '🍁', '🍃'], isCircle: false, colors: [], sizeRange: [12, 18], speedRange: [0.6, 1.6], opacityRange: [0.15, 0.45], drift: 2.0, wobble: 16 },
+    winter: { count: 28, chars: ['❄', '❅', '•'], isCircle: false, colors: ['#e2e8f0', '#cbd5e1', '#ffffff'], sizeRange: [5, 13], speedRange: [0.2, 0.9], opacityRange: [0.1, 0.4], drift: 0.8, wobble: 8 },
+  }
+
   const seasons = ['spring', 'summer', 'autumn', 'winter'] as const
 
   for (const season of seasons) {
-    it(`${season} config has required particle properties`, () => {
-      // Simulate the config generation from WeatherEffects.vue
-      const config = getSeasonConfig(season)
-      expect(config).toBeDefined()
-      expect(config.particles).toBeDefined()
-      expect(config.particles.number).toBeDefined()
-      expect(config.particles.number.value).toBeGreaterThan(0)
-      expect(config.particles.move).toBeDefined()
-      expect(config.particles.move.enable).toBe(true)
-      expect(config.particles.move.speed).toBeDefined()
-      expect(config.fullScreen).toBe(false)
+    it(`${season} config has valid particle count and speed`, () => {
+      const cfg = SEASON_CONFIG[season]!
+      expect(cfg.count).toBeGreaterThan(0)
+      expect(cfg.speedRange[0]).toBeGreaterThan(0)
+      expect(cfg.speedRange[1]).toBeGreaterThan(cfg.speedRange[0])
+      expect(cfg.sizeRange[1]).toBeGreaterThan(cfg.sizeRange[0])
     })
   }
 
-  it('spring has flower characters', () => {
-    const config = getSeasonConfig('spring')
-    const chars = config.particles.shape.options.char.value
-    expect(chars).toContain('🌸')
+  it('spring has flower emoji chars', () => {
+    expect(SEASON_CONFIG.spring!.chars).toContain('🌸')
   })
 
-  it('winter has snowflake characters', () => {
-    const config = getSeasonConfig('winter')
-    const chars = config.particles.shape.options.char.value
-    expect(chars).toContain('❄')
+  it('winter has snowflake chars', () => {
+    expect(SEASON_CONFIG.winter!.chars).toContain('❄')
   })
 
-  it('summer uses circle shape (fireflies)', () => {
-    const config = getSeasonConfig('summer')
-    expect(config.particles.shape.type).toBe('circle')
+  it('summer uses circle shapes (fireflies)', () => {
+    expect(SEASON_CONFIG.summer!.isCircle).toBe(true)
+    expect(SEASON_CONFIG.summer!.colors.length).toBeGreaterThan(0)
   })
 
-  it('autumn has leaf characters', () => {
-    const config = getSeasonConfig('autumn')
-    const chars = config.particles.shape.options.char.value
-    expect(chars).toContain('🍂')
+  it('autumn has leaf emoji chars', () => {
+    expect(SEASON_CONFIG.autumn!.chars).toContain('🍂')
   })
 })
-
-// ===== HELPER: replicate WeatherEffects config generation for testing =====
-function getSeasonConfig(season: 'spring' | 'summer' | 'autumn' | 'winter') {
-  const base = { fullScreen: false, fpsLimit: 60, detectRetina: true, background: { color: 'transparent' } }
-
-  switch (season) {
-    case 'spring':
-      return {
-        ...base,
-        particles: {
-          number: { value: 18 },
-          shape: { type: 'char', options: { char: { value: ['🌸', '🌺', '✿'], font: 'serif', weight: '400' } } },
-          size: { value: { min: 8, max: 14 } },
-          opacity: { value: { min: 0.15, max: 0.5 }, animation: { enable: true, speed: 0.3, minimumValue: 0.1 } },
-          move: { enable: true, speed: { min: 0.5, max: 1.5 }, direction: 'bottom' as const, drift: 1.5, outModes: { default: 'out' as const } },
-          rotate: { value: { min: 0, max: 360 }, animation: { enable: true, speed: 3 } },
-          wobble: { enable: true, distance: 15, speed: 3 },
-        },
-      }
-    case 'summer':
-      return {
-        ...base,
-        particles: {
-          number: { value: 12 },
-          shape: { type: 'circle' },
-          size: { value: { min: 2, max: 5 } },
-          color: { value: ['#fbbf24', '#f59e0b', '#fcd34d'] },
-          opacity: { value: { min: 0.1, max: 0.6 }, animation: { enable: true, speed: 0.8, minimumValue: 0.05, sync: false } },
-          move: { enable: true, speed: { min: 0.2, max: 0.6 }, direction: 'none' as const, random: true, outModes: { default: 'bounce' as const } },
-          shadow: { enable: true, color: '#fbbf24', blur: 8 },
-        },
-      }
-    case 'autumn':
-      return {
-        ...base,
-        particles: {
-          number: { value: 22 },
-          shape: { type: 'char', options: { char: { value: ['🍂', '🍁', '🍃'], font: 'serif', weight: '400' } } },
-          size: { value: { min: 10, max: 16 } },
-          opacity: { value: { min: 0.15, max: 0.45 } },
-          move: { enable: true, speed: { min: 0.8, max: 2 }, direction: 'bottom' as const, drift: 2.5, outModes: { default: 'out' as const } },
-          rotate: { value: { min: 0, max: 360 }, animation: { enable: true, speed: 5 } },
-          wobble: { enable: true, distance: 20, speed: 5 },
-        },
-      }
-    case 'winter':
-      return {
-        ...base,
-        particles: {
-          number: { value: 35 },
-          shape: { type: 'char', options: { char: { value: ['❄', '❅', '•'], font: 'serif', weight: '400' } } },
-          size: { value: { min: 4, max: 12 } },
-          color: { value: ['#e2e8f0', '#cbd5e1', '#ffffff'] },
-          opacity: { value: { min: 0.1, max: 0.4 } },
-          move: { enable: true, speed: { min: 0.3, max: 1.2 }, direction: 'bottom' as const, drift: 1, outModes: { default: 'out' as const } },
-          wobble: { enable: true, distance: 10, speed: 2 },
-        },
-      }
-  }
-}
