@@ -1436,8 +1436,8 @@
         "domain": "Żywi",
         "name": "polewik",
         "stats": {
-            "attack": "",
-            "defense": ""
+            "attack": "2",
+            "defense": "3"
         },
         "oldStats": "",
         "combat": {
@@ -1541,8 +1541,8 @@
         "domain": "Żywi",
         "name": "ŻUPAN",
         "stats": {
-            "attack": "",
-            "defense": ""
+            "attack": "4",
+            "defense": "6"
         },
         "oldStats": "",
         "combat": {
@@ -2962,8 +2962,8 @@
         "domain": "Weles",
         "name": "Mavka",
         "stats": {
-            "attack": "",
-            "defense": ""
+            "attack": "2",
+            "defense": "3"
         },
         "oldStats": "",
         "combat": {

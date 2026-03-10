@@ -43,16 +43,27 @@ const canDraw = computed(() =>
 
 
 function onCardClick(card: CardInstance) {
-  if (!game.isPlayerTurn) return
-  if (card.cardData.cardType !== 'creature') return
-  if (game.currentPhase !== GamePhase.PLAY) return
+  console.log('[PlayerHand] onCardClick', {
+    cardId: card.instanceId,
+    cardName: card.cardData.name,
+    cardType: card.cardData.cardType,
+    isPlayerTurn: game.isPlayerTurn,
+    currentPhase: game.currentPhase,
+    creaturesPlayed: game.player?.creaturesPlayedThisTurn ?? 0,
+    playLimit: GOLD_EDITION_RULES.PLAY_LIMIT_CREATURES,
+  })
+  if (!game.isPlayerTurn) { console.warn('[PlayerHand] BLOCKED: not player turn'); return }
+  if (card.cardData.cardType !== 'creature') { console.log('[PlayerHand] not creature, skipping'); return }
+  if (game.currentPhase !== GamePhase.PLAY) { console.warn('[PlayerHand] BLOCKED: not PLAY phase'); return }
 
   if ((game.player?.creaturesPlayedThisTurn ?? 0) >= GOLD_EDITION_RULES.PLAY_LIMIT_CREATURES) {
+    console.warn('[PlayerHand] BLOCKED: play limit reached')
     ui.showPlayLimitToast('Możesz wystawić tylko 1 istotę na turę!')
     return
   }
 
   ui.selectCardFromHand(card.instanceId)
+  console.log('[PlayerHand] after selectCardFromHand', { selectedCardId: ui.selectedCardId, mode: ui.mode })
 
   if (ui.selectedCardId === card.instanceId) {
     // Sprawdź czy karta wystawiana na pole wroga (Wieszczy, Bieda)
@@ -185,6 +196,7 @@ function onPlayAdventure(card: CardInstance, useEnhanced: boolean) {
 
   // Bez celu — graj od razu
   game.playAdventure(card.instanceId, undefined, useEnhanced)
+  ui.clearSelection()
 }
 
 // Fan layout: karty ułożone w łuk

@@ -1,13 +1,28 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 
 const game = useGameStore()
 
-type LogItem = { message: string; type: string }
-const playerLogs = computed((): LogItem[] => (game.playerCurrentLogs ?? []) as LogItem[])
-const aiLogs = computed((): LogItem[] => (game.aiCurrentLogs ?? []) as LogItem[])
+// Panel open/closed state (desktop: minimized toggle, mobile: hidden by default)
+const panelOpen = ref(true)
+
+// Last 12 entries from unified action log
+const entries = computed(() => {
+  const log = game.actionLog ?? []
+  return log.slice(-12)
+})
+
+const show = computed(() => entries.value.length > 0 && game.gameStarted)
+
+// Auto-scroll to bottom
+const listRef = ref<HTMLElement | null>(null)
+watch(entries, () => {
+  nextTick(() => {
+    if (listRef.value) listRef.value.scrollTop = listRef.value.scrollHeight
+  })
+})
 
 const typeConfig: Record<string, { icon: string; color: string }> = {
   attack:  { icon: 'game-icons:crossed-swords', color: '#fb923c' },
@@ -21,153 +36,185 @@ const typeConfig: Record<string, { icon: string; color: string }> = {
   default: { icon: 'game-icons:perspective-dice-six', color: '#64748b' },
 }
 
-function getConfig(type: string | undefined) {
-  return typeConfig[type ?? 'default'] ?? typeConfig.default
+function cfg(type: string) {
+  return typeConfig[type] ?? typeConfig.default
 }
-function logColor(entry: LogItem | undefined): string { return getConfig(entry?.type)?.color ?? '#64748b' }
-function logIcon(entry: LogItem | undefined): string { return getConfig(entry?.type)?.icon ?? 'game-icons:perspective-dice-six' }
 </script>
 
 <template>
-  <div class="action-log">
-    <!-- LEWA KOLUMNA: logi tury gracza -->
-    <div class="log-col log-col-player">
-      <span class="log-label log-label-player">TY</span>
-      <TransitionGroup name="log-slide" tag="div" class="log-entries">
-        <span
-          v-for="(entry, i) in playerLogs"
-          :key="entry.message + i"
-          class="log-entry"
-          :style="{ '--log-color': logColor(entry) }"
-        >
-          <Icon :icon="logIcon(entry)" class="log-icon" />
-          <span class="log-text">{{ entry.message }}</span>
-        </span>
-      </TransitionGroup>
-    </div>
+  <!-- Mobile: small toggle button only -->
+  <button v-if="show" class="log-mobile-toggle" @click="panelOpen = !panelOpen">
+    <Icon icon="game-icons:scroll-unfurled" />
+  </button>
 
-    <div class="log-divider">᛭</div>
-
-    <!-- PRAWA KOLUMNA: logi tury AI -->
-    <div class="log-col log-col-ai">
-      <TransitionGroup name="log-slide" tag="div" class="log-entries">
-        <span
-          v-for="(entry, i) in aiLogs"
+  <Transition name="log-slide">
+    <div v-if="show && panelOpen" class="log-panel">
+      <div class="log-header" @click="panelOpen = false">
+        <Icon icon="game-icons:scroll-unfurled" class="log-header-icon" />
+        <span class="log-title">Dziennik</span>
+        <span class="log-toggle">✕</span>
+      </div>
+      <ul ref="listRef" class="log-list">
+        <li
+          v-for="(entry, i) in entries"
           :key="entry.message + i"
-          class="log-entry"
-          :style="{ '--log-color': logColor(entry) }"
+          class="log-row"
+          :style="{ '--lc': cfg(entry.type).color }"
         >
-          <Icon :icon="logIcon(entry)" class="log-icon" />
+          <Icon :icon="cfg(entry.type).icon" class="log-icon" />
           <span class="log-text">{{ entry.message }}</span>
-        </span>
-      </TransitionGroup>
-      <span class="log-label log-label-ai">AI</span>
+        </li>
+      </ul>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <style scoped>
-.action-log {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow: hidden;
-  min-width: 0;
-  width: 100%;
-  padding: 2px 4px;
+/* Mobile toggle button — hidden on desktop, visible on mobile */
+.log-mobile-toggle {
+  display: none;
 }
 
-.log-col {
+.log-panel {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  width: 260px;
+  max-height: 260px;
+  background: rgba(12, 18, 32, 0.95);
+  border-radius: 8px;
+  border: 1px solid rgba(200, 168, 78, 0.25);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+  z-index: 150;
   display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
+  flex-direction: column;
   overflow: hidden;
+  backdrop-filter: blur(6px);
 }
 
-.log-col-player { justify-content: flex-start; }
-.log-col-ai     { justify-content: flex-end; }
-
-.log-label {
-  font-family: var(--font-display, Georgia, serif);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.log-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px 4px;
+  background: rgba(200, 168, 78, 0.08);
+  border-bottom: 1px solid rgba(200, 168, 78, 0.12);
   flex-shrink: 0;
-  padding: 2px 6px;
-  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
 }
-
-.log-label-player {
-  color: #86efac;
-  background: rgba(134,239,172,0.1);
-  border: 1px solid rgba(134,239,172,0.2);
-  text-shadow: 0 0 6px rgba(134,239,172,0.3);
+.log-header:hover {
+  background: rgba(200, 168, 78, 0.14);
 }
-
-.log-label-ai {
-  color: #fca5a5;
-  background: rgba(252,165,165,0.1);
-  border: 1px solid rgba(252,165,165,0.2);
-  text-shadow: 0 0 6px rgba(252,165,165,0.3);
+.log-header-icon {
+  width: 12px;
+  height: 12px;
+  color: rgba(200, 168, 78, 0.6);
 }
-
-.log-divider {
+.log-title {
   font-size: 10px;
-  color: rgba(200, 168, 78, 0.25);
-  flex-shrink: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(200, 168, 78, 0.7);
+  flex: 1;
+}
+.log-toggle {
+  font-size: 10px;
+  color: rgba(200, 168, 78, 0.4);
   line-height: 1;
 }
 
-.log-entries {
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 6px;
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200,168,78,0.15) transparent;
+}
+
+.log-row {
+  display: flex;
+  align-items: flex-start;
   gap: 4px;
-  align-items: center;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  position: relative;
-}
-
-.log-col-ai .log-entries {
-  flex-direction: row-reverse;
-}
-
-.log-entry {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
   font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  color: var(--log-color, #94a3b8);
-  background: color-mix(in srgb, var(--log-color, #94a3b8) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--log-color, #94a3b8) 18%, transparent);
+  line-height: 1.4;
+  color: var(--lc, #94a3b8);
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--lc, #94a3b8) 6%, transparent);
 }
 
 .log-icon {
   width: 10px;
   height: 10px;
   flex-shrink: 0;
-  opacity: 0.8;
+  margin-top: 2px;
+  opacity: 0.7;
 }
 
 .log-text {
-  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
 }
 
-.log-slide-enter-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.log-slide-enter-from   { opacity: 0; transform: translateY(-8px) scale(0.9); }
-.log-slide-leave-active { transition: all 0.2s ease; position: absolute; }
-.log-slide-leave-to     { opacity: 0; transform: translateX(-10px); }
+/* Transitions */
+.log-slide-enter-active,
+.log-slide-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+.log-slide-enter-from,
+.log-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
 
-/* ====== MOBILE RESPONSIVE ====== */
+/* ====== MOBILE ====== */
 @media (max-width: 767px) {
-  .action-log {
-    display: none;
+  /* On mobile: panel hidden by default, toggle button visible */
+  .log-mobile-toggle {
+    display: flex;
+    position: fixed;
+    top: 30px;
+    left: 4px;
+    z-index: 160;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12, 18, 32, 0.9);
+    border: 1px solid rgba(200, 168, 78, 0.3);
+    border-radius: 6px;
+    color: rgba(200, 168, 78, 0.7);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    backdrop-filter: blur(4px);
   }
+
+  .log-panel {
+    position: fixed;
+    top: 62px;
+    left: 4px;
+    bottom: auto;
+    right: auto;
+    width: 220px;
+    max-height: 150px;
+    border-radius: 6px;
+    z-index: 155;
+  }
+  .log-header { padding: 3px 6px 2px; }
+  .log-title { font-size: 8px; }
+  .log-header-icon { width: 9px; height: 9px; }
+  .log-toggle { font-size: 8px; }
+  .log-list { padding: 2px 4px; gap: 1px; }
+  .log-row { font-size: 8px; padding: 1px 3px; }
+  .log-icon { width: 8px; height: 8px; }
 }
 </style>

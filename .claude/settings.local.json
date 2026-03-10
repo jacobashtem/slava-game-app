@@ -38,7 +38,16 @@
       "Bash(test:*)",
       "Bash(/tmp/find_adventures.sh:*)",
       "Bash(do:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "WebSearch",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx:*)",
+      "Bash(git log:*)"
     ]
   }
 }

@@ -127,17 +127,56 @@ const atkBuffed = computed(() => isCreature.value && card.value && atkDelta.valu
 const defDamaged = computed(() => isCreature.value && card.value && defDelta.value < 0)
 const defBuffed = computed(() => isCreature.value && card.value && defDelta.value > 0)
 
-// Active effect names
-const activeEffectNameMap: Record<string, string> = {
-  sztandar_mocy_buff: 'Sztandar Mocy (+2 ATK)', twierdza_def_buff: 'Twierdza (-3 DMG)',
-  bazyliszek_paralyze: 'Paraliż', zagorkinia_curse_drain: 'Klątwa Żagorkini',
-  likantropia_absorb: 'Likantropia', czarnoksieznik_steal_abilities: 'Skradzione zdolności',
-  wieszczy_spy_burn: 'Szpieg', bieda_spy_block_draw: 'Bieda',
-  homen_convert_on_death: 'Homunculus', trucizna_poison: 'Trucizna', zmora_grow_sacrifice: 'Zmora',
+// Active effect names + descriptions
+const activeEffectNameMap: Record<string, { name: string; desc: string }> = {
+  sztandar_mocy_buff: { name: 'Sztandar Mocy', desc: '+2 ATK dla sojuszników.' },
+  twierdza_def_buff: { name: 'Twierdza', desc: '-3 DMG otrzymane.' },
+  bazyliszek_paralyze: { name: 'Paraliż', desc: 'Nie może atakować przez 1 turę.' },
+  zagorkinia_curse_drain: { name: 'Klątwa Żagorkini', desc: '-1 DEF na turę.' },
+  likantropia_absorb: { name: 'Likantropia', desc: 'Po śmierci staje się Wilkołakiem.' },
+  czarnoksieznik_steal_abilities: { name: 'Skradzione zdolności', desc: 'Zdolność ukradziona.' },
+  wieszczy_spy_burn: { name: 'Szpieg', desc: '-1 DEF na turę właściciela.' },
+  bieda_spy_block_draw: { name: 'Bieda', desc: 'Właściciel nie dobiera kart.' },
+  homen_convert_on_death: { name: 'Homunculus', desc: 'Po śmierci wstaje jako Homen.' },
+  trucizna_poison: { name: 'Trucizna', desc: '-1 DEF na turę.' },
+  zmora_grow_sacrifice: { name: 'Zmora', desc: 'Rośnie w siłę kosztem sojuszników.' },
+  solowiej_disarm: { name: 'Gwizd Słowieja', desc: 'Choroba: nie może atakować.' },
+  biali_ludzie_disarm: { name: 'Choroba', desc: 'Nie może atakować — traci zdolność.' },
 }
 function getEffectName(effectId: string): string {
-  return activeEffectNameMap[effectId] ?? effectId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  return activeEffectNameMap[effectId]?.name ?? effectId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
+function getEffectDesc(effectId: string): string {
+  return activeEffectNameMap[effectId]?.desc ?? ''
+}
+
+// Status explanations
+const statusDescriptions: Record<string, string> = {
+  CHOROBA: 'Istota nie może atakować. Nałożona przez efekt karty wroga.',
+  PARALIZ: 'Istota jest sparaliżowana — pomija turę.',
+  TRUCIZNA: 'Traci 1 DEF na początku każdej tury.',
+  UCISZENIE: 'Zdolność istoty wyłączona.',
+  KLATWA: 'Klątwa — negatywny efekt.',
+}
+
+// Buff source info — check card metadata for stat modifiers
+const buffSources = computed<string[]>(() => {
+  if (!card.value || !isCreature.value) return []
+  const sources: string[] = []
+  const c = card.value
+  // Check equipped artifacts
+  if (c.equippedArtifacts?.length) {
+    for (const art of c.equippedArtifacts) {
+      sources.push(`${(art as any).name ?? 'Artefakt'}`)
+    }
+  }
+  // Check active effects that modify stats
+  for (const eff of c.activeEffects) {
+    const info = activeEffectNameMap[eff.effectId]
+    if (info) sources.push(info.name)
+  }
+  return sources
+})
 
 // Trigger labels
 const ttTriggerLabels: Record<string, string> = {
@@ -303,12 +342,23 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
             <span class="pv-enhanced-label">Ulepszony:</span> {{ data.enhancedEffectDescription }}
           </div>
 
-          <!-- Traits (silenced, immune, etc.) -->
+          <!-- Traits (silenced, immune, etc.) with descriptions -->
           <div v-if="isCreature && (card.isSilenced || card.isImmune || card.cannotAttack || card.poisonRoundsLeft)" class="pv-traits">
-            <span v-if="card.isSilenced" class="pv-trait pv-trait-bad">Uciszony</span>
-            <span v-if="card.isImmune" class="pv-trait pv-trait-good">Odporny</span>
-            <span v-if="card.cannotAttack" class="pv-trait pv-trait-bad">Nie może atakować</span>
-            <span v-if="card.poisonRoundsLeft" class="pv-trait pv-trait-bad">☠ Trucizna ({{ card.poisonRoundsLeft }}t)</span>
+            <div v-if="card.isSilenced" class="pv-trait-block">
+              <span class="pv-trait pv-trait-bad">Uciszony</span>
+              <span class="pv-trait-desc">Zdolność istoty wyłączona.</span>
+            </div>
+            <div v-if="card.isImmune" class="pv-trait-block">
+              <span class="pv-trait pv-trait-good">Odporny</span>
+            </div>
+            <div v-if="card.cannotAttack" class="pv-trait-block">
+              <span class="pv-trait pv-trait-bad">Choroba — Nie może atakować</span>
+              <span class="pv-trait-desc">Nałożona przez efekt karty wroga.</span>
+            </div>
+            <div v-if="card.poisonRoundsLeft" class="pv-trait-block">
+              <span class="pv-trait pv-trait-bad">☠ Trucizna ({{ card.poisonRoundsLeft }}t)</span>
+              <span class="pv-trait-desc">Traci 1 DEF na początku każdej tury.</span>
+            </div>
           </div>
 
           <!-- STATS BAR -->
@@ -328,6 +378,12 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
             </div>
           </div>
 
+          <!-- Buff/debuff sources -->
+          <div v-if="(atkDelta !== 0 || defDelta !== 0) && buffSources.length > 0" class="pv-buff-sources">
+            <span class="pv-buff-label">Modyfikatory:</span>
+            <span v-for="(src, si) in buffSources" :key="si" class="pv-buff-src">{{ src }}</span>
+          </div>
+
           <!-- Equipped artifacts -->
           <div v-if="card.equippedArtifacts && card.equippedArtifacts.length > 0" class="pv-section">
             <div class="pv-section-label">Artefakty</div>
@@ -337,14 +393,17 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
             </div>
           </div>
 
-          <!-- Active effects -->
+          <!-- Active effects with descriptions -->
           <div v-if="card.activeEffects.length > 0" class="pv-section">
             <div class="pv-section-label">Aktywne efekty</div>
-            <div v-for="(eff, i) in card.activeEffects" :key="i" class="pv-effect-entry">
-              <span class="pv-effect-dot">✦</span>
-              <span class="pv-effect-name">{{ getEffectName(eff.effectId) }}</span>
-              <span v-if="eff.remainingTurns !== null" class="pv-effect-dur">({{ eff.remainingTurns }}t)</span>
-              <span v-else class="pv-effect-perm">∞</span>
+            <div v-for="(eff, i) in card.activeEffects" :key="i" class="pv-effect-entry-block">
+              <div class="pv-effect-entry">
+                <span class="pv-effect-dot">✦</span>
+                <span class="pv-effect-name">{{ getEffectName(eff.effectId) }}</span>
+                <span v-if="eff.remainingTurns !== null" class="pv-effect-dur">({{ eff.remainingTurns }}t)</span>
+                <span v-else class="pv-effect-perm">∞</span>
+              </div>
+              <div v-if="getEffectDesc(eff.effectId)" class="pv-effect-desc-text">{{ getEffectDesc(eff.effectId) }}</div>
             </div>
           </div>
 
@@ -395,7 +454,8 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   inset: -6px;
   border-radius: 16px;
   background: radial-gradient(ellipse, color-mix(in srgb, var(--dc) 15%, transparent), transparent 70%);
-  filter: blur(10px);
+  /* filter: blur(10px) removed — causes GPU blur on every tooltip show, lags hover */
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -404,7 +464,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   border-radius: 12px;
   overflow: hidden;
   background: #0a0406;
-  box-shadow: 0 0 60px color-mix(in srgb, var(--dc) 12%, transparent), 0 20px 60px rgba(0,0,0,0.9);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
 }
 
 /* ART SECTION */
@@ -773,6 +833,11 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 }
 
 /* Active effects */
+.pv-effect-entry-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
 .pv-effect-entry {
   display: flex;
   align-items: center;
@@ -782,6 +847,48 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 .pv-effect-name { color: #c4b5fd; font-size: 10px; }
 .pv-effect-dur { color: #64748b; font-size: 9px; }
 .pv-effect-perm { color: #475569; font-size: 9px; }
+.pv-effect-desc-text {
+  font-size: 9px;
+  color: #64748b;
+  font-style: italic;
+  padding-left: 16px;
+}
+
+/* Trait blocks with description */
+.pv-trait-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.pv-trait-desc {
+  font-size: 9px;
+  color: #64748b;
+  font-style: italic;
+  padding-left: 8px;
+}
+
+/* Buff sources */
+.pv-buff-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.pv-buff-label {
+  font-size: 9px;
+  color: #475569;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pv-buff-src {
+  font-size: 9px;
+  color: #a78bfa;
+  background: rgba(167,139,250,0.08);
+  border: 1px solid rgba(167,139,250,0.2);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
 
 /* LORE */
 .pv-lore {

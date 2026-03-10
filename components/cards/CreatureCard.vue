@@ -7,6 +7,7 @@ import { AttackType, CardPosition } from '../../game-engine/constants'
 import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import { parseTokens } from '../../composables/useTokenIcons'
+// FireVFX (TresJS) removed — too heavy for card game, CSS-only fire used instead
 
 // Grafiki stworzeń: automatycznie wczytuje assets/cards/creature/{id}.png
 const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
@@ -151,6 +152,37 @@ const isInvincible  = computed(() => !props.inHand && (cardData.value as any).ef
 const isWijRevived  = computed(() => !props.inHand && !!props.card.metadata?.wijRevived)
 const isGuardian    = computed(() => !props.inHand && (cardData.value as any).effectId === 'niedzwiedzioak_guardian' && !props.card.isSilenced)
 const isRiding      = computed(() => !props.inHand && !!props.card.metadata?.rumakActive)
+const isHomenCursed = computed(() => !props.inHand && !!props.card.metadata?.homenCurseOwner)
+const isZombifying  = computed(() => ui.zombifyVFX?.cardId === props.card.instanceId)
+
+// ===== P1 VFX STATUSY =====
+const isParalyzed   = computed(() => !props.inHand && props.card.paralyzeRoundsLeft !== null && props.card.paralyzeRoundsLeft !== 0)
+const isDiseased    = computed(() => !props.inHand && !!props.card.cannotAttack && !isParalyzed.value)
+const isLifestealer = computed(() => !props.inHand && ['strzyga_lifesteal', 'bezkost_atk_drain', 'latawica_drain_ally'].includes((cardData.value as any).effectId) && !props.card.isSilenced)
+const isDeathFeeder = computed(() => !props.inHand && ['baba_jaga_death_growth', 'smierc_death_growth_save'].includes((cardData.value as any).effectId) && !props.card.isSilenced)
+const isAoEAura     = computed(() => !props.inHand && ['morowa_dziewica_aoe_all', 'cicha_kill_weak', 'poludnica_kill_weakest'].includes((cardData.value as any).effectId) && !props.card.isSilenced)
+
+// P2 AURA_RING — persistent aura glow per effect type
+const auraRingClass = computed(() => {
+  if (props.inHand || props.card.isSilenced) return ''
+  const eid = (cardData.value as any).effectId
+  switch (eid) {
+    case 'mroz_immunity_buffs': return 'aura-ring-ice'
+    case 'leszy_post_attack_defend': return 'aura-ring-forest'
+    case 'matoha_anti_magic': return 'aura-ring-antimagic'
+    case 'blotnik_taunt': return 'aura-ring-taunt'
+    case 'kudlak_invincible_hunger': return 'aura-ring-blood'
+    case 'wapierz_invincible_hunger': return 'aura-ring-dark'
+    default: return ''
+  }
+})
+
+// Conversion VFX — card being taken over
+const isConverting = computed(() => ui.conversionVFX?.cardId === props.card.instanceId)
+
+// Status flash VFX (krótki puls gdy efekt się aktywuje)
+const hasStatusFlash = computed(() => ui.statusFlashId === props.card.instanceId)
+const statusFlashClass = computed(() => hasStatusFlash.value ? `status-flash-${ui.statusFlashType}` : '')
 
 // ===== PASYWNE AURY — badge z opisem =====
 const passiveAuraMap: Record<string, { icon: string; label: string; desc: string }> = {
@@ -340,105 +372,94 @@ watch(() => props.isDying, (v) => { if (v) hasDied.value = true })
 // ===== GSAP ANIMATION REFS =====
 const cardEl = ref<HTMLElement | null>(null)
 
-// GSAP: Hit impact — attack-type-aware VFX
+// GSAP: Hit impact — compositor-only (transform + opacity). No filter/boxShadow animations.
 watch(() => props.isHit, (v) => {
   if (!v || !cardEl.value) return
   const el = cardEl.value!
   const atkType = ui.animatingAttackType
   nextTick(() => {
     const tl = gsap.timeline({
-      onComplete: () => { gsap.set(el, { x: 0, y: 0, scale: 1, rotation: 0, filter: 'none' }) }
+      onComplete: () => { gsap.set(el, { clearProps: 'transform,opacity' }) }
     })
 
     if (atkType === AttackType.MELEE) {
-      // Melee: heavy slam — big shake + red flash
-      tl.to(el, { x: -8, duration: 0.04, ease: 'power2.out' })
-        .to(el, { x: 8, duration: 0.04 })
-        .to(el, { x: -5, y: -3, duration: 0.04 })
-        .to(el, { x: 5, y: 2, duration: 0.04 })
-        .to(el, { x: -3, y: 1, duration: 0.04 })
-        .to(el, { x: 0, y: 0, duration: 0.06 })
-      tl.fromTo(el, { filter: 'brightness(1)' },
-        { filter: 'brightness(1.8) saturate(1.4)', duration: 0.08, yoyo: true, repeat: 1 }, 0)
-      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(239,68,68,0)' },
-        { boxShadow: 'inset 0 0 20px 4px rgba(239,68,68,0.5)', duration: 0.12, yoyo: true, repeat: 1 }, 0)
+      // Melee: heavy slam shake
+      tl.to(el, { x: -10, duration: 0.08, ease: 'power2.out' })
+        .to(el, { x: 10, duration: 0.08 })
+        .to(el, { x: -7, y: -4, duration: 0.07 })
+        .to(el, { x: 7, y: 3, duration: 0.07 })
+        .to(el, { x: -4, y: 2, duration: 0.08 })
+        .to(el, { x: 0, y: 0, duration: 0.12, ease: 'power2.out' })
+      // Flash via opacity pulse (compositor-only)
+      tl.fromTo(el, { opacity: 1 }, { opacity: 0.4, duration: 0.08, yoyo: true, repeat: 1 }, 0)
 
     } else if (atkType === AttackType.ELEMENTAL) {
-      // Elemental: fiery glow + wobble
-      tl.to(el, { rotation: -4, duration: 0.06 })
-        .to(el, { rotation: 4, duration: 0.06 })
-        .to(el, { rotation: -2, duration: 0.06 })
-        .to(el, { rotation: 0, duration: 0.08, ease: 'elastic.out(1,0.5)' })
-      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(251,146,60,0)' },
-        { boxShadow: '0 0 24px 8px rgba(251,146,60,0.7), inset 0 0 16px 2px rgba(255,100,0,0.4)',
-          duration: 0.2, yoyo: true, repeat: 1, ease: 'power2.out' }, 0)
-      tl.fromTo(el, { filter: 'brightness(1)' },
-        { filter: 'brightness(1.6) sepia(0.3)', duration: 0.15, yoyo: true, repeat: 1 }, 0)
+      // Elemental: wobble rotation
+      tl.to(el, { rotation: -5, duration: 0.1 })
+        .to(el, { rotation: 5, duration: 0.1 })
+        .to(el, { rotation: -3, duration: 0.1 })
+        .to(el, { rotation: 0, duration: 0.15, ease: 'elastic.out(1,0.5)' })
+      tl.fromTo(el, { opacity: 1 }, { opacity: 0.5, duration: 0.12, yoyo: true, repeat: 1 }, 0)
 
     } else if (atkType === AttackType.MAGIC) {
-      // Magic: arcane pulse — scale throb + purple glow + blur
-      tl.to(el, { scale: 0.94, duration: 0.08, ease: 'power2.in' })
-        .to(el, { scale: 1.06, duration: 0.1, ease: 'power2.out' })
-        .to(el, { scale: 1, duration: 0.2, ease: 'elastic.out(1,0.4)' })
-      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(168,85,247,0)' },
-        { boxShadow: '0 0 30px 10px rgba(168,85,247,0.6), 0 0 60px 20px rgba(139,92,246,0.3)',
-          duration: 0.25, yoyo: true, repeat: 1, ease: 'power2.out' }, 0)
-      tl.fromTo(el, { filter: 'brightness(1)' },
-        { filter: 'brightness(1.4) hue-rotate(20deg)', duration: 0.2, yoyo: true, repeat: 1 }, 0)
+      // Magic: arcane scale pulse
+      tl.to(el, { scale: 0.92, duration: 0.15, ease: 'power2.in' })
+        .to(el, { scale: 1.08, duration: 0.18, ease: 'power2.out' })
+        .to(el, { scale: 1, duration: 0.3, ease: 'elastic.out(1,0.4)' })
+      tl.fromTo(el, { opacity: 1 }, { opacity: 0.45, duration: 0.15, yoyo: true, repeat: 1 }, 0)
 
     } else if (atkType === AttackType.RANGED) {
-      // Ranged: sharp push-back + cyan flash
-      tl.to(el, { x: 6, scale: 0.96, duration: 0.06, ease: 'power3.out' })
-        .to(el, { x: -2, scale: 1.02, duration: 0.08 })
-        .to(el, { x: 0, scale: 1, duration: 0.12, ease: 'back.out(2)' })
-      tl.fromTo(el, { boxShadow: '0 0 0 0 rgba(103,232,249,0)' },
-        { boxShadow: '0 0 16px 4px rgba(103,232,249,0.6)', duration: 0.12, yoyo: true, repeat: 1 }, 0)
+      // Ranged: sharp push-back
+      tl.to(el, { x: 8, scale: 0.95, duration: 0.1, ease: 'power3.out' })
+        .to(el, { x: -3, scale: 1.03, duration: 0.12 })
+        .to(el, { x: 0, scale: 1, duration: 0.2, ease: 'back.out(2)' })
+      tl.fromTo(el, { opacity: 1 }, { opacity: 0.5, duration: 0.1, yoyo: true, repeat: 1 }, 0)
 
     } else {
       // Fallback: basic shake
       tl.fromTo(el, { x: 0, y: 0 },
-        { x: 'random(-6, 6)', y: 'random(-2, 2)', duration: 0.06, repeat: 6, yoyo: true, ease: 'power1.inOut' })
+        { x: 'random(-7, 7)', y: 'random(-3, 3)', duration: 0.1, repeat: 5, yoyo: true, ease: 'power1.inOut' })
     }
   })
 })
 
-// GSAP: Death burn — enhanced with scale pulse + color drain
+// GSAP: Death — compositor-only (transform + opacity). No filter/boxShadow.
 watch(() => props.isDying, (v) => {
   if (!v || !cardEl.value) return
   nextTick(() => {
     const el = cardEl.value!
     gsap.timeline()
-      // Phase 1: bright flash
-      .to(el, { scale: 1.1, filter: 'brightness(2.5) saturate(2)', boxShadow: '0 0 30px 10px rgba(255,200,50,0.5)', duration: 0.12 })
-      // Phase 2: shrink with color drain
-      .to(el, { scale: 0.9, opacity: 0.65, filter: 'brightness(1) saturate(0.3) grayscale(0.5)', boxShadow: '0 0 15px 5px rgba(100,0,0,0.4)', duration: 0.2 })
+      // Phase 1: bright flash (scale pop + flash white via opacity)
+      .to(el, { scale: 1.12, opacity: 0.7, duration: 0.2 })
+      // Phase 2: shrink
+      .to(el, { scale: 0.88, opacity: 0.5, duration: 0.35 })
       // Phase 3: crumble
-      .to(el, { scale: 0.4, opacity: 0.1, filter: 'brightness(0.3) grayscale(1) blur(2px)', rotation: 'random(-12, 12)', duration: 0.35, ease: 'power2.in' })
+      .to(el, { scale: 0.35, opacity: 0.08, rotation: 'random(-15, 15)', duration: 0.5, ease: 'power2.in' })
       // Phase 4: vanish
-      .to(el, { scale: 0, opacity: 0, rotation: 'random(-20, 20)', duration: 0.2, ease: 'power3.in' })
+      .to(el, { scale: 0, opacity: 0, rotation: 'random(-25, 25)', duration: 0.3, ease: 'power3.in' })
   })
 })
 
-// GSAP: Growth flash — replaces CSS @keyframes growth-flash
+// GSAP: Growth flash — compositor-only scale pulse
 watch(isGrowing, (v) => {
   if (!v || !cardEl.value) return
   nextTick(() => {
     gsap.fromTo(cardEl.value!,
-      { boxShadow: '0 0 0 0px rgba(34, 197, 94, 0)' },
-      { boxShadow: '0 0 0 4px rgba(34, 197, 94, 0.8), 0 0 16px 4px rgba(34, 197, 94, 0.4)',
-        duration: 0.3, yoyo: true, repeat: 1, ease: 'power2.out' }
+      { scale: 1 },
+      { scale: 1.06, duration: 0.25, yoyo: true, repeat: 1, ease: 'power2.out',
+        onComplete() { gsap.set(cardEl.value!, { clearProps: 'transform' }) } }
     )
   })
 })
 
-// GSAP: Resurrect glow — replaces CSS @keyframes resurrect-glow
+// GSAP: Resurrect glow — compositor-only scale + opacity pulse
 watch(isResurrecting, (v) => {
   if (!v || !cardEl.value) return
   nextTick(() => {
     gsap.fromTo(cardEl.value!,
-      { boxShadow: '0 0 0 0px rgba(167, 139, 250, 0)' },
-      { boxShadow: '0 0 0 5px rgba(167, 139, 250, 0.9), 0 0 20px 6px rgba(167, 139, 250, 0.5)',
-        duration: 0.4, yoyo: true, repeat: 1, ease: 'power2.out' }
+      { scale: 1, opacity: 1 },
+      { scale: 1.08, opacity: 0.6, duration: 0.35, yoyo: true, repeat: 1, ease: 'power2.out',
+        onComplete() { gsap.set(cardEl.value!, { clearProps: 'transform,opacity' }) } }
     )
   })
 })
@@ -510,6 +531,17 @@ const cardClass = computed(() => [
     'is-threatened': !!isThreatened.value,
     'is-growing': isGrowing.value,
     'is-resurrecting': isResurrecting.value,
+    // P1 VFX
+    'is-paralyzed': isParalyzed.value,
+    'is-diseased': isDiseased.value,
+    'is-lifestealer': isLifestealer.value,
+    'is-death-feeder': isDeathFeeder.value,
+    'is-aoe-aura': isAoEAura.value,
+    'is-homen-cursed': isHomenCursed.value,
+    'is-zombifying': isZombifying.value,
+    'is-converting': isConverting.value,
+    [auraRingClass.value]: !!auraRingClass.value,
+    [statusFlashClass.value]: hasStatusFlash.value,
   }
 ])
 
@@ -546,6 +578,7 @@ function onClick() {
     ref="cardEl"
     :class="cardClass"
     :style="{ '--domain-color': domainColor }"
+    :data-instance-id="card.instanceId"
     @click="onClick"
     @mouseenter="emit('mouseenter', card)"
     @mouseleave="emit('mouseleave')"
@@ -603,6 +636,10 @@ function onClick() {
         <!-- Licznik: Młot Swaroga ataków -->
         <span v-if="mlotCounter !== null" class="badge-tag badge-counter badge-mlot" v-tip="`Pozostało ataków Młota: ${mlotCounter}`">
           🔨 {{ mlotCounter }}
+        </span>
+        <!-- Homen curse mark -->
+        <span v-if="isHomenCursed" class="badge-tag badge-homen-curse" v-tip="'Klątwa Homena: po śmierci wstanie jako Homen!'">
+          💀
         </span>
         <!-- Artefakty equipped — hover pokazuje pełny podgląd karty przygody -->
         <span
@@ -736,29 +773,60 @@ function onClick() {
       <span class="threat-reason">{{ isThreatened }}</span>
     </div>
 
+    <!-- P1: Paraliż overlay (Bazyliszek, Jaroszek, Północnica) -->
+    <div v-if="isParalyzed && !hasDeathMark" class="state-overlay paralyze-overlay">
+      <span class="state-overlay-icon">⚡</span>
+      <span class="state-overlay-label">PARALIŻ</span>
+    </div>
+
+    <!-- P1: Choroba overlay (Biali Ludzie - cannotAttack bez paralyze) -->
+    <div v-if="isDiseased && !hasDeathMark" class="state-overlay disease-overlay">
+      <span class="state-overlay-icon">🦠</span>
+      <span class="state-overlay-label">CHOROBA</span>
+    </div>
+
     <div v-if="isValidTarget" class="target-overlay" />
 
     <!-- HIT VFX: type-specific effect on attacked card -->
     <div v-if="isHit" class="hit-vfx">
-      <!-- MELEE: sword slash scar -->
-      <svg v-if="ui.animatingAttackType === 0 || ui.animatingAttackType === null" viewBox="0 0 110 154" class="slash-svg">
-        <line x1="10" y1="140" x2="100" y2="14" class="slash-line" />
-        <line x1="85" y1="140" x2="25" y2="40" class="slash-line slash-line-2" />
-      </svg>
-      <!-- ELEMENTAL: fire particles -->
+      <!-- MELEE: triple slash + blood splatter + scar marks -->
+      <template v-if="ui.animatingAttackType === 0">
+        <svg viewBox="0 0 110 154" class="slash-svg">
+          <line x1="8" y1="145" x2="102" y2="10" class="slash-line slash-main" />
+          <line x1="88" y1="145" x2="22" y2="35" class="slash-line slash-cross" />
+          <line x1="55" y1="150" x2="55" y2="5" class="slash-line slash-vert" />
+        </svg>
+        <div class="melee-scar scar-1" />
+        <div class="melee-scar scar-2" />
+        <div class="melee-blood-splat" />
+      </template>
+      <!-- ELEMENTAL: lightweight CSS fire (no WebGL) -->
       <template v-if="ui.animatingAttackType === 1">
-        <div class="elem-fire" v-for="n in 10" :key="n" :style="{ '--ei': n }" />
-        <div class="elem-glow" />
+        <div class="fire-engulf" />
+        <div class="elem-flame elem-flame-1" />
+        <div class="elem-flame elem-flame-2" />
+        <div class="elem-flame elem-flame-3" />
+        <div class="elem-flame elem-flame-4" />
       </template>
-      <!-- MAGIC: arcane sparkles -->
+      <!-- MAGIC: rune circle + energy spiral + arcane explosion -->
       <template v-if="ui.animatingAttackType === 2">
-        <div class="magic-sparkle" v-for="n in 8" :key="n" :style="{ '--mi': n }" />
+        <div class="magic-circle" />
+        <div class="magic-rune" v-for="n in 6" :key="'mr'+n" :style="{ '--ri': n }" />
+        <div class="magic-spiral" />
+        <div class="magic-sparkle" v-for="n in 12" :key="'mp'+n" :style="{ '--mi': n }" />
         <div class="magic-ring" />
+        <div class="magic-ring magic-ring-2" />
       </template>
-      <!-- RANGED: arrow streak -->
+      <!-- RANGED: arrow with fletching + trail + impact crater -->
       <template v-if="ui.animatingAttackType === 3">
-        <div class="arrow-streak" />
-        <div class="arrow-impact" />
+        <div class="arrow-body">
+          <div class="arrow-shaft" />
+          <div class="arrow-head" />
+          <div class="arrow-fletching" />
+        </div>
+        <div class="arrow-trail" v-for="n in 5" :key="'at'+n" :style="{ '--ti': n }" />
+        <div class="arrow-impact-crater" />
+        <div class="arrow-splinter" v-for="n in 4" :key="'as'+n" :style="{ '--si': n }" />
       </template>
     </div>
 
@@ -795,13 +863,12 @@ function onClick() {
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease;
   user-select: none;
   flex-shrink: 0;
   box-shadow: 0 4px 16px rgba(0,0,0,0.7);
   overflow: hidden;
-  will-change: transform;
-  contain: layout style paint;
+  contain: content;
 }
 
 .creature-card:hover {
@@ -1337,7 +1404,7 @@ function onClick() {
 .badge-tag {
   font-size: 10px;
   line-height: 1;
-  filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));
+  text-shadow: 0 0 2px rgba(0,0,0,0.8);
 }
 
 /* Kolory obramowania dla stanów kart */
@@ -1377,7 +1444,7 @@ function onClick() {
 .state-overlay-icon {
   font-size: 20px;
   line-height: 1;
-  filter: drop-shadow(0 0 4px rgba(0,0,0,0.8));
+  text-shadow: 0 0 4px rgba(0,0,0,0.8);
 }
 
 .state-overlay-label {
@@ -1494,6 +1561,86 @@ function onClick() {
 .is-growing { /* GSAP green pulse */ }
 .is-resurrecting { /* GSAP purple pulse */ }
 
+/* ===== P1 VFX: STATUSY NA KARTACH ===== */
+
+/* Paraliż: szary + lekkie cracks */
+.is-paralyzed { filter: saturate(0.3) brightness(0.85); }
+.paralyze-overlay {
+  background: rgba(100, 116, 139, 0.45);
+  animation: status-opacity-pulse 1.5s ease-in-out infinite;
+}
+.paralyze-overlay .state-overlay-label {
+  color: #e2e8f0;
+  background: rgba(71, 85, 105, 0.85);
+}
+
+/* Choroba: zielonkawy + drżenie */
+.is-diseased { filter: hue-rotate(60deg) saturate(0.5) brightness(0.9); }
+.disease-overlay {
+  background: rgba(22, 101, 52, 0.4);
+  animation: status-opacity-pulse 2s ease-in-out infinite;
+}
+.disease-overlay .state-overlay-label {
+  color: #bbf7d0;
+  background: rgba(22, 101, 52, 0.85);
+}
+
+/* Shared compositor-friendly pulse for status overlays (opacity only, no background repaint) */
+@keyframes status-opacity-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+
+/* Lifesteal aura: delikatny czerwony/fioletowy puls */
+.is-lifestealer {
+  animation: lifesteal-aura 2.5s ease-in-out infinite;
+}
+@keyframes lifesteal-aura {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(239, 68, 68, 0.2); }
+  50%      { box-shadow: 0 0 10px 3px rgba(239, 68, 68, 0.5), 0 0 20px 6px rgba(239, 68, 68, 0.15); }
+}
+
+/* Death feeder aura: mroczny puls (Baba Jaga, Śmierć) */
+.is-death-feeder {
+  animation: death-feeder-aura 3s ease-in-out infinite;
+}
+@keyframes death-feeder-aura {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(107, 33, 168, 0.2); }
+  50%      { box-shadow: 0 0 8px 3px rgba(107, 33, 168, 0.5), 0 0 16px 5px rgba(107, 33, 168, 0.15); }
+}
+
+/* AoE aura: niebezpieczny puls (Morowa Dziewica, Cicha, Południca) */
+.is-aoe-aura {
+  animation: aoe-aura 2s ease-in-out infinite;
+}
+@keyframes aoe-aura {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(220, 38, 38, 0.15); }
+  50%      { box-shadow: 0 0 10px 4px rgba(220, 38, 38, 0.4), 0 0 20px 8px rgba(220, 38, 38, 0.1); }
+}
+
+/* Status flash: krótki puls przy aktywacji statusu */
+.status-flash-paralyze { animation: flash-paralyze 0.5s ease-out; }
+.status-flash-disease  { animation: flash-disease 0.5s ease-out; }
+.status-flash-curse    { animation: flash-curse 0.5s ease-out; }
+.status-flash-petrify  { animation: flash-petrify 0.5s ease-out; }
+
+@keyframes flash-paralyze {
+  0% { box-shadow: 0 0 20px 8px rgba(100,116,139,0.8); filter: brightness(1.5); }
+  100% { box-shadow: none; filter: none; }
+}
+@keyframes flash-disease {
+  0% { box-shadow: 0 0 20px 8px rgba(22,163,74,0.8); filter: brightness(1.3) hue-rotate(60deg); }
+  100% { box-shadow: none; filter: none; }
+}
+@keyframes flash-curse {
+  0% { box-shadow: 0 0 20px 8px rgba(168,85,247,0.8); filter: brightness(1.4); }
+  100% { box-shadow: none; filter: none; }
+}
+@keyframes flash-petrify {
+  0% { box-shadow: 0 0 20px 8px rgba(148,163,184,0.9); filter: brightness(1.6) grayscale(0.8); }
+  100% { box-shadow: none; filter: none; }
+}
+
 /* ===== SLASH EFFECT — cięcie miecza na trafionym celu ===== */
 /* ===== HIT VFX CONTAINER ===== */
 .hit-vfx {
@@ -1505,135 +1652,345 @@ function onClick() {
   border-radius: 5px;
 }
 
-/* --- MELEE: double sword slash --- */
-.slash-svg { width: 100%; height: 100%; }
+/* ===== MELEE: triple slash + blood + scars + sparks ===== */
+.slash-svg { width: 100%; height: 100%; position: absolute; inset: 0; }
 .slash-line {
-  stroke: #fff;
-  stroke-width: 3;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 6px #ef4444);
   stroke-dasharray: 200;
   stroke-dashoffset: 200;
-  animation: slash-draw 0.4s ease-out forwards;
+  will-change: stroke-dashoffset;
 }
-.slash-line-2 {
-  animation-delay: 0.12s;
-  stroke: #fca5a5;
-  filter: drop-shadow(0 0 4px #dc2626);
+.slash-main {
+  stroke: #fff; stroke-width: 3.5;
+  filter: drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 3px #fff);
+  animation: slash-draw 0.35s ease-out forwards;
+}
+.slash-cross {
+  stroke: #fca5a5; stroke-width: 2.5;
+  filter: drop-shadow(0 0 5px #dc2626);
+  animation: slash-draw 0.35s ease-out 0.08s forwards;
+}
+.slash-vert {
+  stroke: #e2e8f0; stroke-width: 2;
+  filter: drop-shadow(0 0 5px #94a3b8);
+  animation: slash-draw 0.3s ease-out 0.18s forwards;
 }
 @keyframes slash-draw {
-  0%   { stroke-dashoffset: 200; opacity: 0; stroke-width: 1; }
-  20%  { opacity: 1; stroke-width: 4; }
-  60%  { stroke-dashoffset: 0; stroke-width: 3; }
-  80%  { opacity: 0.8; stroke-width: 2; }
-  100% { stroke-dashoffset: 0; opacity: 0; stroke-width: 0; }
+  0%   { stroke-dashoffset: 200; opacity: 0; }
+  15%  { opacity: 1; }
+  70%  { stroke-dashoffset: 0; opacity: 0.9; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
 }
 
-/* --- ELEMENTAL: fire particles --- */
-.elem-fire {
+.melee-scar {
   position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fbbf24 30%, #ef4444 70%, transparent);
-  bottom: 10%;
-  left: calc(10% + var(--ei) * 8%);
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(220,38,38,0.8), rgba(239,68,68,0.6), transparent);
   opacity: 0;
-  animation: elem-rise 0.7s ease-out forwards;
-  animation-delay: calc(var(--ei) * 0.04s);
 }
-.elem-glow {
-  position: absolute;
-  inset: 10%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.4) 0%, transparent 70%);
-  animation: elem-glow-pulse 0.6s ease-out forwards;
+.scar-1 {
+  top: 30%; left: 10%; right: 15%;
+  transform: rotate(-35deg);
+  animation: scar-appear 0.5s ease-out 0.25s forwards;
 }
-@keyframes elem-rise {
-  0%   { opacity: 0; transform: translateY(0) scale(0.3); }
-  20%  { opacity: 1; transform: translateY(-10px) scale(1.2); }
-  60%  { opacity: 0.8; transform: translateY(-40px) scale(0.8); }
-  100% { opacity: 0; transform: translateY(-70px) scale(0.2); }
+.scar-2 {
+  top: 55%; left: 15%; right: 10%;
+  transform: rotate(20deg);
+  animation: scar-appear 0.5s ease-out 0.35s forwards;
 }
-@keyframes elem-glow-pulse {
-  0%   { opacity: 0; transform: scale(0.5); }
-  30%  { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.3); }
+@keyframes scar-appear {
+  0%   { opacity: 0; }
+  40%  { opacity: 1; }
+  100% { opacity: 0.5; }
 }
 
-/* --- MAGIC: arcane sparkles + ring --- */
+.melee-sparks {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 4px #fbbf24, 0 0 8px rgba(251,191,36,0.5);
+  top: calc(20% + var(--si) * 10%);
+  left: calc(15% + var(--si) * 12%);
+  opacity: 0;
+  animation: spark-fly 0.4s ease-out forwards;
+  animation-delay: calc(0.05s + var(--si) * 0.04s);
+}
+@keyframes spark-fly {
+  0%   { opacity: 0; transform: translate(0, 0) scale(0.5); }
+  20%  { opacity: 1; transform: translate(calc((var(--si) - 3) * 8px), calc(-10px - var(--si) * 5px)) scale(1.5); }
+  100% { opacity: 0; transform: translate(calc((var(--si) - 3) * 15px), calc(-25px - var(--si) * 8px)) scale(0); }
+}
+
+.melee-blood-splat {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: radial-gradient(ellipse at 40% 45%, rgba(180,20,20,0.35) 0%, transparent 50%);
+  opacity: 0;
+  animation: blood-flash 0.6s ease-out 0.1s forwards;
+}
+@keyframes blood-flash {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ===== ELEMENTAL: realistic fire wrapping around card ===== */
+.fire-engulf {
+  position: absolute;
+  inset: -8px;
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 100%, rgba(251,146,60,0.7) 0%, rgba(239,68,68,0.4) 30%, transparent 55%),
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(239,68,68,0.3) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 80% at 0% 50%, rgba(251,146,60,0.2) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 80% at 100% 50%, rgba(251,146,60,0.2) 0%, transparent 50%);
+  animation: fire-engulf-pulse 1.2s ease-out forwards;
+}
+@keyframes fire-engulf-pulse {
+  0%   { opacity: 0; }
+  10%  { opacity: 0.6; }
+  30%  { opacity: 1; }
+  70%  { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+/* Lightweight CSS fire — 4 gradient flames, compositor-only (transform + opacity) */
+.elem-flame {
+  position: absolute;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.elem-flame-1 {
+  bottom: -10px; left: 15%;
+  width: 30px; height: 50px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255,180,0,0.9), rgba(239,68,68,0.6) 50%, transparent 100%);
+  animation: elem-flicker 0.4s ease-in-out infinite alternate;
+}
+.elem-flame-2 {
+  bottom: -8px; right: 15%;
+  width: 25px; height: 42px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.85), rgba(251,146,60,0.5) 50%, transparent 100%);
+  animation: elem-flicker 0.35s ease-in-out 0.1s infinite alternate;
+}
+.elem-flame-3 {
+  bottom: -6px; left: 40%;
+  width: 35px; height: 55px;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255,220,100,0.9), rgba(239,68,68,0.5) 55%, transparent 100%);
+  animation: elem-flicker 0.45s ease-in-out 0.05s infinite alternate;
+}
+.elem-flame-4 {
+  top: -8px; left: 30%;
+  width: 22px; height: 28px;
+  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(239,68,68,0.7), rgba(180,30,0,0.3) 60%, transparent 100%);
+  animation: elem-flicker-top 0.38s ease-in-out 0.08s infinite alternate;
+}
+@keyframes elem-flicker {
+  0%   { transform: scaleY(0.85) scaleX(0.92); opacity: 0.7; }
+  100% { transform: scaleY(1.15) scaleX(1.08); opacity: 1; }
+}
+@keyframes elem-flicker-top {
+  0%   { transform: scaleY(0.8) scaleX(0.9); opacity: 0.5; }
+  100% { transform: scaleY(1.2) scaleX(1.1); opacity: 0.85; }
+}
+
+/* ===== MAGIC: rune circle + energy spiral + arcane explosion ===== */
+.magic-circle {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 70px; height: 70px;
+  margin: -35px 0 0 -35px;
+  border: 1.5px solid rgba(168,85,247,0.6);
+  border-radius: 50%;
+  opacity: 0;
+  animation: magic-circle-spin 0.8s ease-out forwards;
+}
+@keyframes magic-circle-spin {
+  0%   { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  20%  { opacity: 0.8; transform: scale(0.8) rotate(60deg); }
+  50%  { opacity: 0.6; transform: scale(1) rotate(150deg); }
+  100% { opacity: 0; transform: scale(1.3) rotate(360deg); }
+}
+
+.magic-rune {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 8px; height: 8px;
+  margin: -4px 0 0 -4px;
+  font-size: 10px;
+  color: #c084fc;
+  text-shadow: 0 0 6px #a855f7;
+  opacity: 0;
+  --rune-angle: calc(var(--ri) * 60deg);
+  animation: rune-orbit 0.7s ease-out forwards;
+  animation-delay: calc(var(--ri) * 0.06s);
+}
+.magic-rune::after {
+  content: '✦';
+  display: block;
+}
+@keyframes rune-orbit {
+  0%   { opacity: 0; transform: translate(0,0) scale(0); }
+  25%  { opacity: 1; transform: translate(calc(cos(var(--rune-angle)) * 25px), calc(sin(var(--rune-angle)) * 25px)) scale(1.5); }
+  60%  { opacity: 0.7; transform: translate(calc(cos(var(--rune-angle)) * 30px), calc(sin(var(--rune-angle)) * 30px)) rotate(180deg) scale(1); }
+  100% { opacity: 0; transform: translate(calc(cos(var(--rune-angle)) * 10px), calc(sin(var(--rune-angle)) * 10px)) rotate(360deg) scale(0.3); }
+}
+
+.magic-spiral {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 4px; height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #e9d5ff;
+  box-shadow: 0 0 12px #a855f7, 0 0 24px rgba(168,85,247,0.4), 0 0 40px rgba(139,92,246,0.2);
+  opacity: 0;
+  animation: spiral-pulse 0.6s ease-out forwards;
+}
+@keyframes spiral-pulse {
+  0%   { opacity: 0; transform: scale(0); }
+  30%  { opacity: 1; transform: scale(3); }
+  60%  { opacity: 0.8; transform: scale(1.5); }
+  80%  { opacity: 0.4; transform: scale(5); }
+  100% { opacity: 0; transform: scale(8); }
+}
+
 .magic-sparkle {
   position: absolute;
-  width: 4px;
-  height: 4px;
+  width: 3px; height: 3px;
   border-radius: 50%;
-  background: #c084fc;
-  box-shadow: 0 0 6px #a855f7, 0 0 12px rgba(168, 85, 247, 0.5);
-  top: 50%;
-  left: 50%;
+  background: #e9d5ff;
+  box-shadow: 0 0 4px #c084fc, 0 0 10px rgba(168,85,247,0.6);
+  top: 50%; left: 50%;
   opacity: 0;
+  --angle: calc(var(--mi) * 30deg);
   animation: magic-burst 0.6s ease-out forwards;
-  animation-delay: calc(var(--mi) * 0.05s);
-  --angle: calc(var(--mi) * 45deg);
-  transform-origin: center;
-}
-.magic-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 20px;
-  height: 20px;
-  margin: -10px 0 0 -10px;
-  border: 2px solid #a855f7;
-  border-radius: 50%;
-  opacity: 0;
-  transform-origin: center;
-  animation: magic-ring-expand 0.5s ease-out forwards;
+  animation-delay: calc(var(--mi) * 0.04s);
 }
 @keyframes magic-burst {
-  0%   { opacity: 0; transform: translate(0, 0) scale(0); }
-  30%  { opacity: 1; transform: translate(calc(cos(var(--angle)) * 20px), calc(sin(var(--angle)) * 20px)) scale(1.5); }
-  70%  { opacity: 0.7; transform: translate(calc(cos(var(--angle)) * 40px), calc(sin(var(--angle)) * 40px)) scale(1); }
-  100% { opacity: 0; transform: translate(calc(cos(var(--angle)) * 55px), calc(sin(var(--angle)) * 55px)) scale(0); }
-}
-@keyframes magic-ring-expand {
-  0%   { opacity: 0; transform: scale(0.15); border-width: 3px; }
-  30%  { opacity: 1; transform: scale(0.5); }
-  100% { opacity: 0; transform: scale(6); border-width: 1px; }
+  0%   { opacity: 0; transform: translate(0,0) scale(0); }
+  25%  { opacity: 1; transform: translate(calc(cos(var(--angle)) * 15px), calc(sin(var(--angle)) * 15px)) scale(1.8); }
+  60%  { opacity: 0.7; transform: translate(calc(cos(var(--angle)) * 35px), calc(sin(var(--angle)) * 35px)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(cos(var(--angle)) * 50px), calc(sin(var(--angle)) * 50px)) scale(0); }
 }
 
-/* --- RANGED: arrow streak + impact --- */
-.arrow-streak {
+.magic-ring {
   position: absolute;
-  top: 50%;
-  left: 20%;
-  width: 40px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #93c5fd, #3b82f6);
-  border-radius: 2px;
-  animation: arrow-fly 0.3s ease-out forwards;
-}
-.arrow-impact {
-  position: absolute;
-  top: 50%;
-  right: 30%;
-  width: 12px;
-  height: 12px;
-  margin-top: -6px;
+  top: 50%; left: 50%;
+  width: 16px; height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(168,85,247,0.7);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, transparent 70%);
+  box-shadow: 0 0 8px rgba(168,85,247,0.4), inset 0 0 4px rgba(168,85,247,0.2);
   opacity: 0;
-  animation: arrow-hit 0.4s ease-out 0.25s forwards;
+  animation: magic-ring-expand 0.6s ease-out forwards;
 }
-@keyframes arrow-fly {
-  0%   { transform: translateX(-60px) translateY(-50%) scaleX(0.6); opacity: 0; }
-  30%  { transform: translateX(0) translateY(-50%) scaleX(1.2); opacity: 1; }
-  100% { transform: translateX(80px) translateY(-50%) scaleX(0.4); opacity: 0; }
+.magic-ring-2 {
+  border-color: rgba(139,92,246,0.4);
+  animation-delay: 0.15s;
 }
-@keyframes arrow-hit {
-  0%   { opacity: 0; transform: scale(0.3); }
-  40%  { opacity: 1; transform: scale(2); }
-  100% { opacity: 0; transform: scale(3); }
+@keyframes magic-ring-expand {
+  0%   { opacity: 0; transform: scale(0.2); border-width: 3px; }
+  25%  { opacity: 1; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(7); border-width: 0.5px; }
+}
+
+/* ===== RANGED: arrow with fletching + trail + impact crater ===== */
+.arrow-body {
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  width: 60px;
+  height: 6px;
+  transform: translateY(-50%);
+  animation: arrow-fly-full 0.35s ease-out forwards;
+}
+.arrow-shaft {
+  position: absolute;
+  top: 50%; left: 10px; right: 12px;
+  height: 2px; margin-top: -1px;
+  background: linear-gradient(90deg, rgba(139,92,246,0.2), #94a3b8, #cbd5e1);
+  border-radius: 1px;
+}
+.arrow-head {
+  position: absolute;
+  right: 0; top: 50%;
+  width: 0; height: 0;
+  margin-top: -5px;
+  border-left: 10px solid #e2e8f0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  filter: drop-shadow(0 0 3px rgba(59,130,246,0.6));
+}
+.arrow-fletching {
+  position: absolute;
+  left: 0; top: 50%;
+  margin-top: -4px;
+  width: 12px; height: 8px;
+  background: linear-gradient(90deg, #dc2626, #b91c1c);
+  clip-path: polygon(0% 0%, 100% 25%, 100% 75%, 0% 100%, 30% 50%);
+}
+@keyframes arrow-fly-full {
+  0%   { left: -40px; opacity: 0; }
+  15%  { opacity: 1; }
+  60%  { left: 35%; opacity: 1; }
+  100% { left: 55%; opacity: 0; }
+}
+
+.arrow-trail {
+  position: absolute;
+  top: 50%;
+  height: 1.5px;
+  margin-top: -0.75px;
+  width: 20px;
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
+  left: calc(-10px + var(--ti) * 10px);
+  opacity: 0;
+  animation: trail-fade 0.3s ease-out forwards;
+  animation-delay: calc(var(--ti) * 0.04s);
+}
+@keyframes trail-fade {
+  0%   { opacity: 0; transform: translateX(-10px); }
+  30%  { opacity: 0.6; transform: translateX(20px); }
+  100% { opacity: 0; transform: translateX(70px); }
+}
+
+.arrow-impact-crater {
+  position: absolute;
+  top: 50%; right: 20%;
+  width: 18px; height: 18px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59,130,246,0.6) 0%, rgba(96,165,250,0.3) 40%, transparent 70%);
+  box-shadow: 0 0 12px rgba(59,130,246,0.4);
+  opacity: 0;
+  animation: crater-burst 0.5s ease-out 0.25s forwards;
+}
+@keyframes crater-burst {
+  0%   { opacity: 0; transform: scale(0.2); }
+  30%  { opacity: 1; transform: scale(1.8); }
+  70%  { opacity: 0.6; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(2.5); }
+}
+
+.arrow-splinter {
+  position: absolute;
+  top: 50%; right: calc(18% + var(--si) * 3%);
+  width: 6px; height: 1.5px;
+  background: #94a3b8;
+  border-radius: 1px;
+  opacity: 0;
+  --sp-angle: calc(var(--si) * 90deg - 135deg);
+  animation: splinter-fly 0.35s ease-out 0.28s forwards;
+}
+@keyframes splinter-fly {
+  0%   { opacity: 0; transform: translate(0,0) rotate(0deg) scale(1); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(cos(var(--sp-angle)) * 20px), calc(sin(var(--sp-angle)) * 20px)) rotate(calc(var(--si) * 45deg)) scale(0.3); }
 }
 
 /* ===== DEATH FIRE — iskry/żar przy śmierci ===== */
@@ -1722,96 +2079,201 @@ function onClick() {
   opacity: 0;
 }
 
+/* ===== HOMEN CURSE + ZOMBIFY ===== */
+.badge-homen-curse {
+  background: rgba(107, 33, 168, 0.8) !important;
+  animation: homen-curse-badge 2s ease-in-out infinite;
+}
+@keyframes homen-curse-badge {
+  0%, 100% { box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }
+  50% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.8); }
+}
+
+.is-homen-cursed {
+  box-shadow: 0 0 6px 2px rgba(107, 33, 168, 0.3);
+}
+
+.is-zombifying {
+  animation: zombify-rise 1.2s ease-out !important;
+  filter: hue-rotate(180deg) saturate(0.6) brightness(0.8);
+}
+@keyframes zombify-rise {
+  0%   { transform: translateY(40px) scale(0.5); opacity: 0; filter: hue-rotate(180deg) saturate(0.3) brightness(0.4); }
+  30%  { transform: translateY(10px) scale(0.9); opacity: 0.7; }
+  60%  { transform: translateY(-5px) scale(1.05); opacity: 1; filter: hue-rotate(180deg) saturate(0.6) brightness(0.8); }
+  80%  { transform: translateY(2px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); opacity: 1; filter: none; }
+}
+
+/* Smocze Jajo pulsing counter when close to hatching */
+.badge-jajo {
+  transition: background 0.3s;
+}
+
+/* ===== P2: AURA_RING — persistent aura glow per card ===== */
+.aura-ring-ice {
+  animation: aura-ice 3s ease-in-out infinite;
+}
+@keyframes aura-ice {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(96,165,250,0.2), 0 0 8px 2px rgba(96,165,250,0.1); }
+  50%      { box-shadow: 0 0 8px 3px rgba(96,165,250,0.5), 0 0 16px 5px rgba(96,165,250,0.15); }
+}
+
+.aura-ring-forest {
+  animation: aura-forest 2.5s ease-in-out infinite;
+}
+@keyframes aura-forest {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(34,197,94,0.2), 0 0 8px 2px rgba(34,197,94,0.1); }
+  50%      { box-shadow: 0 0 8px 3px rgba(34,197,94,0.45), 0 0 16px 5px rgba(34,197,94,0.12); }
+}
+
+.aura-ring-antimagic {
+  animation: aura-antimagic 2s ease-in-out infinite;
+}
+@keyframes aura-antimagic {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(107,33,168,0.2), 0 0 8px 2px rgba(107,33,168,0.1); }
+  50%      { box-shadow: 0 0 8px 3px rgba(107,33,168,0.5), 0 0 16px 5px rgba(107,33,168,0.15); }
+}
+
+.aura-ring-taunt {
+  animation: aura-taunt 1.5s ease-in-out infinite;
+}
+@keyframes aura-taunt {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(239,68,68,0.2), 0 0 8px 2px rgba(239,68,68,0.1); }
+  50%      { box-shadow: 0 0 8px 3px rgba(239,68,68,0.5), 0 0 16px 5px rgba(239,68,68,0.12); }
+}
+
+.aura-ring-blood {
+  animation: aura-blood 2s ease-in-out infinite;
+}
+@keyframes aura-blood {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(185,28,28,0.25), 0 0 8px 2px rgba(185,28,28,0.1); }
+  50%      { box-shadow: 0 0 10px 4px rgba(185,28,28,0.5), 0 0 20px 6px rgba(185,28,28,0.15); }
+}
+
+.aura-ring-dark {
+  animation: aura-dark 2.5s ease-in-out infinite;
+}
+@keyframes aura-dark {
+  0%, 100% { box-shadow: 0 0 5px 2px rgba(30,0,50,0.3), 0 0 10px 3px rgba(107,33,168,0.15); }
+  50%      { box-shadow: 0 0 10px 4px rgba(30,0,50,0.5), 0 0 20px 6px rgba(107,33,168,0.25); }
+}
+
+/* ===== P2: CONVERSION — card being taken over ===== */
+.is-converting {
+  animation: converting-pulse 0.8s ease-in-out;
+}
+@keyframes converting-pulse {
+  0%   { box-shadow: none; filter: none; }
+  30%  { box-shadow: 0 0 20px 8px rgba(168,85,247,0.7); filter: brightness(1.3); }
+  70%  { box-shadow: 0 0 15px 5px rgba(168,85,247,0.4); filter: brightness(1.1); }
+  100% { box-shadow: none; filter: none; }
+}
+
 /* ====== MOBILE RESPONSIVE ====== */
 @media (max-width: 767px) {
   .creature-card {
-    width: 62px;
-    height: 86px;
+    width: 56px;
+    height: 76px;
     border-radius: 4px;
     border-width: 1.5px;
   }
   .creature-card:hover {
-    transform: translateY(-2px);
+    transform: none;
   }
+
+  /* Attack rotation on mobile — scaled down to fit container */
   .card-attack {
-    transform: rotate(90deg) scale(0.92);
+    transform: rotate(90deg) scale(0.85);
+    border-color: color-mix(in srgb, #ef4444 55%, var(--domain-color, #334155));
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.35), 0 2px 6px rgba(0,0,0,0.7);
   }
   .card-attack:hover {
-    transform: rotate(90deg) scale(0.92) translateY(-2px);
+    transform: rotate(90deg) scale(0.85);
   }
 
-  /* Full-bleed art on mobile — card is mostly art */
-  .card-art {
-    /* Already absolute + inset: 0 — full card */
-  }
+  /* Header hidden — name badge replaces it */
+  .card-header { display: none; }
 
-  /* Hide header — name badge takes up too much space at this size */
-  .card-header {
-    display: none;
-  }
-
-  /* Minimize body — only show essential badges */
+  /* Compact body */
   .card-body {
     flex: 0;
     padding: 1px 2px 0;
     gap: 1px;
   }
-  .flying-row {
-    padding-right: 1px;
-  }
-  .flying-img {
-    width: 10px;
-    height: 10px;
-  }
-  .card-badges {
-    gap: 1px;
-  }
+  .flying-row { padding-right: 1px; }
+  .flying-img { width: 10px; height: 10px; }
+  .card-badges { gap: 1px; }
   .badge-icon { font-size: 7px; }
   .badge-tag { font-size: 7px; }
   .badge-paralyze { font-size: 6px; padding: 0 1px; }
   .badge-poison { font-size: 6px; }
-  .card-active-effects {
-    display: none;
-  }
-  .card-abilities {
-    display: none;
-  }
-  .position-badge {
-    display: none;
-  }
-  .ability-row {
-    display: none;
-  }
+  .card-active-effects { display: none; }
+  .card-abilities { display: none; }
+  .ability-row { display: none; }
 
-  /* Compact footer: tiny stats at bottom overlaying art */
+  /* Position badge — LARGE tappable button ABOVE the card on mobile */
+  .position-badge {
+    display: flex;
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-size: 8px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    min-width: 36px;
+    min-height: 20px;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    backdrop-filter: blur(4px);
+  }
+  .pos-attack {
+    background: rgba(239, 68, 68, 0.25) !important;
+    border: 1.5px solid rgba(239, 68, 68, 0.5) !important;
+    color: #fca5a5 !important;
+  }
+  .pos-defense {
+    background: rgba(96, 165, 250, 0.25) !important;
+    border: 1.5px solid rgba(96, 165, 250, 0.5) !important;
+    color: #93c5fd !important;
+  }
+  .pos-clickable {
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(200, 168, 78, 0.5);
+    animation: pos-pulse 2s ease-in-out infinite;
+  }
+  @keyframes pos-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(200, 168, 78, 0.5); }
+    50% { box-shadow: 0 0 14px rgba(200, 168, 78, 0.8); }
+  }
+  .pos-icon { font-size: 10px; }
+
+  /* Stats footer — compact for smaller cards */
   .card-footer {
-    padding: 2px 4px;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(2px);
+    padding: 2px 3px;
+    background: rgba(0,0,0,0.85);
   }
   .stat {
-    font-size: 13px;
-    gap: 2px;
+    font-size: 11px;
+    gap: 1px;
   }
-  .stat-img {
-    width: 10px;
-    height: 10px;
-  }
-  .stat-icon {
-    font-size: 10px;
-  }
-  .stat-delta {
-    font-size: 7px;
-  }
+  .stat-img { width: 9px; height: 9px; }
+  .stat-icon { font-size: 9px; }
+  .stat-delta { font-size: 6px; }
 
-  /* Name: tiny overlay at top of card */
+  /* Name overlay — compact 1-line */
   .card-name-badge {
     position: absolute;
     top: 1px;
     left: 1px;
-    right: 14px;
+    right: 12px;
     z-index: 5;
-    padding: 1px 3px;
+    padding: 0 2px;
     border-radius: 2px;
     display: block;
   }
@@ -1822,54 +2284,44 @@ function onClick() {
     -webkit-line-clamp: 1;
   }
 
-  /* Domain icon smaller */
+  /* Domain icon */
   .card-domain-img {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
     top: 1px;
     right: 1px;
   }
   .card-domain-dot {
     width: 6px;
     height: 6px;
-    top: 2px;
-    right: 2px;
+    top: 1px;
+    right: 1px;
   }
 
-  /* Gradient: gentler on mobile — show more art */
+  /* Gradient for stat readability */
   .creature-card::after {
-    height: 40%;
+    height: 45%;
     background: linear-gradient(transparent 0%, rgba(5,3,8,0.5) 40%, rgba(5,3,8,0.9) 100%);
   }
 
   .aura-badge {
-    transform: scale(0.6);
+    transform: scale(0.55);
     transform-origin: bottom left;
-    bottom: 22px;
+    bottom: 24px;
     left: 1px;
   }
   .spy-badge {
-    transform: scale(0.6);
+    transform: scale(0.55);
     transform-origin: top left;
   }
 
-  /* Shield overlay smaller */
-  .shield-overlay {
-    font-size: 18px;
-  }
-  .shield-label {
-    font-size: 5px;
-  }
+  /* Shield overlay */
+  .shield-overlay { font-size: 18px; }
+  .shield-label { font-size: 5px; }
 
   /* State overlays */
-  .state-overlay {
-    font-size: 10px;
-  }
-  .state-overlay-icon {
-    font-size: 16px;
-  }
-  .state-overlay-label {
-    font-size: 5px;
-  }
+  .state-overlay { font-size: 10px; }
+  .state-overlay-icon { font-size: 16px; }
+  .state-overlay-label { font-size: 5px; }
 }
 </style>

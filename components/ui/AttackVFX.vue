@@ -13,12 +13,12 @@ const ui = useUIStore()
 const flashEl = ref<HTMLElement | null>(null)
 const ringEl = ref<HTMLElement | null>(null)
 
-// Screen flash colors per attack type
+// Screen flash colors per attack type (longer durations for visual impact)
 const flashConfigs: Record<number, { color: string; intensity: number; duration: number }> = {
-  0: { color: 'rgba(255, 80, 40, 0.14)', intensity: 0.9, duration: 0.25 },  // melee — red flash
-  1: { color: 'rgba(251, 146, 60, 0.2)', intensity: 1, duration: 0.4 },     // elemental — orange fire
-  2: { color: 'rgba(168, 85, 247, 0.18)', intensity: 1, duration: 0.5 },    // magic — purple
-  3: { color: 'rgba(59, 130, 246, 0.12)', intensity: 0.8, duration: 0.2 },  // ranged — blue streak
+  0: { color: 'rgba(255, 80, 40, 0.16)', intensity: 0.9, duration: 0.5 },   // melee — red flash
+  1: { color: 'rgba(251, 146, 60, 0.22)', intensity: 1, duration: 0.7 },    // elemental — orange fire
+  2: { color: 'rgba(168, 85, 247, 0.2)', intensity: 1, duration: 0.8 },     // magic — purple
+  3: { color: 'rgba(59, 130, 246, 0.14)', intensity: 0.85, duration: 0.4 }, // ranged — blue streak
 }
 
 watch(() => ui.animatingHit, (hitId) => {
@@ -62,12 +62,12 @@ watch(() => ui.animatingHit, (hitId) => {
       })
     }
 
-    // Magic: expanding ring ripple
+    // Magic: expanding ring ripple (slower expansion)
     if (atkType === 2 && ringEl.value) {
-      gsap.set(ringEl.value, { display: 'block', scale: 0.1, opacity: 0.6 })
+      gsap.set(ringEl.value, { display: 'block', scale: 0.1, opacity: 0.7 })
       gsap.to(ringEl.value, {
-        scale: 2.5, opacity: 0,
-        duration: 0.7, ease: 'power2.out',
+        scale: 2.8, opacity: 0,
+        duration: 1.0, ease: 'power2.out',
         onComplete: () => { if (ringEl.value) gsap.set(ringEl.value, { display: 'none' }) },
       })
     }
@@ -76,23 +76,23 @@ watch(() => ui.animatingHit, (hitId) => {
     const board = document.querySelector('.game-board')
     if (board) {
       if (atkType === 0) {
-        // Melee: heavy slam shake
+        // Melee: heavy slam shake (slower, more dramatic)
         gsap.to(board, {
-          x: 'random(-4, 4)', y: 'random(-2, 2)',
-          duration: 0.04, repeat: 7, yoyo: true, ease: 'power1.inOut',
+          x: 'random(-5, 5)', y: 'random(-3, 3)',
+          duration: 0.07, repeat: 7, yoyo: true, ease: 'power1.inOut',
           onComplete: () => { gsap.set(board, { x: 0, y: 0 }) },
         })
       } else if (atkType === 1) {
-        // Elemental: rumble
+        // Elemental: rumble (slower)
         gsap.to(board, {
-          x: 'random(-2.5, 2.5)', y: 'random(-1.5, 1.5)',
-          duration: 0.05, repeat: 5, yoyo: true, ease: 'power1.inOut',
+          x: 'random(-3, 3)', y: 'random(-2, 2)',
+          duration: 0.08, repeat: 5, yoyo: true, ease: 'power1.inOut',
           onComplete: () => { gsap.set(board, { x: 0, y: 0 }) },
         })
       } else if (atkType === 2) {
-        // Magic: single pulse outward
+        // Magic: single pulse outward (deeper)
         gsap.fromTo(board, { scale: 1 },
-          { scale: 1.005, duration: 0.12, yoyo: true, repeat: 1, ease: 'power2.out',
+          { scale: 1.008, duration: 0.2, yoyo: true, repeat: 1, ease: 'power2.out',
             onComplete: () => { gsap.set(board, { scale: 1 }) } }
         )
       }

@@ -356,21 +356,9 @@ function ownerColor(ev: ActiveEventCard): string {
     display: none;
   }
 
-  /* Events zone: poziomy, kompaktowy */
+  /* Events zone: HIDDEN on mobile — saves vertical space */
   .events-zone {
-    flex-direction: row;
-    width: 100%;
-    height: auto;
-    min-height: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-left: none;
-    border-right: none;
-    border-top: 1px solid rgba(200,168,78,0.08);
-    border-bottom: 1px solid rgba(200,168,78,0.08);
-    padding: 2px 4px;
-    scrollbar-width: none;
-    gap: 3px;
+    display: none;
   }
   .events-zone::-webkit-scrollbar { display: none; }
   .events-zone-label {

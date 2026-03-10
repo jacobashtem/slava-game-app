@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, onErrorCaptured } from 'vue'
 import PlayerField from './PlayerField.vue'
 import PlayerHand from '../ui/PlayerHand.vue'
 import TurnIndicator from '../ui/TurnIndicator.vue'
@@ -11,7 +11,7 @@ import GameOverModal from '../ui/GameOverModal.vue'
 import GraveyardModal from '../ui/GraveyardModal.vue'
 import PendingInteractionModal from '../ui/PendingInteractionModal.vue'
 import GameHint from '../ui/GameHint.vue'
-import AISummaryPanel from '../ui/AISummaryPanel.vue'
+// AISummaryPanel removed — unified ActionLog is the single log source
 import WeatherEffects from '../ui/WeatherEffects.vue'
 import MusicPlayer from '../ui/MusicPlayer.vue'
 import TurnBanner from '../ui/TurnBanner.vue'
@@ -19,6 +19,11 @@ import GloryBar from '../ui/GloryBar.vue'
 import PanteonPanel from '../ui/PanteonPanel.vue'
 import InfoBox from '../ui/InfoBox.vue'
 import AttackVFX from '../ui/AttackVFX.vue'
+import DrainParticles from '../ui/DrainParticles.vue'
+import AoEWave from '../ui/AoEWave.vue'
+import EggHatchVFX from '../ui/EggHatchVFX.vue'
+import ConversionSlideVFX from '../ui/ConversionSlideVFX.vue'
+import GorynychMergeVFX from '../ui/GorynychMergeVFX.vue'
 import CardBack from '../cards/CardBack.vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
@@ -27,6 +32,12 @@ import { useAudio } from '../../composables/useAudio'
 
 const game = useGameStore()
 const ui = useUIStore()
+
+// No error suppression — let errors surface so we can fix root causes.
+// The insertBefore/emitsOptions crashes were fixed by:
+// 1. Removing el.remove() from GSAP onComplete (BattleLine damage float)
+// 2. Stable positional keys in renderItems (slot-0, slot-1, slot-2)
+// 3. nextTick guards on setTimeout reactive mutations (uiStore)
 
 const player = computed(() => game.state?.players.player1)
 const ai = computed(() => game.state?.players.player2)
@@ -49,6 +60,24 @@ const seasonGradients: Record<string, string> = {
   autumn: 'radial-gradient(ellipse 120% 100% at 50% 55%, #1a0f08 0%, #12101c 40%, #080c1a 100%)',
   winter: 'radial-gradient(ellipse 120% 100% at 50% 55%, #0c1420 0%, #0a0e1e 40%, #060a14 100%)',
 }
+
+// Season crossfade: two layers, old bg fades out while new bg fades in
+const currentBg = ref(seasonBgMap[game.season] ?? '')
+const prevBg = ref('')
+const isCrossfading = ref(false)
+
+watch(() => game.season, (newSeason, oldSeason) => {
+  if (newSeason === oldSeason) return
+  const newUrl = seasonBgMap[newSeason]
+  if (!newUrl) return
+  prevBg.value = currentBg.value
+  currentBg.value = newUrl
+  isCrossfading.value = true
+  setTimeout(() => {
+    isCrossfading.value = false
+    prevBg.value = ''
+  }, 2000)
+})
 
 const bgStyle = computed(() => {
   const url = seasonBgMap[game.season]
@@ -74,31 +103,7 @@ const passiveAuraMap: Record<string, { icon: string; label: string; desc: string
   'zupan_no_field_limit':    { icon: '👑', label: 'Bez limitu',   desc: 'Znosi limit istot na polu.' },
 }
 
-interface ActiveAuraEntry {
-  icon: string
-  label: string
-  desc: string
-  cardName: string
-  side: 'player1' | 'player2'
-}
-
-const activeAuras = computed<ActiveAuraEntry[]>(() => {
-  if (!game.state) return []
-  const result: ActiveAuraEntry[] = []
-  for (const side of ['player1', 'player2'] as const) {
-    for (const line of Object.values(game.state.players[side].field.lines)) {
-      for (const card of line as any[]) {
-        if (card.isSilenced) continue
-        const effectId = card.cardData?.effectId
-        const aura = passiveAuraMap[effectId]
-        if (aura) {
-          result.push({ ...aura, cardName: card.cardData.name, side })
-        }
-      }
-    }
-  }
-  return result
-})
+// activeAuras computed removed — aura bar was removed, passive effects shown on creature cards
 
 // Event color by adventure type
 function eventColor(ev: any): string {
@@ -147,7 +152,7 @@ watch(() => ui.animatingHit, (v) => {
   else if (atkType === 3) sfx.sfxHitRanged()
   else sfx.sfxHit()
 })
-watch(() => ui.animatingDeath, (v) => { if (v.size > 0) sfx.sfxDeath() }, { deep: true })
+watch(() => ui.animatingDeath.size, (n, o) => { if (n > 0 && n > (o ?? 0)) sfx.sfxDeath() })
 watch(() => game.winner, (v) => {
   if (!v) return
   if (v === 'player1') sfx.sfxVictory()
@@ -157,6 +162,151 @@ watch(() => game.currentPhase, () => sfx.sfxPhase())
 // Counter/Immune SFX
 watch(() => ui.counterAttackCardId, (v) => { if (v) sfx.sfxCounterattack() })
 watch(() => ui.immuneCardId, (v) => { if (v) sfx.sfxImmune() })
+
+// === UI SFX — card play, draw, gold, adventure, activate, season ===
+// Card play + draw: watch hand size changes
+let prevHandSize = 0
+watch(() => game.state?.players.player1.hand.length ?? 0, (newSize) => {
+  if (prevHandSize > 0 && newSize < prevHandSize) sfx.sfxCardPlay()
+  if (prevHandSize > 0 && newSize > prevHandSize) sfx.sfxDraw()
+  prevHandSize = newSize
+})
+// Gold: watch for gold spent
+let prevGold = 0
+watch(() => game.state?.players.player1.gold ?? 0, (newGold) => {
+  if (prevGold > 0 && newGold !== prevGold) sfx.sfxGold()
+  prevGold = newGold
+})
+// Adventure: watch for active events count change
+let prevEventCount = 0
+watch(() => game.state?.activeEvents?.length ?? 0, (newCount) => {
+  if (newCount > prevEventCount) sfx.sfxAdventure()
+  prevEventCount = newCount
+})
+// Activate: watch for activation in action log
+watch(() => game.actionLog.length, () => {
+  const log = game.actionLog
+  if (log.length === 0) return
+  const last = log[log.length - 1]
+  if (last?.type === 'effect' && last.message?.includes('aktywuje')) {
+    sfx.sfxActivate()
+  }
+}, { deep: false })
+// Season change: watch season computed
+watch(() => game.season, (newSeason, oldSeason) => {
+  if (oldSeason && newSeason !== oldSeason) sfx.sfxSeasonChange()
+})
+
+// ===== P1 VFX WATCHERS =====
+// Drain VFX: lifesteal / soul drain — watch actionLog for specific effects
+watch(() => game.actionLog.length, () => {
+  const log = game.actionLog
+  if (log.length === 0) return
+  const last = log[log.length - 1]
+  if (!last?.message) return
+  const text = last.message
+
+  // Strzyga lifesteal
+  if (text.includes('regeneruje') && text.includes('Strzyga')) {
+    const ids = last.involvedCards
+    if (ids?.length === 2) ui.triggerDrainVFX(ids[1]!, ids[0]!, 'red')
+  }
+  // Baba Jaga / Śmierć growth on death
+  if ((text.includes('Baba Jaga') || text.includes('Śmierć')) && (text.includes('+1') || text.includes('zyskuje'))) {
+    const ids = last.involvedCards
+    if (ids?.length >= 1) {
+      // Find dying card in previous logs
+      const deathLog = log.slice(-5).find(l => l.type === 'death')
+      if (deathLog?.involvedCards?.[0]) {
+        ui.triggerDrainVFX(deathLog.involvedCards[0], ids[0]!, 'purple')
+      }
+    }
+  }
+  // Bezkost ATK drain
+  if (text.includes('Bezkost') && text.includes('atak')) {
+    const ids = last.involvedCards
+    if (ids?.length === 2) ui.triggerDrainVFX(ids[1]!, ids[0]!, 'dark')
+  }
+
+  // AoE wave: Morowa Dziewica
+  if (text.includes('Morowa') && text.includes('wszystk')) {
+    const ids = last.involvedCards
+    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(22,163,74,0.35)', 'radial')
+  }
+  // AoE wave: Żar-ptak death explosion
+  if (text.includes('Żar-ptak') && text.includes('trac')) {
+    const ids = last.involvedCards
+    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(251,146,60,0.4)', 'radial')
+  }
+
+  // Status flash: paralyze
+  if (text.includes('paraliżuje') || text.includes('Paraliż')) {
+    const ids = last.involvedCards
+    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'paralyze')
+  }
+  // Status flash: disease (Biali Ludzie disarm)
+  if (text.includes('traci zdolność') || text.includes('nie może atak')) {
+    const ids = last.involvedCards
+    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'disease')
+  }
+  // Status flash: curse (Zagorkinia)
+  if (text.includes('Klątwa') || text.includes('klątwa')) {
+    const ids = last.involvedCards
+    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'curse')
+  }
+
+  // Smocze Jajo hatch: egg crack + burst + 3 cards fly out
+  if (text.includes('Kluwa się') && text.includes('Jajo')) {
+    const ids = last.involvedCards
+    if (ids?.[0]) ui.triggerEggHatch(ids[0])
+  }
+
+  // Homen zombify: card rises from death as Homen
+  if (text.includes('wstaje jako Homen')) {
+    const ids = last.involvedCards
+    if (ids?.[0]) ui.triggerZombify(ids[0])
+  }
+
+  // Homen curse mark flash
+  if (text.includes('klątwę') && text.includes('Homen')) {
+    const ids = last.involvedCards
+    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'curse')
+  }
+
+  // === P2 VFX ===
+
+  // Północnica ice wave: mass paralyze AoE sweep
+  if (text.includes('Północnica') && text.includes('paraliżuje')) {
+    const ids = last.involvedCards
+    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(96,165,250,0.45)', 'line')
+  }
+
+  // Światogor line cleave: line slam AoE
+  if (text.includes('rozcina linię')) {
+    const ids = last.involvedCards
+    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(251,146,60,0.4)', 'line')
+  }
+
+  // Gorynych dragon merge: absorb dragons
+  if (text.includes('wchłania')) {
+    const ids = last.involvedCards
+    if (ids && ids.length >= 2) {
+      ui.triggerGorynychMerge(ids[0]!, ids.slice(1))
+    }
+  }
+
+  // Wiła conversion: charm weak enemies
+  if (text.includes('przejęła:')) {
+    const ids = last.involvedCards
+    if (ids?.[0]) ui.triggerConversion(ids[0], 'pink', 'Taniec Wiły')
+  }
+
+  // Mara sacrifice takeover
+  if (text.includes('Przejmuje') && !text.includes('zdolności')) {
+    const ids = last.involvedCards
+    if (ids && ids.length >= 2) ui.triggerConversion(ids[ids.length - 1]!, 'purple', 'Przejęcie!')
+  }
+})
 
 // ===== KEYBOARD SHORTCUTS =====
 function onKeyDown(e: KeyboardEvent) {
@@ -204,6 +354,10 @@ const onPlayDescription = computed(() => {
 
 <template>
   <div class="game-board" v-if="game.state && player && ai" :style="bgStyle">
+
+    <!-- ===== SEASON CROSSFADE BACKGROUNDS ===== -->
+    <div v-if="prevBg" class="season-bg season-bg-old" :class="{ 'season-bg-out': isCrossfading }" :style="{ backgroundImage: `url(${prevBg})` }" />
+    <div class="season-bg season-bg-current" :class="{ 'season-bg-in': isCrossfading }" :style="{ backgroundImage: currentBg ? `url(${currentBg})` : 'none' }" />
 
     <!-- ===== EFEKTY POGODOWE ===== -->
     <WeatherEffects :season="game.season" />
@@ -344,6 +498,9 @@ const onPlayDescription = computed(() => {
     <!-- ===== PODPOWIEDŹ ===== -->
     <GameHint />
 
+    <!-- ===== LOG AKCJI (jedna linia nad ręką) ===== -->
+    <ActionLog />
+
     <!-- ===== RĘKA GRACZA (dolny pasek) ===== -->
     <PlayerHand />
 
@@ -419,10 +576,14 @@ const onPlayDescription = computed(() => {
     <TurnBanner />
     <InfoBox />
     <CardTooltip />
-    <AISummaryPanel />
     <GameOverModal />
     <GraveyardModal />
     <AttackVFX />
+    <DrainParticles />
+    <AoEWave />
+    <EggHatchVFX />
+    <ConversionSlideVFX />
+    <GorynychMergeVFX />
   </div>
 
   <div v-else class="board-loading">
@@ -445,7 +606,7 @@ const onPlayDescription = computed(() => {
   position: relative;
 }
 
-/* Battlefield background image/gradient layer */
+/* Battlefield background — fallback via ::before, crossfade via .season-bg layers */
 .game-board::before {
   content: '';
   position: absolute;
@@ -455,7 +616,37 @@ const onPlayDescription = computed(() => {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  transition: background 2s ease;
+}
+
+/* Season crossfade layers */
+.season-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.season-bg-current {
+  z-index: 1;
+}
+.season-bg-old {
+  z-index: 1;
+}
+.season-bg-out {
+  animation: season-fade-out 2s ease forwards;
+}
+.season-bg-in {
+  animation: season-fade-in 2s ease forwards;
+}
+@keyframes season-fade-out {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes season-fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* Vignette overlay — darker edges for readability */
@@ -463,7 +654,7 @@ const onPlayDescription = computed(() => {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   pointer-events: none;
   background:
     radial-gradient(
@@ -473,8 +664,8 @@ const onPlayDescription = computed(() => {
     );
 }
 
-/* Layout children above the ::before/::after pseudo-elements */
-.top-bar, .board-main, .mobile-hud { position: relative; z-index: 1; }
+/* Layout children above the ::before/::after pseudo-elements and .season-bg layers */
+.top-bar, .board-main, .mobile-hud { position: relative; z-index: 3; }
 .player-hand { position: relative; z-index: 10; }
 
 /* ====== PASEK GÓRNY (minimalny) ====== */
@@ -720,7 +911,7 @@ const onPlayDescription = computed(() => {
   padding: 6px 0;
   writing-mode: vertical-rl;
   text-shadow: 0 0 12px rgba(200, 168, 78, 0.2);
-  animation: rune-glow 4s ease-in-out infinite;
+  /* rune-glow animation removed — static for performance */
 }
 
 /* ====== OVERLAY HINTS + AURAS (above board, don't affect layout) ====== */
@@ -1126,7 +1317,8 @@ const onPlayDescription = computed(() => {
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   /* === SEPARATOR ŚRODKOWY: poziomy, minimalny === */

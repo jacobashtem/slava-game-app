@@ -149,7 +149,9 @@ export class AIPlayer {
     const attackers = getAllCreaturesOnField(currentState, this.side)
       .filter(c => c.position === CardPosition.ATTACK && !c.hasAttackedThisTurn && !c.cannotAttack)
 
-    const enemies = getAllCreaturesOnField(currentState, this.side === 'player1' ? 'player2' : 'player1')
+    const enemySideEasy = this.side === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(currentState, enemySideEasy)
+      .filter(c => c.owner !== this.side) // wyklucz własne karty na polu wroga (Wieszczy/Bieda)
 
     for (const attacker of attackers) {
       const validTargets = enemies.filter(e => canAttack(currentState, attacker, e).valid)
@@ -288,6 +290,7 @@ export class AIPlayer {
       .filter(c => c.position === CardPosition.ATTACK && !c.hasAttackedThisTurn && !c.cannotAttack)
 
     const enemies = getAllCreaturesOnField(currentState, this.side === 'player1' ? 'player2' : 'player1')
+      .filter(c => c.owner !== this.side) // wyklucz własne karty na polu wroga (Wieszczy/Bieda)
 
     for (const attacker of attackers) {
       const validTargets = enemies.filter(e => canAttack(currentState, attacker, e).valid)
@@ -442,6 +445,7 @@ export class AIPlayer {
       .sort((a, b) => b.currentStats.attack - a.currentStats.attack) // najsilniejszy atakuje pierwszy
 
     const currentEnemies = getAllCreaturesOnField(currentState, enemySide)
+      .filter(c => c.owner !== this.side) // wyklucz własne karty na polu wroga (Wieszczy/Bieda)
 
     for (const attacker of attackers) {
       const validTargets = currentEnemies.filter(e => canAttack(currentState, attacker, e).valid)
