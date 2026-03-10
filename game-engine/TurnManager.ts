@@ -7,7 +7,7 @@ import { GamePhase, EffectTrigger, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
 import { cloneGameState, addLog, getAllCreaturesOnField } from './GameStateUtils'
 import { drawCard, drawCards } from './DeckBuilder'
-import { placeCreatureOnField, canPlayCreature, canPlaceInLine } from './LineManager'
+import { placeCreatureOnField, canPlayCreature, canPlaceInLine, getFirstAvailableSlot } from './LineManager'
 import { resolveAttack } from './CombatResolver'
 import { getEffect, canActivateEffect } from './EffectRegistry'
 import { GOLD_EDITION_RULES, SLAVA_RULES } from './constants'
@@ -152,7 +152,8 @@ export function processDrawPhase(state: GameState): { newState: GameState; log: 
 export function playCreature(
   state: GameState,
   cardInstanceId: string,
-  targetLine: BattleLine
+  targetLine: BattleLine,
+  slotIndex?: number
 ): { newState: GameState; log: LogEntry[] } {
   let newState = cloneGameState(state)
   const log: LogEntry[] = []
@@ -199,10 +200,10 @@ export function playCreature(
     if (!canPlaceInLine(newState, enemySide, targetLine)) {
       throw new Error(`[TurnManager] Linia ${targetLine} wroga jest pełna.`)
     }
-    placeCreatureOnField(newState, card, targetLine, newState.roundNumber, enemySide)
+    placeCreatureOnField(newState, card, targetLine, newState.roundNumber, enemySide, slotIndex)
     log.push(addLog(newState, `${newState.currentTurn} wystawia ${card.cardData.name} na pole wroga w linii ${targetLine}!`, 'play', [cardInstanceId]))
   } else {
-    placeCreatureOnField(newState, card, targetLine, newState.roundNumber)
+    placeCreatureOnField(newState, card, targetLine, newState.roundNumber, undefined, slotIndex)
     const cardDisplayName = card.owner === 'player2' ? 'zakrytą jednostkę' : card.cardData.name
     log.push(addLog(newState, `${newState.currentTurn} wystawia ${cardDisplayName} w linii ${targetLine}.`, 'play', [cardInstanceId]))
   }
@@ -748,7 +749,8 @@ export function changePosition(
 export function moveCreatureLine(
   state: GameState,
   cardInstanceId: string,
-  targetLine: BattleLine
+  targetLine: BattleLine,
+  slotIndex?: number
 ): { newState: GameState; log: LogEntry[] } {
   const newState = cloneGameState(state)
   const log: LogEntry[] = []
@@ -771,6 +773,10 @@ export function moveCreatureLine(
   }
 
   if (foundLine === targetLine) {
+    // Same line — only update slot position if requested
+    if (slotIndex !== undefined) {
+      foundCard.metadata.slotPosition = slotIndex
+    }
     return { newState, log }
   }
 
@@ -783,6 +789,9 @@ export function moveCreatureLine(
   const srcIdx = srcLine.findIndex(c => c.instanceId === cardInstanceId)
   if (srcIdx !== -1) srcLine.splice(srcIdx, 1)
   foundCard.line = targetLine
+  // Assign visual slot in target line
+  const targetSlot = slotIndex ?? getFirstAvailableSlot(currentPlayer.field.lines[targetLine])
+  foundCard.metadata.slotPosition = targetSlot
   currentPlayer.field.lines[targetLine].push(foundCard)
 
   log.push(addLog(

@@ -21,10 +21,40 @@ const game = useGameStore()
 
 const isDragOver = ref(false)
 
+// ===== CARD PLAY ANIMATION: track which cards are newly placed =====
+const recentlyPlayedIds = ref<string[]>([])
+const knownCardIds = new Set<string>()
+
+// Initialize knownCardIds on first render (don't animate pre-existing cards)
+if (props.cards) {
+  for (const c of props.cards) knownCardIds.add(c.instanceId)
+}
+
+watch(() => props.cards.map(c => c.instanceId).join(','), () => {
+  const newIds: string[] = []
+  for (const card of props.cards) {
+    if (!knownCardIds.has(card.instanceId)) {
+      knownCardIds.add(card.instanceId)
+      newIds.push(card.instanceId)
+    }
+  }
+  if (newIds.length > 0) {
+    recentlyPlayedIds.value = [...recentlyPlayedIds.value, ...newIds]
+    setTimeout(() => {
+      recentlyPlayedIds.value = recentlyPlayedIds.value.filter(id => !newIds.includes(id))
+    }, 450)
+  }
+  // Clean up removed cards
+  const currentIds = new Set(props.cards.map(c => c.instanceId))
+  for (const id of knownCardIds) {
+    if (!currentIds.has(id)) knownCardIds.delete(id)
+  }
+})
+
 const lineKey = computed(() => `${props.side}-${props.line}`)
 const isHighlighted = computed(() => ui.highlightedLines.has(lineKey.value))
 const isDropTarget = computed(() =>
-  props.isPlayerSide && isHighlighted.value && ui.isPlacingCard
+  isHighlighted.value && (ui.isPlacingCard || ui.isMovingCard)
 )
 const isEnemyAttackTarget = computed(() =>
   !props.isPlayerSide && ui.isSelectingTarget
@@ -39,20 +69,97 @@ const lineLabels: Record<number, { name: string; realm: string; rune: string }> 
 const lineInfo = computed(() => lineLabels[props.line] ?? { name: '?', realm: '?', rune: '?' })
 
 const MAX_SLOTS = 3
-const ghostSlots = computed(() => Math.max(0, MAX_SLOTS - props.cards.length))
 
-// ===== KLIK NA LINIĘ (wystawianie z ręki) =====
-function onLineClick(e: MouseEvent) {
-  if (!ui.isPlacingCard || !ui.selectedCardId) return
-  if (ui.placingOnEnemyField) {
-    if (props.isPlayerSide) return
-  } else {
-    if (!props.isPlayerSide) return
+// ===== FLAT RENDER LIST: fixed 3-slot grid, cards at their metadata.slotPosition =====
+interface RenderItem {
+  key: string
+  type: 'card' | 'slot'
+  card?: CardInstance
+  slotIndex: number
+}
+
+const renderItems = computed((): RenderItem[] => {
+  const result: (RenderItem | null)[] = new Array(MAX_SLOTS).fill(null)
+  const usedSlots = new Set<number>()
+  const unplaced: CardInstance[] = []
+
+  // First pass: place cards that have explicit slotPosition
+  for (const card of props.cards) {
+    const slot = card.metadata?.slotPosition as number | undefined
+    if (slot !== undefined && slot >= 0 && slot < MAX_SLOTS && !usedSlots.has(slot)) {
+      result[slot] = { key: `slot-${slot}`, type: 'card', card, slotIndex: slot }
+      usedSlots.add(slot)
+    } else {
+      unplaced.push(card)
+    }
   }
+
+  // Second pass: auto-assign cards without slotPosition to first available slot
+  let nextFree = 0
+  for (const card of unplaced) {
+    while (nextFree < MAX_SLOTS && usedSlots.has(nextFree)) nextFree++
+    if (nextFree < MAX_SLOTS) {
+      result[nextFree] = { key: `slot-${nextFree}`, type: 'card', card, slotIndex: nextFree }
+      usedSlots.add(nextFree)
+      nextFree++
+    }
+  }
+
+  // Fill remaining positions with empty slots
+  // IMPORTANT: Use stable positional keys (slot-0, slot-1, slot-2) so Vue patches
+  // in place instead of inserting/removing VNodes. Prevents 'insertBefore null' crash
+  // when stale setTimeout (hitAmounts delete) triggers re-render mid-VDOM patch.
+  const items: RenderItem[] = []
+  for (let i = 0; i < MAX_SLOTS; i++) {
+    items.push(result[i] ?? { key: `slot-${i}`, type: 'slot', slotIndex: i })
+  }
+  return items
+})
+
+// ===== KLIK NA LINIĘ (fallback — append to end) =====
+function onLineClick(e: MouseEvent) {
   const target = e.target as HTMLElement
-  if (target.closest('.creature-card')) return
-  game.playCreature(ui.selectedCardId, props.line)
-  ui.clearSelection()
+  if (target.closest('.creature-card') || target.closest('.slot-empty')) return
+
+  console.log('[BattleLine] onLineClick (fallback)', {
+    line: props.line,
+    side: props.side,
+    isPlacing: ui.isPlacingCard,
+    selectedId: ui.selectedCardId,
+    appendAt: props.cards.length,
+  })
+
+  if (ui.isPlacingCard && ui.selectedCardId) {
+    if (ui.placingOnEnemyField ? props.isPlayerSide : !props.isPlayerSide) return
+    // Line-level click: engine auto-assigns first available slot (no slotIndex)
+    game.playCreature(ui.selectedCardId, props.line)
+    // clearSelection is called inside gameStore.playCreature
+  }
+}
+
+function onSlotClick(slotIndex: number) {
+  console.log('[BattleLine] onSlotClick', {
+    slotIndex,
+    line: props.line,
+    side: props.side,
+    isPlacing: ui.isPlacingCard,
+    isMoving: ui.isMovingCard,
+    selectedId: ui.selectedCardId,
+    mode: ui.mode,
+    isDropTarget: isDropTarget.value,
+    isHighlighted: isHighlighted.value,
+    cardsInLine: props.cards.length,
+  })
+  if (ui.isPlacingCard && ui.selectedCardId) {
+    console.log('[BattleLine] → calling game.playCreature', { cardId: ui.selectedCardId, line: props.line, slotIndex })
+    game.playCreature(ui.selectedCardId, props.line, slotIndex)
+  } else if (ui.isMovingCard && ui.selectedCardId) {
+    console.log('[BattleLine] → calling game.moveCreatureLine', { cardId: ui.selectedCardId, line: props.line, slotIndex })
+    game.moveCreatureLine(ui.selectedCardId, props.line, slotIndex)
+    ui.clearSelection()
+  } else {
+    console.warn('[BattleLine] onSlotClick — no action taken (not placing or moving)')
+  }
 }
 
 // ===== KLIK NA KARTĘ =====
@@ -173,21 +280,22 @@ function getAllTargets(): string[] {
 }
 
 // ===== GSAP DAMAGE FLOAT =====
+// IMPORTANT: Do NOT call el.remove() in GSAP onComplete!
+// Vue owns the DOM lifecycle via v-if on hitAmounts. If GSAP removes the element
+// before Vue's reactive cleanup (delete hitAmounts[id]), Vue finds a null VNode
+// and crashes with 'insertBefore null'. Let Vue handle removal via the v-if binding.
 function animateDmgFloat(el: HTMLElement) {
   gsap.fromTo(el,
     { y: 0, scale: 1.3, opacity: 1, x: '-50%' },
-    {
-      y: -65, scale: 0.75, opacity: 0,
-      duration: 1.6, ease: 'power2.out',
-      onComplete: () => el.remove(),
-    }
+    { y: -75, scale: 0.75, opacity: 0, duration: 2.2, ease: 'power2.out' }
   )
   // Bounce up first
-  gsap.to(el, { scale: 1.6, duration: 0.15, yoyo: true, repeat: 1, ease: 'power1.out' })
+  gsap.to(el, { scale: 1.8, duration: 0.2, yoyo: true, repeat: 1, ease: 'power1.out' })
 }
 
 // ===== DRAG & DROP =====
 let _draggingId = ''
+const dragOverSlot = ref<number | null>(null)
 
 function onDragStart(e: DragEvent, card: CardInstance) {
   if (!props.isPlayerSide || !game.isPlayerTurn) return
@@ -201,6 +309,7 @@ function onDragStart(e: DragEvent, card: CardInstance) {
 function onDragEnd() {
   _draggingId = ''
   isDragOver.value = false
+  dragOverSlot.value = null
 }
 
 function onDragOver(e: DragEvent) {
@@ -212,13 +321,41 @@ function onDragOver(e: DragEvent) {
 
 function onDragLeave() {
   isDragOver.value = false
+  dragOverSlot.value = null
+}
+
+function onSlotDragOver(e: DragEvent, slotIndex: number) {
+  if (!props.isPlayerSide || !game.isPlayerTurn) return
+  e.preventDefault()
+  e.stopPropagation()
+  isDragOver.value = true
+  dragOverSlot.value = slotIndex
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+}
+
+function onSlotDragLeave(slotIndex: number) {
+  if (dragOverSlot.value === slotIndex) dragOverSlot.value = null
+}
+
+function onSlotDrop(e: DragEvent, slotIndex: number) {
+  e.preventDefault()
+  e.stopPropagation()
+  isDragOver.value = false
+  dragOverSlot.value = null
+  const cardId = e.dataTransfer?.getData('text/plain') || _draggingId
+  if (cardId && props.isPlayerSide && game.isPlayerTurn) {
+    game.moveCreatureLine(cardId, props.line, slotIndex)
+  }
+  _draggingId = ''
 }
 
 function onLineDrop(e: DragEvent) {
   e.preventDefault()
   isDragOver.value = false
+  dragOverSlot.value = null
   const cardId = e.dataTransfer?.getData('text/plain') || _draggingId
   if (cardId && props.isPlayerSide && game.isPlayerTurn) {
+    // Line-level drop: auto-assign first available slot
     game.moveCreatureLine(cardId, props.line)
   }
   _draggingId = ''
@@ -245,58 +382,52 @@ function onLineDrop(e: DragEvent) {
 
     <div class="cards-col">
       <div
-        v-for="card in cards"
-        :key="card.instanceId"
-        class="card-wrap"
-        :draggable="isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY"
-        @dragstart="onDragStart($event, card)"
-        @dragend="onDragEnd"
+        v-for="item in renderItems"
+        :key="item.key"
+        :class="item.type === 'slot'
+          ? ['slot-empty', { 'slot-active': isDropTarget || dragOverSlot === item.slotIndex, 'slot-drop-hover': dragOverSlot === item.slotIndex, 'slot-enemy': !isPlayerSide }]
+          : ['card-wrap', { 'card-just-played': recentlyPlayedIds.includes(item.card!.instanceId) }]"
+        :draggable="item.type === 'card' && isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY"
+        @click.stop="item.type === 'slot' ? onSlotClick(item.slotIndex) : undefined"
+        @dragstart="item.type === 'card' ? onDragStart($event, item.card!) : undefined"
+        @dragend="item.type === 'card' ? onDragEnd() : undefined"
+        @dragover="item.type === 'slot' ? onSlotDragOver($event, item.slotIndex) : undefined"
+        @dragleave="item.type === 'slot' ? onSlotDragLeave(item.slotIndex) : undefined"
+        @drop="item.type === 'slot' ? onSlotDrop($event, item.slotIndex) : undefined"
       >
-        <!-- Floating damage number — GSAP animated -->
-        <div v-if="ui.hitAmounts[card.instanceId]" class="damage-number"
-          :key="`dmg-${card.instanceId}-${ui.hitAmounts[card.instanceId]}`"
-          :ref="(el: any) => { if (el) animateDmgFloat(el as HTMLElement) }"
-        >
-          -{{ ui.hitAmounts[card.instanceId] }}
-        </div>
+        <!-- Empty slot rune -->
+        <template v-if="item.type === 'slot'">
+          <div v-if="isPlayerSide" class="slot-rune">{{ (isDropTarget || dragOverSlot === item.slotIndex) ? '+' : lineInfo.rune }}</div>
+        </template>
 
-        <CreatureCard
-          :card="card"
-          :selected="ui.selectedCardId === card.instanceId || ui.attackingCardId === card.instanceId"
-          :is-attacking="ui.attackingCardId === card.instanceId || ui.animatingAttack === card.instanceId"
-          :is-hit="ui.animatingHit === card.instanceId"
-          :is-dying="ui.animatingDeath.has(card.instanceId)"
-          :is-valid-target="ui.validAttackTargets.has(card.instanceId)"
-          :dimmed="ui.isSelectingTarget && !ui.validAttackTargets.has(card.instanceId) && !isPlayerSide"
-          :toggle-position-on-click="isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY && !ui.pendingArtifactId"
-          :can-toggle-position="isPlayerSide && game.isPlayerTurn && (game.currentPhase === GamePhase.PLAY || (game.currentPhase === GamePhase.COMBAT && !card.hasAttackedThisTurn)) && !ui.pendingArtifactId"
-          :effect-available="isEffectAvailable(card)"
-          :effect-cost="getEffectCost(card)"
-          @click="onCardClick(card)"
-          @change-position="onChangePosition(card)"
-          @activate-effect="onActivateEffect(card)"
-          @mouseenter="ui.showTooltip(card.instanceId)"
-          @mouseleave="ui.hideTooltip()"
-        />
+        <!-- Card content -->
+        <template v-else>
+          <div v-if="ui.hitAmounts[item.card!.instanceId]" class="damage-number"
+            :ref="(el: any) => { if (el) animateDmgFloat(el as HTMLElement) }"
+          >
+            -{{ ui.hitAmounts[item.card!.instanceId] }}
+          </div>
+
+          <CreatureCard
+            :card="item.card!"
+            :selected="ui.selectedCardId === item.card!.instanceId || ui.attackingCardId === item.card!.instanceId"
+            :is-attacking="ui.attackingCardId === item.card!.instanceId || ui.animatingAttack === item.card!.instanceId"
+            :is-hit="ui.animatingHit === item.card!.instanceId"
+            :is-dying="ui.animatingDeath.has(item.card!.instanceId)"
+            :is-valid-target="ui.validAttackTargets.has(item.card!.instanceId)"
+            :dimmed="ui.isSelectingTarget && !ui.validAttackTargets.has(item.card!.instanceId) && !isPlayerSide"
+            :toggle-position-on-click="isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY && !ui.pendingArtifactId && !isDropTarget"
+            :can-toggle-position="isPlayerSide && game.isPlayerTurn && (game.currentPhase === GamePhase.PLAY || (game.currentPhase === GamePhase.COMBAT && !item.card!.hasAttackedThisTurn)) && !ui.pendingArtifactId"
+            :effect-available="isEffectAvailable(item.card!)"
+            :effect-cost="getEffectCost(item.card!)"
+            @click="onCardClick(item.card!)"
+            @change-position="onChangePosition(item.card!)"
+            @activate-effect="onActivateEffect(item.card!)"
+            @mouseenter="ui.showTooltip(item.card!.instanceId)"
+            @mouseleave="ui.hideTooltip()"
+          />
+        </template>
       </div>
-
-      <!-- Ghost slots -->
-      <template v-if="isPlayerSide">
-        <div
-          v-for="i in ghostSlots"
-          :key="`ghost-${i}`"
-          :class="['ghost-slot', { 'ghost-active': isDropTarget }]"
-        >
-          <div class="ghost-rune">{{ lineInfo.rune }}</div>
-        </div>
-      </template>
-      <template v-else>
-        <div
-          v-for="i in ghostSlots"
-          :key="`ghost-enemy-${i}`"
-          class="ghost-slot ghost-enemy"
-        />
-      </template>
     </div>
   </div>
 </template>
@@ -313,7 +444,6 @@ function onLineDrop(e: DragEvent) {
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.03);
   background: rgba(0, 0, 0, 0.12);
-  transition: border-color 0.3s, background 0.3s;
   position: relative;
   gap: 2px;
   overflow: visible;
@@ -380,7 +510,7 @@ function onLineDrop(e: DragEvent) {
 .line-rune {
   font-size: 10px;
   opacity: 0.4;
-  animation: rune-glow 4s ease-in-out infinite;
+  /* no infinite animation — static glow */
 }
 
 .line-label {
@@ -427,6 +557,7 @@ function onLineDrop(e: DragEvent) {
   gap: 4px;
   flex: 1;
   width: 100%;
+  overflow: visible;
 }
 
 .card-wrap {
@@ -442,9 +573,9 @@ function onLineDrop(e: DragEvent) {
 /* ===== FLOATING DAMAGE NUMBER ===== */
 .damage-number {
   position: absolute;
-  top: -10px;
+  top: -18px;
   left: 50%;
-  z-index: 30;
+  z-index: 100;
   font-size: 24px;
   font-weight: 900;
   color: #ef4444;
@@ -459,8 +590,8 @@ function onLineDrop(e: DragEvent) {
   /* GSAP handles float animation via animateDmgFloat() */
 }
 
-/* ===== GHOST SLOTS — Runic stone tablets ===== */
-.ghost-slot {
+/* ===== EMPTY SLOTS — uniform with card-wrap sizing ===== */
+.slot-empty {
   width: 86px;
   height: 120px;
   border-radius: 6px;
@@ -469,48 +600,52 @@ function onLineDrop(e: DragEvent) {
     radial-gradient(ellipse at center, rgba(200, 168, 78, 0.02) 0%, transparent 70%),
     rgba(255, 255, 255, 0.01);
   flex-shrink: 0;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.ghost-rune {
+.slot-rune {
   font-size: 20px;
   opacity: 0.08;
   color: var(--gold);
   user-select: none;
+  transition: opacity 0.15s;
 }
 
-/* Enemy ghost slots — darker, no rune */
-.ghost-enemy {
+/* Enemy empty slots */
+.slot-enemy {
   border-color: rgba(239, 68, 68, 0.06);
   background: rgba(239, 68, 68, 0.01);
 }
 
-/* Active ghost = placing card */
-.ghost-slot.ghost-active {
+/* Active slot = placing/moving card */
+.slot-active {
   border: 2px solid rgba(200, 168, 78, 0.6);
   background: rgba(200, 168, 78, 0.1);
   cursor: pointer;
-  animation: rune-slot-pulse 2s ease-in-out infinite;
+  animation: slot-pulse 2s ease-in-out infinite;
 }
-.ghost-slot.ghost-active .ghost-rune {
-  opacity: 0.45;
-  animation: rune-glow 2s ease-in-out infinite;
+.slot-active .slot-rune {
+  opacity: 0.5;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(200, 168, 78, 0.8);
 }
-.ghost-slot.ghost-active:hover {
-  background: rgba(200, 168, 78, 0.18);
+.slot-active:hover,
+.slot-drop-hover {
+  background: rgba(200, 168, 78, 0.2);
   border-color: rgba(200, 168, 78, 0.85);
-  outline: 2px solid rgba(200, 168, 78, 0.3);
-  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(200, 168, 78, 0.2);
 }
-.ghost-slot.ghost-active:hover .ghost-rune {
-  opacity: 0.7;
+.slot-active:hover .slot-rune,
+.slot-drop-hover .slot-rune {
+  opacity: 0.8;
 }
 
-@keyframes rune-slot-pulse {
+@keyframes slot-pulse {
   0%, 100% { box-shadow: 0 0 0 0px rgba(200, 168, 78, 0); }
   50%      { box-shadow: 0 0 0 1px rgba(200, 168, 78, 0.4), 0 0 8px rgba(200, 168, 78, 0.15); }
 }
@@ -526,7 +661,7 @@ function onLineDrop(e: DragEvent) {
     gap: 0;
     padding: 1px 2px;
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible;
   }
 
   /* Line header: thin vertical strip */
@@ -568,21 +703,32 @@ function onLineDrop(e: DragEvent) {
   .cards-col::-webkit-scrollbar { display: none; }
 
   .card-wrap {
-    width: 64px;
-    min-height: 90px;
+    width: 58px;
+    min-height: 78px;
     flex-shrink: 0;
   }
 
-  .ghost-slot {
-    width: 48px;
-    height: 68px;
-    border-radius: 4px;
+  .slot-empty {
+    width: 46px;
+    height: 62px;
+    border-radius: 3px;
   }
-  .ghost-rune { font-size: 12px; }
+  .slot-rune { font-size: 12px; }
 
   .damage-number {
     font-size: 16px;
     top: -6px;
   }
 }
+
+/* ===== CARD PLAY ANIMATION ===== */
+.card-just-played {
+  animation: card-drop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes card-drop-in {
+  0%   { transform: translateY(-30px) scale(0.85); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* TransitionGroup removed for performance — plain v-for */
 </style>

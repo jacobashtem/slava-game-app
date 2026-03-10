@@ -239,11 +239,11 @@ export class GameEngine {
   /**
    * Gracz wystawia istotę z ręki na pole.
    */
-  playerPlayCreature(cardInstanceId: string, targetLine: BattleLine): GameState {
+  playerPlayCreature(cardInstanceId: string, targetLine: BattleLine, slotIndex?: number): GameState {
     this.assertPlayerTurn()
     this.assertPhase(GamePhase.PLAY)
 
-    const { newState, log } = playCreature(this.state, cardInstanceId, targetLine)
+    const { newState, log } = playCreature(this.state, cardInstanceId, targetLine, slotIndex)
     this.applyStateAndLog(newState, log)
 
     this.checkWinAndNotify()
@@ -335,10 +335,10 @@ export class GameEngine {
   /**
    * Gracz przesuwa istotę między liniami.
    */
-  playerMoveCreatureLine(cardInstanceId: string, targetLine: BattleLine): GameState {
+  playerMoveCreatureLine(cardInstanceId: string, targetLine: BattleLine, slotIndex?: number): GameState {
     this.assertPlayerTurn()
 
-    const { newState, log } = moveCreatureLine(this.state, cardInstanceId, targetLine)
+    const { newState, log } = moveCreatureLine(this.state, cardInstanceId, targetLine, slotIndex)
     this.applyStateAndLog(newState, log)
 
     return cloneGameState(this.state)

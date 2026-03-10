@@ -345,7 +345,9 @@ export function placeCreatureOnField(
   line: BattleLine,
   roundNumber: number,
   /** Nadpisz stronę pola (dla kart wystawianych na pole wroga) */
-  overrideFieldSide?: PlayerSide
+  overrideFieldSide?: PlayerSide,
+  /** Indeks slotu w linii (0-based). Undefined = push na koniec. */
+  slotIndex?: number
 ): void {
   const fieldSide = overrideFieldSide ?? card.owner
   const fieldPlayer = state.players[fieldSide]
@@ -366,7 +368,29 @@ export function placeCreatureOnField(
     }
   }
 
+  // Assign visual slot position (metadata-only, used by UI for fixed-position rendering)
+  const MAX_SLOTS = 3
+  const finalSlot = slotIndex ?? getFirstAvailableSlot(fieldPlayer.field.lines[line], MAX_SLOTS)
+  card.metadata.slotPosition = finalSlot
+
+  // Engine array: always push (order doesn't matter for game logic, UI uses slotPosition)
   fieldPlayer.field.lines[line].push(card)
+}
+
+/**
+ * Finds the first unoccupied visual slot in a line (0-based).
+ * Cards track their slot via metadata.slotPosition.
+ */
+export function getFirstAvailableSlot(lineCards: CardInstance[], maxSlots = 3): number {
+  const occupied = new Set<number>()
+  for (const c of lineCards) {
+    const s = c.metadata.slotPosition as number | undefined
+    if (s !== undefined) occupied.add(s)
+  }
+  for (let i = 0; i < maxSlots; i++) {
+    if (!occupied.has(i)) return i
+  }
+  return lineCards.length
 }
 
 /**
