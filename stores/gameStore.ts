@@ -14,6 +14,64 @@ import { canAttack, getAllCreaturesOnField } from '../game-engine/LineManager'
 import { getEffect } from '../game-engine/EffectRegistry'
 import type { PlayerSide } from '../game-engine/types'
 import { useUIStore } from './uiStore'
+import { useVFXOrchestrator, type AttackVisualType } from '../composables/useVFXOrchestrator'
+import type { CombatResult } from '../game-engine/types'
+import { AttackType } from '../game-engine/constants'
+
+/** Map engine AttackType enum to VFX visual type string */
+function toVisualAttackType(card: CombatResult['attacker']): AttackVisualType {
+  const data = card.cardData as { attackType?: number }
+  const at = data.attackType
+  if (at === AttackType.MELEE) return 'melee'
+  if (at === AttackType.ELEMENTAL) return 'elemental'
+  if (at === AttackType.MAGIC) return 'magic'
+  return 'ranged'
+}
+
+/**
+ * Snapshot a card's screen position BEFORE state update removes it from DOM.
+ * Returns center-top coordinates or null if card not found.
+ */
+function snapshotCardPosition(instanceId: string): { x: number; y: number } | null {
+  const el = document.querySelector(`[data-instance-id="${instanceId}"]`)
+  if (!el) return null
+  const rect = el.getBoundingClientRect()
+  return { x: rect.left + rect.width / 2, y: rect.top }
+}
+
+/** Emit VFX events from a CombatResult (damage numbers + hit) */
+function emitCombatVFX(vfx: ReturnType<typeof useVFXOrchestrator>, combat: CombatResult | null) {
+  if (!combat) return
+  const attackVisual = toVisualAttackType(combat.attacker)
+
+  // Snapshot positions NOW — before state update removes dead cards from DOM
+  const defenderPos = snapshotCardPosition(combat.defender.instanceId)
+  const attackerPos = snapshotCardPosition(combat.attacker.instanceId)
+
+  // Damage to defender
+  if (combat.damageToDefender > 0 && defenderPos) {
+    vfx.emit({
+      type: 'damage-number',
+      targetId: combat.defender.instanceId,
+      value: combat.damageToDefender,
+      color: '#ef4444',
+      attackType: attackVisual,
+      meta: { pos: defenderPos },
+    })
+  }
+
+  // Counter-damage to attacker
+  if (combat.counterattackOccurred && combat.damageToAttacker > 0 && attackerPos) {
+    vfx.emit({
+      type: 'damage-number',
+      targetId: combat.attacker.instanceId,
+      value: combat.damageToAttacker,
+      color: '#f59e0b',
+      label: 'kontra',
+      meta: { pos: attackerPos },
+    })
+  }
+}
 
 export const useGameStore = defineStore('game', () => {
   // ===== STATE =====
@@ -39,24 +97,45 @@ export const useGameStore = defineStore('game', () => {
   const winner = computed(() => state.value?.winner ?? null)
   const actionLog = computed(() => state.value?.actionLog ?? [])
   const roundNumber = computed(() => state.value?.roundNumber ?? 1)
+  const ROUNDS_PER_SEASON = 2  // season changes every 2 rounds (cycles: spring→summer→autumn→winter→spring...)
   const season = computed<'spring' | 'summer' | 'autumn' | 'winter'>(() => {
-    // Sława: sezon z slavaData (4 rundy/porę, start Zima)
+    // Sława: sezon z slavaData
     if (state.value?.gameMode === 'slava' && state.value.slavaData) {
       const seasonMap = ['winter', 'spring', 'summer', 'autumn'] as const
       return seasonMap[state.value.slavaData.currentSeason] ?? 'winter'
     }
-    // Gold Edition: 3 rundy/porę
+    // Gold Edition: cycling seasons (2 rounds per season)
     const r = roundNumber.value
-    if (r <= 3) return 'spring'
-    if (r <= 6) return 'summer'
-    if (r <= 9) return 'autumn'
-    return 'winter'
+    const seasons = ['spring', 'summer', 'autumn', 'winter'] as const
+    const idx = Math.floor(((r - 1) % (ROUNDS_PER_SEASON * 4)) / ROUNDS_PER_SEASON)
+    return seasons[idx] ?? 'spring'
   })
   const gameMode = computed(() => state.value?.gameMode ?? 'gold')
   const slavaData = computed(() => state.value?.slavaData ?? null)
   const playerGlory = computed(() => state.value?.players.player1.glory ?? 0)
   const aiGlory = computed(() => state.value?.players.player2.glory ?? 0)
   const isPlayerTurn = computed(() => currentTurn.value === 'player1' && !isAIThinking.value)
+
+  // Field threats — cached scan for Południca/Cicha (avoids N×M iteration in each CreatureCard)
+  const fieldThreats = computed(() => {
+    if (!state.value) return null
+    const enemyField = Object.values(state.value.players.player2.field.lines).flat()
+    const playerField = Object.values(state.value.players.player1.field.lines).flat()
+
+    const hasPoludnica = enemyField.some(c => (c.cardData as any).effectId === 'poludnica_kill_weakest' && !c.isSilenced)
+    const hasCicha = enemyField.some(c => (c.cardData as any).effectId === 'cicha_kill_weak' && !c.isSilenced)
+      || playerField.some(c => (c.cardData as any).effectId === 'cicha_kill_weak' && !c.isSilenced)
+
+    let weakestId: string | null = null
+    if (hasPoludnica) {
+      const allAlive = [...playerField, ...enemyField].filter(c => c.currentStats.defense > 0)
+      if (allAlive.length > 0) {
+        weakestId = allAlive.reduce((a, b) => a.currentStats.defense < b.currentStats.defense ? a : b).instanceId
+      }
+    }
+
+    return { hasCicha, hasPoludnica, weakestId }
+  })
   const playerCurrentLogs = computed(() => (state.value?.actionLog ?? []).slice(playerTurnLogStart.value).slice(-6))
   const aiCurrentLogs = computed(() => {
     const log = state.value?.actionLog ?? []
@@ -135,22 +214,15 @@ export const useGameStore = defineStore('game', () => {
 
   // ===== AKCJE GRACZA =====
   function playCreature(cardInstanceId: string, line: BattleLine, slotIndex?: number) {
-    console.log('[gameStore] playCreature called', { cardInstanceId, line, slotIndex, isPlayerTurn: isPlayerTurn.value, currentPhase: currentPhase.value })
-    if (!isPlayerTurn.value) {
-      console.warn('[gameStore] playCreature BLOCKED: not player turn', { currentTurn: currentTurn.value, isAIThinking: isAIThinking.value })
-      return
-    }
+    if (!isPlayerTurn.value) return
     const ui = useUIStore()
     try {
       const newState = engine.playerPlayCreature(cardInstanceId, line, slotIndex)
-      console.log('[gameStore] playCreature SUCCESS — card placed at line', line, 'slot', slotIndex,
-        'cards in line after:', newState.players.player1.field.lines[line].map((c: any) => c.cardData.name))
       ui.clearSelection()
       // Apply state in nextTick to avoid Vue re-render collision
       // (synchronous assignment can crash mid-render, breaking the component tree)
       safeUpdateState(newState)
     } catch (e: any) {
-      console.error('[gameStore] playCreature ERROR:', e.message)
       if (e.message?.includes('limit') || e.message?.includes('pełna') || e.message?.includes('MAX')) {
         ui.showPlayLimitToast('Pole jest pełne! Maksymalnie 5 istot.')
       } else {
@@ -176,50 +248,17 @@ export const useGameStore = defineStore('game', () => {
   function attack(attackerInstanceId: string, defenderInstanceId: string) {
     if (!isPlayerTurn.value) return
     const ui = useUIStore()
+    const vfx = useVFXOrchestrator()
 
     try {
-      // Capture pre-combat state for damage numbers
-      const prevEnemyGrave = state.value?.players.player2.graveyard.length ?? 0
-      const prevPlayerGrave = state.value?.players.player1.graveyard.length ?? 0
-      const defDefBefore = findCardOnField('player2', defenderInstanceId)?.currentStats.defense ?? 0
-      const atkDefBefore = findCardOnField('player1', attackerInstanceId)?.currentStats.defense ?? 0
-
-      // Attack type for VFX
-      const attacker = findCardOnField('player1', attackerInstanceId)
-      ui.animatingAttackType = attacker ? ((attacker.cardData as any).attackType ?? null) : null
-
       // Resolve combat — SYNCHRONOUS, no delays
       const newState = engine.playerAttack(attackerInstanceId, defenderInstanceId)
 
-      // Trigger visual effects (non-blocking — watchers/CSS handle animation)
-      ui.triggerAttackAnimation(attackerInstanceId, defenderInstanceId)
+      // Emit VFX events from combat result
+      emitCombatVFX(vfx, engine.lastCombatResult)
+      engine.lastCombatResult = null
 
-      // Damage numbers
-      const findInState = (side: 'player1' | 'player2', id: string) => {
-        for (const line of Object.values(newState.players[side].field.lines)) {
-          const found = (line as any[]).find((c: any) => c.instanceId === id)
-          if (found) return found
-        }
-        return null
-      }
-      const defDefAfter = findInState('player2', defenderInstanceId)?.currentStats.defense ?? 0
-      const atkDefAfter = findInState('player1', attackerInstanceId)?.currentStats.defense ?? 0
-      const dmgToDefender = Math.max(0, defDefBefore - defDefAfter)
-      const dmgToAttacker = Math.max(0, atkDefBefore - atkDefAfter)
-      if (dmgToDefender > 0) ui.triggerDamageNumber(defenderInstanceId, dmgToDefender)
-      if (dmgToDefender === 0) ui.triggerImmuneFlash(defenderInstanceId)
-      if (dmgToAttacker > 0) {
-        ui.triggerDamageNumber(attackerInstanceId, dmgToAttacker)
-        ui.counterAttackCardId = defenderInstanceId
-      }
-
-      // Death animations
-      const enemyDied = newState.players.player2.graveyard.length > prevEnemyGrave
-      const playerDied = newState.players.player1.graveyard.length > prevPlayerGrave
-      if (enemyDied) ui.triggerDeathAnimation(defenderInstanceId)
-      if (playerDied) ui.triggerDeathAnimation(attackerInstanceId)
-
-      // Apply state safely
+      // Apply state
       safeUpdateState(newState)
 
       // Auto-resolve AI interaction
@@ -227,22 +266,14 @@ export const useGameStore = defineStore('game', () => {
         autoResolveAIInteraction()
       }
 
-      // Auto-end turn if no more attacks
+      // Auto-end turn if no more attacks — delay to let damage number VFX finish
       if (!state.value?.pendingInteraction && !winner.value) {
         if (!hasRemainingAttacks(newState)) {
-          endTurn()
+          setTimeout(() => endTurn(), 1200)
         }
       }
     } catch (e: any) {
       ui.showPlayLimitToast(e.message ?? 'Nie można zaatakować.')
-    } finally {
-      // Cleanup VFX state after a short delay (let animations play)
-      setTimeout(() => {
-        nextTick(() => {
-          ui.animatingAttackType = null
-          ui.counterAttackCardId = null
-        })
-      }, 1500)
     }
   }
 
@@ -453,6 +484,7 @@ export const useGameStore = defineStore('game', () => {
     if (!state.value || winner.value) return
     isAIThinking.value = true
     aiTurnSummary.value = []
+    const vfx = useVFXOrchestrator()
 
     // Arena mode: AI instantly ends its turn (just draw phase, no actions)
     if (isArenaMode.value) {
@@ -517,63 +549,15 @@ export const useGameStore = defineStore('game', () => {
             if (engine.getCurrentPhase() === GamePhase.PLAY) {
               state.value = engine.aiAdvanceToCombat()
             }
-            const ui = useUIStore()
-
-            // Capture DEF before attack for damage numbers
-            const tgtDefBefore = (() => {
-              for (const line of Object.values(state.value?.players.player1.field.lines ?? {}))
-                for (const c of line as any[]) if (c.instanceId === decision.targetInstanceId) return c.currentStats.defense
-              return 0
-            })()
-            const atkDefBefore = (() => {
-              for (const line of Object.values(state.value?.players.player2.field.lines ?? {}))
-                for (const c of line as any[]) if (c.instanceId === decision.cardInstanceId) return c.currentStats.defense
-              return 0
-            })()
-            const prevP2Grave = state.value?.players.player2.graveyard.length ?? 0
-            const prevP1Grave = state.value?.players.player1.graveyard.length ?? 0
-
-            // Attack type for VFX
-            const aiAtkCard = findCardOnField('player2', decision.cardInstanceId)
-            ui.animatingAttackType = aiAtkCard ? ((aiAtkCard.cardData as any).attackType ?? null) : null
-
             // Resolve combat IMMEDIATELY
             const newState = engine.aiAttack(decision.cardInstanceId, decision.targetInstanceId)
 
-            // Trigger non-blocking VFX
-            ui.triggerAttackAnimation(decision.cardInstanceId, decision.targetInstanceId)
+            // Emit VFX events from combat result
+            emitCombatVFX(vfx, engine.lastCombatResult)
+            engine.lastCombatResult = null
 
-            // Damage numbers
-            const tgtDefAfter = (() => {
-              for (const line of Object.values(newState.players.player1.field.lines))
-                for (const c of line as any[]) if (c.instanceId === decision.targetInstanceId) return c.currentStats.defense
-              return 0
-            })()
-            const atkDefAfter = (() => {
-              for (const line of Object.values(newState.players.player2.field.lines))
-                for (const c of line as any[]) if (c.instanceId === decision.cardInstanceId) return c.currentStats.defense
-              return 0
-            })()
-            const dmgToTgt = Math.max(0, tgtDefBefore - tgtDefAfter)
-            const dmgToAi = Math.max(0, atkDefBefore - atkDefAfter)
-            if (dmgToTgt > 0) ui.triggerDamageNumber(decision.targetInstanceId, dmgToTgt)
-            if (dmgToTgt === 0) ui.triggerImmuneFlash(decision.targetInstanceId)
-            if (dmgToAi > 0) {
-              ui.triggerDamageNumber(decision.cardInstanceId, dmgToAi)
-              ui.counterAttackCardId = decision.targetInstanceId
-            }
-
-            // Death animations
-            const aiDied = newState.players.player2.graveyard.length > prevP2Grave
-            const playerDied = newState.players.player1.graveyard.length > prevP1Grave
-            if (aiDied) ui.triggerDeathAnimation(decision.cardInstanceId)
-            if (playerDied) ui.triggerDeathAnimation(decision.targetInstanceId)
-
-            // Apply state IMMEDIATELY
+            // Apply state
             state.value = newState
-
-            // Cleanup VFX after animation (non-blocking)
-            setTimeout(() => { nextTick(() => { ui.animatingAttackType = null; ui.counterAttackCardId = null }) }, 1500)
             break
           }
           case 'activate_effect':
@@ -811,16 +795,16 @@ export const useGameStore = defineStore('game', () => {
     { pattern: /Strela.*przechwyc/i, icon: '⚡', type: 'effect' },
   ]
 
-  watch(state, (s) => {
-    if (!s) return
-    const log = s.actionLog
-    if (log.length <= _lastLogLen) {
-      _lastLogLen = log.length
+  // Watch actionLog LENGTH only (not deep state!) to trigger info boxes and event flashes
+  watch(() => state.value?.actionLog.length ?? 0, (newLen) => {
+    const s = state.value
+    if (!s || newLen <= _lastLogLen) {
+      _lastLogLen = newLen
       return
     }
     const ui = useUIStore()
-    const newEntries = log.slice(_lastLogLen)
-    _lastLogLen = log.length
+    const newEntries = s.actionLog.slice(_lastLogLen)
+    _lastLogLen = newLen
 
     for (const entry of newEntries) {
       if (entry.type !== 'effect') continue
@@ -841,7 +825,7 @@ export const useGameStore = defineStore('game', () => {
         }
       }
     }
-  }, { deep: true })
+  })
 
   return {
     // state
@@ -864,6 +848,7 @@ export const useGameStore = defineStore('game', () => {
     roundNumber,
     season,
     isPlayerTurn,
+    fieldThreats,
     playerCurrentLogs,
     aiCurrentLogs,
     // actions

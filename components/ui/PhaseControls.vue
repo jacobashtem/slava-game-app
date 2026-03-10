@@ -81,12 +81,12 @@ const btnConfig = computed(() => {
   padding: 9px 22px;
   border: 1px solid;
   border-radius: 5px;
-  font-size: 15px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   white-space: nowrap;
   font-family: var(--font-display, Georgia, serif);
   position: relative;

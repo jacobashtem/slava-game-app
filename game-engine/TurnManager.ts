@@ -2,7 +2,7 @@
  * TurnManager — zarządza fazami tury: START → DRAW → PLAY → COMBAT → END
  */
 
-import type { GameState, CardInstance, LogEntry, ActiveEventCard } from './types'
+import type { GameState, CardInstance, LogEntry, ActiveEventCard, CombatResult } from './types'
 import { GamePhase, EffectTrigger, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
 import { cloneGameState, addLog, getAllCreaturesOnField } from './GameStateUtils'
@@ -602,7 +602,7 @@ export function performAttack(
   attackerInstanceId: string,
   defenderInstanceId: string,
   options?: { skipChowaniecCheck?: boolean; skipBrzeginaCheck?: boolean; forceBrzeginaSkip?: boolean }
-): { newState: GameState; log: LogEntry[] } {
+): { newState: GameState; log: LogEntry[]; combatResult?: CombatResult } {
   if (state.currentPhase !== GamePhase.COMBAT) {
     throw new Error(`[TurnManager] Nie jesteś w fazie COMBAT (jesteś w ${state.currentPhase}).`)
   }
@@ -710,11 +710,11 @@ export function performAttack(
         metadata: { cost: 1 },
       }
       addLog(newState, `${kosciej.cardData.name}: Serce wciąż bije! Wskrzesić za 1 ZŁ?`, 'effect')
-      return { newState, log: result.log }
+      return { newState, log: result.log, combatResult: result }
     }
   }
 
-  return { newState, log: result.log }
+  return { newState, log: result.log, combatResult: result }
 }
 
 /**

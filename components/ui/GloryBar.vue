@@ -145,8 +145,8 @@ const holiday = computed(() => {
 
 .gb-value {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 14px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 500;
   flex-shrink: 0;
 }
 

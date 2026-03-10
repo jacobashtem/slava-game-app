@@ -20,13 +20,11 @@ const seasonInfo = computed(() => ({
   winter: { label: 'Zima',   icon: '❄' },
 }[game.season]))
 
-// Season progress: which round within current season (1-3)
+// Season progress: which round within current season (1-2, cycling)
+const ROUNDS_PER_SEASON = 2
 const seasonProgress = computed(() => {
   const r = game.roundNumber
-  if (r <= 3) return r
-  if (r <= 6) return r - 3
-  if (r <= 9) return r - 6
-  return Math.min(r - 9, 3) // winter goes on indefinitely, cap display at 3
+  return ((r - 1) % ROUNDS_PER_SEASON) + 1
 })
 </script>
 
@@ -40,7 +38,7 @@ const seasonProgress = computed(() => {
     <div class="season-badge" v-if="seasonInfo">
       {{ seasonInfo.icon }} {{ seasonInfo.label }}
       <span class="season-dots">
-        <span v-for="i in 3" :key="i" :class="['dot', { filled: i <= seasonProgress }]" />
+        <span v-for="i in 2" :key="i" :class="['dot', { filled: i <= seasonProgress }]" />
       </span>
     </div>
   </div>
@@ -56,7 +54,7 @@ const seasonProgress = computed(() => {
 
 .turn-side {
   font-weight: 800;
-  font-size: 14px;
+  font-size: 16px;
   padding: 3px 10px;
   border-radius: 4px;
   white-space: nowrap;
@@ -94,7 +92,7 @@ const seasonProgress = computed(() => {
 }
 
 .season-badge {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   font-family: var(--font-display, Georgia, serif);
   color: #cbd5e1;

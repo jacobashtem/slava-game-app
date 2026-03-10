@@ -232,7 +232,7 @@ function getDomainColor(data: any): string {
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.02);
-  transition: all 0.15s;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
   flex-shrink: 0;
 }
 .arena-back-btn:hover { color: #e2e8f0; border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); }
@@ -305,7 +305,7 @@ function getDomainColor(data: any): string {
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s;
   text-align: center;
 }
 .ftab.active { border-color: rgba(200, 168, 78, 0.3); color: #c8a84e; background: rgba(200, 168, 78, 0.06); }
@@ -334,7 +334,7 @@ function getDomainColor(data: any): string {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, opacity 0.12s;
 }
 .nav-btn:hover:not(:disabled) { background: rgba(200, 168, 78, 0.12); }
 .nav-btn:disabled { opacity: 0.25; cursor: default; }
@@ -452,8 +452,8 @@ function getDomainColor(data: any): string {
 
 .fi-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 500;
   color: #e2e8f0;
   white-space: nowrap;
 }
@@ -531,7 +531,7 @@ function getDomainColor(data: any): string {
 .placeholder-content h2 {
   font-family: var(--font-display, Georgia, serif);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 500;
   color: #475569;
   margin: 0;
 }

@@ -88,10 +88,10 @@ watch(() => game.currentTurn, (turn, prevTurn) => {
 }
 
 .banner-slide-enter-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .banner-slide-leave-active {
-  transition: all 0.4s ease-out;
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
 }
 .banner-slide-enter-from {
   opacity: 0;

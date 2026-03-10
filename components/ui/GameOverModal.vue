@@ -375,7 +375,7 @@ h2 {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
   letter-spacing: 0.05em;
 }
 .restart-btn:hover {
@@ -394,7 +394,7 @@ h2 {
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
 .menu-link:hover {
   color: #94a3b8;

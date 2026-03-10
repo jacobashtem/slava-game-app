@@ -421,8 +421,8 @@ function toggle(id: string) {
 
 .rules-header h1 {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 25px;
+  font-weight: 500;
   margin: 0;
   letter-spacing: 0.04em;
 }
@@ -464,7 +464,7 @@ function toggle(id: string) {
   text-decoration: none;
   padding: 3px 8px;
   border-radius: 4px;
-  transition: all 0.12s;
+  transition: color 0.12s, background-color 0.12s;
 }
 .toc-link:hover { color: #a5b4fc; background: rgba(99, 102, 241, 0.1); }
 
@@ -487,8 +487,8 @@ function toggle(id: string) {
 
 .rule-section h2 {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 500;
   color: #c8a84e;
   margin: 0 0 12px 0;
   display: flex;

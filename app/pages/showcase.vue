@@ -8,15 +8,47 @@ import { ref, reactive, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAudio } from '../../composables/useAudio'
 import { useUIStore } from '../../stores/uiStore'
+import { useVFXOrchestrator } from '../../composables/useVFXOrchestrator'
+import WeatherEffects from '../../components/ui/WeatherEffects.vue'
 import DrainParticles from '../../components/ui/DrainParticles.vue'
 import AoEWave from '../../components/ui/AoEWave.vue'
 import EggHatchVFX from '../../components/ui/EggHatchVFX.vue'
 import ConversionSlideVFX from '../../components/ui/ConversionSlideVFX.vue'
 import GorynychMergeVFX from '../../components/ui/GorynychMergeVFX.vue'
 import FireVFX from '../../components/ui/FireVFX.vue'
+import VFXOverlay from '../../components/vfx/VFXOverlay.vue'
 
 const sfx = useAudio()
 const ui = useUIStore()
+const vfx = useVFXOrchestrator()
+
+// ===== P3 SHOWCASE STATE =====
+const p3ActiveSeason = ref<'spring' | 'summer' | 'autumn' | 'winter'>('spring')
+const p3Tab = ref<'p3' | 'legacy'>('p3')
+
+// Battlefield backgrounds for season panels
+const bgModules = import.meta.glob('../../assets/backgrounds/battlefields/1/*.webp', { eager: true, query: '?url', import: 'default' })
+const seasonBgMap: Record<string, string> = {}
+for (const [path, url] of Object.entries(bgModules)) {
+  if (path.includes('wiosna')) seasonBgMap.spring = url as string
+  else if (path.includes('lato')) seasonBgMap.summer = url as string
+  else if (path.includes('jesien')) seasonBgMap.autumn = url as string
+  else if (path.includes('zima')) seasonBgMap.winter = url as string
+}
+
+function demoDamageNumber(targetId: string, value: number, color: string, label?: string) {
+  const el = document.querySelector(`[data-instance-id="${targetId}"]`)
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  vfx.emit({
+    type: 'damage-number',
+    targetId,
+    value,
+    color,
+    label,
+    meta: { pos: { x: rect.left + rect.width / 2, y: rect.top + 20 } },
+  })
+}
 
 // ===== MOCK CARD STATE (do animacji) =====
 const mockCard = reactive({
@@ -391,89 +423,8 @@ const effects: ShowcaseEffect[] = [
       mockCard.isAoE = false
     }
   },
-  // CZĄSTKI (DrainParticles, AoE Wave) — potrzebują 2 kart
-  {
-    id: 'drain-red', name: 'Drain: Krwi', desc: 'Czerwone cząstki lecą z ofiary do wampira — lifesteal Strzygi.',
-    icon: 'game-icons:drop', category: 'Cząstki', color: '#ef4444',
-    async play() {
-      ui.triggerDrainVFX('showcase-source', 'showcase-target', 'red', '+2 HP')
-      await later(1400)
-    }
-  },
-  {
-    id: 'drain-purple', name: 'Drain: Duszy', desc: 'Fioletowe cząstki — dusza wysysana przez Babę Jagę.',
-    icon: 'game-icons:ghost', category: 'Cząstki', color: '#a855f7',
-    async play() {
-      ui.triggerDrainVFX('showcase-source', 'showcase-target', 'purple', '+1/+1')
-      await later(1400)
-    }
-  },
-  {
-    id: 'drain-dark', name: 'Drain: ATK', desc: 'Ciemne cząstki — Bezkost kradnie siłę ataku.',
-    icon: 'game-icons:sword-wound', category: 'Cząstki', color: '#6b21a8',
-    async play() {
-      ui.triggerDrainVFX('showcase-source', 'showcase-target', 'dark', 'ATK -1')
-      await later(1400)
-    }
-  },
-  {
-    id: 'aoe-radial', name: 'Fala: Radialna', desc: 'Rozchodząca się fala — Morowa Dziewica, Żar-ptak.',
-    icon: 'game-icons:cracked-disc', category: 'Cząstki', color: '#22c55e',
-    async play() {
-      ui.triggerAoEWave('showcase-source', 'rgba(34,197,94,0.5)', 'radial')
-      await later(1400)
-    }
-  },
-  {
-    id: 'aoe-line', name: 'Fala: Liniowa', desc: 'Pozioma fala uderzeniowa — Światogor, szarża.',
-    icon: 'game-icons:shockwave', category: 'Cząstki', color: '#f97316',
-    async play() {
-      ui.triggerAoEWave('showcase-source', 'rgba(249,115,22,0.5)', 'line')
-      await later(1200)
-    }
-  },
-  // P2: KONWERSJA I MERGE
-  {
-    id: 'conversion-wila', name: 'Konwersja: Wiła', desc: 'Różowa poświata — Wiła przejmuje słabe wrogie istoty.',
-    icon: 'game-icons:charm', category: 'Konwersja', color: '#ec4899',
-    async play() {
-      ui.triggerConversion('showcase-target', 'pink', 'Taniec Wiły')
-      await later(1400)
-    }
-  },
-  {
-    id: 'conversion-mara', name: 'Konwersja: Mara', desc: 'Fioletowe przejęcie — Mara poświęca się, przejmując wroga.',
-    icon: 'game-icons:ghost', category: 'Konwersja', color: '#a855f7',
-    async play() {
-      ui.triggerConversion('showcase-target', 'purple', 'Przejęcie!')
-      await later(1400)
-    }
-  },
-  {
-    id: 'gorynych-merge', name: 'Gorynych: Merge', desc: 'Smoki wchłaniane przez Gorynycha — ogniste kule lecą do smoka.',
-    icon: 'game-icons:dragon-head', category: 'Konwersja', color: '#f97316',
-    async play() {
-      ui.triggerGorynychMerge('showcase-source', ['showcase-target'])
-      await later(2000)
-    }
-  },
-  {
-    id: 'aoe-ice', name: 'Fala: Lodowa', desc: 'Północnica — lodowa fala paraliżu zamraża wszystkich wrogów.',
-    icon: 'game-icons:frozen-orb', category: 'Cząstki', color: '#60a5fa',
-    async play() {
-      ui.triggerAoEWave('showcase-source', 'rgba(96,165,250,0.45)', 'line')
-      await later(1400)
-    }
-  },
+  // VFX entries removed — Drain, AoE, Conversion, Merge, EggHatch will be re-added after P3 VFXOrchestrator
   // SPECJALNE
-  {
-    id: 'egg-hatch', name: 'Smocze Jajo: Wylęg', desc: 'Jajo pęka po 5 rundach — pęknięcia, eksplozja, 3 karty wylatują.',
-    icon: 'game-icons:cracked-shield', category: 'Specjalne', color: '#22c55e',
-    async play() {
-      ui.triggerEggHatch('showcase-source')
-      await later(2200)
-    }
-  },
   {
     id: 'homen-curse', name: 'Klątwa Homena', desc: 'Mroczna klątwa — zraniona istota po śmierci wstanie jako Homen.',
     icon: 'game-icons:raise-zombie', category: 'Specjalne', color: '#7c3aed',
@@ -536,7 +487,46 @@ const activeEffectId = ref<string | null>(null)
         </div>
       </div>
 
-      <div class="effect-list">
+      <!-- Tab switcher: P3 | Legacy -->
+      <div class="showcase-tabs">
+        <button :class="['stab', { active: p3Tab === 'p3' }]" @click="p3Tab = 'p3'">P3 Nowe</button>
+        <button :class="['stab', { active: p3Tab === 'legacy' }]" @click="p3Tab = 'legacy'">Legacy</button>
+      </div>
+
+      <!-- P3 sidebar -->
+      <div v-if="p3Tab === 'p3'" class="effect-list">
+        <div class="cat-label">VFX Pipeline</div>
+        <div
+          :class="['effect-item', { active: activeEffectId === 'p3-dmg' }]"
+          style="--ec: #ef4444"
+          @click="activeEffectId = 'p3-dmg'; demoDamageNumber('showcase-source', 5, '#ef4444')"
+        >
+          <Icon icon="game-icons:drop" class="eff-icon" />
+          <span class="eff-name">Damage Number</span>
+        </div>
+        <div
+          :class="['effect-item', { active: activeEffectId === 'p3-counter' }]"
+          style="--ec: #f59e0b"
+          @click="activeEffectId = 'p3-counter'; demoDamageNumber('showcase-source', 3, '#f59e0b', 'kontra')"
+        >
+          <Icon icon="game-icons:crossed-swords" class="eff-icon" />
+          <span class="eff-name">Counter Damage</span>
+        </div>
+        <div class="cat-label">Pory Roku</div>
+        <div
+          v-for="s in (['spring', 'summer', 'autumn', 'winter'] as const)"
+          :key="s"
+          :class="['effect-item', { active: p3ActiveSeason === s }]"
+          :style="{ '--ec': { spring: '#4ade80', summer: '#fbbf24', autumn: '#f97316', winter: '#60a5fa' }[s] }"
+          @click="p3ActiveSeason = s"
+        >
+          <span class="eff-icon-text">{{ { spring: '🌸', summer: '☀', autumn: '🍂', winter: '❄' }[s] }}</span>
+          <span class="eff-name">{{ { spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima' }[s] }}</span>
+        </div>
+      </div>
+
+      <!-- Legacy sidebar -->
+      <div v-if="p3Tab === 'legacy'" class="effect-list">
         <template v-for="cat in categories" :key="cat">
           <div class="cat-label">{{ cat }}</div>
           <div
@@ -555,8 +545,58 @@ const activeEffectId = ref<string | null>(null)
 
     <!-- Main area -->
     <div class="showcase-main">
-      <!-- Mock card display -->
-      <div class="mock-stage">
+
+      <!-- ===== P3 STAGE: Seasons + Damage Numbers ===== -->
+      <div v-if="p3Tab === 'p3'" class="p3-stage">
+        <!-- Season panels — all 4 side by side -->
+        <div class="p3-seasons-grid">
+          <div
+            v-for="s in (['spring', 'summer', 'autumn', 'winter'] as const)"
+            :key="s"
+            :class="['p3-season-panel', { 'p3-season-active': p3ActiveSeason === s }]"
+            @click="p3ActiveSeason = s"
+          >
+            <div
+              class="p3-season-bg"
+              :class="`p3-bg-${s}`"
+              :style="seasonBgMap[s] ? { backgroundImage: `url(${seasonBgMap[s]})` } : {}"
+            >
+              <WeatherEffects :season="s" />
+            </div>
+            <div class="p3-season-label">
+              {{ { spring: '🌸 Wiosna', summer: '☀ Lato', autumn: '🍂 Jesień', winter: '❄ Zima' }[s] }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Damage number demo card -->
+        <div class="p3-damage-demo">
+          <div class="p3-demo-title">Damage Numbers (GSAP + VFXOrchestrator)</div>
+          <div class="p3-demo-row">
+            <div class="p3-demo-card" data-instance-id="p3-demo-target">
+              <div class="p3-dc-art">
+                <Icon icon="game-icons:werewolf" class="p3-dc-icon" />
+              </div>
+              <div class="p3-dc-name">Cel ataku</div>
+              <div class="p3-dc-stats"><span class="p3-atk">5</span>/<span class="p3-def">7</span></div>
+            </div>
+            <div class="p3-demo-buttons">
+              <button class="p3-btn p3-btn-dmg" @click="demoDamageNumber('p3-demo-target', 3, '#ef4444')">
+                -3 DMG
+              </button>
+              <button class="p3-btn p3-btn-crit" @click="demoDamageNumber('p3-demo-target', 7, '#dc2626')">
+                -7 CRIT
+              </button>
+              <button class="p3-btn p3-btn-counter" @click="demoDamageNumber('p3-demo-target', 2, '#f59e0b', 'kontra')">
+                -2 Kontra
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== LEGACY STAGE: Old showcase ===== -->
+      <div v-if="p3Tab === 'legacy'" class="mock-stage">
         <div class="stage-bg" />
 
         <!-- The mock creature card visualization -->
@@ -775,6 +815,7 @@ const activeEffectId = ref<string | null>(null)
     <EggHatchVFX />
     <ConversionSlideVFX />
     <GorynychMergeVFX />
+    <ClientOnly><VFXOverlay /></ClientOnly>
   </div>
 </template>
 
@@ -814,7 +855,7 @@ const activeEffectId = ref<string | null>(null)
   text-decoration: none;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
 .back-btn:hover { color: #e2e8f0; border-color: rgba(255, 255, 255, 0.15); }
 
@@ -853,7 +894,7 @@ const activeEffectId = ref<string | null>(null)
   padding: 8px 14px;
   cursor: pointer;
   border-left: 3px solid transparent;
-  transition: all 0.12s;
+  transition: background-color 0.12s, border-left-color 0.12s, color 0.12s;
   color: #64748b;
 }
 .effect-item:hover { background: rgba(255, 255, 255, 0.03); color: #94a3b8; }
@@ -964,7 +1005,7 @@ const activeEffectId = ref<string | null>(null)
 .mc-name {
   font-family: var(--font-display, Georgia, serif);
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 500;
   color: #e2e8f0;
   text-align: center;
   padding: 4px 8px 2px;
@@ -980,7 +1021,7 @@ const activeEffectId = ref<string | null>(null)
   background: rgba(0, 0, 0, 0.4);
   font-family: var(--font-display, Georgia, serif);
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .mc-atk { color: #f87171; }
@@ -1804,7 +1845,7 @@ const activeEffectId = ref<string | null>(null)
 .modal-card h3 {
   font-family: var(--font-display, Georgia, serif);
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 500;
   color: #e2e8f0;
   margin: 0;
 }
@@ -1829,7 +1870,7 @@ const activeEffectId = ref<string | null>(null)
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s;
   margin-top: 4px;
 }
 .modal-btn:hover { background: rgba(200, 168, 78, 0.2); }
@@ -1837,4 +1878,222 @@ const activeEffectId = ref<string | null>(null)
 /* Modal transition */
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+
+/* ===== P3 TAB SWITCHER ===== */
+.showcase-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.stab {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #475569;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.stab:hover { color: #94a3b8; background: rgba(255, 255, 255, 0.03); }
+.stab.active {
+  color: #c8a84e;
+  background: rgba(200, 168, 78, 0.08);
+  border-color: rgba(200, 168, 78, 0.2);
+}
+.eff-icon-text { font-size: 16px; flex-shrink: 0; }
+
+/* ===== P3 STAGE ===== */
+.p3-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  gap: 24px;
+  overflow-y: auto;
+}
+
+/* Season grid — 4 panels side by side */
+.p3-seasons-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  flex: 1;
+  min-height: 300px;
+}
+
+.p3-season-panel {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.p3-season-panel:hover { border-color: rgba(255, 255, 255, 0.12); transform: scale(1.01); }
+.p3-season-active { border-color: rgba(200, 168, 78, 0.4) !important; }
+
+.p3-season-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Season background gradients */
+.p3-bg-spring {
+  background: linear-gradient(180deg, #1a2e1a 0%, #0d1f12 40%, #0a1a0d 100%);
+}
+.p3-bg-spring::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% 80%, rgba(74, 222, 128, 0.08) 0%, transparent 60%),
+              radial-gradient(ellipse 40% 30% at 30% 20%, rgba(167, 243, 208, 0.05) 0%, transparent 50%);
+}
+.p3-bg-summer {
+  background: linear-gradient(180deg, #2a1f0a 0%, #1a1408 40%, #12100a 100%);
+}
+.p3-bg-summer::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 10%, rgba(251, 191, 36, 0.1) 0%, transparent 60%),
+              radial-gradient(ellipse 80% 50% at 50% 90%, rgba(251, 146, 60, 0.06) 0%, transparent 50%);
+}
+.p3-bg-autumn {
+  background: linear-gradient(180deg, #2a1510 0%, #1a0e0a 40%, #120a08 100%);
+}
+.p3-bg-autumn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 40% at 60% 30%, rgba(249, 115, 22, 0.07) 0%, transparent 50%),
+              radial-gradient(ellipse 50% 50% at 30% 70%, rgba(220, 38, 38, 0.04) 0%, transparent 50%);
+}
+.p3-bg-winter {
+  background: linear-gradient(180deg, #0f1520 0%, #0a0e18 40%, #060a12 100%);
+}
+.p3-bg-winter::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 40% 20%, rgba(96, 165, 250, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse 80% 50% at 60% 80%, rgba(147, 197, 253, 0.04) 0%, transparent 50%);
+}
+
+.p3-season-label {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  padding: 10px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 14px;
+  font-weight: 500;
+  color: #e2e8f0;
+  text-align: center;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+}
+
+/* Damage demo section */
+.p3-damage-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.p3-demo-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.p3-demo-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.p3-demo-card {
+  width: 100px;
+  height: 140px;
+  border-radius: 8px;
+  background: linear-gradient(165deg, #1a1520 0%, #0d0a14 100%);
+  border: 2px solid rgba(200, 168, 78, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.p3-dc-art {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.p3-dc-icon { font-size: 40px; color: rgba(200, 168, 78, 0.3); }
+.p3-dc-name {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 11px;
+  font-weight: 500;
+  color: #e2e8f0;
+  text-align: center;
+  padding: 2px 4px;
+}
+.p3-dc-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 14px;
+  font-weight: 500;
+}
+.p3-atk { color: #f87171; }
+.p3-def { color: #60a5fa; }
+
+.p3-demo-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.p3-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.p3-btn-dmg {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+}
+.p3-btn-dmg:hover { background: rgba(239, 68, 68, 0.15); }
+.p3-btn-crit {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.08);
+}
+.p3-btn-crit:hover { background: rgba(220, 38, 38, 0.15); }
+.p3-btn-counter {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
+}
+.p3-btn-counter:hover { background: rgba(245, 158, 11, 0.15); }
 </style>

@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import gsap from 'gsap'
 import type { CardInstance } from '../../game-engine/types'
 import { AttackType, CardPosition } from '../../game-engine/constants'
 import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import { parseTokens } from '../../composables/useTokenIcons'
-// FireVFX (TresJS) removed — too heavy for card game, CSS-only fire used instead
-
 // Grafiki stworzeń: automatycznie wczytuje assets/cards/creature/{id}.png
 const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
 const creatureImgs = Object.fromEntries(
@@ -113,16 +110,12 @@ function getTokenSegments(text: string) {
 const props = defineProps<{
   card: CardInstance
   selected?: boolean
-  isAttacking?: boolean
-  isHit?: boolean
-  isDying?: boolean
   isValidTarget?: boolean
   dimmed?: boolean
   inHand?: boolean
   togglePositionOnClick?: boolean  // PLAY faza: klik = zmień pozycję
   effectAvailable?: boolean        // ⚡ aktywowalna zdolność gotowa
   effectCost?: number              // koszt aktywacji w ZŁ (0 = darmowe)
-  isCounterattacking?: boolean     // (legacy prop, kept for compat)
   canTogglePosition?: boolean      // może zmienić pozycję (PLAY lub COMBAT nieaatkująca)
 }>()
 
@@ -135,11 +128,6 @@ const emit = defineEmits<{
 }>()
 
 const ui = useUIStore()
-// Kontratak — sprawdzamy bezpośrednio w UIStore, nie przez prop (unika problemów z reaktywnością)
-const isCounterattacking = computed(() => ui.counterAttackCardId === props.card.instanceId)
-// ODPORNY flash — atak zadał 0 obrażeń (soft-fail immunity)
-const isImmuneFlash = computed(() => ui.immuneCardId === props.card.instanceId)
-
 // ===== WSKAŹNIKI STANU (TIER 4 visual indicators) =====
 const isTaunt       = computed(() => !props.inHand && (cardData.value as any).effectId === 'blotnik_taunt' && !props.card.isSilenced)
 const isMatecznik   = computed(() => !props.inHand && !!props.card.metadata?.matecznikHidden)
@@ -153,7 +141,6 @@ const isWijRevived  = computed(() => !props.inHand && !!props.card.metadata?.wij
 const isGuardian    = computed(() => !props.inHand && (cardData.value as any).effectId === 'niedzwiedzioak_guardian' && !props.card.isSilenced)
 const isRiding      = computed(() => !props.inHand && !!props.card.metadata?.rumakActive)
 const isHomenCursed = computed(() => !props.inHand && !!props.card.metadata?.homenCurseOwner)
-const isZombifying  = computed(() => ui.zombifyVFX?.cardId === props.card.instanceId)
 
 // ===== P1 VFX STATUSY =====
 const isParalyzed   = computed(() => !props.inHand && props.card.paralyzeRoundsLeft !== null && props.card.paralyzeRoundsLeft !== 0)
@@ -177,12 +164,7 @@ const auraRingClass = computed(() => {
   }
 })
 
-// Conversion VFX — card being taken over
-const isConverting = computed(() => ui.conversionVFX?.cardId === props.card.instanceId)
-
-// Status flash VFX (krótki puls gdy efekt się aktywuje)
-const hasStatusFlash = computed(() => ui.statusFlashId === props.card.instanceId)
-const statusFlashClass = computed(() => hasStatusFlash.value ? `status-flash-${ui.statusFlashType}` : '')
+// VFX (conversion, status flash, zombify) removed — will be handled by VFXOrchestrator (P3)
 
 // ===== PASYWNE AURY — badge z opisem =====
 const passiveAuraMap: Record<string, { icon: string; label: string; desc: string }> = {
@@ -276,34 +258,19 @@ const trophies = computed(() => {
   return t
 })
 
-// Zagrożenie Południcą / Cichą — najsłabsza istota na polu
+// Zagrożenie Południcą / Cichą — computed only checks THIS card's stats
+// Field scan (hasCicha/hasPoludnica/weakestId) cached at game-store level to avoid N×M iteration
 const isThreatened = computed(() => {
   if (props.inHand || props.card.owner !== 'player1') return null
-  const state = game.state
-  if (!state) return null
+  const threats = game.fieldThreats
+  if (!threats) return null
 
-  const enemySide = 'player2'
-  const enemyField = Object.values(state.players[enemySide].field.lines).flat()
-
-  // Południca: zabija najsłabszą istotę na polu (obie strony!)
-  const hasPoludnica = enemyField.some(c => (c.cardData as any).effectId === 'poludnica_kill_weakest' && !c.isSilenced)
-  // Cicha: zabija istoty z ATK ≤ 2 (obie strony!)
-  const hasCicha = enemyField.some(c => (c.cardData as any).effectId === 'cicha_kill_weak' && !c.isSilenced)
-  // Cicha gracza (zabija też swoje)
-  const playerField = Object.values(state.players.player1.field.lines).flat()
-  const playerHasCicha = playerField.some(c => (c.cardData as any).effectId === 'cicha_kill_weak' && !c.isSilenced)
-
-  if (hasCicha || playerHasCicha) {
-    if (props.card.currentStats.attack <= 2) return 'Zagrożony przez Cichą (ATK ≤ 2)!'
+  if (threats.hasCicha && props.card.currentStats.attack <= 2) {
+    return 'Zagrożony przez Cichą (ATK ≤ 2)!'
   }
-
-  if (hasPoludnica) {
-    const allOnField = [...playerField, ...enemyField].filter(c => c.currentStats.defense > 0)
-    if (allOnField.length === 0) return null
-    const weakest = allOnField.reduce((a, b) => a!.currentStats.defense < b!.currentStats.defense ? a : b, allOnField[0])
-    if (weakest?.instanceId === props.card.instanceId) return 'Najsłabsza istota — cel Południcy!'
+  if (threats.weakestId === props.card.instanceId) {
+    return 'Najsłabsza istota — cel Południcy!'
   }
-
   return null
 })
 
@@ -359,115 +326,6 @@ const activeEffectLabels = computed(() => {
   })
 })
 
-// Stat growth flash (Baba Jaga / Śmierć)
-const isGrowing = computed(() => !props.inHand && !!props.card.metadata?.justGrew)
-
-// Resurrection flash (Kościej)
-const isResurrecting = computed(() => !props.inHand && !!props.card.metadata?.justResurrected)
-
-// Sticky death flag — once dying, never show card again (prevents flash after animation)
-const hasDied = ref(false)
-watch(() => props.isDying, (v) => { if (v) hasDied.value = true })
-
-// ===== GSAP ANIMATION REFS =====
-const cardEl = ref<HTMLElement | null>(null)
-
-// GSAP: Hit impact — compositor-only (transform + opacity). No filter/boxShadow animations.
-watch(() => props.isHit, (v) => {
-  if (!v || !cardEl.value) return
-  const el = cardEl.value!
-  const atkType = ui.animatingAttackType
-  nextTick(() => {
-    const tl = gsap.timeline({
-      onComplete: () => { gsap.set(el, { clearProps: 'transform,opacity' }) }
-    })
-
-    if (atkType === AttackType.MELEE) {
-      // Melee: heavy slam shake
-      tl.to(el, { x: -10, duration: 0.08, ease: 'power2.out' })
-        .to(el, { x: 10, duration: 0.08 })
-        .to(el, { x: -7, y: -4, duration: 0.07 })
-        .to(el, { x: 7, y: 3, duration: 0.07 })
-        .to(el, { x: -4, y: 2, duration: 0.08 })
-        .to(el, { x: 0, y: 0, duration: 0.12, ease: 'power2.out' })
-      // Flash via opacity pulse (compositor-only)
-      tl.fromTo(el, { opacity: 1 }, { opacity: 0.4, duration: 0.08, yoyo: true, repeat: 1 }, 0)
-
-    } else if (atkType === AttackType.ELEMENTAL) {
-      // Elemental: wobble rotation
-      tl.to(el, { rotation: -5, duration: 0.1 })
-        .to(el, { rotation: 5, duration: 0.1 })
-        .to(el, { rotation: -3, duration: 0.1 })
-        .to(el, { rotation: 0, duration: 0.15, ease: 'elastic.out(1,0.5)' })
-      tl.fromTo(el, { opacity: 1 }, { opacity: 0.5, duration: 0.12, yoyo: true, repeat: 1 }, 0)
-
-    } else if (atkType === AttackType.MAGIC) {
-      // Magic: arcane scale pulse
-      tl.to(el, { scale: 0.92, duration: 0.15, ease: 'power2.in' })
-        .to(el, { scale: 1.08, duration: 0.18, ease: 'power2.out' })
-        .to(el, { scale: 1, duration: 0.3, ease: 'elastic.out(1,0.4)' })
-      tl.fromTo(el, { opacity: 1 }, { opacity: 0.45, duration: 0.15, yoyo: true, repeat: 1 }, 0)
-
-    } else if (atkType === AttackType.RANGED) {
-      // Ranged: sharp push-back
-      tl.to(el, { x: 8, scale: 0.95, duration: 0.1, ease: 'power3.out' })
-        .to(el, { x: -3, scale: 1.03, duration: 0.12 })
-        .to(el, { x: 0, scale: 1, duration: 0.2, ease: 'back.out(2)' })
-      tl.fromTo(el, { opacity: 1 }, { opacity: 0.5, duration: 0.1, yoyo: true, repeat: 1 }, 0)
-
-    } else {
-      // Fallback: basic shake
-      tl.fromTo(el, { x: 0, y: 0 },
-        { x: 'random(-7, 7)', y: 'random(-3, 3)', duration: 0.1, repeat: 5, yoyo: true, ease: 'power1.inOut' })
-    }
-  })
-})
-
-// GSAP: Death — compositor-only (transform + opacity). No filter/boxShadow.
-watch(() => props.isDying, (v) => {
-  if (!v || !cardEl.value) return
-  nextTick(() => {
-    const el = cardEl.value!
-    gsap.timeline()
-      // Phase 1: bright flash (scale pop + flash white via opacity)
-      .to(el, { scale: 1.12, opacity: 0.7, duration: 0.2 })
-      // Phase 2: shrink
-      .to(el, { scale: 0.88, opacity: 0.5, duration: 0.35 })
-      // Phase 3: crumble
-      .to(el, { scale: 0.35, opacity: 0.08, rotation: 'random(-15, 15)', duration: 0.5, ease: 'power2.in' })
-      // Phase 4: vanish
-      .to(el, { scale: 0, opacity: 0, rotation: 'random(-25, 25)', duration: 0.3, ease: 'power3.in' })
-  })
-})
-
-// GSAP: Growth flash — compositor-only scale pulse
-watch(isGrowing, (v) => {
-  if (!v || !cardEl.value) return
-  nextTick(() => {
-    gsap.fromTo(cardEl.value!,
-      { scale: 1 },
-      { scale: 1.06, duration: 0.25, yoyo: true, repeat: 1, ease: 'power2.out',
-        onComplete() { gsap.set(cardEl.value!, { clearProps: 'transform' }) } }
-    )
-  })
-})
-
-// GSAP: Resurrect glow — compositor-only scale + opacity pulse
-watch(isResurrecting, (v) => {
-  if (!v || !cardEl.value) return
-  nextTick(() => {
-    gsap.fromTo(cardEl.value!,
-      { scale: 1, opacity: 1 },
-      { scale: 1.08, opacity: 0.6, duration: 0.35, yoyo: true, repeat: 1, ease: 'power2.out',
-        onComplete() { gsap.set(cardEl.value!, { clearProps: 'transform,opacity' }) } }
-    )
-  })
-})
-
-// Cleanup GSAP on unmount
-onUnmounted(() => {
-  if (cardEl.value) gsap.killTweensOf(cardEl.value)
-})
 
 const cardData = computed(() => props.card.cardData as any)
 const stats = computed(() => props.card.currentStats)
@@ -489,7 +347,6 @@ const isHidden = computed(() =>
   !props.card.isRevealed
   && props.card.owner === 'player2'
   && !props.inHand
-  && ui.revealingCardId !== props.card.instanceId
 )
 
 const domainColor = computed(() => ({
@@ -513,35 +370,12 @@ const cardClass = computed(() => [
     'card-attack':     !props.inHand && !isDefense.value,
     'card-defense':    isDefense.value,
     'is-selected':     props.selected,
-    'is-attacking':    props.isAttacking,
-    'is-hit':          props.isHit,
-    'is-dying':        props.isDying,
-    'has-died':        hasDied.value,
     'is-valid-target': props.isValidTarget,
     'is-dimmed':       props.dimmed,
     'is-silenced':          props.card.isSilenced,
     'cannot-attack':        props.card.cannotAttack,
-    'is-counterattacking':  isCounterattacking.value,
-    // TIER 4 visual indicators
-    'is-taunt':      isTaunt.value,
-    'is-matecznik':  isMatecznik.value,
-    'has-death-mark': hasDeathMark.value,
-    'is-invincible': isInvincible.value,
-    'wij-last-turn': isWijRevived.value,
-    'is-threatened': !!isThreatened.value,
-    'is-growing': isGrowing.value,
-    'is-resurrecting': isResurrecting.value,
-    // P1 VFX
-    'is-paralyzed': isParalyzed.value,
-    'is-diseased': isDiseased.value,
-    'is-lifestealer': isLifestealer.value,
-    'is-death-feeder': isDeathFeeder.value,
-    'is-aoe-aura': isAoEAura.value,
-    'is-homen-cursed': isHomenCursed.value,
-    'is-zombifying': isZombifying.value,
-    'is-converting': isConverting.value,
-    [auraRingClass.value]: !!auraRingClass.value,
-    [statusFlashClass.value]: hasStatusFlash.value,
+    // Visual indicators stripped — all defined in useCardIndicators.ts registry
+    // VFXOrchestrator will render glows/auras via VFXOverlay
   }
 ])
 
@@ -558,24 +392,18 @@ function onClick() {
   <!-- Ukryta karta AI — rewers z ? -->
   <div
     v-if="isHidden"
-    :class="['creature-card', 'card-hidden', { 'card-attack': !inHand && card.position === CardPosition.ATTACK, 'is-valid-target': isValidTarget, 'is-dimmed': dimmed, 'is-counterattacking': isCounterattacking }]"
+    :class="['creature-card', 'card-hidden', { 'card-attack': !inHand && card.position === CardPosition.ATTACK, 'is-valid-target': isValidTarget, 'is-dimmed': dimmed }]"
     @click="emit('click', card)"
     @mouseenter="emit('mouseenter', card)"
     @mouseleave="emit('mouseleave')"
   >
     <div class="hidden-pattern" />
     <div class="hidden-mark">?</div>
-    <!-- Kontratak na zakrytej karcie -->
-    <div v-show="ui.counterAttackCardId === card.instanceId" class="shield-overlay">
-      🛡️
-      <span class="shield-label">KONTRATAK</span>
-    </div>
   </div>
 
   <!-- Widoczna karta -->
   <div
     v-else
-    ref="cardEl"
     :class="cardClass"
     :style="{ '--domain-color': domainColor }"
     :data-instance-id="card.instanceId"
@@ -773,82 +601,9 @@ function onClick() {
       <span class="threat-reason">{{ isThreatened }}</span>
     </div>
 
-    <!-- P1: Paraliż overlay (Bazyliszek, Jaroszek, Północnica) -->
-    <div v-if="isParalyzed && !hasDeathMark" class="state-overlay paralyze-overlay">
-      <span class="state-overlay-icon">⚡</span>
-      <span class="state-overlay-label">PARALIŻ</span>
-    </div>
-
-    <!-- P1: Choroba overlay (Biali Ludzie - cannotAttack bez paralyze) -->
-    <div v-if="isDiseased && !hasDeathMark" class="state-overlay disease-overlay">
-      <span class="state-overlay-icon">🦠</span>
-      <span class="state-overlay-label">CHOROBA</span>
-    </div>
+    <!-- P1 status overlays (paralysis/disease) stripped — P3 VFXOrchestrator will handle -->
 
     <div v-if="isValidTarget" class="target-overlay" />
-
-    <!-- HIT VFX: type-specific effect on attacked card -->
-    <div v-if="isHit" class="hit-vfx">
-      <!-- MELEE: triple slash + blood splatter + scar marks -->
-      <template v-if="ui.animatingAttackType === 0">
-        <svg viewBox="0 0 110 154" class="slash-svg">
-          <line x1="8" y1="145" x2="102" y2="10" class="slash-line slash-main" />
-          <line x1="88" y1="145" x2="22" y2="35" class="slash-line slash-cross" />
-          <line x1="55" y1="150" x2="55" y2="5" class="slash-line slash-vert" />
-        </svg>
-        <div class="melee-scar scar-1" />
-        <div class="melee-scar scar-2" />
-        <div class="melee-blood-splat" />
-      </template>
-      <!-- ELEMENTAL: lightweight CSS fire (no WebGL) -->
-      <template v-if="ui.animatingAttackType === 1">
-        <div class="fire-engulf" />
-        <div class="elem-flame elem-flame-1" />
-        <div class="elem-flame elem-flame-2" />
-        <div class="elem-flame elem-flame-3" />
-        <div class="elem-flame elem-flame-4" />
-      </template>
-      <!-- MAGIC: rune circle + energy spiral + arcane explosion -->
-      <template v-if="ui.animatingAttackType === 2">
-        <div class="magic-circle" />
-        <div class="magic-rune" v-for="n in 6" :key="'mr'+n" :style="{ '--ri': n }" />
-        <div class="magic-spiral" />
-        <div class="magic-sparkle" v-for="n in 12" :key="'mp'+n" :style="{ '--mi': n }" />
-        <div class="magic-ring" />
-        <div class="magic-ring magic-ring-2" />
-      </template>
-      <!-- RANGED: arrow with fletching + trail + impact crater -->
-      <template v-if="ui.animatingAttackType === 3">
-        <div class="arrow-body">
-          <div class="arrow-shaft" />
-          <div class="arrow-head" />
-          <div class="arrow-fletching" />
-        </div>
-        <div class="arrow-trail" v-for="n in 5" :key="'at'+n" :style="{ '--ti': n }" />
-        <div class="arrow-impact-crater" />
-        <div class="arrow-splinter" v-for="n in 4" :key="'as'+n" :style="{ '--si': n }" />
-      </template>
-    </div>
-
-    <!-- DEATH FIRE: efekt płonięcia przy śmierci karty -->
-    <div v-if="isDying" class="death-fire">
-      <div class="fire-ember" v-for="n in 8" :key="n" :style="{ '--i': n }" />
-      <div class="fire-glow" />
-    </div>
-
-    <!-- Kontratak: duża tarcza na twarzy karty -->
-    <div v-show="ui.counterAttackCardId === card.instanceId" class="shield-overlay">
-      🛡️
-      <span class="shield-label">KONTRATAK</span>
-    </div>
-
-    <!-- ODPORNY: atak zadał 0 obrażeń -->
-    <Transition name="immune-flash">
-      <div v-if="isImmuneFlash" class="immune-overlay">
-        ✋
-        <span class="immune-label">ODPORNY</span>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -933,14 +688,6 @@ function onClick() {
   transform: rotate(90deg) translateY(-6px) scale(1.05);
 }
 
-.is-attacking {
-  animation: attack-charge 0.8s ease infinite;
-}
-@keyframes attack-charge {
-  0%, 100% { box-shadow: 0 0 0 3px #f59e0b, 0 0 8px 2px rgba(245,158,11,0.5); }
-  50%      { box-shadow: 0 0 0 4px #fbbf24, 0 0 20px 6px rgba(251,191,36,0.8); }
-}
-
 .is-valid-target {
   box-shadow: 0 0 0 2px #ef4444, 0 0 12px 3px rgba(239,68,68,0.4);
 }
@@ -948,11 +695,6 @@ function onClick() {
   box-shadow: 0 0 0 3px #ef4444, 0 0 20px 6px rgba(239,68,68,0.6);
 }
 
-/* hit-impact and death-burn now handled by GSAP watchers in <script> */
-.is-hit   { /* GSAP handles shake animation */ }
-.is-dying { /* GSAP handles death timeline */ }
-/* Po zakończeniu animacji śmierci — karta pozostaje niewidoczna */
-.has-died:not(.is-dying) { opacity: 0; pointer-events: none; }
 .is-dimmed { opacity: 0.45; pointer-events: none; }
 
 /* ===== HEADER ===== */
@@ -976,8 +718,8 @@ function onClick() {
 
 .card-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 500;
   color: #f0ede8;
   line-height: 1.05;
   display: -webkit-box;
@@ -1043,7 +785,6 @@ function onClick() {
 
 .badge-icon    { font-size: 11px; }
 .stat-img      { width: 20px; height: 20px; object-fit: contain; opacity: 0.9; flex-shrink: 0; }
-.badge-fly      { color: #7dd3fc; }
 .badge-immune   { color: #a78bfa; }
 .badge-silenced { color: #94a3b8; }
 .badge-disarmed { color: #f87171; }
@@ -1270,59 +1011,13 @@ function onClick() {
 
 .cannot-attack .stat.atk { color: #64748b; }
 
-/* ===== KONTRATAK: niebieski blask tarczy ===== */
-.is-counterattacking {
-  animation: shield-pulse 0.4s ease infinite alternate;
-  border-color: #60a5fa !important;
-}
-.card-attack.is-counterattacking {
-  transform: rotate(90deg);
-}
-@keyframes shield-pulse {
-  from { box-shadow: 0 0 0 3px #60a5fa, 0 0 8px 2px rgba(96,165,250,0.4); opacity: 0.85; }
-  to   { box-shadow: 0 0 0 5px #93c5fd, 0 0 16px 4px rgba(147,197,253,0.6); opacity: 1; }
-}
-
-/* Overlay tarczy na twarzy karty */
-.shield-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 48px;
-  border-radius: 5px;
-  pointer-events: none;
-  background: rgba(30, 90, 200, 0.78);
-  box-shadow: 0 0 0 3px #60a5fa;
-  animation: shield-bg 0.35s ease-in-out infinite alternate;
-}
-.shield-label {
-  font-size: 9px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 0.06em;
-  text-shadow: 0 0 8px #60a5fa, 0 1px 3px rgba(0,0,0,0.9);
-  background: rgba(10, 40, 120, 0.9);
-  padding: 2px 5px;
-  border-radius: 3px;
-  line-height: 1.4;
-}
-@keyframes shield-bg {
-  from { background: rgba(30, 90, 200, 0.65); box-shadow: inset 0 0 0 2px #60a5fa; }
-  to   { background: rgba(50, 130, 255, 0.88); box-shadow: inset 0 0 0 3px #fff; }
-}
-
 /* Klikalny badge pozycji */
 .pos-clickable {
   cursor: pointer;
   box-shadow: 0 0 0 1px currentColor;
 }
 .pos-clickable:hover {
-  filter: brightness(1.4);
+  opacity: 0.85;
 }
 
 /* Rząd zdolności */
@@ -1371,17 +1066,11 @@ function onClick() {
 /* Pusty lewy slot gdy brak ⚡ (żeby 🪙 zostało po prawej) */
 .ability-slot-empty { flex: 1; }
 
+/* Pulsing animations use OPACITY only (compositor-only, zero paint cost) */
 @keyframes effect-pulse {
-  0%, 100% { box-shadow: 0 0 0 0px rgba(251,191,36,0); }
-  50%       { box-shadow: 0 0 0 2px rgba(251,191,36,0.35), 0 0 6px rgba(251,191,36,0.2); }
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 1; }
 }
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 3px #f59e0b, 0 0 8px 2px rgba(245,158,11,0.5); }
-  50%       { box-shadow: 0 0 0 3px #f59e0b, 0 0 22px 8px rgba(245,158,11,0.8); }
-}
-
-/* hit-impact & death-burn: removed — now GSAP-driven in <script> */
 
 /* ===== PASYWNA AURA ===== */
 .badge-passive {
@@ -1389,13 +1078,8 @@ function onClick() {
   border: 1px solid rgba(167, 139, 250, 0.5);
   border-radius: 4px;
   padding: 0 2px;
-  animation: passive-glow 2.5s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.5);
   cursor: help;
-}
-
-@keyframes passive-glow {
-  0%, 100% { box-shadow: 0 0 3px rgba(167, 139, 250, 0.3); }
-  50%      { box-shadow: 0 0 8px rgba(167, 139, 250, 0.7), 0 0 2px rgba(167, 139, 250, 0.5); }
 }
 
 /* ===== TIER 4 WSKAŹNIKI STANU ===== */
@@ -1407,25 +1091,7 @@ function onClick() {
   text-shadow: 0 0 2px rgba(0,0,0,0.8);
 }
 
-/* Kolory obramowania dla stanów kart */
-.is-taunt    { border-color: #ef4444 !important; animation: taunt-pulse 1.8s ease-in-out infinite; }
-.is-matecznik { border-color: #22c55e !important; }
-.has-death-mark { animation: deathmark-pulse 1.2s ease-in-out infinite; }
-.is-invincible  { border-color: #eab308 !important; box-shadow: 0 0 8px 2px rgba(234,179,8,0.4); }
-.wij-last-turn  { border-color: #60a5fa !important; animation: wij-pulse 1s ease-in-out infinite; }
-
-@keyframes taunt-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.4), 0 0 8px 2px rgba(239,68,68,0.2); }
-  50%       { box-shadow: 0 0 0 3px rgba(239,68,68,0.8), 0 0 14px 4px rgba(239,68,68,0.5); }
-}
-@keyframes deathmark-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.5); border-color: #dc2626 !important; }
-  50%       { box-shadow: 0 0 0 4px rgba(239,68,68,0.9), 0 0 16px 6px rgba(239,68,68,0.6); border-color: #ff0000 !important; }
-}
-@keyframes wij-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(96,165,250,0.5); }
-  50%       { box-shadow: 0 0 0 3px rgba(96,165,250,0.9), 0 0 12px 4px rgba(96,165,250,0.5); }
-}
+/* Visual indicator styles stripped — defined in useCardIndicators.ts, rendered by VFXOverlay */
 
 /* OVERLAYE STANÓW — półprzezroczyste nakładki na kartę */
 .state-overlay {
@@ -1458,8 +1124,9 @@ function onClick() {
   text-shadow: 0 1px 3px rgba(0,0,0,0.9);
 }
 
+/* State overlays — minimal text-only (VFXOverlay will add visual effects) */
 .matecznik-overlay {
-  background: rgba(21, 128, 61, 0.55);
+  background: rgba(21, 128, 61, 0.3);
 }
 .matecznik-overlay .state-overlay-label {
   color: #bbf7d0;
@@ -1467,16 +1134,11 @@ function onClick() {
 }
 
 .deathmark-overlay {
-  background: rgba(127, 0, 0, 0.45);
-  animation: deathmark-overlay-pulse 1.2s ease-in-out infinite;
+  background: rgba(170, 0, 0, 0.3);
 }
 .deathmark-overlay .state-overlay-label {
   color: #fca5a5;
   background: rgba(127, 0, 0, 0.8);
-}
-@keyframes deathmark-overlay-pulse {
-  0%, 100% { background: rgba(127, 0, 0, 0.35); }
-  50%       { background: rgba(220, 0, 0, 0.55); }
 }
 
 /* ===== LICZNIKI (Smocze Jajo, Młot) ===== */
@@ -1502,12 +1164,8 @@ function onClick() {
   border: 1px solid rgba(251, 191, 36, 0.6);
   border-radius: 4px;
   padding: 0 2px;
-  animation: artifact-shimmer 3s ease-in-out infinite;
+  box-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
   cursor: help;
-}
-@keyframes artifact-shimmer {
-  0%, 100% { box-shadow: 0 0 2px rgba(251, 191, 36, 0.3); }
-  50%      { box-shadow: 0 0 8px rgba(251, 191, 36, 0.7), 0 0 3px rgba(251, 191, 36, 0.4); }
 }
 
 /* ===== TROFEA CZARNOKSIĘŻNIKA ===== */
@@ -1520,21 +1178,13 @@ function onClick() {
   font-weight: 700;
   color: #c084fc;
   cursor: help;
-  animation: trophy-glow 2s ease-in-out infinite;
-}
-@keyframes trophy-glow {
-  0%, 100% { box-shadow: 0 0 2px rgba(168, 85, 247, 0.3); }
-  50%      { box-shadow: 0 0 8px rgba(168, 85, 247, 0.7); }
+  box-shadow: 0 0 5px rgba(168, 85, 247, 0.5);
 }
 
 
-/* ===== ZAGROŻENIE (Południca/Cicha) ===== */
-.is-threatened {
-  animation: threat-pulse 1.5s ease-in-out infinite;
-}
+/* Threat overlay — minimal text-only (VFXOverlay will add visual effects) */
 .threat-overlay {
-  background: rgba(220, 38, 38, 0.35);
-  animation: threat-overlay-pulse 1.5s ease-in-out infinite;
+  background: rgba(220, 38, 38, 0.25);
 }
 .threat-overlay .state-overlay-label {
   color: #fca5a5;
@@ -1548,627 +1198,22 @@ function onClick() {
   max-width: 90%;
   opacity: 0.9;
 }
-@keyframes threat-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3); }
-  50%      { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.7), 0 0 12px 4px rgba(239, 68, 68, 0.4); }
-}
-@keyframes threat-overlay-pulse {
-  0%, 100% { background: rgba(220, 38, 38, 0.25); }
-  50%      { background: rgba(220, 38, 38, 0.45); }
-}
 
-/* growth-flash and resurrect-glow now handled by GSAP watchers in <script> */
-.is-growing { /* GSAP green pulse */ }
-.is-resurrecting { /* GSAP purple pulse */ }
+/* P1 VFX status overlays (paralysis/disease/filters) stripped — P3 VFXOrchestrator will handle */
 
-/* ===== P1 VFX: STATUSY NA KARTACH ===== */
-
-/* Paraliż: szary + lekkie cracks */
-.is-paralyzed { filter: saturate(0.3) brightness(0.85); }
-.paralyze-overlay {
-  background: rgba(100, 116, 139, 0.45);
-  animation: status-opacity-pulse 1.5s ease-in-out infinite;
-}
-.paralyze-overlay .state-overlay-label {
-  color: #e2e8f0;
-  background: rgba(71, 85, 105, 0.85);
-}
-
-/* Choroba: zielonkawy + drżenie */
-.is-diseased { filter: hue-rotate(60deg) saturate(0.5) brightness(0.9); }
-.disease-overlay {
-  background: rgba(22, 101, 52, 0.4);
-  animation: status-opacity-pulse 2s ease-in-out infinite;
-}
-.disease-overlay .state-overlay-label {
-  color: #bbf7d0;
-  background: rgba(22, 101, 52, 0.85);
-}
-
-/* Shared compositor-friendly pulse for status overlays (opacity only, no background repaint) */
-@keyframes status-opacity-pulse {
-  0%, 100% { opacity: 0.7; }
-  50%      { opacity: 1; }
-}
-
-/* Lifesteal aura: delikatny czerwony/fioletowy puls */
-.is-lifestealer {
-  animation: lifesteal-aura 2.5s ease-in-out infinite;
-}
-@keyframes lifesteal-aura {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(239, 68, 68, 0.2); }
-  50%      { box-shadow: 0 0 10px 3px rgba(239, 68, 68, 0.5), 0 0 20px 6px rgba(239, 68, 68, 0.15); }
-}
-
-/* Death feeder aura: mroczny puls (Baba Jaga, Śmierć) */
-.is-death-feeder {
-  animation: death-feeder-aura 3s ease-in-out infinite;
-}
-@keyframes death-feeder-aura {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(107, 33, 168, 0.2); }
-  50%      { box-shadow: 0 0 8px 3px rgba(107, 33, 168, 0.5), 0 0 16px 5px rgba(107, 33, 168, 0.15); }
-}
-
-/* AoE aura: niebezpieczny puls (Morowa Dziewica, Cicha, Południca) */
-.is-aoe-aura {
-  animation: aoe-aura 2s ease-in-out infinite;
-}
-@keyframes aoe-aura {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(220, 38, 38, 0.15); }
-  50%      { box-shadow: 0 0 10px 4px rgba(220, 38, 38, 0.4), 0 0 20px 8px rgba(220, 38, 38, 0.1); }
-}
-
-/* Status flash: krótki puls przy aktywacji statusu */
-.status-flash-paralyze { animation: flash-paralyze 0.5s ease-out; }
-.status-flash-disease  { animation: flash-disease 0.5s ease-out; }
-.status-flash-curse    { animation: flash-curse 0.5s ease-out; }
-.status-flash-petrify  { animation: flash-petrify 0.5s ease-out; }
-
-@keyframes flash-paralyze {
-  0% { box-shadow: 0 0 20px 8px rgba(100,116,139,0.8); filter: brightness(1.5); }
-  100% { box-shadow: none; filter: none; }
-}
-@keyframes flash-disease {
-  0% { box-shadow: 0 0 20px 8px rgba(22,163,74,0.8); filter: brightness(1.3) hue-rotate(60deg); }
-  100% { box-shadow: none; filter: none; }
-}
-@keyframes flash-curse {
-  0% { box-shadow: 0 0 20px 8px rgba(168,85,247,0.8); filter: brightness(1.4); }
-  100% { box-shadow: none; filter: none; }
-}
-@keyframes flash-petrify {
-  0% { box-shadow: 0 0 20px 8px rgba(148,163,184,0.9); filter: brightness(1.6) grayscale(0.8); }
-  100% { box-shadow: none; filter: none; }
-}
-
-/* ===== SLASH EFFECT — cięcie miecza na trafionym celu ===== */
-/* ===== HIT VFX CONTAINER ===== */
-.hit-vfx {
-  position: absolute;
-  inset: 0;
-  z-index: 45;
-  pointer-events: none;
-  overflow: hidden;
-  border-radius: 5px;
-}
-
-/* ===== MELEE: triple slash + blood + scars + sparks ===== */
-.slash-svg { width: 100%; height: 100%; position: absolute; inset: 0; }
-.slash-line {
-  stroke-linecap: round;
-  stroke-dasharray: 200;
-  stroke-dashoffset: 200;
-  will-change: stroke-dashoffset;
-}
-.slash-main {
-  stroke: #fff; stroke-width: 3.5;
-  filter: drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 3px #fff);
-  animation: slash-draw 0.35s ease-out forwards;
-}
-.slash-cross {
-  stroke: #fca5a5; stroke-width: 2.5;
-  filter: drop-shadow(0 0 5px #dc2626);
-  animation: slash-draw 0.35s ease-out 0.08s forwards;
-}
-.slash-vert {
-  stroke: #e2e8f0; stroke-width: 2;
-  filter: drop-shadow(0 0 5px #94a3b8);
-  animation: slash-draw 0.3s ease-out 0.18s forwards;
-}
-@keyframes slash-draw {
-  0%   { stroke-dashoffset: 200; opacity: 0; }
-  15%  { opacity: 1; }
-  70%  { stroke-dashoffset: 0; opacity: 0.9; }
-  100% { stroke-dashoffset: 0; opacity: 0; }
-}
-
-.melee-scar {
-  position: absolute;
-  height: 2px;
-  border-radius: 1px;
-  background: linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(220,38,38,0.8), rgba(239,68,68,0.6), transparent);
-  opacity: 0;
-}
-.scar-1 {
-  top: 30%; left: 10%; right: 15%;
-  transform: rotate(-35deg);
-  animation: scar-appear 0.5s ease-out 0.25s forwards;
-}
-.scar-2 {
-  top: 55%; left: 15%; right: 10%;
-  transform: rotate(20deg);
-  animation: scar-appear 0.5s ease-out 0.35s forwards;
-}
-@keyframes scar-appear {
-  0%   { opacity: 0; }
-  40%  { opacity: 1; }
-  100% { opacity: 0.5; }
-}
-
-.melee-sparks {
-  position: absolute;
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: #fbbf24;
-  box-shadow: 0 0 4px #fbbf24, 0 0 8px rgba(251,191,36,0.5);
-  top: calc(20% + var(--si) * 10%);
-  left: calc(15% + var(--si) * 12%);
-  opacity: 0;
-  animation: spark-fly 0.4s ease-out forwards;
-  animation-delay: calc(0.05s + var(--si) * 0.04s);
-}
-@keyframes spark-fly {
-  0%   { opacity: 0; transform: translate(0, 0) scale(0.5); }
-  20%  { opacity: 1; transform: translate(calc((var(--si) - 3) * 8px), calc(-10px - var(--si) * 5px)) scale(1.5); }
-  100% { opacity: 0; transform: translate(calc((var(--si) - 3) * 15px), calc(-25px - var(--si) * 8px)) scale(0); }
-}
-
-.melee-blood-splat {
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  background: radial-gradient(ellipse at 40% 45%, rgba(180,20,20,0.35) 0%, transparent 50%);
-  opacity: 0;
-  animation: blood-flash 0.6s ease-out 0.1s forwards;
-}
-@keyframes blood-flash {
-  0%   { opacity: 0; }
-  25%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-/* ===== ELEMENTAL: realistic fire wrapping around card ===== */
-.fire-engulf {
-  position: absolute;
-  inset: -8px;
-  border-radius: 12px;
-  background:
-    radial-gradient(ellipse 120% 60% at 50% 100%, rgba(251,146,60,0.7) 0%, rgba(239,68,68,0.4) 30%, transparent 55%),
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(239,68,68,0.3) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 80% at 0% 50%, rgba(251,146,60,0.2) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 80% at 100% 50%, rgba(251,146,60,0.2) 0%, transparent 50%);
-  animation: fire-engulf-pulse 1.2s ease-out forwards;
-}
-@keyframes fire-engulf-pulse {
-  0%   { opacity: 0; }
-  10%  { opacity: 0.6; }
-  30%  { opacity: 1; }
-  70%  { opacity: 0.8; }
-  100% { opacity: 0; }
-}
-
-/* Lightweight CSS fire — 4 gradient flames, compositor-only (transform + opacity) */
-.elem-flame {
-  position: absolute;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-.elem-flame-1 {
-  bottom: -10px; left: 15%;
-  width: 30px; height: 50px;
-  background: radial-gradient(ellipse at 50% 100%, rgba(255,180,0,0.9), rgba(239,68,68,0.6) 50%, transparent 100%);
-  animation: elem-flicker 0.4s ease-in-out infinite alternate;
-}
-.elem-flame-2 {
-  bottom: -8px; right: 15%;
-  width: 25px; height: 42px;
-  background: radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.85), rgba(251,146,60,0.5) 50%, transparent 100%);
-  animation: elem-flicker 0.35s ease-in-out 0.1s infinite alternate;
-}
-.elem-flame-3 {
-  bottom: -6px; left: 40%;
-  width: 35px; height: 55px;
-  background: radial-gradient(ellipse at 50% 100%, rgba(255,220,100,0.9), rgba(239,68,68,0.5) 55%, transparent 100%);
-  animation: elem-flicker 0.45s ease-in-out 0.05s infinite alternate;
-}
-.elem-flame-4 {
-  top: -8px; left: 30%;
-  width: 22px; height: 28px;
-  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
-  background: radial-gradient(ellipse at 50% 0%, rgba(239,68,68,0.7), rgba(180,30,0,0.3) 60%, transparent 100%);
-  animation: elem-flicker-top 0.38s ease-in-out 0.08s infinite alternate;
-}
-@keyframes elem-flicker {
-  0%   { transform: scaleY(0.85) scaleX(0.92); opacity: 0.7; }
-  100% { transform: scaleY(1.15) scaleX(1.08); opacity: 1; }
-}
-@keyframes elem-flicker-top {
-  0%   { transform: scaleY(0.8) scaleX(0.9); opacity: 0.5; }
-  100% { transform: scaleY(1.2) scaleX(1.1); opacity: 0.85; }
-}
-
-/* ===== MAGIC: rune circle + energy spiral + arcane explosion ===== */
-.magic-circle {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 70px; height: 70px;
-  margin: -35px 0 0 -35px;
-  border: 1.5px solid rgba(168,85,247,0.6);
-  border-radius: 50%;
-  opacity: 0;
-  animation: magic-circle-spin 0.8s ease-out forwards;
-}
-@keyframes magic-circle-spin {
-  0%   { opacity: 0; transform: scale(0.2) rotate(0deg); }
-  20%  { opacity: 0.8; transform: scale(0.8) rotate(60deg); }
-  50%  { opacity: 0.6; transform: scale(1) rotate(150deg); }
-  100% { opacity: 0; transform: scale(1.3) rotate(360deg); }
-}
-
-.magic-rune {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 8px; height: 8px;
-  margin: -4px 0 0 -4px;
-  font-size: 10px;
-  color: #c084fc;
-  text-shadow: 0 0 6px #a855f7;
-  opacity: 0;
-  --rune-angle: calc(var(--ri) * 60deg);
-  animation: rune-orbit 0.7s ease-out forwards;
-  animation-delay: calc(var(--ri) * 0.06s);
-}
-.magic-rune::after {
-  content: '✦';
-  display: block;
-}
-@keyframes rune-orbit {
-  0%   { opacity: 0; transform: translate(0,0) scale(0); }
-  25%  { opacity: 1; transform: translate(calc(cos(var(--rune-angle)) * 25px), calc(sin(var(--rune-angle)) * 25px)) scale(1.5); }
-  60%  { opacity: 0.7; transform: translate(calc(cos(var(--rune-angle)) * 30px), calc(sin(var(--rune-angle)) * 30px)) rotate(180deg) scale(1); }
-  100% { opacity: 0; transform: translate(calc(cos(var(--rune-angle)) * 10px), calc(sin(var(--rune-angle)) * 10px)) rotate(360deg) scale(0.3); }
-}
-
-.magic-spiral {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 4px; height: 4px;
-  margin: -2px 0 0 -2px;
-  border-radius: 50%;
-  background: #e9d5ff;
-  box-shadow: 0 0 12px #a855f7, 0 0 24px rgba(168,85,247,0.4), 0 0 40px rgba(139,92,246,0.2);
-  opacity: 0;
-  animation: spiral-pulse 0.6s ease-out forwards;
-}
-@keyframes spiral-pulse {
-  0%   { opacity: 0; transform: scale(0); }
-  30%  { opacity: 1; transform: scale(3); }
-  60%  { opacity: 0.8; transform: scale(1.5); }
-  80%  { opacity: 0.4; transform: scale(5); }
-  100% { opacity: 0; transform: scale(8); }
-}
-
-.magic-sparkle {
-  position: absolute;
-  width: 3px; height: 3px;
-  border-radius: 50%;
-  background: #e9d5ff;
-  box-shadow: 0 0 4px #c084fc, 0 0 10px rgba(168,85,247,0.6);
-  top: 50%; left: 50%;
-  opacity: 0;
-  --angle: calc(var(--mi) * 30deg);
-  animation: magic-burst 0.6s ease-out forwards;
-  animation-delay: calc(var(--mi) * 0.04s);
-}
-@keyframes magic-burst {
-  0%   { opacity: 0; transform: translate(0,0) scale(0); }
-  25%  { opacity: 1; transform: translate(calc(cos(var(--angle)) * 15px), calc(sin(var(--angle)) * 15px)) scale(1.8); }
-  60%  { opacity: 0.7; transform: translate(calc(cos(var(--angle)) * 35px), calc(sin(var(--angle)) * 35px)) scale(1); }
-  100% { opacity: 0; transform: translate(calc(cos(var(--angle)) * 50px), calc(sin(var(--angle)) * 50px)) scale(0); }
-}
-
-.magic-ring {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 16px; height: 16px;
-  margin: -8px 0 0 -8px;
-  border: 2px solid rgba(168,85,247,0.7);
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(168,85,247,0.4), inset 0 0 4px rgba(168,85,247,0.2);
-  opacity: 0;
-  animation: magic-ring-expand 0.6s ease-out forwards;
-}
-.magic-ring-2 {
-  border-color: rgba(139,92,246,0.4);
-  animation-delay: 0.15s;
-}
-@keyframes magic-ring-expand {
-  0%   { opacity: 0; transform: scale(0.2); border-width: 3px; }
-  25%  { opacity: 1; transform: scale(0.6); }
-  100% { opacity: 0; transform: scale(7); border-width: 0.5px; }
-}
-
-/* ===== RANGED: arrow with fletching + trail + impact crater ===== */
-.arrow-body {
-  position: absolute;
-  top: 50%;
-  left: -20px;
-  width: 60px;
-  height: 6px;
-  transform: translateY(-50%);
-  animation: arrow-fly-full 0.35s ease-out forwards;
-}
-.arrow-shaft {
-  position: absolute;
-  top: 50%; left: 10px; right: 12px;
-  height: 2px; margin-top: -1px;
-  background: linear-gradient(90deg, rgba(139,92,246,0.2), #94a3b8, #cbd5e1);
-  border-radius: 1px;
-}
-.arrow-head {
-  position: absolute;
-  right: 0; top: 50%;
-  width: 0; height: 0;
-  margin-top: -5px;
-  border-left: 10px solid #e2e8f0;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  filter: drop-shadow(0 0 3px rgba(59,130,246,0.6));
-}
-.arrow-fletching {
-  position: absolute;
-  left: 0; top: 50%;
-  margin-top: -4px;
-  width: 12px; height: 8px;
-  background: linear-gradient(90deg, #dc2626, #b91c1c);
-  clip-path: polygon(0% 0%, 100% 25%, 100% 75%, 0% 100%, 30% 50%);
-}
-@keyframes arrow-fly-full {
-  0%   { left: -40px; opacity: 0; }
-  15%  { opacity: 1; }
-  60%  { left: 35%; opacity: 1; }
-  100% { left: 55%; opacity: 0; }
-}
-
-.arrow-trail {
-  position: absolute;
-  top: 50%;
-  height: 1.5px;
-  margin-top: -0.75px;
-  width: 20px;
-  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
-  left: calc(-10px + var(--ti) * 10px);
-  opacity: 0;
-  animation: trail-fade 0.3s ease-out forwards;
-  animation-delay: calc(var(--ti) * 0.04s);
-}
-@keyframes trail-fade {
-  0%   { opacity: 0; transform: translateX(-10px); }
-  30%  { opacity: 0.6; transform: translateX(20px); }
-  100% { opacity: 0; transform: translateX(70px); }
-}
-
-.arrow-impact-crater {
-  position: absolute;
-  top: 50%; right: 20%;
-  width: 18px; height: 18px;
-  margin-top: -9px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(59,130,246,0.6) 0%, rgba(96,165,250,0.3) 40%, transparent 70%);
-  box-shadow: 0 0 12px rgba(59,130,246,0.4);
-  opacity: 0;
-  animation: crater-burst 0.5s ease-out 0.25s forwards;
-}
-@keyframes crater-burst {
-  0%   { opacity: 0; transform: scale(0.2); }
-  30%  { opacity: 1; transform: scale(1.8); }
-  70%  { opacity: 0.6; transform: scale(1.2); }
-  100% { opacity: 0; transform: scale(2.5); }
-}
-
-.arrow-splinter {
-  position: absolute;
-  top: 50%; right: calc(18% + var(--si) * 3%);
-  width: 6px; height: 1.5px;
-  background: #94a3b8;
-  border-radius: 1px;
-  opacity: 0;
-  --sp-angle: calc(var(--si) * 90deg - 135deg);
-  animation: splinter-fly 0.35s ease-out 0.28s forwards;
-}
-@keyframes splinter-fly {
-  0%   { opacity: 0; transform: translate(0,0) rotate(0deg) scale(1); }
-  20%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(cos(var(--sp-angle)) * 20px), calc(sin(var(--sp-angle)) * 20px)) rotate(calc(var(--si) * 45deg)) scale(0.3); }
-}
-
-/* ===== DEATH FIRE — iskry/żar przy śmierci ===== */
-.death-fire {
-  position: absolute;
-  inset: 0;
-  z-index: 44;
-  pointer-events: none;
-  overflow: visible;
-}
-.fire-glow {
-  position: absolute;
-  inset: -4px;
-  border-radius: 8px;
-  background: radial-gradient(ellipse at center bottom, rgba(251,146,60,0.6) 0%, rgba(239,68,68,0.3) 40%, transparent 70%);
-  animation: fire-glow-anim 0.9s ease-out forwards;
-}
-@keyframes fire-glow-anim {
-  0%   { opacity: 0; }
-  20%  { opacity: 1; }
-  60%  { opacity: 0.7; }
-  100% { opacity: 0; }
-}
-.fire-ember {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #fbbf24;
-  box-shadow: 0 0 4px 1px rgba(251,191,36,0.7);
-  bottom: 20%;
-  left: calc(10% + var(--i) * 10%);
-  animation: ember-rise 0.8s ease-out forwards;
-  animation-delay: calc(var(--i) * 0.06s);
-  opacity: 0;
-}
-@keyframes ember-rise {
-  0%   { opacity: 0; transform: translateY(0) scale(1); }
-  15%  { opacity: 1; }
-  50%  { opacity: 0.8; transform: translateY(-30px) scale(0.8); }
-  100% { opacity: 0; transform: translateY(-60px) scale(0); }
-}
-
-/* ===== ODPORNY FLASH — atak zadał 0 obrażeń ===== */
-.immune-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 52;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 48px;
-  border-radius: 5px;
-  pointer-events: none;
-  background: rgba(120, 80, 20, 0.78);
-  box-shadow: 0 0 0 3px #f59e0b;
-  animation: immune-bg 0.35s ease-in-out infinite alternate;
-}
-.immune-label {
-  font-size: 9px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: 0.06em;
-  text-shadow: 0 0 8px #f59e0b, 0 1px 3px rgba(0,0,0,0.9);
-  background: rgba(100, 60, 10, 0.9);
-  padding: 2px 5px;
-  border-radius: 3px;
-  line-height: 1.4;
-}
-@keyframes immune-bg {
-  from { opacity: 0.85; }
-  to   { opacity: 1; }
-}
-.immune-flash-enter-active {
-  transition: opacity 0.15s ease;
-}
-.immune-flash-leave-active {
-  transition: opacity 0.3s ease-out;
-}
-.immune-flash-enter-from {
-  opacity: 0;
-}
-.immune-flash-leave-to {
-  opacity: 0;
-}
-
-/* ===== HOMEN CURSE + ZOMBIFY ===== */
+/* Creature type auras + homen curse — stripped, defined in useCardIndicators.ts */
 .badge-homen-curse {
   background: rgba(107, 33, 168, 0.8) !important;
-  animation: homen-curse-badge 2s ease-in-out infinite;
-}
-@keyframes homen-curse-badge {
-  0%, 100% { box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }
-  50% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.8); }
 }
 
-.is-homen-cursed {
-  box-shadow: 0 0 6px 2px rgba(107, 33, 168, 0.3);
-}
-
-.is-zombifying {
-  animation: zombify-rise 1.2s ease-out !important;
-  filter: hue-rotate(180deg) saturate(0.6) brightness(0.8);
-}
-@keyframes zombify-rise {
-  0%   { transform: translateY(40px) scale(0.5); opacity: 0; filter: hue-rotate(180deg) saturate(0.3) brightness(0.4); }
-  30%  { transform: translateY(10px) scale(0.9); opacity: 0.7; }
-  60%  { transform: translateY(-5px) scale(1.05); opacity: 1; filter: hue-rotate(180deg) saturate(0.6) brightness(0.8); }
-  80%  { transform: translateY(2px) scale(0.98); }
-  100% { transform: translateY(0) scale(1); opacity: 1; filter: none; }
-}
 
 /* Smocze Jajo pulsing counter when close to hatching */
 .badge-jajo {
-  transition: background 0.3s;
+  transition: background-color 0.3s;
 }
 
-/* ===== P2: AURA_RING — persistent aura glow per card ===== */
-.aura-ring-ice {
-  animation: aura-ice 3s ease-in-out infinite;
-}
-@keyframes aura-ice {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(96,165,250,0.2), 0 0 8px 2px rgba(96,165,250,0.1); }
-  50%      { box-shadow: 0 0 8px 3px rgba(96,165,250,0.5), 0 0 16px 5px rgba(96,165,250,0.15); }
-}
+/* P2 AURA_RING — stripped, defined in useCardIndicators.ts */
 
-.aura-ring-forest {
-  animation: aura-forest 2.5s ease-in-out infinite;
-}
-@keyframes aura-forest {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(34,197,94,0.2), 0 0 8px 2px rgba(34,197,94,0.1); }
-  50%      { box-shadow: 0 0 8px 3px rgba(34,197,94,0.45), 0 0 16px 5px rgba(34,197,94,0.12); }
-}
-
-.aura-ring-antimagic {
-  animation: aura-antimagic 2s ease-in-out infinite;
-}
-@keyframes aura-antimagic {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(107,33,168,0.2), 0 0 8px 2px rgba(107,33,168,0.1); }
-  50%      { box-shadow: 0 0 8px 3px rgba(107,33,168,0.5), 0 0 16px 5px rgba(107,33,168,0.15); }
-}
-
-.aura-ring-taunt {
-  animation: aura-taunt 1.5s ease-in-out infinite;
-}
-@keyframes aura-taunt {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(239,68,68,0.2), 0 0 8px 2px rgba(239,68,68,0.1); }
-  50%      { box-shadow: 0 0 8px 3px rgba(239,68,68,0.5), 0 0 16px 5px rgba(239,68,68,0.12); }
-}
-
-.aura-ring-blood {
-  animation: aura-blood 2s ease-in-out infinite;
-}
-@keyframes aura-blood {
-  0%, 100% { box-shadow: 0 0 4px 1px rgba(185,28,28,0.25), 0 0 8px 2px rgba(185,28,28,0.1); }
-  50%      { box-shadow: 0 0 10px 4px rgba(185,28,28,0.5), 0 0 20px 6px rgba(185,28,28,0.15); }
-}
-
-.aura-ring-dark {
-  animation: aura-dark 2.5s ease-in-out infinite;
-}
-@keyframes aura-dark {
-  0%, 100% { box-shadow: 0 0 5px 2px rgba(30,0,50,0.3), 0 0 10px 3px rgba(107,33,168,0.15); }
-  50%      { box-shadow: 0 0 10px 4px rgba(30,0,50,0.5), 0 0 20px 6px rgba(107,33,168,0.25); }
-}
-
-/* ===== P2: CONVERSION — card being taken over ===== */
-.is-converting {
-  animation: converting-pulse 0.8s ease-in-out;
-}
-@keyframes converting-pulse {
-  0%   { box-shadow: none; filter: none; }
-  30%  { box-shadow: 0 0 20px 8px rgba(168,85,247,0.7); filter: brightness(1.3); }
-  70%  { box-shadow: 0 0 15px 5px rgba(168,85,247,0.4); filter: brightness(1.1); }
-  100% { box-shadow: none; filter: none; }
-}
 
 /* ====== MOBILE RESPONSIVE ====== */
 @media (max-width: 767px) {
@@ -2230,7 +1275,7 @@ function onClick() {
     justify-content: center;
     align-items: center;
     gap: 2px;
-    backdrop-filter: blur(4px);
+    /* backdrop-filter removed — causes paint */
   }
   .pos-attack {
     background: rgba(239, 68, 68, 0.25) !important;
@@ -2248,8 +1293,8 @@ function onClick() {
     animation: pos-pulse 2s ease-in-out infinite;
   }
   @keyframes pos-pulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(200, 168, 78, 0.5); }
-    50% { box-shadow: 0 0 14px rgba(200, 168, 78, 0.8); }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
   }
   .pos-icon { font-size: 10px; }
 
@@ -2314,10 +1359,6 @@ function onClick() {
     transform: scale(0.55);
     transform-origin: top left;
   }
-
-  /* Shield overlay */
-  .shield-overlay { font-size: 18px; }
-  .shield-label { font-size: 5px; }
 
   /* State overlays */
   .state-overlay { font-size: 10px; }

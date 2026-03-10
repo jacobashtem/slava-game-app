@@ -239,7 +239,7 @@ function cancel() {
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 .panteon-toggle:hover {
   background: rgba(200, 168, 78, 0.12);
@@ -277,7 +277,7 @@ function cancel() {
   scrollbar-color: rgba(200, 168, 78, 0.15) transparent;
 }
 
-.panteon-slide-enter-active, .panteon-slide-leave-active { transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.panteon-slide-enter-active, .panteon-slide-leave-active { transition: opacity 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .panteon-slide-enter-from, .panteon-slide-leave-to { opacity: 0; transform: translateY(-10px) scale(0.97); }
 
 /* ===== HEADER ===== */
@@ -308,8 +308,8 @@ function cancel() {
 
 .ph-title {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 12px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 500;
   letter-spacing: 0.2em;
   color: rgba(200, 168, 78, 0.7);
 }
@@ -447,7 +447,7 @@ function cancel() {
   border: 1px solid rgba(200, 168, 78, 0.1);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
   text-align: center;
 }
@@ -476,7 +476,7 @@ function cancel() {
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--god-accent) 25%, transparent);
-  transition: all 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
   flex-shrink: 0;
 }
 .god-portrait-img {
@@ -496,8 +496,8 @@ function cancel() {
 
 .god-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 500;
   color: #e2e8f0;
   letter-spacing: 0.03em;
 }
@@ -552,7 +552,7 @@ function cancel() {
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  transition: all 0.15s;
+  transition: color 0.15s, background-color 0.15s;
   display: flex;
   align-items: center;
 }
@@ -579,7 +579,7 @@ function cancel() {
 .powers-god-name {
   font-family: var(--font-display, Georgia, serif);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--god-accent);
 }
 
@@ -605,7 +605,7 @@ function cancel() {
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
   text-align: center;
 }
 
@@ -712,14 +712,14 @@ function cancel() {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: background-color 0.15s;
 }
 .bid-adj:hover { background: rgba(200, 168, 78, 0.15); }
 
 .bid-val {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 26px;
+  font-weight: 500;
   color: #fbbf24;
   min-width: 30px;
   text-align: center;
@@ -747,7 +747,7 @@ function cancel() {
   color: #64748b;
   font-size: 11px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s;
 }
 .bid-cancel:hover { background: rgba(255, 255, 255, 0.06); color: #94a3b8; }
 
@@ -764,7 +764,7 @@ function cancel() {
   font-weight: 800;
   letter-spacing: 0.06em;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 .bid-confirm:hover:not(:disabled) {
   background: linear-gradient(180deg, rgba(200, 168, 78, 0.3), rgba(200, 168, 78, 0.12));

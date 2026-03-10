@@ -554,8 +554,8 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 }
 .pv-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 500;
   color: #f0ede8;
   letter-spacing: 0.08em;
   text-shadow: 0 1px 6px rgba(0,0,0,0.9);

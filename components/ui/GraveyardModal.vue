@@ -150,8 +150,8 @@ function cardImg(card: any): string | null {
 
 .modal-title {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 500;
   color: #e2e8f0;
   letter-spacing: 0.08em;
 }
@@ -183,7 +183,7 @@ function cardImg(card: any): string | null {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
   flex-shrink: 0;
 }
 .close-btn:hover {
@@ -238,7 +238,7 @@ function cardImg(card: any): string | null {
   border-radius: 8px;
   overflow: hidden;
   cursor: help;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   display: flex;
   flex-direction: column;
 }
@@ -296,8 +296,8 @@ function cardImg(card: any): string | null {
 
 .card-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 500;
   color: #e2e8f0;
   line-height: 1.2;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
@@ -315,7 +315,7 @@ function cardImg(card: any): string | null {
   gap: 2px;
   font-family: var(--font-display, Georgia, serif);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
 }
 .stat-atk { color: #fb923c; }
 .stat-def { color: #60a5fa; }

@@ -128,6 +128,7 @@ function ownerColor(ev: ActiveEventCard): string {
   gap: 2px;
   min-height: 0;
   height: 100%;
+  contain: layout style;
 }
 
 .player-field--player {
@@ -145,8 +146,8 @@ function ownerColor(ev: ActiveEventCard): string {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   font-family: var(--font-display, Georgia, serif);
-  font-size: 11px;
-  font-weight: 900;
+  font-size: 13px;
+  font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   display: flex;
@@ -227,16 +228,16 @@ function ownerColor(ev: ActiveEventCard): string {
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(10, 10, 30, 0.95) 100%);
   padding: 0;
   cursor: help;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
   flex-shrink: 0;
   overflow: hidden;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  will-change: transform;
 }
 
 .event-scroll:hover {
   border-color: color-mix(in srgb, var(--ev-color) 70%, transparent);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 12px 1px color-mix(in srgb, var(--ev-color) 20%, transparent);
   transform: scale(1.05);
   z-index: 5;
 }
@@ -263,8 +264,8 @@ function ownerColor(ev: ActiveEventCard): string {
 
 .ev-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 500;
   color: #e2e8f0;
   line-height: 1.2;
   overflow: hidden;
@@ -304,8 +305,8 @@ function ownerColor(ev: ActiveEventCard): string {
 /* Duży widoczny licznik rund */
 .ev-counter {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 16px;
-  font-weight: 900;
+  font-size: 18px;
+  font-weight: 500;
   color: #fbbf24;
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.5), 0 1px 3px rgba(0, 0, 0, 0.8);
   line-height: 1;

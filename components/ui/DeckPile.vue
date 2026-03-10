@@ -147,7 +147,7 @@ const emit = defineEmits<{
   border-radius: 6px;
   border: 1px solid rgba(251, 191, 36, 0.15);
   background: rgba(251, 191, 36, 0.04);
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .gold-section:hover:not(.gold-section--low) {
@@ -189,8 +189,8 @@ const emit = defineEmits<{
 
 .gold-count {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 21px;
+  font-weight: 500;
   color: #fbbf24;
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
   line-height: 1;
@@ -225,7 +225,7 @@ const emit = defineEmits<{
   cursor: pointer;
   border-radius: 6px;
   padding: 4px 6px;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .pile-section--clickable:hover {
@@ -246,7 +246,7 @@ const emit = defineEmits<{
 .grave-icon {
   font-size: 26px;
   color: #475569;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, filter 0.2s ease;
 }
 
 .grave-count {

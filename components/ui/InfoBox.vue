@@ -69,10 +69,10 @@ const ui = useUIStore()
 }
 
 .infobox-enter-active {
-  transition: all 0.35s ease;
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 .infobox-leave-active {
-  transition: all 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 .infobox-enter-from {
   opacity: 0;

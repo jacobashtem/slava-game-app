@@ -667,7 +667,7 @@ function pickTarget(choice: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: background 0.15s;
 }
 .pi-auction-adj:hover {
   background: rgba(200, 168, 78, 0.18);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted, onErrorCaptured } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import PlayerField from './PlayerField.vue'
 import PlayerHand from '../ui/PlayerHand.vue'
 import TurnIndicator from '../ui/TurnIndicator.vue'
@@ -11,19 +11,12 @@ import GameOverModal from '../ui/GameOverModal.vue'
 import GraveyardModal from '../ui/GraveyardModal.vue'
 import PendingInteractionModal from '../ui/PendingInteractionModal.vue'
 import GameHint from '../ui/GameHint.vue'
-// AISummaryPanel removed — unified ActionLog is the single log source
 import WeatherEffects from '../ui/WeatherEffects.vue'
 import MusicPlayer from '../ui/MusicPlayer.vue'
 import TurnBanner from '../ui/TurnBanner.vue'
 import GloryBar from '../ui/GloryBar.vue'
 import PanteonPanel from '../ui/PanteonPanel.vue'
 import InfoBox from '../ui/InfoBox.vue'
-import AttackVFX from '../ui/AttackVFX.vue'
-import DrainParticles from '../ui/DrainParticles.vue'
-import AoEWave from '../ui/AoEWave.vue'
-import EggHatchVFX from '../ui/EggHatchVFX.vue'
-import ConversionSlideVFX from '../ui/ConversionSlideVFX.vue'
-import GorynychMergeVFX from '../ui/GorynychMergeVFX.vue'
 import CardBack from '../cards/CardBack.vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
@@ -85,83 +78,17 @@ const bgStyle = computed(() => {
   return { '--bf-bg': bg }
 })
 
-// ===== ACTIVE AURAS INFO BAR =====
-const passiveAuraMap: Record<string, { icon: string; label: string; desc: string }> = {
-  'matoha_anti_magic':       { icon: '🚫', label: 'Anty-Magia',   desc: 'Blokuje ataki typu Magia na sojuszników.' },
-  'chmurnik_ground_flying':  { icon: '⬇',  label: 'Uziemienie',   desc: 'Wrogie latające istoty tracą latanie.' },
-  'guslarka_bonus_vs_demon': { icon: '✝',  label: 'vs Demony',    desc: 'Sojusznicy +2 ATK vs demony.' },
-  'zerca_welesa_demon_buff': { icon: '🔥', label: 'Demoniczny',   desc: 'Sojusznicze demony +1 ATK.' },
-  'polewik_buff_neighbors':  { icon: '🌾', label: 'Wsparcie',     desc: 'Sąsiedzi w L1 +1 ATK.' },
-  'szeptunka_damage_reduction':{ icon: '🤫',label: 'Szept',       desc: 'Sojusznicy -1 obrażeń.' },
-  'chlop_extra_attack':      { icon: '⚔',  label: '+1 Atak',     desc: 'Sojusznicy +1 atak na turę.' },
-  'tesknica_block_enhance':  { icon: '🔒', label: 'Blokada',      desc: 'Blokuje ulepszanie przygód wroga.' },
-  'bieda_spy_block_draw':    { icon: '💀', label: 'Bieda',        desc: 'Właściciel nie dobiera kart.' },
-  'licho_block_draw':        { icon: '👁',  label: 'Licho',       desc: 'Wróg nie dobiera kart.' },
-  'bzionek_spell_intercept': { icon: '🛡',  label: 'Anty-Czar',   desc: 'Przechwytuje zaklęcia.' },
-  'czarownica_redirect_spell':{ icon: '🔄',label: 'Odwrót',       desc: 'Przekierowuje zaklęcia wroga.' },
-  'lapiduch_demon_hunter':   { icon: '⚔',  label: 'Łowca',       desc: 'Blokuje wystawianie demonów.' },
-  'zupan_no_field_limit':    { icon: '👑', label: 'Bez limitu',   desc: 'Znosi limit istot na polu.' },
-}
 
-// activeAuras computed removed — aura bar was removed, passive effects shown on creature cards
-
-// Event color by adventure type
-function eventColor(ev: any): string {
-  const t = ev.cardData?.adventureType
-  if (t === 0) return '#f59e0b'  // zdarzenie
-  if (t === 1) return '#6366f1'  // artefakt
-  if (t === 2) return '#10b981'  // lokacja
-  return '#94a3b8'
-}
-
-// Active event cards — rozdzielone na gracza i wroga
-const playerEventCards = computed(() => (game.state?.activeEvents ?? []).filter(e => e.owner === 'player1'))
-const enemyEventCards = computed(() => (game.state?.activeEvents ?? []).filter(e => e.owner === 'player2'))
-const activeEventCards = computed(() => game.state?.activeEvents ?? [])
-
-// Łaska Morany counter — ile jeszcze istot zostanie zabitych
-const moranaCounter = computed(() => {
-  if (!game.state) return null
-  const p1Count = (game.state.players.player1 as any).moranaKillCount as number | undefined
-  const p2Count = (game.state.players.player2 as any).moranaKillCount as number | undefined
-  const entries: { side: 'player1' | 'player2'; count: number }[] = []
-  if (p1Count && p1Count > 0) entries.push({ side: 'player1', count: p1Count })
-  if (p2Count && p2Count > 0) entries.push({ side: 'player2', count: p2Count })
-  return entries.length > 0 ? entries : null
-})
 
 // ===== SFX WATCHERS =====
 const sfx = useAudio()
-// Attack SFX — type-specific
-watch(() => ui.animatingAttack, (v) => {
-  if (!v) return
-  const atkType = ui.animatingAttackType
-  if (atkType === 0) sfx.sfxAttackMelee()
-  else if (atkType === 1) sfx.sfxAttackElemental()
-  else if (atkType === 2) sfx.sfxAttackMagic()
-  else if (atkType === 3) sfx.sfxAttackRanged()
-  else sfx.sfxAttack()
-})
-// Hit SFX — type-specific
-watch(() => ui.animatingHit, (v) => {
-  if (!v) return
-  const atkType = ui.animatingAttackType
-  if (atkType === 0) sfx.sfxHitMelee()
-  else if (atkType === 1) sfx.sfxHitElemental()
-  else if (atkType === 2) sfx.sfxHitMagic()
-  else if (atkType === 3) sfx.sfxHitRanged()
-  else sfx.sfxHit()
-})
-watch(() => ui.animatingDeath.size, (n, o) => { if (n > 0 && n > (o ?? 0)) sfx.sfxDeath() })
+// Attack/hit/death SFX will be triggered by VFXOrchestrator (P3)
 watch(() => game.winner, (v) => {
   if (!v) return
   if (v === 'player1') sfx.sfxVictory()
   else sfx.sfxDefeat()
 })
 watch(() => game.currentPhase, () => sfx.sfxPhase())
-// Counter/Immune SFX
-watch(() => ui.counterAttackCardId, (v) => { if (v) sfx.sfxCounterattack() })
-watch(() => ui.immuneCardId, (v) => { if (v) sfx.sfxImmune() })
 
 // === UI SFX — card play, draw, gold, adventure, activate, season ===
 // Card play + draw: watch hand size changes
@@ -197,116 +124,7 @@ watch(() => game.season, (newSeason, oldSeason) => {
   if (oldSeason && newSeason !== oldSeason) sfx.sfxSeasonChange()
 })
 
-// ===== P1 VFX WATCHERS =====
-// Drain VFX: lifesteal / soul drain — watch actionLog for specific effects
-watch(() => game.actionLog.length, () => {
-  const log = game.actionLog
-  if (log.length === 0) return
-  const last = log[log.length - 1]
-  if (!last?.message) return
-  const text = last.message
-
-  // Strzyga lifesteal
-  if (text.includes('regeneruje') && text.includes('Strzyga')) {
-    const ids = last.involvedCards
-    if (ids?.length === 2) ui.triggerDrainVFX(ids[1]!, ids[0]!, 'red')
-  }
-  // Baba Jaga / Śmierć growth on death
-  if ((text.includes('Baba Jaga') || text.includes('Śmierć')) && (text.includes('+1') || text.includes('zyskuje'))) {
-    const ids = last.involvedCards
-    if (ids?.length >= 1) {
-      // Find dying card in previous logs
-      const deathLog = log.slice(-5).find(l => l.type === 'death')
-      if (deathLog?.involvedCards?.[0]) {
-        ui.triggerDrainVFX(deathLog.involvedCards[0], ids[0]!, 'purple')
-      }
-    }
-  }
-  // Bezkost ATK drain
-  if (text.includes('Bezkost') && text.includes('atak')) {
-    const ids = last.involvedCards
-    if (ids?.length === 2) ui.triggerDrainVFX(ids[1]!, ids[0]!, 'dark')
-  }
-
-  // AoE wave: Morowa Dziewica
-  if (text.includes('Morowa') && text.includes('wszystk')) {
-    const ids = last.involvedCards
-    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(22,163,74,0.35)', 'radial')
-  }
-  // AoE wave: Żar-ptak death explosion
-  if (text.includes('Żar-ptak') && text.includes('trac')) {
-    const ids = last.involvedCards
-    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(251,146,60,0.4)', 'radial')
-  }
-
-  // Status flash: paralyze
-  if (text.includes('paraliżuje') || text.includes('Paraliż')) {
-    const ids = last.involvedCards
-    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'paralyze')
-  }
-  // Status flash: disease (Biali Ludzie disarm)
-  if (text.includes('traci zdolność') || text.includes('nie może atak')) {
-    const ids = last.involvedCards
-    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'disease')
-  }
-  // Status flash: curse (Zagorkinia)
-  if (text.includes('Klątwa') || text.includes('klątwa')) {
-    const ids = last.involvedCards
-    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'curse')
-  }
-
-  // Smocze Jajo hatch: egg crack + burst + 3 cards fly out
-  if (text.includes('Kluwa się') && text.includes('Jajo')) {
-    const ids = last.involvedCards
-    if (ids?.[0]) ui.triggerEggHatch(ids[0])
-  }
-
-  // Homen zombify: card rises from death as Homen
-  if (text.includes('wstaje jako Homen')) {
-    const ids = last.involvedCards
-    if (ids?.[0]) ui.triggerZombify(ids[0])
-  }
-
-  // Homen curse mark flash
-  if (text.includes('klątwę') && text.includes('Homen')) {
-    const ids = last.involvedCards
-    if (ids?.length >= 2) ui.triggerStatusFlash(ids[ids.length - 1]!, 'curse')
-  }
-
-  // === P2 VFX ===
-
-  // Północnica ice wave: mass paralyze AoE sweep
-  if (text.includes('Północnica') && text.includes('paraliżuje')) {
-    const ids = last.involvedCards
-    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(96,165,250,0.45)', 'line')
-  }
-
-  // Światogor line cleave: line slam AoE
-  if (text.includes('rozcina linię')) {
-    const ids = last.involvedCards
-    if (ids?.[0]) ui.triggerAoEWave(ids[0], 'rgba(251,146,60,0.4)', 'line')
-  }
-
-  // Gorynych dragon merge: absorb dragons
-  if (text.includes('wchłania')) {
-    const ids = last.involvedCards
-    if (ids && ids.length >= 2) {
-      ui.triggerGorynychMerge(ids[0]!, ids.slice(1))
-    }
-  }
-
-  // Wiła conversion: charm weak enemies
-  if (text.includes('przejęła:')) {
-    const ids = last.involvedCards
-    if (ids?.[0]) ui.triggerConversion(ids[0], 'pink', 'Taniec Wiły')
-  }
-
-  // Mara sacrifice takeover
-  if (text.includes('Przejmuje') && !text.includes('zdolności')) {
-    const ids = last.involvedCards
-    if (ids && ids.length >= 2) ui.triggerConversion(ids[ids.length - 1]!, 'purple', 'Przejęcie!')
-  }
-})
+// P1/P2 VFX watchers removed — will be replaced by VFXOrchestrator typed events (P3)
 
 // ===== KEYBOARD SHORTCUTS =====
 function onKeyDown(e: KeyboardEvent) {
@@ -362,13 +180,20 @@ const onPlayDescription = computed(() => {
     <!-- ===== EFEKTY POGODOWE ===== -->
     <WeatherEffects :season="game.season" />
 
+    <!-- ===== SEASON LIGHT TINT — color temperature per season ===== -->
+    <div :class="['season-tint', `tint-${game.season}`]" />
+
     <!-- ===== PASEK GÓRNY (minimalny) ===== -->
     <div class="top-bar">
       <div :class="['turn-badge', game.isPlayerTurn ? 'tb-player' : 'tb-ai']">
         {{ game.isPlayerTurn ? 'TWOJA TURA' : 'TURA WROGA' }}
       </div>
+      <div class="round-counter" v-tip="'Numer rundy'">
+        <span class="round-label">Runda</span>
+        <span class="round-number">{{ game.roundNumber }}</span>
+      </div>
       <div class="top-bar-spacer" />
-      <div class="season-badge" v-tip="'Aktualna pora roku'">
+      <div :class="['season-badge', `season-${game.season}`]" v-tip="'Aktualna pora roku'">
         {{ { spring: '🌸 Wiosna', summer: '☀ Lato', autumn: '🍂 Jesień', winter: '❄ Zima' }[game.season] }}
       </div>
       <div class="top-bar-spacer" />
@@ -578,12 +403,8 @@ const onPlayDescription = computed(() => {
     <CardTooltip />
     <GameOverModal />
     <GraveyardModal />
-    <AttackVFX />
-    <DrainParticles />
-    <AoEWave />
-    <EggHatchVFX />
-    <ConversionSlideVFX />
-    <GorynychMergeVFX />
+    <!-- P3 VFX Overlay — single canvas for all visual effects -->
+    <VFXOverlay />
   </div>
 
   <div v-else class="board-loading">
@@ -664,9 +485,50 @@ const onPlayDescription = computed(() => {
     );
 }
 
+/* Season light tint — color temperature overlay */
+.season-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transition: background 1.5s ease;
+  mix-blend-mode: soft-light;
+}
+.tint-spring {
+  background: radial-gradient(ellipse 100% 80% at 50% 30%,
+    rgba(74, 222, 128, 0.08) 0%,
+    rgba(167, 243, 208, 0.04) 40%,
+    transparent 70%);
+}
+.tint-summer {
+  background:
+    radial-gradient(ellipse 70% 50% at 65% 15%,
+      rgba(251, 191, 36, 0.12) 0%,
+      rgba(251, 146, 60, 0.06) 40%,
+      transparent 65%),
+    linear-gradient(180deg,
+      rgba(251, 191, 36, 0.04) 0%,
+      transparent 40%);
+}
+.tint-autumn {
+  background: radial-gradient(ellipse 90% 70% at 40% 50%,
+    rgba(249, 115, 22, 0.06) 0%,
+    rgba(220, 38, 38, 0.03) 40%,
+    transparent 65%);
+}
+.tint-winter {
+  background:
+    radial-gradient(ellipse 100% 80% at 50% 40%,
+      rgba(96, 165, 250, 0.08) 0%,
+      rgba(147, 197, 253, 0.04) 40%,
+      transparent 65%),
+    linear-gradient(180deg,
+      transparent 60%,
+      rgba(96, 165, 250, 0.04) 100%);
+}
+
 /* Layout children above the ::before/::after pseudo-elements and .season-bg layers */
 .top-bar, .board-main, .mobile-hud { position: relative; z-index: 3; }
-.player-hand { position: relative; z-index: 10; }
 
 /* ====== PASEK GÓRNY (minimalny) ====== */
 .top-bar {
@@ -697,8 +559,8 @@ const onPlayDescription = computed(() => {
 
 .turn-badge {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 500;
   letter-spacing: 0.12em;
   padding: 3px 16px;
   border-radius: 5px;
@@ -708,6 +570,29 @@ const onPlayDescription = computed(() => {
 /* Runiczna dekoracja po bokach */
 .turn-badge::before { content: '᛫'; margin-right: 6px; opacity: 0.4; font-size: 10px; }
 .turn-badge::after  { content: '᛫'; margin-left: 6px; opacity: 0.4; font-size: 10px; }
+
+.round-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-display, Georgia, serif);
+  color: #94a3b8;
+  padding: 2px 14px;
+}
+.round-label {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.round-number {
+  font-size: 42px;
+  font-weight: 500;
+  color: #c8a84e;
+  text-shadow: 0 0 12px rgba(200, 168, 78, 0.4), 0 0 24px rgba(200, 168, 78, 0.15);
+  line-height: 1;
+}
 .tb-player {
   color: #86efac;
   background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%);
@@ -728,15 +613,38 @@ const onPlayDescription = computed(() => {
 
 .season-badge {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 12px;
-  font-weight: 700;
-  color: #e2e8f0;
-  padding: 2px 12px;
-  border-radius: 4px;
-  background: rgba(200,168,78,0.04);
-  border: 1px solid rgba(200,168,78,0.12);
+  font-size: 20px;
+  font-weight: 500;
+  padding: 5px 16px;
+  border-radius: 6px;
   white-space: nowrap;
   letter-spacing: 0.06em;
+  transition: color 0.4s, background-color 0.4s, border-color 0.4s, text-shadow 0.4s;
+}
+/* Season colors */
+.season-spring {
+  color: #86efac;
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+}
+.season-summer {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+.season-autumn {
+  color: #fb923c;
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  text-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+}
+.season-winter {
+  color: #93c5fd;
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
 }
 
 .surrender-top-btn {
@@ -747,7 +655,7 @@ const onPlayDescription = computed(() => {
   color: rgba(239, 68, 68, 0.35);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
   line-height: 1;
 }
 .surrender-top-btn:hover {
@@ -803,84 +711,6 @@ const onPlayDescription = computed(() => {
   left: 0;
 }
 
-/* ====== SIDEBAR ACTIVE EVENTS ====== */
-.sidebar-events {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  width: 100%;
-  padding: 0 2px;
-}
-
-.sidebar-event-chip {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 5px 4px 8px;
-  border-radius: 5px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  cursor: help;
-  transition: all 0.15s ease;
-  position: relative;
-  overflow: hidden;
-}
-.sidebar-event-chip:hover {
-  border-color: color-mix(in srgb, var(--sev-color, #f59e0b) 60%, transparent);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--sev-color, #f59e0b) 15%, transparent);
-}
-.sidebar-event-ally {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);
-  border-color: rgba(34, 197, 94, 0.25);
-}
-
-/* Kolorowy accent pasek po lewej */
-.sev-accent {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--sev-color, #f59e0b);
-  opacity: 0.7;
-}
-
-.sev-name {
-  font-family: var(--font-display, Georgia, serif);
-  font-size: 8px;
-  font-weight: 700;
-  color: #e2e8f0;
-  line-height: 1.2;
-  word-break: break-word;
-  flex: 1;
-}
-.sev-rounds {
-  font-family: var(--font-display, Georgia, serif);
-  font-size: 12px;
-  font-weight: 900;
-  color: #fbbf24;
-  text-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
-  flex-shrink: 0;
-  margin-left: auto;
-  line-height: 1;
-}
-.sev-rounds-low {
-  color: #ef4444;
-  text-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
-  animation: sev-urgent 1s ease-in-out infinite;
-}
-@keyframes sev-urgent {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.sev-perm {
-  font-size: 10px;
-  font-weight: 700;
-  color: #a78bfa;
-  opacity: 0.6;
-  flex-shrink: 0;
-  margin-left: auto;
-}
 
 /* ====== SEPARATOR ŚRODKOWY (pionowy) ====== */
 .center-divider {
@@ -914,20 +744,6 @@ const onPlayDescription = computed(() => {
   /* rune-glow animation removed — static for performance */
 }
 
-/* ====== OVERLAY HINTS + AURAS (above board, don't affect layout) ====== */
-.board-overlays {
-  position: absolute;
-  bottom: 174px; /* sits above the hand */
-  left: 0;
-  right: 0;
-  z-index: 20;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-}
-.board-overlays > * {
-  pointer-events: auto;
-}
 
 /* ====== LOADING ====== */
 .board-loading {
@@ -975,9 +791,9 @@ const onPlayDescription = computed(() => {
 
 /* ===== SURRENDER (sidebar) ===== */
 
-.toast-fade-enter-active { transition: all 0.25s ease; }
+.toast-fade-enter-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .toast-fade-enter-from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-.toast-fade-leave-active { transition: all 0.3s ease; }
+.toast-fade-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
 .toast-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(-6px); }
 
 /* ===== ON_PLAY CONFIRMATION ===== */
@@ -1055,74 +871,6 @@ const onPlayDescription = computed(() => {
 .onplay-fade-enter-active, .onplay-fade-leave-active { transition: opacity 0.2s; }
 .onplay-fade-enter-from, .onplay-fade-leave-to { opacity: 0; }
 
-/* ===== AURA BAR ===== */
-.aura-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 10px;
-  border-top: 1px solid rgba(200,168,78,0.06);
-  background: rgba(4, 3, 10, 0.7);
-  /* backdrop-filter removed for performance */
-  flex-shrink: 0;
-  min-height: 24px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.aura-bar::-webkit-scrollbar { display: none; }
-
-.aura-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-  cursor: help;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.aura-ally {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  color: #86efac;
-}
-.aura-enemy {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
-}
-.aura-event {
-  background: rgba(251, 191, 36, 0.12);
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  color: #fde68a;
-}
-.aura-event-ally {
-  border-left: 3px solid rgba(34, 197, 94, 0.6);
-}
-.aura-event-enemy {
-  border-left: 3px solid rgba(239, 68, 68, 0.6);
-}
-.aura-flash {
-  animation: aura-pulse 0.6s ease-out 2;
-}
-@keyframes aura-pulse {
-  0%   { box-shadow: 0 0 0 0px rgba(251, 191, 36, 0); }
-  30%  { box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.7), 0 0 12px rgba(251, 191, 36, 0.3); }
-  100% { box-shadow: 0 0 0 0px rgba(251, 191, 36, 0); }
-}
-
-.aura-rounds {
-  font-size: 8px;
-  font-weight: 700;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0 3px;
-  border-radius: 3px;
-  margin-left: 2px;
-}
 
 /* ====================================================================
    MOBILE HUD — ukryty na desktopie, widoczny na mobile
@@ -1156,9 +904,12 @@ const onPlayDescription = computed(() => {
   }
   .turn-badge::before, .turn-badge::after { display: none; }
   .season-badge {
-    font-size: 9px;
-    padding: 1px 6px;
+    font-size: 11px;
+    padding: 2px 8px;
   }
+  .round-counter { padding: 0 4px; }
+  .round-label { font-size: 10px; }
+  .round-number { font-size: 22px; }
   .surrender-top-btn {
     font-size: 11px;
     padding: 2px 4px;
@@ -1191,7 +942,7 @@ const onPlayDescription = computed(() => {
   .mhud-label {
     font-family: var(--font-display, Georgia, serif);
     font-size: 8px;
-    font-weight: 900;
+    font-weight: 500;
     letter-spacing: 0.1em;
     padding: 1px 4px;
     border-radius: 3px;
@@ -1230,7 +981,6 @@ const onPlayDescription = computed(() => {
     background: rgba(251,191,36,0.2);
     border: 1px solid rgba(251,191,36,0.5);
     box-shadow: 0 0 6px rgba(251,191,36,0.2);
-    animation: gold-active-glow 2s ease-in-out infinite;
   }
   .mhud-toggle {
     width: 24px;
@@ -1245,7 +995,7 @@ const onPlayDescription = computed(() => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all 0.15s;
+    transition: background-color 0.15s, color 0.15s;
   }
   .mhud-toggle:active {
     background: rgba(200,168,78,0.15);

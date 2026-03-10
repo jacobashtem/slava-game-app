@@ -4,7 +4,7 @@
  * Store Pinia jest tylko adapterem który wywołuje metody tego silnika.
  */
 
-import type { GameState, LogEntry, CardInstance } from './types'
+import type { GameState, LogEntry, CardInstance, CombatResult } from './types'
 import { GamePhase, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
 import { createInitialGameState, cloneGameState, addLog } from './GameStateUtils'
@@ -51,6 +51,9 @@ export class GameEngine {
   private onStateChange?: (state: GameState) => void
   private onLogEntry?: (entry: LogEntry) => void
   private arenaMode = false
+
+  /** Last combat result — sideband for VFX (read after playerAttack/aiAttack, then clear) */
+  lastCombatResult: CombatResult | null = null
 
   constructor() {
     this.factory = new CardFactory()
@@ -313,7 +316,8 @@ export class GameEngine {
       return cloneGameState(this.state)
     }
 
-    const { newState, log } = performAttack(this.state, attackerInstanceId, defenderInstanceId)
+    const { newState, log, combatResult } = performAttack(this.state, attackerInstanceId, defenderInstanceId)
+    this.lastCombatResult = combatResult ?? null
     this.applyStateAndLog(newState, log)
 
     this.checkWinAndNotify()
@@ -557,7 +561,8 @@ export class GameEngine {
     if (aiNormalAttacksUsed >= (aiHasChlop ? 2 : 1)) {
       throw new Error('AI może wykonać tylko jeden atak na turę.')
     }
-    const { newState, log } = performAttack(this.state, attackerInstanceId, defenderInstanceId)
+    const { newState, log, combatResult } = performAttack(this.state, attackerInstanceId, defenderInstanceId)
+    this.lastCombatResult = combatResult ?? null
     this.applyStateAndLog(newState, log)
     this.checkWinAndNotify()
     return cloneGameState(this.state)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import CreatureCard from '../cards/CreatureCard.vue'
 import { Icon } from '@iconify/vue'
 import type { CardInstance } from '../../game-engine/types'
@@ -13,10 +13,11 @@ import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 import { getEffect } from '../../game-engine/EffectRegistry'
 
 // Mobile detection — disable hover tooltips, use info button instead
-const isMobile = ref(typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches)
-if (typeof window !== 'undefined') {
-  window.matchMedia('(max-width: 767px)').addEventListener('change', (e) => { isMobile.value = e.matches })
-}
+const _mql = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)') : null
+const isMobile = ref(_mql?.matches ?? false)
+function _onMqlChange(e: MediaQueryListEvent) { isMobile.value = e.matches }
+_mql?.addEventListener('change', _onMqlChange)
+onUnmounted(() => _mql?.removeEventListener('change', _onMqlChange))
 
 function onInfoClick(e: Event, card: CardInstance) {
   e.stopPropagation()
@@ -43,27 +44,16 @@ const canDraw = computed(() =>
 
 
 function onCardClick(card: CardInstance) {
-  console.log('[PlayerHand] onCardClick', {
-    cardId: card.instanceId,
-    cardName: card.cardData.name,
-    cardType: card.cardData.cardType,
-    isPlayerTurn: game.isPlayerTurn,
-    currentPhase: game.currentPhase,
-    creaturesPlayed: game.player?.creaturesPlayedThisTurn ?? 0,
-    playLimit: GOLD_EDITION_RULES.PLAY_LIMIT_CREATURES,
-  })
-  if (!game.isPlayerTurn) { console.warn('[PlayerHand] BLOCKED: not player turn'); return }
-  if (card.cardData.cardType !== 'creature') { console.log('[PlayerHand] not creature, skipping'); return }
-  if (game.currentPhase !== GamePhase.PLAY) { console.warn('[PlayerHand] BLOCKED: not PLAY phase'); return }
+  if (!game.isPlayerTurn) return
+  if (card.cardData.cardType !== 'creature') return
+  if (game.currentPhase !== GamePhase.PLAY) return
 
   if ((game.player?.creaturesPlayedThisTurn ?? 0) >= GOLD_EDITION_RULES.PLAY_LIMIT_CREATURES) {
-    console.warn('[PlayerHand] BLOCKED: play limit reached')
     ui.showPlayLimitToast('Możesz wystawić tylko 1 istotę na turę!')
     return
   }
 
   ui.selectCardFromHand(card.instanceId)
-  console.log('[PlayerHand] after selectCardFromHand', { selectedCardId: ui.selectedCardId, mode: ui.mode })
 
   if (ui.selectedCardId === card.instanceId) {
     // Sprawdź czy karta wystawiana na pole wroga (Wieszczy, Bieda)
@@ -332,7 +322,8 @@ const adventureTypeColor = (card: CardInstance) => {
 .hand-card-wrap {
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.15s ease-out;
+  will-change: transform;
   margin-left: -18px;
   position: relative;
   border-radius: 8px;
@@ -433,8 +424,8 @@ const adventureTypeColor = (card: CardInstance) => {
 }
 .adv-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 500;
   color: #f0ede8;
   line-height: 1.05;
   text-shadow: 0 0 12px rgba(0,0,0,0.95), 0 1px 6px rgba(0,0,0,0.9), 0 0 20px color-mix(in srgb, var(--adv-color) 25%, transparent);
@@ -516,11 +507,6 @@ const adventureTypeColor = (card: CardInstance) => {
 .adv-btn-enhanced:hover:not(:disabled) { background: rgba(251,191,36,0.2); }
 .adv-btn-enhanced:disabled { opacity: 0.25; cursor: not-allowed; }
 
-@keyframes adv-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
-  50%       { box-shadow: 0 0 0 3px rgba(99,102,241,0.35); }
-}
-
 .hand-empty {
   font-size: 12px;
   color: var(--text-muted);
@@ -543,7 +529,7 @@ const adventureTypeColor = (card: CardInstance) => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 .draw-card-wrap:hover .draw-card {
   border-color: rgba(99, 102, 241, 0.7);

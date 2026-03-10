@@ -361,8 +361,8 @@ const showSettings = ref(false)
 
 .title {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 54px;
-  font-weight: 900;
+  font-size: 62px;
+  font-weight: 500;
   letter-spacing: 0.28em;
   color: #ddd6c1;
   margin: 0;
@@ -476,8 +476,8 @@ const showSettings = ref(false)
 
 .mode-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 21px;
+  font-weight: 500;
   letter-spacing: 0.04em;
 }
 
@@ -516,14 +516,14 @@ const showSettings = ref(false)
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s;
 }
 .settings-toggle:hover { background: rgba(255, 255, 255, 0.03); color: #94a3b8; }
 .st-icon { font-size: 14px; }
 .st-chev { margin-left: auto; font-size: 16px; opacity: 0.4; }
 
 /* Settings panel transition */
-.panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.25s ease; overflow: hidden; }
+.panel-slide-enter-active, .panel-slide-leave-active { transition: max-height 0.25s ease, opacity 0.25s ease; overflow: hidden; }
 .panel-slide-enter-from, .panel-slide-leave-to { max-height: 0; opacity: 0; }
 .panel-slide-enter-to, .panel-slide-leave-from { max-height: 380px; opacity: 1; }
 
@@ -553,7 +553,7 @@ const showSettings = ref(false)
   border: 1px solid rgba(255, 255, 255, 0.04);
   background: rgba(255, 255, 255, 0.015);
   color: #475569; font-size: 11px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
+  cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 .sg-btn.active {
   border-color: rgba(200, 168, 78, 0.3);
@@ -568,7 +568,7 @@ const showSettings = ref(false)
   padding: 8px 6px; border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.04);
   background: rgba(255, 255, 255, 0.015);
-  color: #475569; cursor: pointer; transition: all 0.15s;
+  color: #475569; cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
   text-align: center;
 }
 .dom-btn.active {
@@ -601,7 +601,7 @@ const showSettings = ref(false)
   background: rgba(255, 255, 255, 0.01);
   color: #475569;
   text-decoration: none;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 .nav-tile:hover {
   background: rgba(200, 168, 78, 0.04);

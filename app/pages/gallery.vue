@@ -314,7 +314,7 @@ function getDomainColor(domainId: number): string {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 .tab.active {
   background: rgba(99, 102, 241, 0.1);
@@ -364,7 +364,7 @@ function getDomainColor(domainId: number): string {
   display: flex;
   align-items: center;
   gap: 4px;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 .pill.active { border-color: #6366f1; color: #a5b4fc; background: rgba(99, 102, 241, 0.1); }
 .pill:hover:not(.active) { background: rgba(255,255,255,0.06); }
@@ -385,7 +385,7 @@ function getDomainColor(domainId: number): string {
   background: rgba(255,255,255,0.02);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: background-color 0.12s, border-color 0.12s;
 }
 .card-entry:hover { background: rgba(255,255,255,0.05); border-color: #1e293b; }
 .card-entry.expanded { background: rgba(255,255,255,0.04); border-color: var(--dc, #334155); }

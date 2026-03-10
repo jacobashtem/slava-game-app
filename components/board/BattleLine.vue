@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
-import gsap from 'gsap'
+import { computed, ref, watch } from 'vue'
 import CreatureCard from '../cards/CreatureCard.vue'
 import type { CardInstance } from '../../game-engine/types'
 import { BattleLine as BL, CardPosition, GamePhase } from '../../game-engine/constants'
@@ -121,14 +120,6 @@ function onLineClick(e: MouseEvent) {
   const target = e.target as HTMLElement
   if (target.closest('.creature-card') || target.closest('.slot-empty')) return
 
-  console.log('[BattleLine] onLineClick (fallback)', {
-    line: props.line,
-    side: props.side,
-    isPlacing: ui.isPlacingCard,
-    selectedId: ui.selectedCardId,
-    appendAt: props.cards.length,
-  })
-
   if (ui.isPlacingCard && ui.selectedCardId) {
     if (ui.placingOnEnemyField ? props.isPlayerSide : !props.isPlayerSide) return
     // Line-level click: engine auto-assigns first available slot (no slotIndex)
@@ -138,27 +129,11 @@ function onLineClick(e: MouseEvent) {
 }
 
 function onSlotClick(slotIndex: number) {
-  console.log('[BattleLine] onSlotClick', {
-    slotIndex,
-    line: props.line,
-    side: props.side,
-    isPlacing: ui.isPlacingCard,
-    isMoving: ui.isMovingCard,
-    selectedId: ui.selectedCardId,
-    mode: ui.mode,
-    isDropTarget: isDropTarget.value,
-    isHighlighted: isHighlighted.value,
-    cardsInLine: props.cards.length,
-  })
   if (ui.isPlacingCard && ui.selectedCardId) {
-    console.log('[BattleLine] → calling game.playCreature', { cardId: ui.selectedCardId, line: props.line, slotIndex })
     game.playCreature(ui.selectedCardId, props.line, slotIndex)
   } else if (ui.isMovingCard && ui.selectedCardId) {
-    console.log('[BattleLine] → calling game.moveCreatureLine', { cardId: ui.selectedCardId, line: props.line, slotIndex })
     game.moveCreatureLine(ui.selectedCardId, props.line, slotIndex)
     ui.clearSelection()
-  } else {
-    console.warn('[BattleLine] onSlotClick — no action taken (not placing or moving)')
   }
 }
 
@@ -279,19 +254,7 @@ function getAllTargets(): string[] {
     .map(e => e.instanceId)
 }
 
-// ===== GSAP DAMAGE FLOAT =====
-// IMPORTANT: Do NOT call el.remove() in GSAP onComplete!
-// Vue owns the DOM lifecycle via v-if on hitAmounts. If GSAP removes the element
-// before Vue's reactive cleanup (delete hitAmounts[id]), Vue finds a null VNode
-// and crashes with 'insertBefore null'. Let Vue handle removal via the v-if binding.
-function animateDmgFloat(el: HTMLElement) {
-  gsap.fromTo(el,
-    { y: 0, scale: 1.3, opacity: 1, x: '-50%' },
-    { y: -75, scale: 0.75, opacity: 0, duration: 2.2, ease: 'power2.out' }
-  )
-  // Bounce up first
-  gsap.to(el, { scale: 1.8, duration: 0.2, yoyo: true, repeat: 1, ease: 'power1.out' })
-}
+// Damage float removed — will be handled by VFXOrchestrator (P3)
 
 // ===== DRAG & DROP =====
 let _draggingId = ''
@@ -402,18 +365,9 @@ function onLineDrop(e: DragEvent) {
 
         <!-- Card content -->
         <template v-else>
-          <div v-if="ui.hitAmounts[item.card!.instanceId]" class="damage-number"
-            :ref="(el: any) => { if (el) animateDmgFloat(el as HTMLElement) }"
-          >
-            -{{ ui.hitAmounts[item.card!.instanceId] }}
-          </div>
-
           <CreatureCard
             :card="item.card!"
             :selected="ui.selectedCardId === item.card!.instanceId || ui.attackingCardId === item.card!.instanceId"
-            :is-attacking="ui.attackingCardId === item.card!.instanceId || ui.animatingAttack === item.card!.instanceId"
-            :is-hit="ui.animatingHit === item.card!.instanceId"
-            :is-dying="ui.animatingDeath.has(item.card!.instanceId)"
             :is-valid-target="ui.validAttackTargets.has(item.card!.instanceId)"
             :dimmed="ui.isSelectingTarget && !ui.validAttackTargets.has(item.card!.instanceId) && !isPlayerSide"
             :toggle-position-on-click="isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY && !ui.pendingArtifactId && !isDropTarget"
@@ -439,6 +393,7 @@ function onLineDrop(e: DragEvent) {
   align-items: center;
   flex: 1;
   min-width: 100px;
+  contain: layout style;
   height: 100%;
   padding: 2px 4px;
   border-radius: 8px;
@@ -570,25 +525,7 @@ function onLineDrop(e: DragEvent) {
   flex-shrink: 0;
 }
 
-/* ===== FLOATING DAMAGE NUMBER ===== */
-.damage-number {
-  position: absolute;
-  top: -18px;
-  left: 50%;
-  z-index: 100;
-  font-size: 24px;
-  font-weight: 900;
-  color: #ef4444;
-  text-shadow:
-    0 0 10px rgba(239, 68, 68, 0.9),
-    0 0 20px rgba(239, 68, 68, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.95);
-  pointer-events: none;
-  white-space: nowrap;
-  font-family: var(--font-display, Georgia, serif);
-  letter-spacing: -0.5px;
-  /* GSAP handles float animation via animateDmgFloat() */
-}
+/* Damage float removed — will be handled by VFXOrchestrator (P3) */
 
 /* ===== EMPTY SLOTS — uniform with card-wrap sizing ===== */
 .slot-empty {
@@ -646,8 +583,8 @@ function onLineDrop(e: DragEvent) {
 }
 
 @keyframes slot-pulse {
-  0%, 100% { box-shadow: 0 0 0 0px rgba(200, 168, 78, 0); }
-  50%      { box-shadow: 0 0 0 1px rgba(200, 168, 78, 0.4), 0 0 8px rgba(200, 168, 78, 0.15); }
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
 }
 
 /* ====== MOBILE RESPONSIVE ====== */
@@ -715,10 +652,6 @@ function onLineDrop(e: DragEvent) {
   }
   .slot-rune { font-size: 12px; }
 
-  .damage-number {
-    font-size: 16px;
-    top: -6px;
-  }
 }
 
 /* ===== CARD PLAY ANIMATION ===== */
