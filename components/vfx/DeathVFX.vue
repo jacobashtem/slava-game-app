@@ -275,6 +275,9 @@ function play(targetEl: HTMLElement) {
   // Restore previous target's styles (showcase/arena reuse)
   if (lastAnimatedEl && lastAnimatedEl.isConnected) {
     lastAnimatedEl.style.visibility = ''
+    if (lastAnimatedEl.parentElement) {
+      lastAnimatedEl.parentElement.style.visibility = ''
+    }
     gsap.set(lastAnimatedEl, { opacity: 1, scale: 1, y: 0 })
     if (lastAnimatedCardInner) {
       gsap.set(lastAnimatedCardInner, { filter: lastOrigFilter || 'none', boxShadow: 'none' })
@@ -366,14 +369,18 @@ function play(targetEl: HTMLElement) {
     },
   })
 
-  // ── Phase 1: Card darkens + smoke gathers (0–0.65s) ──
+  // ── Phase 1: Card darkens + smoke gathers + card sinks (single pass, no re-brighten) ──
   tl.to(cardInner, {
-    filter: 'brightness(0.4) saturate(0.2)',
-    boxShadow: 'inset 0 0 40px rgba(0,0,0,0.7)',
-    duration: 0.65, ease: 'power2.in',
+    filter: 'brightness(0) saturate(0)',
+    boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8)',
+    duration: 0.7, ease: 'power2.in',
   })
-  tl.to(smoke.uIntensity, { value: 0.85, duration: 0.4, ease: 'power2.out' }, '<')
-  tl.to(smoke.uProgress, { value: 0.6, duration: 0.65, ease: 'power1.in' }, '<')
+  tl.to(targetEl, {
+    opacity: 0.3, scale: 0.85, y: 15,
+    duration: 0.7, ease: 'power2.in',
+  }, '<')
+  tl.to(smoke.uIntensity, { value: 0.85, duration: 0.35, ease: 'power2.out' }, '<')
+  tl.to(smoke.uProgress, { value: 1.0, duration: 0.7, ease: 'power1.in' }, '<')
 
   // Dark smoke particles from card edges
   tl.call(() => {
@@ -393,22 +400,23 @@ function play(targetEl: HTMLElement) {
     }
   }, undefined, 0.1)
 
-  // ── Phase 2: Card sinks into shadow + soul emerges ──
-  tl.to(cardInner, {
-    filter: 'brightness(0) saturate(0)',
-    duration: 0.45, ease: 'power2.in',
-  })
+  // ── Phase 2: Card fully gone + soul emerges ──
   tl.to(targetEl, {
-    opacity: 0.3, scale: 0.85, y: 15,
-    duration: 0.55, ease: 'power2.in',
-  }, '<')
-  tl.to(smoke.uProgress, { value: 1.0, duration: 0.5, ease: 'power2.in' }, '<')
+    opacity: 0, scale: 0.6, y: 30, duration: 0.3, ease: 'power3.in',
+    onComplete: () => {
+      // Hide card + parent wrapper so slot border doesn't flash
+      targetEl.style.visibility = 'hidden'
+      if (targetEl.parentElement) {
+        targetEl.parentElement.style.visibility = 'hidden'
+      }
+    },
+  })
 
-  // Soul wisp emerges
+  // Soul wisp emerges as card vanishes
   tl.call(() => {
     soul.mesh.visible = true
-    gsap.to(soul.uIntensity, { value: 1.5, duration: 0.5, ease: 'power2.out' })
-  }, undefined, '-=0.25')
+    gsap.to(soul.uIntensity, { value: 1.5, duration: 0.4, ease: 'power2.out' })
+  }, undefined, '-=0.2')
 
   // Soul motes
   tl.call(() => {
@@ -421,25 +429,17 @@ function play(targetEl: HTMLElement) {
         color: '255,230,170', type: 'soul', gravity: -0.02, friction: 0.98, alpha: 0.8,
       }))
     }
-  }, undefined, '-=0.1')
+  }, undefined, '-=0.05')
 
-  // ── Phase 3: Card fully gone + soul rises ──
-  tl.to(targetEl, {
-    opacity: 0, scale: 0.6, y: 30, duration: 0.4, ease: 'power3.in',
-    onComplete: () => {
-      // Hide with visibility so Vue re-render can't flash the card back
-      targetEl.style.visibility = 'hidden'
-    },
-  })
-
+  // ── Phase 3: Soul rises ──
   const soulRiseTarget = s2t(tcx, tcy - th * 1.5, W, H)
-  tl.to(soul.mesh.position, { y: soulRiseTarget.y, duration: 1.0, ease: 'power1.out' }, '-=0.25')
-  tl.to(soul.uIntensity, { value: 0, duration: 0.8, ease: 'power2.in' }, '-=0.4')
+  tl.to(soul.mesh.position, { y: soulRiseTarget.y, duration: 0.8, ease: 'power1.out' })
+  tl.to(soul.uIntensity, { value: 0, duration: 0.6, ease: 'power2.in' }, '-=0.3')
 
   // Trail motes
   const trailObj = { progress: 0 }
   tl.to(trailObj, {
-    progress: 1, duration: 0.6,
+    progress: 1, duration: 0.5,
     onUpdate: () => {
       if (Math.random() > 0.6) {
         const cy = tcy - trailObj.progress * th * 1.2
@@ -452,8 +452,8 @@ function play(targetEl: HTMLElement) {
     },
   }, '<')
 
-  // ── Phase 4: Smoke fades + ash (1.4–1.8s) ──
-  tl.to(smoke.uIntensity, { value: 0, duration: 0.5, ease: 'power2.in' }, '-=0.3')
+  // ── Phase 4: Smoke fades + ash ──
+  tl.to(smoke.uIntensity, { value: 0, duration: 0.4, ease: 'power2.in' }, '-=0.2')
 
   // Ash drifting
   tl.call(() => {

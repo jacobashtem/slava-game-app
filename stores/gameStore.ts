@@ -78,7 +78,7 @@ const COMBAT_VFX_BOW_MS = 2400      // WebGPU bow draw + arrow flight + impact (
 const COMBAT_VFX_ELEMENTAL_MS = 2600 // WebGPU fire orb charge + flight + impact (elemental)
 const COMBAT_VFX_MAGIC_MS = 2200    // WebGPU rune circle + crystal orb + implosion (magic)
 const COMBAT_VFX_COUNTER_MS = 1800  // counter overlay (600ms) + hit + damage (1200ms)
-const COMBAT_VFX_DEATH_MS = 2600    // WebGPU death dissolution
+const COMBAT_VFX_DEATH_MS = 2000    // WebGPU death dissolution
 
 function getCombatVFXDuration(combat: CombatResult | null): number {
   if (!combat) return 0
