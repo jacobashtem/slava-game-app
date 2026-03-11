@@ -31,7 +31,7 @@ function toggle(id: string) {
       <a href="#counter" class="toc-link">Kontratak</a>
       <a href="#adventure" class="toc-link">Przygody</a>
       <a href="#domains" class="toc-link">Domeny</a>
-      <a href="#gold" class="toc-link">Złoto</a>
+      <a href="#gold" class="toc-link">Punkty Sławy</a>
       <a href="#abilities" class="toc-link">Zdolności</a>
       <a href="#seasons" class="toc-link">Pory roku</a>
       <a href="#victory" class="toc-link">Zwycięstwo</a>
@@ -48,7 +48,7 @@ function toggle(id: string) {
           <Icon icon="game-icons:info" class="hb-icon" />
           <div>
             <strong>Cel gry:</strong> Zniszcz wszystkie istoty wroga i wyczerpaj jego zasoby.
-            Każdy gracz zaczyna z <strong>talią 30 kart</strong>, <strong>5 kartami na ręce</strong> i <strong>5 ZŁ</strong> (Złociszy).
+            Każdy gracz zaczyna z <strong>talią 30 kart</strong>, <strong>5 kartami na ręce</strong> i <strong>5 PS</strong> (Punktów Sławy).
           </div>
         </div>
       </section>
@@ -266,7 +266,7 @@ function toggle(id: string) {
         <div class="highlight-box gold-box">
           <Icon icon="game-icons:two-coins" class="hb-icon" />
           <div>
-            Każda karta przygody ma <strong>efekt podstawowy</strong> (darmowy) i <strong>efekt wzmocniony</strong> (kosztuje <strong>1 ZŁ</strong>). Efekt wzmocniony jest zawsze silniejszy. Aby go użyć, kliknij ikonę monet przed zagraniem karty.
+            Każda karta przygody ma <strong>efekt podstawowy</strong> (darmowy) i <strong>efekt wzmocniony</strong> (kosztuje <strong>1 PS</strong>). Efekt wzmocniony jest zawsze silniejszy. Aby go użyć, kliknij ikonę monet przed zagraniem karty.
           </div>
         </div>
       </section>
@@ -302,19 +302,19 @@ function toggle(id: string) {
 
       <!-- GOLD -->
       <section id="gold" class="rule-section">
-        <h2><Icon icon="game-icons:two-coins" /> Złocisze (ZŁ)</h2>
-        <p>Złoto to kluczowy zasób. Zaczynasz z <strong>5 ZŁ</strong> i możesz wydać je na:</p>
+        <h2><Icon icon="game-icons:two-coins" /> Punkty Sławy (PS)</h2>
+        <p>Punkty Sławy to kluczowy zasób. Zaczynasz z <strong>5 PS</strong> i możesz wydać je na:</p>
         <ul>
-          <li><strong>Wzmocnione efekty przygód</strong> — 1 ZŁ za silniejszy efekt karty</li>
-          <li><strong>Aktywowalne zdolności istot</strong> — koszt zależy od karty (0–3 ZŁ)</li>
+          <li><strong>Wzmocnione efekty przygód</strong> — 1 PS za silniejszy efekt karty</li>
+          <li><strong>Aktywowalne zdolności istot</strong> — koszt zależy od karty (0–3 PS)</li>
         </ul>
 
         <div class="example-box">
           <div class="example-label"><Icon icon="game-icons:scroll-quill" /> Przykład</div>
-          <p>Masz kartę „Magiczny Kamień" (Artefakt). Efekt podstawowy: +1 ATK. Efekt wzmocniony (1 ZŁ): +2 ATK i +1 DEF. Jeśli masz złoto i silną istotę — warto dopłacić!</p>
+          <p>Masz kartę „Magiczny Kamień" (Artefakt). Efekt podstawowy: +1 ATK. Efekt wzmocniony (1 PS): +2 ATK i +1 DEF. Jeśli masz PS i silną istotę — warto dopłacić!</p>
         </div>
 
-        <p>Złoto możesz zdobywać dzięki efektom kart — np. „Chowaniec" daje ZŁ za każdym razem gdy pomaga w walce. Zarządzaj złotem mądrze — to klucz do zwycięstwa w późnej grze!</p>
+        <p>PS możesz zdobywać dzięki efektom kart — np. „Chowaniec" daje PS za każdym razem gdy pomaga w walce. Zarządzaj Punktami Sławy mądrze — to klucz do zwycięstwa w późnej grze!</p>
       </section>
 
       <!-- ABILITIES -->
@@ -334,7 +334,7 @@ function toggle(id: string) {
 
         <div class="highlight-box">
           <Icon icon="game-icons:info" class="hb-icon" />
-          <div>Zdolności AKCJA ⚡ wymagają kliknięcia ikony błyskawicy na karcie. Niektóre kosztują ZŁ i mają cooldown (raz na turę / raz na rundę).</div>
+          <div>Zdolności AKCJA ⚡ wymagają kliknięcia ikony błyskawicy na karcie. Niektóre kosztują PS i mają cooldown (raz na turę / raz na rundę).</div>
         </div>
       </section>
 
@@ -379,10 +379,10 @@ function toggle(id: string) {
         <div class="glossary">
           <div class="gl-item"><strong>ATK</strong> <span>Atak — obrażenia zadawane przez istotę</span></div>
           <div class="gl-item"><strong>DEF</strong> <span>Obrona — punkty życia istoty</span></div>
-          <div class="gl-item"><strong>ZŁ</strong> <span>Złocisze — waluta gry</span></div>
+          <div class="gl-item"><strong>PS</strong> <span>Punkty Sławy — waluta gry</span></div>
           <div class="gl-item"><strong>Latający</strong> <span>Istota latająca — ignoruje ataki Wręcz (ale nie Żywioł, Dystans, Magia)</span></div>
           <div class="gl-item"><strong>Ukryty</strong> <span>Karta zakryta — nie widzisz jej statystyk do momentu ataku</span></div>
-          <div class="gl-item"><strong>Wzmocniony</strong> <span>Silniejsza wersja efektu karty przygody (koszt: 1 ZŁ)</span></div>
+          <div class="gl-item"><strong>Wzmocniony</strong> <span>Silniejsza wersja efektu karty przygody (koszt: 1 PS)</span></div>
           <div class="gl-item"><strong>Runda</strong> <span>1 tura Twoja + 1 tura AI = 1 runda</span></div>
           <div class="gl-item"><strong>Kontratak</strong> <span>Automatyczna odpowiedź istoty w OBRONIE na atak</span></div>
           <div class="gl-item"><strong>AOE</strong> <span>Area of Effect — obrażenia trafiające wiele celów</span></div>

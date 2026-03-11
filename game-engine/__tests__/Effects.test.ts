@@ -731,7 +731,7 @@ describe('Card Effects', () => {
       expect(result.log[0].message).toContain('darmowe')
     })
 
-    it('costs 1 gold after first use', () => {
+    it('costs 1 glory after first use', () => {
       const effect = getEffect('brzegina_shield_for_gold')!
 
       const brzegina = createFieldCard(state, 'player2', BattleLine.FRONT, CardPosition.DEFENSE, {
@@ -741,7 +741,7 @@ describe('Card Effects', () => {
       })
       brzegina.metadata.brzeginaUsedFree = true // already used free
 
-      state.players.player2.gold = 3
+      state.players.player2.glory = 3
 
       const ally = placeDefender(state, {
         name: 'Protected Ally',
@@ -758,11 +758,11 @@ describe('Card Effects', () => {
       })
 
       expect(result.prevented).toBe(true)
-      expect(result.newState.players.player2.gold).toBe(2) // 3 - 1
-      expect(result.log[0].message).toContain('-1 ZŁ')
+      expect(result.newState.players.player2.glory).toBe(2) // 3 - 1
+      expect(result.log[0].message).toContain('-1 PS')
     })
 
-    it('canActivate returns false when no gold and free use spent', () => {
+    it('canActivate returns false when no glory and free use spent', () => {
       const effect = getEffect('brzegina_shield_for_gold')!
 
       const brzegina = createFieldCard(state, 'player2', BattleLine.FRONT, CardPosition.DEFENSE, {
@@ -771,7 +771,7 @@ describe('Card Effects', () => {
         stats: { attack: 2, defense: 5, maxDefense: 5, maxAttack: 2 },
       })
       brzegina.metadata.brzeginaUsedFree = true
-      state.players.player2.gold = 0
+      state.players.player2.glory = 0
 
       const canUse = effect.canActivate!({
         state,

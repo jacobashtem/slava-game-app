@@ -85,7 +85,7 @@ export const GOLD_EDITION_RULES = {
   PLAY_LIMIT_CREATURES: 1,  // max istot do wystawienia na turę
   PLAY_LIMIT_ADVENTURES: 99, // effectively no limit on adventures per turn
   ADVENTURE_COST: 0,        // efekt podstawowy — DARMOWY
-  ENHANCED_ADVENTURE_COST: 1, // efekt ulepszony — kosztuje 1 ZŁ
+  ENHANCED_ADVENTURE_COST: 1, // efekt ulepszony — kosztuje 1 PS
   CARDS_DRAWN_PER_TURN: 1,
 } as const
 

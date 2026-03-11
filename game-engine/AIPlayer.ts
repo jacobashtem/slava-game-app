@@ -66,7 +66,6 @@ export interface AIDecision {
   useEnhanced?: boolean
   // Slava-specific
   godId?: number
-  enhanced?: boolean
   bidAmount?: number
 }
 
@@ -413,7 +412,7 @@ export class AIPlayer {
     }
 
     // === SLAVA: AI proaktywnie invokuje boga ===
-    if (currentState.gameMode === 'slava' && currentState.slavaData) {
+    if (currentState.gameMode === 'slava' && currentState.slavaData && !currentState.slavaData.pendingFavor) {
       const aiGlory = currentState.players[this.side].glory
       const availableGods = currentState.slavaData.gods.filter(g => !g.usedThisCycle)
       if (availableGods.length > 0 && aiGlory >= 2) {
@@ -423,52 +422,42 @@ export class AIPlayer {
 
         for (const god of availableGods) {
           let shouldInvoke = false
-          let useEnhanced = false
           let bidAmount = 1
 
           switch (god.id) {
-            case 4: // Jaryło — heal all (korzystny gdy mamy ranne istoty)
+            case 4: // Jaryło — heal all
               if (myCreatures.some(c => c.currentStats.defense < c.currentStats.maxDefense * 0.6)) {
                 shouldInvoke = true
-                useEnhanced = aiGlory >= 3 && isLosing
-                bidAmount = useEnhanced ? 2 : 1
               }
               break
-            case 2: // Swarożyc — AOE 15 dmg (korzystny gdy wróg ma dużo istot)
+            case 2: // Swarożyc — AOE 15 dmg
               if (enemyCreatures.length >= 3) {
                 shouldInvoke = true
-                bidAmount = 1
               }
               break
-            case 5: // Mokosz — draw 3 (korzystny gdy mała ręka)
+            case 5: // Mokosz — draw 3
               if (player.hand.length <= 2) {
                 shouldInvoke = true
-                bidAmount = 1
               }
               break
-            case 1: // Weles — resurrect (korzystny gdy cmentarz ma dobre istoty)
+            case 1: // Weles — resurrect
               if (player.graveyard.filter(c => c.cardData.cardType === 'creature').length >= 2) {
                 shouldInvoke = true
-                useEnhanced = aiGlory >= 3
-                bidAmount = useEnhanced ? 2 : 1
               }
               break
-            case 6: // Perun — nuke (korzystny gdy wróg ma jednego silnego)
+            case 6: // Perun — nuke Weles creature
               if (enemyCreatures.some(c => c.currentStats.defense >= 6)) {
                 shouldInvoke = true
-                bidAmount = 1
               }
               break
             default:
-              // Inne bogi: invoke gdy przegrywamy i stać nas
               if (isLosing && aiGlory >= 2) {
                 shouldInvoke = true
-                bidAmount = 1
               }
           }
 
           if (shouldInvoke && aiGlory >= bidAmount) {
-            decisions.push({ type: 'invoke_god', godId: god.id, enhanced: useEnhanced, bidAmount })
+            decisions.push({ type: 'invoke_god', godId: god.id, bidAmount })
             break // max 1 god per turn
           }
         }

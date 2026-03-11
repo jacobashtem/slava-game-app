@@ -18,8 +18,27 @@ const skipCombat = computed(() =>
   game.currentPhase === GamePhase.PLAY && !hasEnemiesOnField.value
 )
 
+const canPlunder = computed(() => {
+  if (!game.state) return false
+  const s = game.state
+  if (s.roundNumber < 2 || hasEnemiesOnField.value || !game.isPlayerTurn) return false
+  if (s.currentPhase !== GamePhase.PLAY && s.currentPhase !== GamePhase.COMBAT) return false
+  const enemyCurrency = s.gameMode === 'slava' ? s.players.player2.glory : s.players.player2.gold
+  return (enemyCurrency ?? 0) > 0
+})
+
+const plunderLabel = computed(() => 'ZŁUP (1 PS)')
+
 function handlePhase() {
   ui.clearSelection()
+
+  // ZŁUP: zamiast normalnej fazy combat — łup i kończ turę
+  if (canPlunder.value && (game.currentPhase === GamePhase.PLAY || game.currentPhase === GamePhase.COMBAT)) {
+    game.plunder()
+    game.endTurn()
+    return
+  }
+
   if (
     game.currentPhase === GamePhase.END ||
     game.currentPhase === GamePhase.COMBAT ||
@@ -35,9 +54,11 @@ const btnConfig = computed(() => {
   switch (game.currentPhase) {
     case GamePhase.START:  return { label: 'DOBIERZ',  icon: 'game-icons:card-draw', type: 'next' }
     case GamePhase.DRAW:   return { label: 'DO BOJU',  icon: 'game-icons:crossed-swords', type: 'next' }
-    case GamePhase.PLAY:   return skipCombat.value
-      ? { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
-      : { label: 'ATAKUJ',  icon: 'game-icons:sword-clash', type: 'combat' }
+    case GamePhase.PLAY:
+      if (canPlunder.value) return { label: plunderLabel.value,  icon: 'game-icons:treasure-map', type: 'plunder' }
+      return skipCombat.value
+        ? { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
+        : { label: 'ATAKUJ',  icon: 'game-icons:sword-clash', type: 'combat' }
     case GamePhase.COMBAT: return { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
     case GamePhase.END:    return { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
     default:               return { label: 'DALEJ',   icon: 'game-icons:forward', type: 'next' }
@@ -132,6 +153,19 @@ const btnConfig = computed(() => {
   background: linear-gradient(180deg, rgba(167,139,250,0.25) 0%, rgba(139,92,246,0.15) 100%);
   border-color: rgba(167,139,250,0.6);
   box-shadow: 0 4px 16px rgba(139,92,246,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* Plunder (złup) */
+.ctrl-plunder {
+  color: #f97316;
+  background: linear-gradient(180deg, rgba(249,115,22,0.15) 0%, rgba(234,88,12,0.08) 100%);
+  border-color: rgba(249,115,22,0.35);
+  box-shadow: 0 2px 8px rgba(249,115,22,0.15);
+}
+.ctrl-plunder:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(249,115,22,0.25) 0%, rgba(234,88,12,0.15) 100%);
+  border-color: rgba(249,115,22,0.6);
+  box-shadow: 0 4px 16px rgba(249,115,22,0.25), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 /* Combat (atakuj) */

@@ -4,7 +4,7 @@
  * ZERO wpływu na Gold Edition — wywoływany TYLKO gdy gameMode === 'slava'.
  */
 
-import type { GameState, LogEntry, PlayerSide, SlavaState, GodData, HolidayMission, AuctionState, CardInstance } from './types'
+import type { GameState, LogEntry, PlayerSide, SlavaState, GodData, HolidayMission, AuctionState, CardInstance, PendingFavor } from './types'
 import { Season, Domain, BattleLine, SLAVA_RULES, SEASON_BONUS_DOMAIN, SEASON_PARALYSIS_DOMAIN, SEASON_NAMES, DOMAIN_NAMES } from './constants'
 import { cloneGameState, addLog, getAllCreaturesOnField } from './GameStateUtils'
 
@@ -12,19 +12,27 @@ import panteonData from '../data/Slava_Vol2_Panteon_Normalized.json'
 
 // ===== SEASON HELPERS =====
 
-/** Oblicza porę roku z numeru rundy (Sława: 4 rundy/porę, start od Zimy) */
+/** Ile rund trwa jedna pora roku */
+const ROUNDS_PER_SEASON = 12
+
+/** Oblicza porę roku z numeru rundy (Sława: 12 rund/porę, start od Zimy) */
 export function getSeasonFromRound(round: number): Season {
-  // Rundy 1-4 = Zima, 5-8 = Wiosna, 9-12 = Lato, 13-16 = Jesień, 17-20 = Zima...
-  const cyclePos = ((round - 1) % 16)
-  if (cyclePos < 4) return Season.WINTER
-  if (cyclePos < 8) return Season.SPRING
-  if (cyclePos < 12) return Season.SUMMER
+  const cycleLen = ROUNDS_PER_SEASON * 4 // 48 rund = pełny cykl
+  const cyclePos = ((round - 1) % cycleLen)
+  if (cyclePos < ROUNDS_PER_SEASON) return Season.WINTER
+  if (cyclePos < ROUNDS_PER_SEASON * 2) return Season.SPRING
+  if (cyclePos < ROUNDS_PER_SEASON * 3) return Season.SUMMER
   return Season.AUTUMN
 }
 
-/** Runda w ramach pory roku (1-4) */
+/** Runda w ramach pory roku (1-12) */
 export function getSeasonRound(round: number): number {
-  return ((round - 1) % 4) + 1
+  return ((round - 1) % ROUNDS_PER_SEASON) + 1
+}
+
+/** Ile rund ma jedna pora roku (eksport dla UI) */
+export function getRoundsPerSeason(): number {
+  return ROUNDS_PER_SEASON
 }
 
 // ===== INITIAL SLAVA STATE =====
@@ -43,6 +51,7 @@ export function createInitialSlavaState(startRound: number): SlavaState {
     paralyzedDomain: null,
     paralysisRoundsLeft: 0,
     activeAuction: null,
+    pendingFavor: null,
     damageDealtThisTurn: { player1: 0, player2: 0 },
     killedEnemyDefenseThisTurn: { player1: 0, player2: 0 },
   }
@@ -57,7 +66,6 @@ function getGodsForSeason(season: Season): GodData[] {
     id: g.id,
     name: g.name,
     powerID: g.powerID,
-    enhancedPowerID: g.enhancedPowerID,
     cost: g.cost,
     usedThisCycle: false,
   }))
@@ -78,6 +86,7 @@ function createHolidayForSeason(season: Season): HolidayMission {
         },
         reward: 3,
         completed: { player1: false, player2: false },
+        claimable: { player1: false, player2: false },
       }
     case Season.SPRING:
       return {
@@ -90,6 +99,7 @@ function createHolidayForSeason(season: Season): HolidayMission {
         },
         reward: 3,
         completed: { player1: false, player2: false },
+        claimable: { player1: false, player2: false },
       }
     case Season.SUMMER:
       return {
@@ -102,6 +112,7 @@ function createHolidayForSeason(season: Season): HolidayMission {
         },
         reward: 3,
         completed: { player1: false, player2: false },
+        claimable: { player1: false, player2: false },
       }
     case Season.AUTUMN:
       return {
@@ -115,6 +126,7 @@ function createHolidayForSeason(season: Season): HolidayMission {
         },
         reward: 3,
         completed: { player1: false, player2: false },
+        claimable: { player1: false, player2: false },
       }
   }
 }
@@ -160,6 +172,34 @@ export function checkBreakthrough(state: GameState, attackerSide: PlayerSide, ta
     )]
   }
   return []
+}
+
+/** Złupienie: gdy wróg nie ma istot na polu, zabierz mu 1 walutę (od rundy 2) */
+export function performPlunder(state: GameState, attackerSide: PlayerSide): LogEntry[] {
+  if (state.roundNumber < 2) return []
+  const log: LogEntry[] = []
+
+  const defenderSide: PlayerSide = attackerSide === 'player1' ? 'player2' : 'player1'
+  const defenderCreatures = getAllCreaturesOnField(state, defenderSide)
+  if (defenderCreatures.length > 0) return []
+
+  const defender = state.players[defenderSide]
+  const attacker = state.players[attackerSide]
+  const label = attackerSide === 'player1' ? 'Ty' : 'AI'
+
+  if (state.gameMode === 'slava') {
+    if (defender.glory <= 0) return []
+    defender.glory = Math.max(0, defender.glory - 1)
+    attacker.glory += 1
+    log.push(addLog(state, `${label}: ŁUPIENIE! Wróg bez obrony — kradniesz 1 PS!`, 'glory'))
+  } else {
+    if (defender.gold <= 0) return []
+    defender.gold = Math.max(0, defender.gold - 1)
+    attacker.gold += 1
+    log.push(addLog(state, `${label}: ŁUPIENIE! Wróg bez obrony — kradniesz 1 PS!`, 'gold'))
+  }
+
+  return log
 }
 
 /** Rejestruje zabicie wroga (do trofeów) */
@@ -317,22 +357,42 @@ function removeParalysis(state: GameState, domain: Domain): void {
 
 // ===== HOLIDAY CHECK =====
 
-/** Sprawdza święto na koniec tury — przyznaje PS jeśli spełnione */
+/** Sprawdza święto na koniec tury — ustawia claimable jeśli warunki spełnione */
 export function checkHoliday(state: GameState): LogEntry[] {
   if (state.gameMode !== 'slava' || !state.slavaData?.holiday) return []
   const log: LogEntry[] = []
   const holiday = state.slavaData.holiday
 
   for (const side of ['player1', 'player2'] as PlayerSide[]) {
-    if (!holiday.completed[side] && holiday.condition(state, side)) {
-      holiday.completed[side] = true
-      state.players[side].glory += holiday.reward
+    if (!holiday.completed[side] && !holiday.claimable[side] && holiday.condition(state, side)) {
+      holiday.claimable[side] = true
       const label = side === 'player1' ? 'Ty' : 'AI'
-      log.push(addLog(state, `🎉 ${label}: ŚWIĘTO ${holiday.name.toUpperCase()} spełnione! +${holiday.reward} PS!`, 'glory'))
+      log.push(addLog(state, `🎉 ${label}: Warunki ŚWIĘTA ${holiday.name.toUpperCase()} spełnione! Kliknij by świętować!`, 'glory'))
     }
   }
 
+  // AI automatycznie świętuje
+  if (holiday.claimable.player2 && !holiday.completed.player2) {
+    holiday.completed.player2 = true
+    holiday.claimable.player2 = false
+    state.players.player2.glory += holiday.reward
+    log.push(addLog(state, `AI: ŚWIĘTO ${holiday.name.toUpperCase()} — świętuje! +${holiday.reward} PS!`, 'glory'))
+  }
+
   return log
+}
+
+/** Gracz świętuje — ręczne kliknięcie po spełnieniu warunków */
+export function claimHoliday(state: GameState, side: PlayerSide): LogEntry[] {
+  if (state.gameMode !== 'slava' || !state.slavaData?.holiday) return []
+  const holiday = state.slavaData.holiday
+  if (!holiday.claimable[side] || holiday.completed[side]) return []
+
+  holiday.completed[side] = true
+  holiday.claimable[side] = false
+  state.players[side].glory += holiday.reward
+  const label = side === 'player1' ? 'Ty' : 'AI'
+  return [addLog(state, `🎉 ${label}: ŚWIĘTO ${holiday.name.toUpperCase()}! +${holiday.reward} PS!`, 'glory')]
 }
 
 // ===== TURN RESET (per turn tracking) =====
@@ -372,10 +432,9 @@ export function getEnhancedAdventureCost(state: GameState, side: PlayerSide): nu
 
 // ===== AUCTION =====
 
-export function startAuction(godId: number, enhanced: boolean, initiator: PlayerSide, initialBid: number): AuctionState {
+export function startAuction(godId: number, initiator: PlayerSide, initialBid: number): AuctionState {
   return {
     godId,
-    enhanced,
     bids: [{ side: initiator, amount: initialBid }],
     currentHighBidder: initiator,
     currentHighBid: initialBid,
@@ -393,25 +452,59 @@ export function placeBid(auction: AuctionState, side: PlayerSide, amount: number
   return auction
 }
 
+/** Rozwiązuje licytację — NIE pobiera PS (to się dzieje przy ZŁÓŻ OFIARĘ) */
 export function resolveAuction(state: GameState, auction: AuctionState): LogEntry[] {
   if (state.gameMode !== 'slava' || !state.slavaData) return []
   const log: LogEntry[] = []
 
   const winner = auction.currentHighBidder
   const cost = auction.currentHighBid
-  const player = state.players[winner]
-
-  // Opłata
-  player.glory = Math.max(0, player.glory - cost)
   const label = winner === 'player1' ? 'Ty' : 'AI'
-  log.push(addLog(state, `${label}: Wygrywa licytację za ${cost} PS!`, 'glory'))
 
   // Oznacz boga jako użytego
   const god = state.slavaData.gods.find(g => g.id === auction.godId)
   if (god) god.usedThisCycle = true
 
+  log.push(addLog(state, `${label}: Wygrywa licytację o ${god?.name ?? 'boga'}! Koszt: ${cost} PS przy aktywacji.`, 'glory'))
+
+  // Zapisz pendingFavor — aktywacja w następnej rundzie
+  state.slavaData.pendingFavor = {
+    godId: auction.godId,
+    godName: god?.name ?? 'Bóg',
+    winnerSide: winner,
+    cost,
+    wonOnRound: state.roundNumber,
+  }
+
   auction.resolved = true
   state.slavaData.activeAuction = null
+
+  return log
+}
+
+/** Aktywacja łaski boga (ZŁÓŻ OFIARĘ) — płaci PS i wykonuje moc */
+export function activatePendingFavor(state: GameState, targetInstanceId?: string): LogEntry[] {
+  if (state.gameMode !== 'slava' || !state.slavaData?.pendingFavor) return []
+  const favor = state.slavaData.pendingFavor
+  const log: LogEntry[] = []
+  const player = state.players[favor.winnerSide]
+  const label = favor.winnerSide === 'player1' ? 'Ty' : 'AI'
+
+  // Pobierz PS
+  if (player.glory < favor.cost) {
+    log.push(addLog(state, `${label}: Za mało PS na Złóż Ofiarę! (${player.glory}/${favor.cost})`, 'system'))
+    return log
+  }
+
+  player.glory = Math.max(0, player.glory - favor.cost)
+  log.push(addLog(state, `${label}: SKŁADA OFIARĘ — ${favor.cost} PS za łaskę ${favor.godName}!`, 'glory'))
+
+  // Wykonaj moc boga
+  const favorLogs = executeDivineFavor(state, favor.godId, favor.winnerSide, targetInstanceId)
+  log.push(...favorLogs)
+
+  // Wyczyść pendingFavor
+  state.slavaData.pendingFavor = null
 
   return log
 }
@@ -422,16 +515,9 @@ export function aiAuctionDecision(state: GameState, auction: AuctionState): { bi
   if (!state.slavaData) return { bid: false, amount: 0 }
   const aiGlory = state.players.player2.glory
 
-  if (auction.enhanced) {
-    // Wzmocniona moc — przebij do max 3 PS
-    if (aiGlory >= auction.currentHighBid + 1 && auction.currentHighBid < 3) {
-      return { bid: true, amount: auction.currentHighBid + 1 }
-    }
-  } else {
-    // Bazowa moc — przebij do max 2 PS
-    if (aiGlory >= auction.currentHighBid + 1 && auction.currentHighBid < 2) {
-      return { bid: true, amount: auction.currentHighBid + 1 }
-    }
+  // Przebij do max 2 PS
+  if (aiGlory >= auction.currentHighBid + 1 && auction.currentHighBid < 2) {
+    return { bid: true, amount: auction.currentHighBid + 1 }
   }
 
   return { bid: false, amount: 0 }
@@ -440,7 +526,7 @@ export function aiAuctionDecision(state: GameState, auction: AuctionState): { bi
 // ===== DIVINE FAVOR EXECUTION =====
 
 /** Wykonaj moc boga (po wygranej licytacji) */
-export function executeDivineFavor(state: GameState, godId: number, enhanced: boolean, winnerSide: PlayerSide, targetInstanceId?: string): LogEntry[] {
+export function executeDivineFavor(state: GameState, godId: number, winnerSide: PlayerSide, targetInstanceId?: string): LogEntry[] {
   if (state.gameMode !== 'slava' || !state.slavaData) return []
   const log: LogEntry[] = []
   const opponent: PlayerSide = winnerSide === 'player1' ? 'player2' : 'player1'
@@ -450,257 +536,131 @@ export function executeDivineFavor(state: GameState, godId: number, enhanced: bo
   if (!god) return []
 
   switch (godId) {
-    case 1: // Weles
-      if (!enhanced) {
-        // Bazowa: Wskrzesza własną istotę z cmentarza
-        const graveyard = state.players[winnerSide].graveyard
-        const creatures = graveyard.filter(c => c.cardData.cardType === 'creature')
-        if (creatures.length > 0) {
-          const target = targetInstanceId
-            ? creatures.find(c => c.instanceId === targetInstanceId) ?? creatures[0]!
-            : creatures[0]!
-          const idx = graveyard.findIndex(c => c.instanceId === target.instanceId)
-          if (idx !== -1) {
-            graveyard.splice(idx, 1)
-            target.currentStats.defense = target.currentStats.maxDefense
-            target.line = BattleLine.FRONT
-            target.hasAttackedThisTurn = false
-            target.isSilenced = false
-            target.cannotAttack = false
-            state.players[winnerSide].field.lines[BattleLine.FRONT].push(target)
-            log.push(addLog(state, `${label}: Weles wskrzesza ${target.cardData.name}!`, 'effect'))
-          }
-        } else {
-          log.push(addLog(state, `${label}: Weles — brak istot w cmentarzu!`, 'system'))
+    case 1: { // Weles — Wskrzesza własną istotę z cmentarza
+      const graveyard = state.players[winnerSide].graveyard
+      const creatures = graveyard.filter(c => c.cardData.cardType === 'creature')
+      if (creatures.length > 0) {
+        const target = targetInstanceId
+          ? creatures.find(c => c.instanceId === targetInstanceId) ?? creatures[0]!
+          : creatures[0]!
+        const idx = graveyard.findIndex(c => c.instanceId === target.instanceId)
+        if (idx !== -1) {
+          graveyard.splice(idx, 1)
+          target.currentStats.defense = target.currentStats.maxDefense
+          target.line = BattleLine.FRONT
+          target.hasAttackedThisTurn = false
+          target.isSilenced = false
+          target.cannotAttack = false
+          state.players[winnerSide].field.lines[BattleLine.FRONT].push(target)
+          log.push(addLog(state, `${label}: Weles wskrzesza ${target.cardData.name}!`, 'effect'))
         }
       } else {
-        // Wzmocniona: Wskrzesza istotę RYWALA z jego cmentarza (walczy po stronie gracza)
-        const enemyGraveyard = state.players[opponent].graveyard
-        const creatures = enemyGraveyard.filter(c => c.cardData.cardType === 'creature')
-        if (creatures.length > 0) {
-          const target = targetInstanceId
-            ? creatures.find(c => c.instanceId === targetInstanceId) ?? creatures[0]!
-            : creatures[0]!
-          const idx = enemyGraveyard.findIndex(c => c.instanceId === target.instanceId)
-          if (idx !== -1) {
-            enemyGraveyard.splice(idx, 1)
-            target.currentStats.defense = target.currentStats.maxDefense
-            target.line = BattleLine.FRONT
-            target.owner = winnerSide
-            target.hasAttackedThisTurn = false
-            target.isSilenced = false
-            target.cannotAttack = false
-            state.players[winnerSide].field.lines[BattleLine.FRONT].push(target)
-            log.push(addLog(state, `${label}: Weles Enhanced — wskrzesza wrogiego ${target.cardData.name}!`, 'effect'))
-          }
-        } else {
-          log.push(addLog(state, `${label}: Weles Enhanced — brak istot w cmentarzu rywala!`, 'system'))
-        }
+        log.push(addLog(state, `${label}: Weles — brak istot w cmentarzu!`, 'system'))
       }
       break
+    }
 
-    case 2: // Swarożyc
-      if (!enhanced) {
-        // Bazowa: 15 obrażeń rozdzielonych po równo na wrogie istoty
-        const enemies = getAllCreaturesOnField(state, opponent)
-        if (enemies.length > 0) {
-          const dmgPerTarget = Math.floor(15 / enemies.length)
-          const remainder = 15 % enemies.length
-          enemies.forEach((enemy, i) => {
-            const dmg = dmgPerTarget + (i < remainder ? 1 : 0)
-            enemy.currentStats.defense -= dmg
-            log.push(addLog(state, `Swarożyc: ${enemy.cardData.name} otrzymuje ${dmg} obrażeń!`, 'damage'))
-          })
-          // Usuń martwe istoty
-          cleanupDeadCreatures(state, log)
-        }
-      } else {
-        // Wzmocniona: Niszczy wybraną istotę Welesa
-        const enemies = getAllCreaturesOnField(state, opponent)
-          .filter(c => (c.cardData as any).domain === Domain.WELES)
-        if (enemies.length > 0) {
-          const target = targetInstanceId
-            ? enemies.find(c => c.instanceId === targetInstanceId) ?? enemies[0]!
-            : enemies[0]!
-          target.currentStats.defense = 0
-          log.push(addLog(state, `Swarożyc Enhanced: Niszczy ${target.cardData.name}!`, 'death'))
-          cleanupDeadCreatures(state, log)
-        }
+    case 2: { // Swarożyc — 15 obrażeń rozdzielonych po równo na wrogów
+      const enemies = getAllCreaturesOnField(state, opponent)
+      if (enemies.length > 0) {
+        const dmgPerTarget = Math.floor(15 / enemies.length)
+        const remainder = 15 % enemies.length
+        enemies.forEach((enemy, i) => {
+          const dmg = dmgPerTarget + (i < remainder ? 1 : 0)
+          enemy.currentStats.defense -= dmg
+          log.push(addLog(state, `Swarożyc: ${enemy.cardData.name} otrzymuje ${dmg} obrażeń!`, 'damage'))
+        })
+        cleanupDeadCreatures(state, log)
       }
       break
+    }
 
-    case 3: // Marzanna
-      if (!enhanced) {
-        // Bazowa: Perunowcy wroga muszą być w Obronie do końca pory roku
-        const enemies = getAllCreaturesOnField(state, opponent)
-          .filter(c => (c.cardData as any).domain === Domain.PERUN)
-        for (const enemy of enemies) {
-          enemy.position = 'defense' as any
-          enemy.metadata.marzannaLocked = true
-          enemy.cannotAttack = true
-        }
-        log.push(addLog(state, `Marzanna: Perunowcy wroga zamrożeni w Obronie!`, 'effect'))
-      } else {
-        // Wzmocniona: Niszczy wybraną istotę Peruna
-        const enemies = getAllCreaturesOnField(state, opponent)
-          .filter(c => (c.cardData as any).domain === Domain.PERUN)
-        if (enemies.length > 0) {
-          const target = targetInstanceId
-            ? enemies.find(c => c.instanceId === targetInstanceId) ?? enemies[0]!
-            : enemies[0]!
-          target.currentStats.defense = 0
-          log.push(addLog(state, `Marzanna Enhanced: Niszczy ${target.cardData.name}!`, 'death'))
-          cleanupDeadCreatures(state, log)
-        }
+    case 3: { // Marzanna — Perunowcy wroga w Obronie do końca pory roku
+      const enemies = getAllCreaturesOnField(state, opponent)
+        .filter(c => (c.cardData as any).domain === Domain.PERUN)
+      for (const enemy of enemies) {
+        enemy.position = 'defense' as any
+        enemy.metadata.marzannaLocked = true
+        enemy.cannotAttack = true
       }
+      log.push(addLog(state, `Marzanna: Perunowcy wroga zamrożeni w Obronie!`, 'effect'))
       break
+    }
 
-    case 4: // Jaryło
-      if (!enhanced) {
-        // Bazowa: Leczy WSZYSTKICH sojuszników do pełna
-        const allies = getAllCreaturesOnField(state, winnerSide)
-        let healed = 0
-        for (const ally of allies) {
-          if (ally.currentStats.defense < ally.currentStats.maxDefense) {
-            ally.currentStats.defense = ally.currentStats.maxDefense
-            healed++
-          }
-        }
-        log.push(addLog(state, `Jaryło: Odrodzenie — wyleczono ${healed} sojuszników do pełna!`, 'effect'))
-      } else {
-        // Wzmocniona: Leczy + każdy wyleczony wykonuje darmowy atak
-        const allies = getAllCreaturesOnField(state, winnerSide)
-        let healed = 0
-        for (const ally of allies) {
-          if (ally.currentStats.defense < ally.currentStats.maxDefense) {
-            ally.currentStats.defense = ally.currentStats.maxDefense
-            healed++
-          }
-        }
-        log.push(addLog(state, `Jaryło Enhanced: Wiosenny Szał — wyleczono ${healed} sojuszników + darmowe ataki!`, 'effect'))
-        // Darmowe ataki się nie wykonują automatycznie — to byłoby zbyt skomplikowane
-        // Zamiast tego dajemy każdemu wyleczonemu freeAttacksLeft = 1
-        for (const ally of allies) {
-          if (!ally.hasAttackedThisTurn) {
-            ally.metadata.freeAttacksLeft = ((ally.metadata.freeAttacksLeft as number) ?? 0) + 1
-          }
+    case 4: { // Jaryło — Odrodzenie: leczy WSZYSTKICH sojuszników do pełna
+      const allies = getAllCreaturesOnField(state, winnerSide)
+      let healed = 0
+      for (const ally of allies) {
+        if (ally.currentStats.defense < ally.currentStats.maxDefense) {
+          ally.currentStats.defense = ally.currentStats.maxDefense
+          healed++
         }
       }
+      log.push(addLog(state, `Jaryło: Odrodzenie — wyleczono ${healed} sojuszników do pełna!`, 'effect'))
       break
+    }
 
-    case 5: // Mokosz
-      if (!enhanced) {
-        // Bazowa: Dobierz 3 karty + wystaw jedną darmowo
-        const player = state.players[winnerSide]
-        let drawn = 0
-        for (let i = 0; i < 3; i++) {
-          if (player.deck.length > 0) {
-            const card = player.deck.shift()!
-            card.line = null
-            player.hand.push(card)
-            drawn++
-          }
+    case 5: { // Mokosz — Dar Ziemi: dobierz 3 karty + darmowe wystawienie
+      const player = state.players[winnerSide]
+      let drawn = 0
+      for (let i = 0; i < 3; i++) {
+        if (player.deck.length > 0) {
+          const card = player.deck.shift()!
+          card.line = null
+          player.hand.push(card)
+          drawn++
         }
-        log.push(addLog(state, `Mokosz: Dar Ziemi — dobrano ${drawn} karty + darmowe wystawienie!`, 'effect'))
-        // Darmowe wystawienie: dajemy dodatkowy slot
-        player.creaturesPlayedThisTurn = Math.max(0, player.creaturesPlayedThisTurn - 1)
-      } else {
-        // Wzmocniona: Niszczy premie i artefakty wroga + niszczy aktywne zdarzenia
-        const enemies = getAllCreaturesOnField(state, opponent)
-        for (const enemy of enemies) {
-          enemy.activeEffects = []
-          enemy.equippedArtifacts = []
-        }
-        // Usuń aktywne zdarzenia wroga
-        state.activeEvents = state.activeEvents.filter(ev => ev.owner !== opponent)
-        log.push(addLog(state, `Mokosz Enhanced: Oczyszczenie — zniszczono premie, artefakty i zdarzenia wroga!`, 'effect'))
       }
+      log.push(addLog(state, `Mokosz: Dar Ziemi — dobrano ${drawn} karty + darmowe wystawienie!`, 'effect'))
+      player.creaturesPlayedThisTurn = Math.max(0, player.creaturesPlayedThisTurn - 1)
       break
+    }
 
-    case 6: // Perun
-      if (!enhanced) {
-        // Bazowa: 10 obrażeń wybranej istoty Welesa, ignoruje odporności
-        const enemies = getAllCreaturesOnField(state, opponent)
-          .filter(c => (c.cardData as any).domain === Domain.WELES)
-        if (enemies.length > 0) {
-          const target = targetInstanceId
-            ? enemies.find(c => c.instanceId === targetInstanceId) ?? enemies[0]!
-            : enemies[0]!
-          target.currentStats.defense -= 10
-          log.push(addLog(state, `Perun: 10 obrażeń ${target.cardData.name}! (ignoruje odporności)`, 'damage'))
-          cleanupDeadCreatures(state, log)
-        }
-      } else {
-        // Wzmocniona: Niszczy dowolną istotę na stole
-        const allCreatures = [
-          ...getAllCreaturesOnField(state, 'player1'),
-          ...getAllCreaturesOnField(state, 'player2'),
-        ]
-        if (allCreatures.length > 0) {
-          const target = targetInstanceId
-            ? allCreatures.find(c => c.instanceId === targetInstanceId) ?? allCreatures[0]!
-            : allCreatures[0]!
-          target.currentStats.defense = 0
-          log.push(addLog(state, `Perun Enhanced: Niszczy ${target.cardData.name}!`, 'death'))
-          cleanupDeadCreatures(state, log)
-        }
+    case 6: { // Perun — 10 obrażeń istoty Welesa, ignoruje odporności
+      const enemies = getAllCreaturesOnField(state, opponent)
+        .filter(c => (c.cardData as any).domain === Domain.WELES)
+      if (enemies.length > 0) {
+        const target = targetInstanceId
+          ? enemies.find(c => c.instanceId === targetInstanceId) ?? enemies[0]!
+          : enemies[0]!
+        target.currentStats.defense -= 10
+        log.push(addLog(state, `Perun: 10 obrażeń ${target.cardData.name}! (ignoruje odporności)`, 'damage'))
+        cleanupDeadCreatures(state, log)
       }
       break
+    }
 
-    case 7: // Swaróg
-      if (!enhanced) {
-        // Bazowa: Odtwarza kartę przygody z graveyard
-        const player = state.players[winnerSide]
-        const adventureInGraveyard = player.graveyard.filter(c => c.cardData.cardType === 'adventure')
-        if (adventureInGraveyard.length > 0) {
-          const target = targetInstanceId
-            ? adventureInGraveyard.find(c => c.instanceId === targetInstanceId) ?? adventureInGraveyard[0]!
-            : adventureInGraveyard[0]!
-          const idx = player.graveyard.findIndex(c => c.instanceId === target.instanceId)
-          if (idx !== -1) {
-            player.graveyard.splice(idx, 1)
-            player.hand.push(target)
-            log.push(addLog(state, `Swaróg: Odtwarza ${target.cardData.name} z cmentarza do ręki!`, 'effect'))
-          }
-        }
-      } else {
-        // Wzmocniona: Kopiuje kartę przygody z gry
-        // Uproszczone — dodaj kopię losowej aktywnej przygody do ręki
-        if (state.activeEvents.length > 0) {
-          const randomEvent = state.activeEvents[Math.floor(Math.random() * state.activeEvents.length)]!
-          log.push(addLog(state, `Swaróg Enhanced: Skopiowano ${randomEvent.cardData.name} (efekt zredukowany w tej implementacji)!`, 'effect'))
+    case 7: { // Swaróg — Odtwarza kartę przygody z cmentarza
+      const player = state.players[winnerSide]
+      const adventureInGraveyard = player.graveyard.filter(c => c.cardData.cardType === 'adventure')
+      if (adventureInGraveyard.length > 0) {
+        const target = targetInstanceId
+          ? adventureInGraveyard.find(c => c.instanceId === targetInstanceId) ?? adventureInGraveyard[0]!
+          : adventureInGraveyard[0]!
+        const idx = player.graveyard.findIndex(c => c.instanceId === target.instanceId)
+        if (idx !== -1) {
+          player.graveyard.splice(idx, 1)
+          player.hand.push(target)
+          log.push(addLog(state, `Swaróg: Odtwarza ${target.cardData.name} z cmentarza do ręki!`, 'effect'))
         }
       }
       break
+    }
 
-    case 8: // Ród
-      if (!enhanced) {
-        // Bazowa: Zamienia premie dwóch sojuszników
-        // Uproszczone — zamień activeEffects i artefakty między dwoma
-        const allies = getAllCreaturesOnField(state, winnerSide)
-        if (allies.length >= 2) {
-          const a = allies[0]!, b = allies[1]!
-          const tempEffects = [...a.activeEffects]
-          const tempArtifacts = [...a.equippedArtifacts]
-          a.activeEffects = [...b.activeEffects]
-          a.equippedArtifacts = [...b.equippedArtifacts]
-          b.activeEffects = tempEffects
-          b.equippedArtifacts = tempArtifacts
-          log.push(addLog(state, `Ród: Zamieniono premie między ${a.cardData.name} i ${b.cardData.name}!`, 'effect'))
-        }
-      } else {
-        // Wzmocniona: Daje wybranej istocie +3 ATK (uproszczone)
-        const allies = getAllCreaturesOnField(state, winnerSide)
-        if (allies.length > 0) {
-          const target = targetInstanceId
-            ? allies.find(c => c.instanceId === targetInstanceId) ?? allies[0]!
-            : allies[0]!
-          target.currentStats.attack += 3
-          target.currentStats.maxAttack += 3
-          log.push(addLog(state, `Ród Enhanced: ${target.cardData.name} otrzymuje +3 ATK!`, 'effect'))
-        }
+    case 8: { // Ród — Zamienia premie dwóch sojuszników
+      const allies = getAllCreaturesOnField(state, winnerSide)
+      if (allies.length >= 2) {
+        const a = allies[0]!, b = allies[1]!
+        const tempEffects = [...a.activeEffects]
+        const tempArtifacts = [...a.equippedArtifacts]
+        a.activeEffects = [...b.activeEffects]
+        a.equippedArtifacts = [...b.equippedArtifacts]
+        b.activeEffects = tempEffects
+        b.equippedArtifacts = tempArtifacts
+        log.push(addLog(state, `Ród: Zamieniono premie między ${a.cardData.name} i ${b.cardData.name}!`, 'effect'))
       }
       break
+    }
   }
 
   return log

@@ -54,7 +54,7 @@ interface ScenarioConfig {
 const SCENARIO_MAP: Record<string, ScenarioConfig> = {
   // ===== PERUN =====
   'aitwar_steal_hand': {
-    hint: 'Aitwar przy wejściu kradnie kartę z ręki AI. ⚡ = ponowna kradzież za 1 ZŁ (raz na grę). AI ma pełną rękę.',
+    hint: 'Aitwar przy wejściu kradnie kartę z ręki AI. ⚡ = ponowna kradzież za 1 PS (raz na grę). AI ma pełną rękę.',
   },
   'alkonost_redirect_counterattack': {
     hint: 'Alkonost: gdy wróg kontratakuje sojusznika, Alkonost przejmuje kontratak na siebie.',
@@ -64,7 +64,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     hint: 'Biali Ludzie: atak rani i rozbrajia cel (nie może atakować przez rundę). Zaatakuj wroga.',
   },
   'brzegina_shield_for_gold': {
-    hint: 'Brzegina: gdy sojusznik traci HP, możesz zapłacić 1 ZŁ by zablokować obrażenia.',
+    hint: 'Brzegina: gdy sojusznik traci HP, możesz zapłacić 1 PS by zablokować obrażenia.',
     allyL1: ['dobroochoczy_no_counter', 'blotnik_taunt'],
   },
   'bugaj_def_to_atk': {
@@ -90,7 +90,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     allyL1: ['dobroochoczy_no_counter'],
   },
   'dziewiatko_deathmark': {
-    hint: 'Dziewiątko: gdy cel osiągnie DEF ≤ 3 po ataku, przeciwnik musi zapłacić 1 ZŁ lub karta ginie. Wróg L1 ma 2 HP.',
+    hint: 'Dziewiątko: gdy cel osiągnie DEF ≤ 3 po ataku, przeciwnik musi zapłacić 1 PS lub karta ginie. Wróg L1 ma 2 HP.',
     aiL1: ['licho_block_draw'],
     aiL2: ['bazyliszek_paralyze'],
     aiL3: ['gryf_double_dmg_on_play_turn'],
@@ -272,7 +272,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     aiL3: ['bezkost_atk_drain'],
   },
   'polnocnica_mass_paralyze': {
-    hint: 'Północnica: ⚡ za 1 ZŁ paraliżuje WSZYSTKICH wrogów na 1 rundę. AI ma 3 stworzenia.',
+    hint: 'Północnica: ⚡ za 1 PS paraliżuje WSZYSTKICH wrogów na 1 rundę. AI ma 3 stworzenia.',
   },
   // siemiargl_cleanse — zdefiniowany wyżej
   'strzyga_lifesteal': {
@@ -365,7 +365,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     aiL2: ['bezkost_atk_drain'],
   },
   'chasnik_gold_on_kill': {
-    hint: 'Chasnik: za co DRUGIEGO zabitego wroga zdobywa 1 ZŁ. Zabij 2 słabych wrogów.',
+    hint: 'Chasnik: za co DRUGIEGO zabitego wroga zdobywa 1 PS. Zabij 2 słabych wrogów.',
     allyL1: ['chasnik_gold_on_kill'],
     aiL1: ['licho_block_draw'],
     aiL2: ['domowik_hand_size'],
@@ -420,7 +420,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     aiL3: ['bezkost_atk_drain'],
   },
   'lamia_death_reward': {
-    hint: 'Lamia: gdy zabije wroga, obie strony dostają nagrodę (ZŁ lub karta). Zabij coś!',
+    hint: 'Lamia: gdy zabije wroga, obie strony dostają nagrodę (PS lub karta). Zabij coś!',
     allyL1: ['lamia_death_reward'],
     aiL1: ['licho_block_draw'],
     aiL2: ['domowik_hand_size'],
@@ -442,7 +442,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     aiL3: ['tur_ranged_magic_immune'],
   },
   'szatopierz_discard_for_gold': {
-    hint: 'Szątopierz: ⚡ odrzuć 2 karty z ręki → zyskaj 1 ZŁ. Masz pełną rękę z kartami do odrzucenia.',
+    hint: 'Szątopierz: ⚡ odrzuć 2 karty z ręki → zyskaj 1 PS. Masz pełną rękę z kartami do odrzucenia.',
     allyL1: ['szatopierz_discard_for_gold'],
     handExtras: ['blotnik_taunt', 'rusalka_mirror_attack', 'alkonost_redirect_counterattack'],
   },

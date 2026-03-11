@@ -32,6 +32,7 @@ import {
   grantPassiveIncome,
   grantTrophyBonus,
   checkHoliday,
+  claimHoliday,
   processSeasonChange,
   resetTurnTracking,
   checkBreakthrough,
@@ -40,6 +41,8 @@ import {
   placeBid,
   resolveAuction,
   aiAuctionDecision,
+  activatePendingFavor,
+  performPlunder,
 } from './GloryManager'
 
 import istotypData from '../data/Slava_Vol2_Istoty.json'
@@ -125,8 +128,8 @@ export class GameEngine {
     // Initialize slava data if applicable
     if (gameMode === 'slava') {
       this.state.slavaData = createInitialSlavaState(this.state.roundNumber)
-      this.state.players.player1.glory = 0
-      this.state.players.player2.glory = 0
+      this.state.players.player1.glory = 5
+      this.state.players.player2.glory = 5
     }
 
     const startLog = addLog(this.state, 'Gra rozpoczęta! Tryb: ' + gameMode, 'system')
@@ -166,8 +169,6 @@ export class GameEngine {
     // W Sława: PS startowe = 0 (income +1/turę)
     this.state.players.player1.glory = 0
     this.state.players.player2.glory = 0
-    this.state.players.player1.glory = 0
-    this.state.players.player2.glory = 0
 
     // Inicjalizuj SlavaState
     this.state.slavaData = createInitialSlavaState(this.state.roundNumber)
@@ -176,10 +177,7 @@ export class GameEngine {
     this.state.actionLog.push(startLog)
     this.onLogEntry?.(startLog)
 
-    // Season setup logs
-    const seasonLogs = processSeasonChange(this.state)
-    this.pushLogs(seasonLogs)
-
+    // runStartPhase handles processSeasonChange + passive income + draw
     this.state = this.runStartPhase(this.state)
 
     this.notifyStateChange()
@@ -188,10 +186,13 @@ export class GameEngine {
 
   // ===== SLAVA: LICYTACJA O BOŻĄ ŁASKĘ =====
 
-  playerInvokeGod(godId: number, enhanced: boolean, bid: number): GameState {
+  playerInvokeGod(godId: number, bid: number): GameState {
     this.assertPlayerTurn()
     if (this.state.gameMode !== 'slava' || !this.state.slavaData) {
       throw new Error('Boże Łaski dostępne tylko w trybie Sława!')
+    }
+    if (this.state.slavaData.pendingFavor) {
+      throw new Error('Już masz oczekującą łaskę boga! Najpierw Złóż Ofiarę lub zrezygnuj.')
     }
 
     const god = this.state.slavaData.gods.find(g => g.id === godId)
@@ -200,7 +201,7 @@ export class GameEngine {
     if (this.state.players.player1.glory < bid) throw new Error('Za mało PS!')
 
     const newState = cloneGameState(this.state)
-    const auction = startAuction(godId, enhanced, 'player1', bid)
+    const auction = startAuction(godId, 'player1', bid)
 
     // AI od razu odpowiada
     const aiResponse = aiAuctionDecision(newState, auction)
@@ -214,7 +215,6 @@ export class GameEngine {
         respondingPlayer: 'player1',
         metadata: {
           godId,
-          enhanced,
           currentBid: aiResponse.amount,
           currentBidder: 'player2',
           godName: god.name,
@@ -222,20 +222,22 @@ export class GameEngine {
       }
       this.applyStateAndLog(newState, [addLog(newState, `AI przebija licytację o ${god.name}: ${aiResponse.amount} PS!`, 'glory')])
     } else {
-      // AI pasuje → gracz wygrywa
+      // AI pasuje → gracz wygrywa, ale favor czeka do następnej rundy
       const resolveLogs = resolveAuction(newState, auction)
-      const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player1')
-      this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+      this.applyStateAndLog(newState, resolveLogs)
       this.checkWinAndNotify()
     }
 
     return cloneGameState(this.state)
   }
 
-  /** AI przywołuje boga (brak kontr-licytacji — AI płaci cenę bezpośrednio) */
-  aiInvokeGod(godId: number, enhanced: boolean, bid: number): GameState {
+  /** AI przywołuje boga — gracz może kontr-licytować */
+  aiInvokeGod(godId: number, bid: number): GameState {
     if (this.state.gameMode !== 'slava' || !this.state.slavaData) {
       throw new Error('Boże Łaski dostępne tylko w trybie Sława!')
+    }
+    if (this.state.slavaData.pendingFavor) {
+      throw new Error('Już jest oczekująca łaska boga!')
     }
 
     const god = this.state.slavaData.gods.find(g => g.id === godId)
@@ -244,16 +246,104 @@ export class GameEngine {
     if (this.state.players.player2.glory < bid) throw new Error('AI: Za mało PS!')
 
     const newState = cloneGameState(this.state)
-    const auction = startAuction(godId, enhanced, 'player2', bid)
+    const auction = startAuction(godId, 'player2', bid)
 
-    // Gracz od razu dostaje szansę kontrlicytacji
-    // Dla uproszczenia: gracz nie kontrlicytuje (AI automatycznie wygrywa)
-    // TODO: pendingInteraction for player counter-bid
-    const resolveLogs = resolveAuction(newState, auction)
-    const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player2')
-    this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+    // Gracz może kontr-licytować
+    newState.slavaData!.activeAuction = auction
+    newState.pendingInteraction = {
+      type: 'auction_bid',
+      sourceInstanceId: `god-${godId}`,
+      respondingPlayer: 'player1',
+      metadata: {
+        godId,
+        currentBid: bid,
+        currentBidder: 'player2',
+        godName: god.name,
+      },
+    }
+    this.applyStateAndLog(newState, [addLog(newState, `AI licytuje łaskę ${god.name}: ${bid} PS!`, 'glory')])
+
+    return cloneGameState(this.state)
+  }
+
+  // ===== SLAVA: AKTYWACJA ŁASKI (ZŁÓŻ OFIARĘ) =====
+
+  playerActivateFavor(targetInstanceId?: string): GameState {
+    this.assertPlayerTurn()
+    if (this.state.gameMode !== 'slava' || !this.state.slavaData?.pendingFavor) {
+      throw new Error('Brak oczekującej łaski boga!')
+    }
+    const favor = this.state.slavaData.pendingFavor
+    if (favor.winnerSide !== 'player1') {
+      throw new Error('Ta łaska nie należy do ciebie!')
+    }
+    if (favor.wonOnRound >= this.state.roundNumber) {
+      throw new Error('Łaska będzie dostępna od następnej rundy!')
+    }
+
+    const newState = cloneGameState(this.state)
+    const log = activatePendingFavor(newState, targetInstanceId)
+    this.applyStateAndLog(newState, log)
     this.checkWinAndNotify()
+    return cloneGameState(this.state)
+  }
 
+  aiActivateFavor(targetInstanceId?: string): GameState {
+    if (this.state.gameMode !== 'slava' || !this.state.slavaData?.pendingFavor) {
+      throw new Error('Brak oczekującej łaski boga!')
+    }
+    const favor = this.state.slavaData.pendingFavor
+    if (favor.winnerSide !== 'player2') {
+      throw new Error('Ta łaska nie należy do AI!')
+    }
+
+    const newState = cloneGameState(this.state)
+    const log = activatePendingFavor(newState, targetInstanceId)
+    this.applyStateAndLog(newState, log)
+    this.checkWinAndNotify()
+    return cloneGameState(this.state)
+  }
+
+  // ===== SLAVA: CLAIM HOLIDAY =====
+
+  playerClaimHoliday(): GameState {
+    this.assertPlayerTurn()
+    if (this.state.gameMode !== 'slava' || !this.state.slavaData) {
+      throw new Error('Święta dostępne tylko w trybie Sława!')
+    }
+    const newState = cloneGameState(this.state)
+    const log = claimHoliday(newState, 'player1')
+    this.applyStateAndLog(newState, log)
+    this.checkWinAndNotify()
+    return cloneGameState(this.state)
+  }
+
+  // ===== SLAVA: ŁUPIENIE =====
+
+  playerPlunder(): GameState {
+    this.assertPlayerTurn()
+    if (this.state.currentPhase !== GamePhase.PLAY && this.state.currentPhase !== GamePhase.COMBAT) {
+      throw new Error('Łupienie możliwe tylko w fazie gry lub walki!')
+    }
+    if (this.state.roundNumber < 2) throw new Error('Łupienie dostępne od 2. rundy!')
+
+    const newState = cloneGameState(this.state)
+    const log = performPlunder(newState, 'player1')
+    if (log.length === 0) {
+      throw new Error('Nie można łupić — wróg ma istoty na polu lub 0 PS!')
+    }
+    this.applyStateAndLog(newState, log)
+    this.checkWinAndNotify()
+    return cloneGameState(this.state)
+  }
+
+  aiPlunder(): GameState {
+    const newState = cloneGameState(this.state)
+    const log = performPlunder(newState, 'player2')
+    if (log.length > 0) {
+      this.applyStateAndLog(newState, log)
+      this.checkWinAndNotify()
+    }
     return cloneGameState(this.state)
   }
 
@@ -941,15 +1031,13 @@ export class GameEngine {
     if (interaction.type === 'auction_bid') {
       const meta = interaction.metadata ?? {}
       const godId = meta.godId as number
-      const enhanced = meta.enhanced as boolean
       const auction = newState.slavaData?.activeAuction
 
       if (choice === 'pass' || !auction) {
-        // Gracz pasuje → AI wygrywa licytację
+        // Gracz pasuje → AI wygrywa licytację (favor czeka do następnej rundy)
         if (auction) {
           const resolveLogs = resolveAuction(newState, auction)
-          const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player2')
-          this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+          this.applyStateAndLog(newState, resolveLogs)
         } else {
           this.applyStateAndLog(newState, [])
         }
@@ -966,14 +1054,13 @@ export class GameEngine {
               type: 'auction_bid',
               sourceInstanceId: `god-${godId}`,
               respondingPlayer: 'player1',
-              metadata: { godId, enhanced, currentBid: aiResp.amount, currentBidder: 'player2' },
+              metadata: { godId, currentBid: aiResp.amount, currentBidder: 'player2', godName: meta.godName },
             }
             this.applyStateAndLog(newState, [addLog(newState, `AI przebija: ${aiResp.amount} PS!`, 'glory')])
           } else {
-            // AI pasuje → gracz wygrywa
+            // AI pasuje → gracz wygrywa (favor czeka do następnej rundy)
             const resolveLogs = resolveAuction(newState, auction)
-            const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player1')
-            this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+            this.applyStateAndLog(newState, resolveLogs)
           }
         } else {
           this.applyStateAndLog(newState, [addLog(newState, 'Nieprawidłowa stawka!', 'system')])

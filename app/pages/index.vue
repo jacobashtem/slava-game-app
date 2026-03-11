@@ -178,6 +178,11 @@ const showSettings = ref(false)
 
         <!-- NAVIGATION -->
         <div class="nav-row">
+          <NuxtLink to="/lobby" class="nav-tile nav-mp">
+            <Icon icon="game-icons:swords-emblem" class="nt-icon" />
+            <span class="nt-label">Multiplayer</span>
+            <span class="nt-desc">Graj z ludźmi</span>
+          </NuxtLink>
           <NuxtLink to="/arena" class="nav-tile">
             <Icon icon="game-icons:card-joker" class="nt-icon" />
             <span class="nt-label">Arena</span>

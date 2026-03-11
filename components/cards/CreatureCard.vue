@@ -115,7 +115,7 @@ const props = defineProps<{
   inHand?: boolean
   togglePositionOnClick?: boolean  // PLAY faza: klik = zmień pozycję
   effectAvailable?: boolean        // ⚡ aktywowalna zdolność gotowa
-  effectCost?: number              // koszt aktywacji w ZŁ (0 = darmowe)
+  effectCost?: number              // koszt aktywacji w PS (0 = darmowe)
   canTogglePosition?: boolean      // może zmienić pozycję (PLAY lub COMBAT nieaatkująca)
 }>()
 
@@ -530,7 +530,7 @@ function onClick() {
         <button
           v-if="effectCost !== undefined && effectCost > 0"
           class="effect-cost-pill"
-          v-tip="`Aktywuj za ${effectCost} ZŁ`"
+          v-tip="`Aktywuj za ${effectCost} PS`"
           @click.stop="emit('activate-effect', card)"
         >🪙{{ effectCost }}</button>
       </div>

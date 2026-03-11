@@ -36,8 +36,8 @@ const typeConfig: Record<string, { icon: string; color: string }> = {
   default: { icon: 'game-icons:perspective-dice-six', color: '#64748b' },
 }
 
-function cfg(type: string) {
-  return typeConfig[type] ?? typeConfig.default
+function cfg(type: string): { icon: string; color: string } {
+  return typeConfig[type] ?? typeConfig.default!
 }
 </script>
 

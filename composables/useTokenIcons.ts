@@ -35,7 +35,7 @@ const tokenMap: Record<string, { img?: string; iconify?: string; color: string; 
   DEF:       { iconify: 'game-icons:shield', color: '#3b82f6', label: 'Obrona' },
   DMG:       { img: attackTypeImg1, color: '#ef4444', label: 'Obrażenia' },
   FLY:       { img: flyingImg, color: '#a78bfa', label: 'Lot' },
-  GOLD:      { iconify: 'game-icons:two-coins', color: '#eab308', label: 'Złocisze' },
+  GOLD:      { iconify: 'game-icons:two-coins', color: '#eab308', label: 'Punkty Sławy' },
   POISON:    { iconify: 'game-icons:poison-bottle', color: '#22c55e', label: 'Trucizna' },
   SILENCE:   { iconify: 'game-icons:silenced', color: '#6b7280', label: 'Uciszenie' },
   MELEE:     { img: attackTypeImg1, color: '#ef4444', label: 'Wręcz' },

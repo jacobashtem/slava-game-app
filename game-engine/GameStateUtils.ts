@@ -9,7 +9,12 @@ import { GamePhase, BattleLine } from './constants'
 // ===== KLONOWANIE =====
 
 export function cloneGameState(state: GameState): GameState {
-  return JSON.parse(JSON.stringify(state))
+  const clone: GameState = JSON.parse(JSON.stringify(state))
+  // JSON.stringify strips functions — re-attach holiday condition from original
+  if (state.slavaData?.holiday && clone.slavaData?.holiday) {
+    clone.slavaData.holiday.condition = state.slavaData.holiday.condition
+  }
+  return clone
 }
 
 export function cloneCard(card: CardInstance): CardInstance {

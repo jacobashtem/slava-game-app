@@ -359,9 +359,40 @@ export const useGameStore = defineStore('game', () => {
   const arenaFocusedName = ref('')
   const playerTurnLogStart = ref(0)
   const aiTurnLogStart = ref(0)
+
+  // ===== MULTIPLAYER =====
+  const isMultiplayerMode = ref(false)
+  const mySide = ref<PlayerSide>('player1')
+
+  /** Called by useMultiplayer when server sends state update */
+  function receiveMultiplayerState(newState: GameState) {
+    state.value = newState
+    gameStarted.value = true
+    isMultiplayerMode.value = true
+  }
+
+  /** Initialize multiplayer mode (called from lobby) */
+  function startMultiplayer(side: PlayerSide) {
+    isMultiplayerMode.value = true
+    mySide.value = side
+    isArenaMode.value = false
+    arenaFocusedName.value = ''
+    gameStarted.value = false
+  }
+
+  /**
+   * Multiplayer action sender — set by game.vue when in multiplayer mode.
+   * When set, player actions are routed through this callback (→ WebSocket)
+   * instead of the local GameEngine.
+   */
+  let mpSend: ((msg: Record<string, unknown>) => void) | null = null
+  function setMultiplayerSender(sender: ((msg: Record<string, unknown>) => void) | null) {
+    mpSend = sender
+  }
   // ===== COMPUTED =====
-  const player = computed(() => state.value?.players.player1 ?? null)
-  const ai = computed(() => state.value?.players.player2 ?? null)
+  const player = computed(() => state.value?.players[mySide.value] ?? null)
+  const opponentSide = computed<PlayerSide>(() => mySide.value === 'player1' ? 'player2' : 'player1')
+  const ai = computed(() => state.value?.players[opponentSide.value] ?? null)
   const currentTurn = computed(() => state.value?.currentTurn ?? 'player1')
   const currentPhase = computed(() => state.value?.currentPhase ?? GamePhase.START)
   const winner = computed(() => state.value?.winner ?? null)
@@ -382,15 +413,15 @@ export const useGameStore = defineStore('game', () => {
   })
   const gameMode = computed(() => state.value?.gameMode ?? 'gold')
   const slavaData = computed(() => state.value?.slavaData ?? null)
-  const playerGlory = computed(() => state.value?.players.player1.glory ?? 0)
-  const aiGlory = computed(() => state.value?.players.player2.glory ?? 0)
-  const isPlayerTurn = computed(() => currentTurn.value === 'player1' && !isAIThinking.value)
+  const playerGlory = computed(() => state.value?.players[mySide.value].glory ?? 0)
+  const aiGlory = computed(() => state.value?.players[opponentSide.value].glory ?? 0)
+  const isPlayerTurn = computed(() => currentTurn.value === mySide.value && !isAIThinking.value)
 
   // Field threats — cached scan for Południca/Cicha (avoids N×M iteration in each CreatureCard)
   const fieldThreats = computed(() => {
     if (!state.value) return null
-    const enemyField = Object.values(state.value.players.player2.field.lines).flat()
-    const playerField = Object.values(state.value.players.player1.field.lines).flat()
+    const enemyField = Object.values(state.value.players[opponentSide.value].field.lines).flat()
+    const playerField = Object.values(state.value.players[mySide.value].field.lines).flat()
 
     const hasPoludnica = enemyField.some(c => (c.cardData as any).effectId === 'poludnica_kill_weakest' && !c.isSilenced)
     const hasCicha = enemyField.some(c => (c.cardData as any).effectId === 'cicha_kill_weak' && !c.isSilenced)
@@ -473,18 +504,60 @@ export const useGameStore = defineStore('game', () => {
   }
 
   // ===== SLAVA: INVOKE GOD =====
-  function invokeGod(godId: number, enhanced: boolean, bid: number) {
+  function invokeGod(godId: number, bid: number) {
     if (!state.value) return
+    if (mpSend) { mpSend({ type: 'invoke_god', godId, bid }); return }
     try {
-      state.value = engine.playerInvokeGod(godId, enhanced, bid)
-    } catch (err) {
+      state.value = engine.playerInvokeGod(godId, bid)
+    } catch (err: any) {
       console.warn('[gameStore] invokeGod error:', err)
+      const ui = useUIStore()
+      ui.showPlayLimitToast(err.message ?? 'Nie można przyzwać boga.')
+    }
+  }
+
+  function activateFavor(targetInstanceId?: string) {
+    if (!state.value) return
+    if (mpSend) { mpSend({ type: 'activate_favor', targetInstanceId }); return }
+    try {
+      state.value = engine.playerActivateFavor(targetInstanceId)
+    } catch (err: any) {
+      console.warn('[gameStore] activateFavor error:', err)
+      const ui = useUIStore()
+      ui.showPlayLimitToast(err.message ?? 'Nie można złożyć ofiary.')
+    }
+  }
+
+  function playerClaimHoliday() {
+    if (!state.value) return
+    if (mpSend) { mpSend({ type: 'claim_holiday' }); return }
+    try {
+      state.value = engine.playerClaimHoliday()
+    } catch (err: any) {
+      console.warn('[gameStore] claimHoliday error:', err)
+    }
+  }
+
+  function plunder() {
+    if (!state.value || !isPlayerTurn.value) return
+    if (mpSend) { mpSend({ type: 'plunder' }); return }
+    try {
+      state.value = engine.playerPlunder()
+    } catch (err: any) {
+      console.warn('[gameStore] plunder error:', err)
+      const ui = useUIStore()
+      ui.showPlayLimitToast(err.message ?? 'Nie można łupić.')
     }
   }
 
   // ===== AKCJE GRACZA =====
   function playCreature(cardInstanceId: string, line: BattleLine, slotIndex?: number) {
     if (!isPlayerTurn.value) return
+    if (mpSend) {
+      mpSend({ type: 'play_creature', cardInstanceId, targetLine: line, slotIndex })
+      useUIStore().clearSelection()
+      return
+    }
     const ui = useUIStore()
     try {
       const newState = engine.playerPlayCreature(cardInstanceId, line, slotIndex)
@@ -504,6 +577,11 @@ export const useGameStore = defineStore('game', () => {
 
   function playAdventure(cardInstanceId: string, targetInstanceId?: string, useEnhanced = false) {
     if (!isPlayerTurn.value) return
+    if (mpSend) {
+      mpSend({ type: 'play_adventure', cardInstanceId, targetInstanceId, useEnhanced })
+      useUIStore().clearSelection()
+      return
+    }
     const ui = useUIStore()
     try {
       const newState = engine.playerPlayAdventure(cardInstanceId, targetInstanceId, useEnhanced)
@@ -517,6 +595,11 @@ export const useGameStore = defineStore('game', () => {
 
   function attack(attackerInstanceId: string, defenderInstanceId: string) {
     if (!isPlayerTurn.value) return
+    if (mpSend) {
+      mpSend({ type: 'attack', attackerInstanceId, defenderInstanceId })
+      useUIStore().clearSelection()
+      return
+    }
     const ui = useUIStore()
     const vfx = useVFXOrchestrator()
 
@@ -566,6 +649,7 @@ export const useGameStore = defineStore('game', () => {
    * `choice` — instanceId karty lub string z opcją.
    */
   async function resolvePendingInteraction(choice: string) {
+    if (mpSend) { mpSend({ type: 'resolve_interaction', choice }); return }
     const ui = useUIStore()
     try {
       const prevGrave1 = state.value?.players.player1.graveyard.length ?? 0
@@ -591,6 +675,7 @@ export const useGameStore = defineStore('game', () => {
 
   function changePosition(cardInstanceId: string, position: CardPosition) {
     if (!isPlayerTurn.value) return
+    if (mpSend) { mpSend({ type: 'change_position', cardInstanceId, newPosition: position }); return }
     try {
       safeUpdateState(engine.playerChangePosition(cardInstanceId, position))
     } catch (e: any) {
@@ -674,6 +759,7 @@ export const useGameStore = defineStore('game', () => {
 
   function activateCreatureEffect(cardInstanceId: string, targetInstanceId?: string) {
     if (!isPlayerTurn.value) return
+    if (mpSend) { mpSend({ type: 'activate_effect', cardInstanceId, targetInstanceId }); return }
     try {
       safeUpdateState(engine.playerActivateEffect(cardInstanceId, targetInstanceId))
     } catch (e: any) {
@@ -683,6 +769,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function confirmOnPlay() {
+    if (mpSend) { mpSend({ type: 'confirm_on_play' }); return }
     try {
       state.value = engine.confirmOnPlay()
     } catch (e: any) {
@@ -690,6 +777,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function skipOnPlay() {
+    if (mpSend) { mpSend({ type: 'skip_on_play' }); return }
     try {
       state.value = engine.skipOnPlay()
     } catch (e: any) {
@@ -697,8 +785,9 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function surrender() {
+    if (mpSend) { mpSend({ type: 'surrender' }); return }
     try {
-      state.value = engine.surrender('player1')
+      state.value = engine.surrender(mySide.value)
       const ui = useUIStore()
       ui.openGameOver()
     } catch (e: any) {
@@ -711,6 +800,7 @@ export const useGameStore = defineStore('game', () => {
 
   function drawCard() {
     if (!isPlayerTurn.value) return
+    if (mpSend) { mpSend({ type: 'draw_card' }); return }
     try {
       safeUpdateState(engine.playerDrawCard())
     } catch (e: any) {
@@ -721,6 +811,7 @@ export const useGameStore = defineStore('game', () => {
 
   function moveCreatureLine(cardInstanceId: string, targetLine: BattleLine, slotIndex?: number) {
     if (!isPlayerTurn.value) return
+    if (mpSend) { mpSend({ type: 'move_creature_line', cardInstanceId, targetLine, slotIndex }); return }
     try {
       safeUpdateState(engine.playerMoveCreatureLine(cardInstanceId, targetLine, slotIndex))
     } catch (e: any) {
@@ -729,6 +820,7 @@ export const useGameStore = defineStore('game', () => {
 
   function advancePhase() {
     if (!isPlayerTurn.value) return
+    if (mpSend) { mpSend({ type: 'advance_phase' }); return }
     try {
       state.value = engine.playerAdvancePhase()
       // Po zakończeniu tury gracza uruchom AI
@@ -736,11 +828,13 @@ export const useGameStore = defineStore('game', () => {
         runAITurn()
       }
     } catch (e: any) {
+      console.error('[gameStore] advancePhase error:', e)
     }
   }
 
   function endTurn() {
     if (!isPlayerTurn.value) return
+    if (mpSend) { mpSend({ type: 'end_turn' }); return }
     try {
       // Zbierz podsumowanie tury gracza z wpisów efektów/gry/śmierci
       const logSlice = state.value?.actionLog.slice(playerTurnLogStart.value) ?? []
@@ -756,6 +850,7 @@ export const useGameStore = defineStore('game', () => {
         runAITurn()
       }
     } catch (e: any) {
+      console.error('[gameStore] endTurn error:', e)
     }
   }
 
@@ -790,6 +885,18 @@ export const useGameStore = defineStore('game', () => {
     if (!state.value) { isAIThinking.value = false; return }
     const logBefore = state.value.actionLog.length
     aiTurnLogStart.value = logBefore
+
+    // AI aktywuje oczekującą łaskę boga (jeśli jest z poprzedniej rundy)
+    try {
+      const aiState = engine.getState()
+      if (aiState.slavaData?.pendingFavor?.winnerSide === 'player2' &&
+          aiState.slavaData.pendingFavor.wonOnRound < aiState.roundNumber) {
+        state.value = engine.aiActivateFavor()
+        await delay(AI_PACE_MS)
+      }
+    } catch (e) {
+      console.warn('[gameStore] AI activateFavor error:', e)
+    }
 
     let decisions: ReturnType<typeof aiPlayer.planTurn>
     try {
@@ -867,7 +974,7 @@ export const useGameStore = defineStore('game', () => {
             break
           case 'invoke_god':
             if (decision.godId !== undefined && decision.bidAmount !== undefined) {
-              state.value = engine.aiInvokeGod(decision.godId, decision.enhanced ?? false, decision.bidAmount)
+              state.value = engine.aiInvokeGod(decision.godId, decision.bidAmount)
             }
             break
           case 'end_turn':
@@ -900,6 +1007,11 @@ export const useGameStore = defineStore('game', () => {
         // Player must respond — don't end turn, finally will reset isAIThinking
         return
       }
+    }
+
+    // AI łupienie — gdy wróg (gracz) nie ma istot na polu (od rundy 2, oba tryby)
+    if (state.value && state.value.roundNumber >= 2 && !winner.value) {
+      try { state.value = engine.aiPlunder() } catch { /* no plunder available */ }
     }
 
     // Force end if still AI's turn
@@ -1085,7 +1197,7 @@ export const useGameStore = defineStore('game', () => {
     { pattern: /Wskrze(sza|szony|szenie)/i, icon: '💀', type: 'effect' },
     { pattern: /Przejmuje zdolnoś/i, icon: '🧙', type: 'effect' },
     { pattern: /trwale unieruchomion/i, icon: '⚡', type: 'warning' },
-    { pattern: /Złoto.*zrabowane|Kradnie.*złot/i, icon: '💰', type: 'warning' },
+    { pattern: /ŁUPIENIE|ukradł kartę/i, icon: '💰', type: 'warning' },
     { pattern: /Nowy sezon:/i, icon: '🌿', type: 'info' },
     { pattern: /przechwytuje zaklęcie|Przekierowuje zaklęcie/i, icon: '🛡', type: 'effect' },
     { pattern: /Paraliż.*całe pole|masowy paraliż/i, icon: '⚡', type: 'warning' },
@@ -1094,6 +1206,39 @@ export const useGameStore = defineStore('game', () => {
     { pattern: /Sobowtór.*kopiuje/i, icon: '👤', type: 'effect' },
     { pattern: /Strela.*przechwyc/i, icon: '⚡', type: 'effect' },
   ]
+
+  // Watch turn change → show info boxes about pending favor / claimable holiday
+  watch(() => state.value?.currentTurn, (turn, prevTurn) => {
+    if (turn !== 'player1' || prevTurn === undefined) return
+    const s = state.value
+    if (!s || s.gameMode !== 'slava' || !s.slavaData) return
+    const ui = useUIStore()
+
+    // Pending favor notification
+    const favor = s.slavaData.pendingFavor
+    if (favor) {
+      if (favor.winnerSide === 'player1') {
+        if (favor.wonOnRound < s.roundNumber) {
+          ui.showInfoBox(`Łaska ${favor.godName} gotowa! Otwórz Panteon i Złóż Ofiarę.`, '⛩', 'info')
+        } else {
+          ui.showInfoBox(`Wygrałeś licytację o ${favor.godName}! Aktywacja od następnej rundy.`, '⛩', 'info')
+        }
+      } else {
+        // AI wygrał licytację — powiadom gracza
+        if (favor.wonOnRound < s.roundNumber) {
+          ui.showInfoBox(`Przeciwnik złoży ofiarę ${favor.godName} w tej rundzie!`, '⚠', 'warning')
+        } else {
+          ui.showInfoBox(`Przeciwnik wygrał licytację o ${favor.godName} (${favor.cost} PS)!`, '⚠', 'warning')
+        }
+      }
+    }
+
+    // Claimable holiday notification
+    const holiday = s.slavaData.holiday
+    if (holiday && holiday.claimable?.player1 && !holiday.completed.player1) {
+      ui.showInfoBox(`Warunki ${holiday.name} spełnione! Otwórz Panteon i Świętuj!`, '🎉', 'info')
+    }
+  })
 
   // Watch actionLog LENGTH only (not deep state!) to trigger info boxes and event flashes
   watch(() => state.value?.actionLog.length ?? 0, (newLen) => {
@@ -1176,6 +1321,16 @@ export const useGameStore = defineStore('game', () => {
     dismissAISummary,
     dismissPlayerSummary,
     invokeGod,
+    activateFavor,
+    playerClaimHoliday,
+    plunder,
+    // multiplayer
+    isMultiplayerMode,
+    mySide,
+    opponentSide,
+    receiveMultiplayerState,
+    startMultiplayer,
+    setMultiplayerSender,
     // computed (slava)
     gameMode,
     slavaData,

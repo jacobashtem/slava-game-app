@@ -5,12 +5,14 @@ import { useGameStore } from '../../stores/gameStore'
 const game = useGameStore()
 const showBanner = ref(false)
 const bannerText = ref('')
-const bannerType = ref<'player' | 'ai' | 'season'>('player')
+const bannerSubText = ref('')
+const bannerType = ref<'player' | 'ai' | 'season' | 'plunder'>('player')
 let bannerTimer: ReturnType<typeof setTimeout> | null = null
 
-function showFor(text: string, type: 'player' | 'ai' | 'season', duration: number) {
+function showFor(text: string, type: 'player' | 'ai' | 'season' | 'plunder', duration: number, sub = '') {
   if (bannerTimer) clearTimeout(bannerTimer)
   bannerText.value = text
+  bannerSubText.value = sub
   bannerType.value = type
   showBanner.value = true
   bannerTimer = setTimeout(() => { showBanner.value = false; bannerTimer = null }, duration)
@@ -37,12 +39,34 @@ watch(() => game.currentTurn, (turn, prevTurn) => {
   if (showBanner.value && bannerType.value === 'season') return
   showFor(turn === 'player1' ? 'Twoja tura' : 'Tura przeciwnika', turn === 'player1' ? 'player' : 'ai', 1200)
 })
+
+// Plunder banner — detect plunder in actionLog
+let _lastPlunderLogLen = 0
+watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
+  if (newLen <= _lastPlunderLogLen) { _lastPlunderLogLen = newLen; return }
+  const log = game.state?.actionLog ?? []
+  const newEntries = log.slice(_lastPlunderLogLen)
+  _lastPlunderLogLen = newLen
+  for (const entry of newEntries) {
+    if ((entry.type === 'glory' || entry.type === 'gold') && entry.message.includes('ŁUPIENIE')) {
+      const isAI = entry.message.startsWith('AI')
+      const isSlava = entry.type === 'glory'
+      const currency = 'Punkt Sławy'
+      if (isAI) {
+        showFor('Zostałeś złupiony!', 'plunder', 2200, `Straciłeś ${currency}`)
+      } else {
+        showFor('Złupiłeś wroga!', 'plunder', 1800, `+1 ${currency}`)
+      }
+    }
+  }
+})
 </script>
 
 <template>
   <Transition name="banner-slide">
     <div v-if="showBanner" :class="['turn-banner', `banner-${bannerType}`]" :key="bannerText">
-      {{ bannerText }}
+      <div>{{ bannerText }}</div>
+      <div v-if="bannerSubText" class="banner-sub">{{ bannerSubText }}</div>
     </div>
   </Transition>
 </template>
@@ -85,6 +109,22 @@ watch(() => game.currentTurn, (turn, prevTurn) => {
   border: 2px solid rgba(251, 191, 36, 0.4);
   box-shadow: 0 0 50px rgba(251, 191, 36, 0.25);
   font-size: 32px;
+}
+
+.banner-plunder {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.18);
+  border: 2px solid rgba(249, 115, 22, 0.5);
+  box-shadow: 0 0 50px rgba(249, 115, 22, 0.3);
+  text-align: center;
+}
+
+.banner-sub {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+  margin-top: 4px;
 }
 
 .banner-slide-enter-active {

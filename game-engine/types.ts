@@ -139,7 +139,7 @@ export interface PlayerState {
   graveyard: CardInstance[]
   trophies: CardInstance[]     // zabici wrogowie (dla trybu Slava!)
   glory: number                // Sława w trybie Slava!
-  gold: number                 // Złocisze w trybie Gold Edition
+  gold: number                 // Punkty Sławy (legacy: gold)
   activeLocation: CardInstance | null
   handLimit: number
   // Liczniki dla reguł Gold Edition
@@ -183,8 +183,8 @@ export type PendingInteractionType =
   | 'liczyrzepa_type'          // Liczyrzepa: wybierz typ ataku
   | 'strela_intercept'         // Strela: czy zagrać kartę? (Y/N)
   | 'on_play_target'           // ON_PLAY z wymaganym celem (np. Jaroszek)
-  | 'brzegina_shield'          // Brzegina: czy użyć tarczy za ZŁ?
-  | 'kosciej_resurrect'        // Kościej: czy wskrzesić za ZŁ?
+  | 'brzegina_shield'          // Brzegina: czy użyć tarczy za PS?
+  | 'kosciej_resurrect'        // Kościej: czy wskrzesić za PS?
   // Tryb Sława!
   | 'auction_bid'              // Licytacja o Bożą Łaskę
   | 'divine_favor_target'      // Wybór celu mocy boga
@@ -285,7 +285,7 @@ export interface EffectDefinition {
   // ===== AKTIVOWALNE ZDOLNOŚCI (gracz klika ⚡ na karcie) =====
   // Czy gracz może ręcznie aktywować tę zdolność (ON_ACTIVATE trigger)?
   activatable?: boolean
-  // Koszt aktywacji w ZŁ (0 = darmowe)
+  // Koszt aktywacji w PS (0 = darmowe)
   activationCost?: number
   // Jak często można aktywować:
   //   'per_turn'  — raz na turę gracza
@@ -313,7 +313,6 @@ export interface AIDecision {
   targetPosition?: CardPosition
   // Slava-specific
   godId?: number
-  enhanced?: boolean
   bidAmount?: number
 }
 
@@ -340,8 +339,8 @@ export type PrecedentResolution =
 export interface GodData {
   id: number
   name: string
-  powerID: string           // effectId bazowej mocy
-  enhancedPowerID: string   // effectId wzmocnionej mocy
+  powerID: string           // effectId mocy boga (mniejsza łaska)
+  majorPowerID?: string     // effectId większej łaski (placeholder — do implementacji)
   cost: number
   usedThisCycle: boolean    // czy użyty w aktualnym cyklu pory roku
 }
@@ -352,11 +351,21 @@ export interface HolidayMission {
   condition: (state: GameState, side: PlayerSide) => boolean
   reward: number  // PS
   completed: Record<PlayerSide, boolean>  // raz per cykl pory roku
+  claimable: Record<PlayerSide, boolean>  // warunki spełnione, czeka na kliknięcie
+}
+
+/** Wygrana licytacja czekająca na aktywację (ZŁÓŻ OFIARĘ) */
+export interface PendingFavor {
+  godId: number
+  godName: string
+  winnerSide: PlayerSide
+  cost: number            // PS do zapłacenia przy aktywacji
+  wonOnRound: number      // runda w której wygrano licytację
+  chosenPower?: 'minor' | 'major'  // placeholder — gracz wybiera po wygraniu licytacji
 }
 
 export interface AuctionState {
   godId: number
-  enhanced: boolean
   bids: { side: PlayerSide; amount: number }[]
   currentHighBidder: PlayerSide
   currentHighBid: number
@@ -384,6 +393,9 @@ export interface SlavaState {
 
   // Licytacja (aktywna lub null)
   activeAuction: AuctionState | null
+
+  // Wygrana licytacja czekająca na aktywację (ZŁÓŻ OFIARĘ)
+  pendingFavor: PendingFavor | null
 
   // Tracking per turn: damage dealt (dla Święta Kupały)
   damageDealtThisTurn: Record<PlayerSide, number>

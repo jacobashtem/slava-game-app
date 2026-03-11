@@ -11,7 +11,7 @@ const infoPatterns: { pattern: RegExp; icon: string; type: 'effect' | 'info' | '
   { pattern: /Wskrze(sza|szony|szenie)/i, icon: '💀', type: 'effect' },
   { pattern: /Przejmuje zdolnoś/i, icon: '🧙', type: 'effect' },
   { pattern: /trwale unieruchomion/i, icon: '⚡', type: 'warning' },
-  { pattern: /Złoto.*zrabowane|Kradnie.*złot/i, icon: '💰', type: 'warning' },
+  { pattern: /ŁUPIENIE|ukradł kartę/i, icon: '💰', type: 'warning' },
   { pattern: /Nowy sezon:/i, icon: '🌿', type: 'info' },
   { pattern: /przechwytuje zaklęcie|Przekierowuje zaklęcie/i, icon: '🛡', type: 'effect' },
   { pattern: /Paraliż.*całe pole|masowy paraliż/i, icon: '⚡', type: 'warning' },
@@ -62,9 +62,9 @@ describe('InfoBox notification patterns', () => {
     expect(m!.type).toBe('warning')
   })
 
-  it('matches gold theft', () => {
-    expect(matchPattern('Złoto zrabowane: Tracisz 2 ZŁ!')).not.toBeNull()
-    expect(matchPattern('Aitwar: Kradnie złoto z ręki wroga.')).not.toBeNull()
+  it('matches plunder and card theft', () => {
+    expect(matchPattern('Runda 3: ŁUPIENIE! Wróg bez obrony — kradniesz 1 PS!')).not.toBeNull()
+    expect(matchPattern('Aitwar ukradł kartę "Żmij" z ręki przeciwnika!')).not.toBeNull()
   })
 
   it('matches new season', () => {

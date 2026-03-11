@@ -416,7 +416,7 @@ const onPlayDescription = computed(() => {
         <div class="onplay-box">
           <div class="onplay-title">Aktywacja zdolności</div>
           <div class="onplay-desc">
-            Czy chcesz wydać <strong>{{ ui.pendingActivation.cost }} {{ game.gameMode === 'slava' ? 'PS' : 'ZŁ' }}</strong> na aktywację zdolności
+            Czy chcesz wydać <strong>{{ ui.pendingActivation.cost }} PS</strong> na aktywację zdolności
             <strong>{{ ui.pendingActivation.cardName }}</strong>?
           </div>
           <div class="onplay-btns">
@@ -580,7 +580,8 @@ const onPlayDescription = computed(() => {
 }
 
 /* Layout children above the ::before/::after pseudo-elements and .season-bg layers */
-.top-bar, .board-main, .mobile-hud { position: relative; z-index: 3; }
+.board-main, .mobile-hud { position: relative; z-index: 3; }
+.top-bar { position: relative; z-index: 10; }
 
 /* ====== PASEK GÓRNY (minimalny) ====== */
 .top-bar {

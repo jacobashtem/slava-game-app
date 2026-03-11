@@ -7,7 +7,6 @@ const game = useGameStore()
 
 const expanded = ref(false)
 const selectedGod = ref<number | null>(null)
-const selectedEnhanced = ref(false)
 const bidAmount = ref(1)
 
 const gods = computed(() => game.slavaData?.gods ?? [])
@@ -22,8 +21,31 @@ const holiday = computed(() => {
     reward: slava.holiday.reward,
     playerDone: slava.holiday.completed.player1,
     aiDone: slava.holiday.completed.player2,
+    claimable: slava.holiday.claimable?.player1 ?? false,
   }
 })
+
+const pendingFavor = computed(() => game.slavaData?.pendingFavor ?? null)
+const canActivateFavor = computed(() => {
+  const favor = pendingFavor.value
+  if (!favor || favor.winnerSide !== 'player1') return false
+  const round = game.state?.roundNumber ?? 0
+  return favor.wonOnRound < round && game.isPlayerTurn
+})
+
+const seasonBuffInfo: Record<number, string> = {
+  0: 'Nieumarli: +1 OBR',     // Zima
+  1: 'Perunowcy: +1 ATK',     // Wiosna
+  2: 'Żywi: +1 ATK',          // Lato
+  3: 'Welesowcy: ulepszenie za 0 PS', // Jesień
+}
+
+const seasonParalysisInfo: Record<number, string> = {
+  0: 'Perunowcy: paraliż 1 rundę',
+  1: 'Welesowcy: paraliż 1 rundę',
+  2: 'Nieumarli: paraliż 1 rundę',
+  3: 'Żywi: paraliż 1 rundę',
+}
 
 const seasonInfo = computed(() => {
   const slava = game.slavaData
@@ -31,11 +53,14 @@ const seasonInfo = computed(() => {
   const seasonNames = ['Zima', 'Wiosna', 'Lato', 'Jesień']
   return {
     name: seasonNames[slava.currentSeason] ?? 'Zima',
+    season: slava.currentSeason,
     round: slava.seasonRound,
+    roundsTotal: 12,
+    buff: seasonBuffInfo[slava.currentSeason] ?? '',
+    paralysis: slava.paralysisRoundsLeft > 0 ? (seasonParalysisInfo[slava.currentSeason] ?? '') : '',
   }
 })
 
-// Unique icon + accent color + portrait per god
 const godMeta: Record<number, { icon: string; accent: string; domain: string; image: string }> = {
   1: { icon: 'game-icons:death-skull', accent: '#a78bfa', domain: 'Weles', image: '/images/gods/weles.svg' },
   2: { icon: 'game-icons:fire-ray', accent: '#f97316', domain: 'Swarożyc', image: '/images/gods/swarozyc.svg' },
@@ -47,18 +72,17 @@ const godMeta: Record<number, { icon: string; accent: string; domain: string; im
   8: { icon: 'game-icons:family-tree', accent: '#e2e8f0', domain: 'Rod', image: '/images/gods/rod.svg' },
 }
 
-const godDescriptions: Record<number, { base: string; enhanced: string }> = {
-  1: { base: 'Wskrzesza twoją istotę z cmentarza', enhanced: 'Wskrzesza istotę RYWALA — walczy po twojej stronie' },
-  2: { base: '15 obrażeń rozdzielonych na wrogów', enhanced: 'Niszczy istotę Welesa' },
-  3: { base: 'Perunowcy wroga muszą być w Obronie', enhanced: 'Niszczy istotę Peruna' },
-  4: { base: 'Leczy wszystkich sojuszników do pełna', enhanced: 'Leczy + darmowy atak każdego wyleczonego' },
-  5: { base: 'Dobierz 3 karty + darmowe wystawienie', enhanced: 'Niszczy premie i artefakty wroga' },
-  6: { base: '10 obrażeń istoty Welesa (ignoruje odporności)', enhanced: 'Niszczy dowolną istotę na stole' },
-  7: { base: 'Odtwarza kartę przygody z cmentarza', enhanced: 'Kopiuje aktywną kartę przygody' },
-  8: { base: 'Zamienia premie dwóch sojuszników', enhanced: 'Daje sojusznikowi +3 ATK' },
+const godDescriptions: Record<number, string> = {
+  1: 'Wskrzesza twoją istotę z cmentarza',
+  2: '15 obrażeń rozdzielonych na wrogów',
+  3: 'Perunowcy wroga muszą być w Obronie',
+  4: 'Leczy wszystkich sojuszników do pełna',
+  5: 'Dobierz 3 karty + darmowe wystawienie',
+  6: '10 obrażeń istoty Welesa (ignoruje odporności)',
+  7: 'Odtwarza kartę przygody z cmentarza',
+  8: 'Zamienia premie dwóch sojuszników',
 }
 
-// Holiday descriptions per season name
 const holidayDescriptions: Record<string, string> = {
   'Szczodre Gody': 'Suma OBR twoich istot na polu ≥ 20',
   'Jare Gody': 'Miej istoty z 4 różnych domen na polu',
@@ -66,21 +90,29 @@ const holidayDescriptions: Record<string, string> = {
   'Dziady': 'Miej ≥ 3 istoty więcej niż wróg na polu',
 }
 
-function selectGod(godId: number, enhanced: boolean) {
+function selectGod(godId: number) {
   selectedGod.value = godId
-  selectedEnhanced.value = enhanced
   bidAmount.value = 1
 }
 
 function invokeGod() {
   if (selectedGod.value === null) return
-  game.invokeGod(selectedGod.value, selectedEnhanced.value, bidAmount.value)
+  game.invokeGod(selectedGod.value, bidAmount.value)
   selectedGod.value = null
   expanded.value = false
 }
 
 function cancel() {
   selectedGod.value = null
+}
+
+function doActivateFavor() {
+  game.activateFavor()
+  expanded.value = false
+}
+
+function doClaimHoliday() {
+  game.playerClaimHoliday()
 }
 </script>
 
@@ -99,24 +131,65 @@ function cancel() {
           <div class="ph-ornament-left" />
           <Icon icon="game-icons:triple-corn" class="ph-icon" />
           <span class="ph-title">PANTEON</span>
-          <span class="ph-sub" v-if="seasonInfo">{{ seasonInfo.name }} · Runda {{ seasonInfo.round }}/4</span>
+          <span class="ph-sub" v-if="seasonInfo">{{ seasonInfo.name }} · Runda {{ seasonInfo.round }}/{{ seasonInfo.roundsTotal }}</span>
           <Icon icon="game-icons:triple-corn" class="ph-icon" />
           <div class="ph-ornament-right" />
         </div>
 
+        <!-- Season buff info -->
+        <div v-if="seasonInfo" class="season-info-tile">
+          <div class="season-info-row season-info-buff">
+            <Icon icon="game-icons:arrow-dunk" class="season-info-icon season-info-icon--buff" />
+            <span>{{ seasonInfo.buff }}</span>
+          </div>
+          <div v-if="seasonInfo.paralysis" class="season-info-row season-info-debuff">
+            <Icon icon="game-icons:frozen-body" class="season-info-icon season-info-icon--debuff" />
+            <span>{{ seasonInfo.paralysis }}</span>
+          </div>
+        </div>
+
         <!-- Holiday / Mission tile -->
-        <div v-if="holiday" :class="['mission-tile', { 'mission-done': holiday.playerDone }]">
+        <div
+          v-if="holiday"
+          :class="['mission-tile', { 'mission-done': holiday.playerDone, 'mission-claimable': holiday.claimable && !holiday.playerDone }]"
+          @click="holiday.claimable && !holiday.playerDone ? doClaimHoliday() : undefined"
+        >
           <div class="mission-header">
-            <Icon :icon="holiday.playerDone ? 'game-icons:check-mark' : 'game-icons:party-popper'" class="mission-icon" />
+            <Icon :icon="holiday.playerDone ? 'game-icons:check-mark' : holiday.claimable ? 'game-icons:party-popper' : 'game-icons:scroll-quill'" class="mission-icon" />
             <span class="mission-label">ŚWIĘTO</span>
             <span class="mission-reward" v-if="!holiday.playerDone">+{{ holiday.reward }} PS</span>
             <span class="mission-completed" v-else>UKOŃCZONE</span>
           </div>
           <div class="mission-name">{{ holiday.name }}</div>
           <div class="mission-desc">{{ holidayDescriptions[holiday.name] ?? '' }}</div>
-          <div class="mission-progress-track">
-            <div class="mission-progress-fill" :style="{ width: holiday.playerDone ? '100%' : '0%' }" />
+          <div v-if="holiday.claimable && !holiday.playerDone" class="mission-claim-btn">
+            <Icon icon="game-icons:party-popper" /> ŚWIĘTUJ! (+{{ holiday.reward }} PS)
           </div>
+          <div class="mission-progress-track">
+            <div class="mission-progress-fill" :style="{ width: holiday.playerDone ? '100%' : holiday.claimable ? '100%' : '0%' }" />
+          </div>
+        </div>
+
+        <!-- Pending Favor (ZŁÓŻ OFIARĘ) -->
+        <div v-if="pendingFavor && pendingFavor.winnerSide === 'player1'" class="favor-tile" :style="{ '--god-accent': godMeta[pendingFavor.godId]?.accent ?? '#c8a84e' }">
+          <div class="favor-header">
+            <div class="favor-portrait">
+              <img :src="godMeta[pendingFavor.godId]?.image" :alt="pendingFavor.godName" class="favor-portrait-img" />
+            </div>
+            <div class="favor-info">
+              <div class="favor-god-name">{{ pendingFavor.godName }}</div>
+              <div class="favor-power">{{ godDescriptions[pendingFavor.godId] ?? '' }}</div>
+              <div class="favor-cost">Koszt: {{ pendingFavor.cost }} PS</div>
+            </div>
+          </div>
+          <button
+            class="favor-activate"
+            :disabled="!canActivateFavor"
+            @click="canActivateFavor ? doActivateFavor() : undefined"
+          >
+            <Icon icon="game-icons:temple-gate" />
+            {{ canActivateFavor ? 'ZŁÓŻ OFIARĘ' : 'Dostępne od nast. rundy' }}
+          </button>
         </div>
 
         <!-- God selection -->
@@ -126,17 +199,13 @@ function cancel() {
             :class="['god-tile', { 'god-tile--used': god.usedThisCycle }]"
             :style="{ '--god-accent': godMeta[god.id]?.accent ?? '#c8a84e' }"
             :disabled="god.usedThisCycle"
-            @click="!god.usedThisCycle ? selectGod(god.id, false) : undefined"
+            @click="!god.usedThisCycle ? selectGod(god.id) : undefined"
           >
-            <!-- God portrait -->
             <div class="god-portrait">
               <img :src="godMeta[god.id]?.image" :alt="god.name" class="god-portrait-img" />
             </div>
-
-            <!-- God name -->
             <div class="god-name">{{ god.name }}</div>
-
-            <!-- Status -->
+            <div class="god-power-desc">{{ godDescriptions[god.id] ?? '' }}</div>
             <div v-if="god.usedThisCycle" class="god-status god-status--used">
               <Icon icon="game-icons:padlock" class="god-status-icon" />
               UŻYTY
@@ -148,43 +217,21 @@ function cancel() {
           </button>
         </div>
 
-        <!-- Powers selection (after clicking a god tile) -->
-        <div v-else class="powers-screen">
-          <div class="powers-god-header" :style="{ '--god-accent': godMeta[selectedGod]?.accent ?? '#c8a84e' }">
-            <button class="powers-back" @click="cancel">
+        <!-- Bid screen (after clicking a god) -->
+        <div v-else class="bid-screen">
+          <div class="bid-god-header" :style="{ '--god-accent': godMeta[selectedGod]?.accent ?? '#c8a84e' }">
+            <button class="bid-back" @click="cancel">
               <Icon icon="game-icons:return-arrow" />
             </button>
-            <div class="powers-god-portrait">
-              <img :src="godMeta[selectedGod]?.image" :alt="gods.find(g => g.id === selectedGod)?.name ?? ''" class="powers-god-portrait-img" />
+            <div class="bid-god-portrait">
+              <img :src="godMeta[selectedGod]?.image" :alt="gods.find(g => g.id === selectedGod)?.name ?? ''" class="bid-god-portrait-img" />
             </div>
-            <div class="powers-god-info">
-              <div class="powers-god-name">{{ gods.find(g => g.id === selectedGod)?.name }}</div>
-              <div class="powers-god-sub">Wybierz moc do przyzwania</div>
+            <div class="bid-god-info">
+              <div class="bid-god-name">{{ gods.find(g => g.id === selectedGod)?.name }}</div>
+              <div class="bid-god-power">{{ godDescriptions[selectedGod] ?? '' }}</div>
             </div>
           </div>
 
-          <!-- Two power cards -->
-          <div class="powers-cards">
-            <button class="power-card power-card--base" @click="selectGod(selectedGod, false); selectedGod = selectedGod"
-              :class="{ 'power-card--selected': !selectedEnhanced }"
-              @click.prevent="selectedEnhanced = false"
-            >
-              <div class="pc-badge">BAZOWA</div>
-              <Icon icon="game-icons:plain-circle" class="pc-icon pc-icon--base" />
-              <div class="pc-desc">{{ godDescriptions[selectedGod]?.base ?? '—' }}</div>
-            </button>
-
-            <button class="power-card power-card--enhanced"
-              :class="{ 'power-card--selected': selectedEnhanced }"
-              @click.prevent="selectedEnhanced = true"
-            >
-              <div class="pc-badge">WZMOCNIONA</div>
-              <Icon icon="game-icons:lightning-trio" class="pc-icon pc-icon--enhanced" />
-              <div class="pc-desc">{{ godDescriptions[selectedGod]?.enhanced ?? '—' }}</div>
-            </button>
-          </div>
-
-          <!-- Bid section -->
           <div class="bid-section">
             <div class="bid-glory">
               <Icon icon="game-icons:laurel-crown" class="bid-glory-icon" />
@@ -279,6 +326,30 @@ function cancel() {
 
 .panteon-slide-enter-active, .panteon-slide-leave-active { transition: opacity 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .panteon-slide-enter-from, .panteon-slide-leave-to { opacity: 0; transform: translateY(-10px) scale(0.97); }
+
+/* ===== SEASON INFO ===== */
+.season-info-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(200, 168, 78, 0.08);
+  margin-bottom: 10px;
+}
+.season-info-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.season-info-icon { font-size: 12px; }
+.season-info-icon--buff { color: #86efac; }
+.season-info-icon--debuff { color: #f87171; }
+.season-info-buff { color: rgba(134, 239, 172, 0.8); }
+.season-info-debuff { color: rgba(248, 113, 113, 0.7); }
 
 /* ===== HEADER ===== */
 .panteon-header {
@@ -429,6 +500,121 @@ function cancel() {
   background: linear-gradient(90deg, #22c55e, #86efac);
 }
 
+/* Mission claimable state */
+.mission-claimable {
+  border-color: rgba(251, 191, 36, 0.4);
+  cursor: pointer;
+  animation: mission-glow 1.5s ease-in-out infinite alternate;
+}
+.mission-claimable:hover {
+  border-color: rgba(251, 191, 36, 0.6);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.03) 100%);
+}
+@keyframes mission-glow {
+  from { box-shadow: 0 0 4px rgba(251, 191, 36, 0.1); }
+  to { box-shadow: 0 0 16px rgba(251, 191, 36, 0.25); }
+}
+.mission-claim-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  margin-top: 6px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.08));
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+/* ===== PENDING FAVOR (ZŁÓŻ OFIARĘ) ===== */
+.favor-tile {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--god-accent) 25%, transparent);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--god-accent) 5%, transparent) 0%,
+    color-mix(in srgb, var(--god-accent) 2%, transparent) 100%);
+  margin-bottom: 10px;
+}
+.favor-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.favor-portrait {
+  width: 40px;
+  height: 52px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--god-accent) 30%, transparent);
+  flex-shrink: 0;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--god-accent) 15%, transparent);
+}
+.favor-portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.favor-info { flex: 1; min-width: 0; }
+.favor-god-name {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--god-accent);
+}
+.favor-power {
+  font-size: 9px;
+  color: rgba(148, 163, 184, 0.6);
+  font-style: italic;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+.favor-cost {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-top: 2px;
+}
+.favor-activate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--god-accent) 40%, transparent);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--god-accent) 20%, transparent),
+    color-mix(in srgb, var(--god-accent) 8%, transparent));
+  color: var(--god-accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.favor-activate:hover:not(:disabled) {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--god-accent) 32%, transparent),
+    color-mix(in srgb, var(--god-accent) 14%, transparent));
+  border-color: color-mix(in srgb, var(--god-accent) 60%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--god-accent) 20%, transparent);
+  transform: translateY(-1px);
+}
+.favor-activate:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  font-size: 10px;
+}
+
 /* ===== GODS GRID ===== */
 .gods-grid {
   display: grid;
@@ -525,14 +711,22 @@ function cancel() {
   color: rgba(239, 68, 68, 0.5);
 }
 
-/* ===== POWERS SCREEN ===== */
-.powers-screen {
+/* ===== GOD POWER DESCRIPTION ===== */
+.god-power-desc {
+  font-size: 9px;
+  color: rgba(148, 163, 184, 0.6);
+  line-height: 1.3;
+  font-style: italic;
+}
+
+/* ===== BID SCREEN ===== */
+.bid-screen {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.powers-god-header {
+.bid-god-header {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -544,7 +738,7 @@ function cancel() {
   border: 1px solid color-mix(in srgb, var(--god-accent) 12%, transparent);
 }
 
-.powers-back {
+.bid-back {
   background: none;
   border: none;
   color: #64748b;
@@ -556,9 +750,9 @@ function cancel() {
   display: flex;
   align-items: center;
 }
-.powers-back:hover { color: #94a3b8; background: rgba(255, 255, 255, 0.05); }
+.bid-back:hover { color: #94a3b8; background: rgba(255, 255, 255, 0.05); }
 
-.powers-god-portrait {
+.bid-god-portrait {
   width: 44px;
   height: 56px;
   border-radius: 5px;
@@ -567,104 +761,28 @@ function cancel() {
   flex-shrink: 0;
   box-shadow: 0 0 10px color-mix(in srgb, var(--god-accent) 15%, transparent);
 }
-.powers-god-portrait-img {
+.bid-god-portrait-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.powers-god-info { flex: 1; min-width: 0; }
+.bid-god-info { flex: 1; min-width: 0; }
 
-.powers-god-name {
+.bid-god-name {
   font-family: var(--font-display, Georgia, serif);
   font-size: 14px;
   font-weight: 500;
   color: var(--god-accent);
 }
 
-.powers-god-sub {
-  font-size: 9px;
-  color: rgba(148, 163, 184, 0.5);
-}
-
-/* Power cards */
-.powers-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.power-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 8px;
-  border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s;
-  text-align: center;
-}
-
-.power-card--base {
-  background: linear-gradient(180deg, rgba(34, 197, 94, 0.04) 0%, rgba(34, 197, 94, 0.01) 100%);
-}
-.power-card--enhanced {
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, rgba(139, 92, 246, 0.01) 100%);
-}
-
-.power-card:hover {
-  transform: translateY(-1px);
-}
-.power-card--base:hover {
-  border-color: rgba(34, 197, 94, 0.3);
-  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.1);
-}
-.power-card--enhanced:hover {
-  border-color: rgba(139, 92, 246, 0.3);
-  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.1);
-}
-
-.power-card--selected.power-card--base {
-  border-color: rgba(34, 197, 94, 0.6);
-  background: rgba(34, 197, 94, 0.08);
-  box-shadow: 0 0 16px rgba(34, 197, 94, 0.15), inset 0 0 8px rgba(34, 197, 94, 0.05);
-}
-.power-card--selected.power-card--enhanced {
-  border-color: rgba(139, 92, 246, 0.6);
-  background: rgba(139, 92, 246, 0.08);
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.15), inset 0 0 8px rgba(139, 92, 246, 0.05);
-}
-
-.pc-badge {
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 1px 6px;
-  border-radius: 3px;
-}
-.power-card--base .pc-badge {
-  color: #4ade80;
-  background: rgba(34, 197, 94, 0.1);
-}
-.power-card--enhanced .pc-badge {
-  color: #a78bfa;
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.pc-icon {
-  font-size: 16px;
-}
-.pc-icon--base { color: #4ade80; }
-.pc-icon--enhanced { color: #a78bfa; }
-
-.pc-desc {
-  font-size: 9px;
-  color: #94a3b8;
+.bid-god-power {
+  font-size: 10px;
+  color: rgba(148, 163, 184, 0.6);
+  font-style: italic;
   line-height: 1.3;
+  margin-top: 2px;
 }
 
 /* ===== BID SECTION ===== */
@@ -782,7 +900,7 @@ function cancel() {
   .god-tile { padding: 10px 6px 8px; }
   .god-portrait { width: 52px; height: 66px; }
   .god-name { font-size: 11px; }
-  .powers-cards { gap: 4px; }
-  .power-card { padding: 8px 6px; }
+  .bid-god-portrait { width: 36px; height: 46px; }
+  .bid-god-name { font-size: 12px; }
 }
 </style>

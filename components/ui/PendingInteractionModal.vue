@@ -66,7 +66,16 @@ const auctionMeta = computed(() => {
   return {
     godName: meta.godName as string ?? 'Bóg',
     godId: meta.godId as number ?? 0,
-    enhanced: meta.enhanced as boolean ?? false,
+    godPower: ({
+      1: 'Wskrzesza twoją istotę z cmentarza',
+      2: '15 obrażeń rozdzielonych na wrogów',
+      3: 'Perunowcy wroga muszą być w Obronie',
+      4: 'Leczy wszystkich sojuszników do pełna',
+      5: 'Dobierz 3 karty + darmowe wystawienie',
+      6: '10 obrażeń istoty Welesa (ignoruje odporności)',
+      7: 'Odtwarza kartę przygody z cmentarza',
+      8: 'Zamienia premie dwóch sojuszników',
+    } as Record<number, string>)[meta.godId as number] ?? '',
     currentBid: meta.currentBid as number ?? 1,
     currentBidder: meta.currentBidder as string ?? 'AI',
   }
@@ -106,7 +115,7 @@ const description = computed(() => {
   if (t === 'auction_bid') {
     const a = auctionMeta.value
     if (!a) return ''
-    return `AI przebija licytację o ${a.enhanced ? 'WZMOCNIONĄ' : 'bazową'} moc ${a.godName}. Aktualna stawka: ${a.currentBid} PS. Przebij lub przepuść.`
+    return `AI przebija licytację o moc ${a.godName}. Aktualna stawka: ${a.currentBid} PS. Przebij lub zrezygnuj.`
   }
   if (t === 'alkonost_target') {
     return `${(atk?.cardData as any)?.name ?? 'Atakujący'} musi zaatakować sojusznika ${(src?.cardData as any)?.name ?? 'Alkonosta'}. Kliknij cel.`
@@ -134,9 +143,9 @@ const description = computed(() => {
       const tc = findCard(tId)
       return (tc?.cardData as any)?.name ?? 'sojusznika'
     })()
-    return `Brzegina może ochronić ${targetName} przed obrażeniami. Koszt: ${cost === 0 ? 'GRATIS (pierwsze użycie)' : `${cost} ZŁ`}.`
+    return `Brzegina może ochronić ${targetName} przed obrażeniami. Koszt: ${cost === 0 ? 'GRATIS (pierwsze użycie)' : `${cost} PS`}.`
   }
-  if (t === 'kosciej_resurrect') return 'Kościej zginął od Wręcz — jego serce wciąż bije! Wydaj 1 ZŁ, by wskrzesić go na L1.'
+  if (t === 'kosciej_resurrect') return 'Kościej zginął od Wręcz — jego serce wciąż bije! Wydaj 1 PS, by wskrzesić go na L1.'
   return 'Wybierz opcję.'
 })
 
@@ -246,20 +255,20 @@ function pickTarget(choice: string) {
           class="pi-yn"
         >
           <button class="pi-yn-yes" @click="pickTarget('yes')">
-            <Icon icon="game-icons:shield" /> {{ (interaction?.metadata?.cost as number) === 0 ? 'Tak, osłoń (gratis)' : `Tak, osłoń (-${interaction?.metadata?.cost} ZŁ)` }}
+            <Icon icon="game-icons:shield" /> {{ (interaction?.metadata?.cost as number) === 0 ? 'Tak, osłoń (gratis)' : `Tak, osłoń (-${interaction?.metadata?.cost} PS)` }}
           </button>
           <button class="pi-yn-no" @click="pickTarget('no')">
             <Icon icon="game-icons:cancel" /> Nie, przepuść atak
           </button>
         </div>
 
-        <!-- Kościej: Wskrzeszenie za ZŁ -->
+        <!-- Kościej: Wskrzeszenie za PS -->
         <div
           v-if="interaction?.type === 'kosciej_resurrect'"
           class="pi-yn"
         >
           <button class="pi-yn-yes" @click="pickTarget('yes')">
-            <Icon icon="game-icons:skull-crossed-bones" /> Wskrześ za 1 ZŁ
+            <Icon icon="game-icons:skull-crossed-bones" /> Wskrześ za 1 PS
           </button>
           <button class="pi-yn-no" @click="pickTarget('no')">
             <Icon icon="game-icons:cancel" /> Niech odejdzie
@@ -277,9 +286,7 @@ function pickTarget(choice: string) {
             />
             <div class="pi-auction-info">
               <div class="pi-auction-god-name">{{ auctionMeta.godName }}</div>
-              <div class="pi-auction-power-type">
-                {{ auctionMeta.enhanced ? 'WZMOCNIONA MOC' : 'BAZOWA MOC' }}
-              </div>
+              <div class="pi-auction-power-desc">{{ auctionMeta.godPower }}</div>
             </div>
           </div>
 
@@ -317,7 +324,7 @@ function pickTarget(choice: string) {
               <Icon icon="game-icons:laurel-crown" /> Przebij ({{ auctionBidAmount }} PS)
             </button>
             <button class="pi-yn-no" @click="pickTarget('pass')">
-              <Icon icon="game-icons:cancel" /> Przepuść
+              <Icon icon="game-icons:cancel" /> Zrezygnuj
             </button>
           </div>
         </div>
@@ -608,11 +615,12 @@ function pickTarget(choice: string) {
   color: #c8a84e;
 }
 
-.pi-auction-power-type {
+.pi-auction-power-desc {
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #a78bfa;
+  color: rgba(148, 163, 184, 0.7);
+  font-style: italic;
+  line-height: 1.3;
+  margin-top: 2px;
 }
 
 .pi-auction-bid-info {
