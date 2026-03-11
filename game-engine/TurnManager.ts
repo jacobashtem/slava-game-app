@@ -201,9 +201,11 @@ export function playCreature(
       throw new Error(`[TurnManager] Linia ${targetLine} wroga jest pełna.`)
     }
     placeCreatureOnField(newState, card, targetLine, newState.roundNumber, enemySide, slotIndex)
+    applySeasonalBuffToNewCreature(newState, card)
     log.push(addLog(newState, `${newState.currentTurn} wystawia ${card.cardData.name} na pole wroga w linii ${targetLine}!`, 'play', [cardInstanceId]))
   } else {
     placeCreatureOnField(newState, card, targetLine, newState.roundNumber, undefined, slotIndex)
+    applySeasonalBuffToNewCreature(newState, card)
     const cardDisplayName = card.owner === 'player2' ? 'zakrytą jednostkę' : card.cardData.name
     log.push(addLog(newState, `${newState.currentTurn} wystawia ${cardDisplayName} w linii ${targetLine}.`, 'play', [cardInstanceId]))
   }
@@ -277,14 +279,10 @@ export function playAdventure(
     throw new Error(`[TurnManager] Karta ${cardInstanceId} nie jest przygodą.`)
   }
 
-  // Koszt: podstawowy = DARMOWY, ulepszony = 1 ZŁ/PS (zależnie od trybu)
+  // Koszt: podstawowy = DARMOWY, ulepszony = koszt w PS (glory)
   let adventureCost = 0
   if (useEnhanced) {
-    if (newState.gameMode === 'slava') {
-      adventureCost = getEnhancedAdventureCost(newState, newState.currentTurn)
-    } else {
-      adventureCost = GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST
-    }
+    adventureCost = getEnhancedAdventureCost(newState, newState.currentTurn)
   }
 
   // Tęsknica: blokuje enhanced adventures
@@ -298,19 +296,10 @@ export function playAdventure(
     }
   }
 
-  if (newState.gameMode === 'slava') {
-    // Sława: koszt w PS (glory)
-    if (adventureCost > 0 && currentPlayer.glory < adventureCost) {
-      throw new Error(`[TurnManager] Brak PS. Potrzebujesz ${adventureCost} PS na ulepszony efekt.`)
-    }
-    currentPlayer.glory -= adventureCost
-  } else {
-    // Gold: koszt w ZŁ
-    if (adventureCost > 0 && currentPlayer.gold < adventureCost) {
-      throw new Error(`[TurnManager] Brak Złocisza. Potrzebujesz ${adventureCost} ZŁ na ulepszony efekt.`)
-    }
-    currentPlayer.gold -= adventureCost
+  if (adventureCost > 0 && currentPlayer.glory < adventureCost) {
+    throw new Error(`[TurnManager] Brak PS. Potrzebujesz ${adventureCost} PS na ulepszony efekt.`)
   }
+  currentPlayer.glory -= adventureCost
   currentPlayer.adventuresPlayedThisTurn += 1
 
   // Usuń z ręki
@@ -349,8 +338,8 @@ export function playAdventure(
       const usedFree = !!czarownica.metadata.czarownicaUsedFree
       const cost = usedFree ? 1 : 0
       const ownerSide = czarownica.owner as PlayerSide
-      if (cost === 0 || newState.players[ownerSide].gold >= cost) {
-        if (cost > 0) newState.players[ownerSide].gold -= cost
+      if (cost === 0 || newState.players[ownerSide].glory >= cost) {
+        if (cost > 0) newState.players[ownerSide].glory -= cost
         czarownica.metadata.czarownicaUsedFree = true
         const casterSide = newState.currentTurn as PlayerSide
         const casterCreatures = getAllCreaturesForPlayer(newState, casterSide)
@@ -386,11 +375,7 @@ export function playAdventure(
     currentPlayer.hand.push(card)
     log.push(addLog(newState, `Zlot Czarownic blokuje zaklęcie ${card.cardData.name} — ${zlotEvent.roundsRemaining} blokad pozostało (Zlot Czarownic anuluje 3 kolejne przygody wroga).`, 'effect'))
     currentPlayer.adventuresPlayedThisTurn--
-    if (newState.gameMode === 'slava') {
-      currentPlayer.glory += adventureCost
-    } else {
-      currentPlayer.gold += adventureCost
-    }
+    currentPlayer.glory += adventureCost
     return { newState, log }
   }
 
@@ -495,7 +480,7 @@ export function drawCardManually(state: GameState): { newState: GameState; log: 
 
 /**
  * PLAY/COMBAT — gracz aktywuje zdolność istoty (⚡ kliknięcie).
- * Sprawdza: activatable, cooldown, koszt ZŁ, uciszenie.
+ * Sprawdza: activatable, cooldown, koszt PS, uciszenie.
  * Wykonuje efekt z triggerem ON_ACTIVATE.
  */
 export function activateCreatureEffect(
@@ -531,20 +516,13 @@ export function activateCreatureEffect(
     }
   }
 
-  // Sprawdź i pobierz koszt (ZŁ w Gold, PS w Sława)
+  // Sprawdź i pobierz koszt (PS = glory)
   const cost = isFreeActivation ? 0 : (effect.activationCost ?? 0)
   const owner = newState.players[newState.currentTurn]
-  if (newState.gameMode === 'slava') {
-    if (owner.glory < cost) {
-      throw new Error(`Brak PS. Masz ${owner.glory} PS, potrzebujesz ${cost}.`)
-    }
-    owner.glory -= cost
-  } else {
-    if (owner.gold < cost) {
-      throw new Error(`Brak Złocisza. Masz ${owner.gold} ZŁ, potrzebujesz ${cost}.`)
-    }
-    owner.gold -= cost
+  if (owner.glory < cost) {
+    throw new Error(`Brak PS. Masz ${owner.glory} PS, potrzebujesz ${cost}.`)
   }
+  owner.glory -= cost
 
   // Znajdź cel (jeśli podano)
   let targetCard: CardInstance | undefined
@@ -564,11 +542,7 @@ export function activateCreatureEffect(
     log.push(...result.log)
   } catch (err) {
     // Activation failed — refund
-    if (newState.gameMode === 'slava') {
-      owner.glory += cost
-    } else {
-      owner.gold += cost
-    }
+    owner.glory += cost
   }
 
   // Zaktualizuj metadane cooldownu (szukamy karty w zaktualizowanym stanie)
@@ -586,7 +560,7 @@ export function activateCreatureEffect(
 
   log.unshift(addLog(
     newState,
-    `${card.cardData.name} aktywuje: "${effect.name}"${cost > 0 ? ` (-${cost} ZŁ)` : ''}.`,
+    `${card.cardData.name} aktywuje: "${effect.name}"${cost > 0 ? ` (-${cost} PS)` : ''}.`,
     'effect',
     [cardInstanceId]
   ))
@@ -643,7 +617,7 @@ export function performAttack(
     }
   }
 
-  // Brzegina: pytanie gracza czy użyć tarczy za ZŁ (AI auto-używa)
+  // Brzegina: pytanie gracza czy użyć tarczy za PS (AI auto-używa)
   if (!options?.skipBrzeginaCheck && !options?.forceBrzeginaSkip) {
     const defCard = (() => {
       for (const side of ['player1', 'player2'] as const) {
@@ -675,7 +649,7 @@ export function performAttack(
             targetInstanceId: defenderInstanceId,
             metadata: { cost: firstUseFree ? 0 : 1 },
           }
-          const costLabel = firstUseFree ? 'GRATIS' : '1 ZŁ'
+          const costLabel = firstUseFree ? 'GRATIS' : '1 PS'
           addLog(pendingState, `${brzegina.cardData.name}: Może ochronić ${defCard.cardData.name}! (${costLabel})`, 'effect')
           return { newState: pendingState, log: [] }
         }
@@ -698,10 +672,10 @@ export function performAttack(
 
   // Kościej: po walce sprawdź czy w cmentarzu gracza jest Kościej z flagą kosciejCanPaidResurrect
   for (const side of ['player1', 'player2'] as const) {
-    if (newState.players[side].isAI) continue  // AI auto-decyduje (nie wskrzesza za ZŁ)
+    if (newState.players[side].isAI) continue  // AI auto-decyduje (nie wskrzesza za PS)
     const grave = newState.players[side].graveyard
     const kosciej = grave.find(c => c.metadata.kosciejCanPaidResurrect)
-    if (kosciej && newState.players[side].gold >= 1) {
+    if (kosciej && newState.players[side].glory >= 1) {
       delete kosciej.metadata.kosciejCanPaidResurrect
       newState.pendingInteraction = {
         type: 'kosciej_resurrect',
@@ -709,7 +683,7 @@ export function performAttack(
         respondingPlayer: side,
         metadata: { cost: 1 },
       }
-      addLog(newState, `${kosciej.cardData.name}: Serce wciąż bije! Wskrzesić za 1 ZŁ?`, 'effect')
+      addLog(newState, `${kosciej.cardData.name}: Serce wciąż bije! Wskrzesić za 1 PS?`, 'effect')
       return { newState, log: result.log, combatResult: result }
     }
   }

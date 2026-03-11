@@ -6,9 +6,7 @@ const props = defineProps<{
   deckCount: number
   handCount: number
   graveCount: number
-  gold?: number
   glory?: number
-  gameMode?: 'gold' | 'slava'
   isAI?: boolean
   enhancedActive?: boolean
 }>()
@@ -29,12 +27,12 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- Sława: Punkty Sławy -->
+    <!-- Punkty Sławy (PS) -->
     <div
-      v-if="gameMode === 'slava' && glory !== undefined"
-      :class="['pile-section', 'gold-section', { 'gold-section--active': !isAI && enhancedActive }]"
-      v-tip="isAI ? 'PS przeciwnika' : 'Punkty Sławy — kliknij aby zagrać kartę wzmocnioną (1 PS)'"
-      @click="!isAI ? emit('toggle-enhanced') : undefined"
+      v-if="glory !== undefined"
+      :class="['pile-section', 'gold-section', { 'gold-section--active': !isAI && enhancedActive, 'gold-section--low': !isAI && (glory ?? 0) < 1 }]"
+      v-tip="isAI ? 'PS przeciwnika' : ((glory ?? 0) >= 1 ? 'Punkty Sławy — kliknij aby zagrać kartę wzmocnioną (1 PS)' : 'Za mało PS na wzmocnienie')"
+      @click="!isAI && (glory ?? 0) >= 1 ? emit('toggle-enhanced') : undefined"
       :style="isAI ? {} : { cursor: 'pointer' }"
     >
       <div class="gold-display">
@@ -42,24 +40,6 @@ const emit = defineEmits<{
         <span class="gold-count" style="color: #86efac;">{{ glory }}</span>
       </div>
       <span class="glory-label">PS</span>
-      <span v-if="!isAI && enhancedActive" class="enhanced-label">
-        <Icon icon="game-icons:lightning-trio" class="enhanced-icon" />
-        WZM.
-      </span>
-    </div>
-
-    <!-- Gold Edition: Złoto -->
-    <div
-      v-else-if="gold !== undefined"
-      :class="['pile-section', 'gold-section', { 'gold-section--active': !isAI && enhancedActive, 'gold-section--low': !isAI && (gold ?? 0) < 1 }]"
-      v-tip="isAI ? 'Złocisze przeciwnika' : ((gold ?? 0) >= 1 ? 'Kliknij aby zagrać kartę wzmocnioną (1 ZŁ)' : 'Za mało złota na wzmocnienie')"
-      @click="!isAI && (gold ?? 0) >= 1 ? emit('toggle-enhanced') : undefined"
-      :style="isAI ? {} : { cursor: 'pointer' }"
-    >
-      <div class="gold-display">
-        <Icon icon="game-icons:two-coins" class="gold-icon" />
-        <span class="gold-count">{{ gold }}</span>
-      </div>
       <span v-if="!isAI && enhancedActive" class="enhanced-label">
         <Icon icon="game-icons:lightning-trio" class="enhanced-icon" />
         WZM.

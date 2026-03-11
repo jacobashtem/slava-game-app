@@ -41,7 +41,7 @@ export function getAllEffectIds(): string[] {
 
 /**
  * Sprawdza czy karta może teraz aktywować swoją zdolność (⚡).
- * Uwzględnia: activatable, cooldown, koszt ZŁ, uciszenie.
+ * Uwzględnia: activatable, cooldown, koszt PS, uciszenie.
  */
 export function canActivateEffect(state: import('./types').GameState, card: import('./types').CardInstance): boolean {
   const effect = registry.get((card.cardData as any).effectId ?? '')
@@ -62,9 +62,9 @@ export function canActivateEffect(state: import('./types').GameState, card: impo
     if (((card.metadata.activationCount as number) ?? 0) > 0) return false
   }
 
-  // Sprawdź ZŁ
+  // Sprawdź PS
   const cost = effect.activationCost ?? 0
-  if (state.players[card.owner].gold < cost) return false
+  if (state.players[card.owner].glory < cost) return false
 
   // Sprawdź czy są dostępne cele (jeśli efekt wymaga celu z filtrem)
   if (effect.activationRequiresTarget && effect.activationTargetFilter) {
@@ -108,18 +108,18 @@ function effectResult(state: GameState, log: LogEntry[] = [], prevented = false,
 // ISTOTY — PERUN
 // ===================================================================
 
-// ✅ AITWAR — Kradnie kartę z ręki przeciwnika (ON_PLAY: gratis, ON_ACTIVATE: 1 ZŁ raz na zawsze)
+// ✅ AITWAR — Kradnie kartę z ręki przeciwnika (ON_PLAY: gratis, ON_ACTIVATE: 1 PS raz na zawsze)
 registerEffect({
   id: 'aitwar_steal_hand',
   name: 'Kradzież Aitwara',
-  description: '[WEJŚCIE] [AKCJA] Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 ZŁ.',
+  description: '[WEJŚCIE] [AKCJA] Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 PS.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.REACTION,
   activatable: true,
   activationCost: 1,
   activationCooldown: 'once',
   canActivate: (ctx) => {
-    // Blokuj gdy przeciwnik nie ma kart — uniknij bezużytecznego wydania ZŁ
+    // Blokuj gdy przeciwnik nie ma kart — uniknij bezużytecznego wydania PS
     const opponent = ctx.state.players[ctx.source.owner === 'player1' ? 'player2' : 'player1']
     return opponent.hand.length > 0
   },
@@ -252,17 +252,17 @@ registerEffect({
   },
 })
 
-// ✅ BRZEGINA — Za ZŁ, sojusznik nie otrzymuje obrażeń (pierwsze użycie darmowe)
+// ✅ BRZEGINA — Za PS, sojusznik nie otrzymuje obrażeń (pierwsze użycie darmowe)
 registerEffect({
   id: 'brzegina_shield_for_gold',
   name: 'Tarcza Brzeginy',
-  description: '[ODWET] Za każdy wydany ZŁ jedna sojusznicza istota nie otrzymuje obrażeń podczas ataku. Pierwsze użycie darmowe.',
+  description: '[ODWET] Za każdy wydany PS jedna sojusznicza istota nie otrzymuje obrażeń podczas ataku. Pierwsze użycie darmowe.',
   trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
   priority: EffectPriority.PREVENTION,
   canActivate: (ctx) => {
     const owner = ctx.state.players[ctx.source.owner]
     const firstUseFree = !(ctx.source.metadata.brzeginaUsedFree as boolean)
-    return firstUseFree || owner.gold > 0
+    return firstUseFree || owner.glory > 0
   },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
@@ -271,13 +271,13 @@ registerEffect({
 
     const firstUseFree = !(sourceInState?.metadata?.brzeginaUsedFree as boolean)
     if (!firstUseFree) {
-      owner.gold -= 1
+      owner.glory -= 1
     }
     if (sourceInState) {
       sourceInState.metadata.brzeginaUsedFree = true
     }
 
-    const log = addLog(ctx.state, `${ctx.source.cardData.name}: Tarcza aktywna${firstUseFree ? ' (darmowe)' : ' (-1 ZŁ)'}!`, 'effect')
+    const log = addLog(ctx.state, `${ctx.source.cardData.name}: Tarcza aktywna${firstUseFree ? ' (darmowe)' : ' (-1 PS)'}!`, 'effect')
     return effectResult(newState, [log], true) // prevented = true = damage blocked
   },
 })
@@ -366,11 +366,11 @@ registerEffect({
   execute: (ctx) => effectResult(cloneGameState(ctx.state), [], false, false),
 })
 
-// ✅ DZIEWIĄTKO — Zraniona istota z ≤3 DEF: zapłać ZŁ lub zginie
+// ✅ DZIEWIĄTKO — Zraniona istota z ≤3 DEF: zapłać PS lub zginie
 registerEffect({
   id: 'dziewiatko_deathmark',
   name: 'Ukąszenie Dziewiątka',
-  description: '[CZUJNOŚĆ] Gdy zrani istotę i pozostanie jej 3 lub mniej obrony, rywal musi zapłacić 1 ZŁ — inaczej ta istota zginie.',
+  description: '[CZUJNOŚĆ] Gdy zrani istotę i pozostanie jej 3 lub mniej obrony, rywal musi zapłacić 1 PS — inaczej ta istota zginie.',
   trigger: EffectTrigger.ON_ATTACK,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -382,14 +382,14 @@ registerEffect({
 
     if (targetInState && targetInState.currentStats.defense <= 3 && targetInState.currentStats.defense > 0) {
       const opponent = newState.players[targetInState.owner]
-      if (opponent.gold >= 1) {
+      if (opponent.glory >= 1) {
         // AI/gracz może zapłacić — oznaczamy że musi zdecydować
         targetInState.metadata.dziewiatkoDeathMark = true
-        const log = addLog(state, `${ctx.source.cardData.name}: "${target.cardData.name}" ma śmiertelną ranę! Rywal musi zapłacić 1 ZŁ.`, 'effect')
+        const log = addLog(state, `${ctx.source.cardData.name}: "${target.cardData.name}" ma śmiertelną ranę! Rywal musi zapłacić 1 PS.`, 'effect')
         return effectResult(newState, [log])
       } else {
-        // Brak złota — karta ginie
-        const log = addLog(state, `${ctx.source.cardData.name}: "${target.cardData.name}" ginie — rywal nie ma ZŁ!`, 'death')
+        // Brak PS — karta ginie
+        const log = addLog(state, `${ctx.source.cardData.name}: "${target.cardData.name}" ginie — rywal nie ma PS!`, 'death')
         return effectResult(newState, [log])
       }
     }
@@ -1143,14 +1143,14 @@ registerEffect({
 registerEffect({
   id: 'lamia_death_reward',
   name: 'Przekleństwo Lamii',
-  description: '[POŻEGNANIE] Przy śmierci: zdobądź 1 ZŁ (lub w trybie z wyborem: 5 kart).',
+  description: '[POŻEGNANIE] Przy śmierci: zdobądź 1 PS (lub w trybie z wyborem: 5 kart).',
   trigger: EffectTrigger.ON_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
-    // Auto: daj 1 ZŁ. Wybór gracza (1PS vs 5 kart) wymaga interakcji UI — TODO
+    // Auto: daj 1 PS. Wybór gracza (1PS vs 5 kart) wymaga interakcji UI — TODO
     const newState = cloneGameState(ctx.state)
-    newState.players[ctx.source.owner].gold += 1
-    const log = addLog(newState, `${ctx.source.cardData.name}: Śmierć Lamii daje 1 ZŁ.`, 'effect')
+    newState.players[ctx.source.owner].glory += 1
+    const log = addLog(newState, `${ctx.source.cardData.name}: Śmierć Lamii daje 1 PS.`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -1240,11 +1240,11 @@ registerEffect({
   },
 })
 
-// ✅ CHASNIK (#33) — 1 ZŁ za co drugiego zabitego
+// ✅ CHASNIK (#33) — 1 PS za co drugiego zabitego
 registerEffect({
   id: 'chasnik_gold_on_kill',
   name: 'Łowy Chasnika',
-  description: '[ZABÓJSTWO] Za każdego drugiego zabitego wroga zdobywa 1 ZŁ.',
+  description: '[ZABÓJSTWO] Za każdego drugiego zabitego wroga zdobywa 1 PS.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -1258,8 +1258,8 @@ registerEffect({
 
     const log: LogEntry[] = []
     if (killCount % 2 === 0) {
-      newState.players[card.owner].gold += 1
-      log.push(addLog(newState, `${source.cardData.name}: ${killCount}. zabójstwo — zdobywa 1 ZŁ!`, 'effect'))
+      newState.players[card.owner].glory += 1
+      log.push(addLog(newState, `${source.cardData.name}: ${killCount}. zabójstwo — zdobywa 1 PS!`, 'effect'))
     }
     return effectResult(newState, log)
   },
@@ -1589,7 +1589,7 @@ registerEffect({
 registerEffect({
   id: 'wolch_heal',
   name: 'Wołch (Uzdrowienie)',
-  description: '[AKCJA] Akcja (1 ZŁ, raz/turę): Ulecz sojusznika w tej samej linii do pełna.',
+  description: '[AKCJA] Akcja (1 PS, raz/turę): Ulecz sojusznika w tej samej linii do pełna.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -1968,7 +1968,7 @@ registerEffect({
 registerEffect({
   id: 'polnocnica_mass_paralyze',
   name: 'Północnica (Masowy Paraliż)',
-  description: '[AKCJA] Akcja (1 ZŁ): Paraliżuje WSZYSTKICH wrogów na 2 rundy.',
+  description: '[AKCJA] Akcja (1 PS): Paraliżuje WSZYSTKICH wrogów na 2 rundy.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -2291,7 +2291,7 @@ registerEffect({
 registerEffect({
   id: 'szatopierz_discard_for_gold',
   name: 'Szatopierzowy Handel',
-  description: '[AKCJA] Akcja (gratis): Odrzuć 2 karty z ręki → zyskaj 1 ZŁ. Raz w turze.',
+  description: '[AKCJA] Akcja (gratis): Odrzuć 2 karty z ręki → zyskaj 1 PS. Raz w turze.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -2303,8 +2303,8 @@ registerEffect({
     if (owner.hand.length < 2) return effectResult(newState)
     const discarded = owner.hand.splice(0, 2)
     discarded.forEach(c => { owner.graveyard.push(c) })
-    owner.gold += 1
-    const log = addLog(newState, `${ctx.source.cardData.name}: Odrzuca 2 karty → zyskuje 1 ZŁ (łącznie: ${owner.gold}).`, 'effect')
+    owner.glory += 1
+    const log = addLog(newState, `${ctx.source.cardData.name}: Odrzuca 2 karty → zyskuje 1 PS (łącznie: ${owner.glory}).`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -2393,13 +2393,13 @@ registerEffect({
 })
 
 // ===================================================================
-// ŻMIJE (#30) — Koniec tury: +1 ZŁ gdy pole wroga puste
+// ŻMIJE (#30) — Koniec tury: +1 PS gdy pole wroga puste
 // ===================================================================
 
 registerEffect({
   id: 'zmije_glory_on_empty_field',
   name: 'Żmije (Próżne Pole)',
-  description: '[AURA] Na końcu Twojej tury: jeśli pole przeciwnika jest puste, zdobywasz 1 ZŁ.',
+  description: '[AURA] Na końcu Twojej tury: jeśli pole przeciwnika jest puste, zdobywasz 1 PS.',
   trigger: EffectTrigger.ON_TURN_END,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -2407,8 +2407,8 @@ registerEffect({
     const enemySide = ctx.source.owner === 'player1' ? 'player2' : 'player1'
     const enemyCreatures = getAllCreaturesOnField(newState, enemySide)
     if (enemyCreatures.length > 0) return effectResult(newState)
-    newState.players[ctx.source.owner].gold += 1
-    const log = addLog(newState, `${ctx.source.cardData.name}: Pole wroga puste — zdobywasz 1 ZŁ!`, 'effect')
+    newState.players[ctx.source.owner].glory += 1
+    const log = addLog(newState, `${ctx.source.cardData.name}: Pole wroga puste — zdobywasz 1 PS!`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -2801,7 +2801,7 @@ registerEffect({
 registerEffect({
   id: 'kosciej_melee_resurrection',
   name: 'Kościej (Serce Poza Ciałem)',
-  description: '[POŻEGNANIE] Gdy zginie od Wręcz: wskrzesza się (1. raz za darmo). Można go wskrzesić ręcznie za 1 ZŁ.',
+  description: '[POŻEGNANIE] Gdy zginie od Wręcz: wskrzesza się (1. raz za darmo). Można go wskrzesić ręcznie za 1 PS.',
   trigger: EffectTrigger.ON_DEATH,
   priority: EffectPriority.REPLACEMENT,
   execute: (ctx) => {
@@ -2828,10 +2828,10 @@ registerEffect({
       const log = addLog(newState, `${source.cardData.name}: Serce bije! Wstaje ze śmierci za darmo!`, 'effect')
       return effectResult(newState, [log])
     } else {
-      // Kolejne śmierci: flaga do ręcznego wskrzeszenia za 1 ZŁ
+      // Kolejne śmierci: flaga do ręcznego wskrzeszenia za 1 PS
       card.metadata.kosciejCanPaidResurrect = true
       card.metadata.kosciejResurrectCount = resurrectCount + 1
-      const log = addLog(newState, `${source.cardData.name}: Serce bije — można go wskrzesić za 1 ZŁ!`, 'effect')
+      const log = addLog(newState, `${source.cardData.name}: Serce bije — można go wskrzesić za 1 PS!`, 'effect')
       return effectResult(newState, [log])
     }
   },
@@ -2935,7 +2935,7 @@ registerEffect({
 registerEffect({
   id: 'smierc_death_growth_save',
   name: 'Śmierć (Zbieraczka Dusz)',
-  description: '[CZUJNOŚĆ] Za każdą śmierć na polu: +1 ATK i +1 DEF. Można zapłacić 1 ZŁ, by ginąca istota wróciła do talii.',
+  description: '[CZUJNOŚĆ] Za każdą śmierć na polu: +1 ATK i +1 DEF. Można zapłacić 1 PS, by ginąca istota wróciła do talii.',
   trigger: EffectTrigger.ON_ANY_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -3002,16 +3002,16 @@ registerEffect({
 registerEffect({
   id: 'belt_rearrange',
   name: 'Belt (Zamęt)',
-  description: '[AURA] [AKCJA] Aktywuj (1. raz gratis, kolejne 1 ZŁ): zmienia pozycję lub linię wskazanej wrogiej istoty.',
+  description: '[AURA] [AKCJA] Aktywuj (1. raz gratis, kolejne 1 PS): zmienia pozycję lub linię wskazanej wrogiej istoty.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.MODIFIER,
   activatable: true,
-  activationCost: 0,  // koszt pobierany ręcznie (1. raz gratis, kolejne 1 ZŁ)
+  activationCost: 0,  // koszt pobierany ręcznie (1. raz gratis, kolejne 1 PS)
   activationCooldown: 'unlimited',
   canActivate: (ctx) => {
     const usedFree = !!(ctx.source.metadata.beltUsedFree)
     if (!usedFree) return true  // pierwsze użycie zawsze darmowe
-    return ctx.state.players[ctx.source.owner].gold >= 1
+    return ctx.state.players[ctx.source.owner].glory >= 1
   },
   execute: (ctx) => {
     const { state, source, target, trigger } = ctx
@@ -3021,12 +3021,12 @@ registerEffect({
     const beltCard = findCardInState(newState, source.instanceId)
     const usedFree = !!(beltCard?.metadata.beltUsedFree)
 
-    // Od drugiej aktywacji: pobierz 1 ZŁ
+    // Od drugiej aktywacji: pobierz 1 PS
     if (usedFree) {
-      if (newState.players[source.owner].gold < 1) {
-        return effectResult(newState, [addLog(newState, `${source.cardData.name}: Brak ZŁ na kolejny Zamęt!`, 'effect')])
+      if (newState.players[source.owner].glory < 1) {
+        return effectResult(newState, [addLog(newState, `${source.cardData.name}: Brak PS na kolejny Zamęt!`, 'effect')])
       }
-      newState.players[source.owner].gold -= 1
+      newState.players[source.owner].glory -= 1
     }
     if (beltCard) beltCard.metadata.beltUsedFree = true
 
@@ -3250,7 +3250,7 @@ registerEffect({
 registerEffect({
   id: 'inkluz_steal_buff',
   name: 'Inkluz (Duch Szczęścia)',
-  description: '[AURA] [AKCJA] Aktywuj (1 ZŁ): zabiera premię (activeEffect) z wybranej istoty i przypisuje ją innej.',
+  description: '[AURA] [AKCJA] Aktywuj (1 PS): zabiera premię (activeEffect) z wybranej istoty i przypisuje ją innej.',
   trigger: [EffectTrigger.PASSIVE, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.MODIFIER,
   activatable: true,
@@ -3467,7 +3467,7 @@ registerEffect({
 registerEffect({
   id: 'czarownica_redirect_spell',
   name: 'Czarownica',
-  description: '[AURA] Może zmienić adresata zagranego zaklęcia. Pierwszy raz za darmo, każdy kolejny za 1 ZŁ.',
+  description: '[AURA] Może zmienić adresata zagranego zaklęcia. Pierwszy raz za darmo, każdy kolejny za 1 PS.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),

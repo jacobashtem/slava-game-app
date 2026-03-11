@@ -21,7 +21,6 @@ const stats = computed(() => {
     season: game.season,
     playerKills: a.graveyard.length,
     aiKills: p.graveyard.length,
-    playerGold: p.gold,
     playerGlory: p.glory,
     aiGlory: a.glory,
     playerDeck: p.deck.length,
@@ -184,13 +183,9 @@ function restart() {
             <span class="stat-label"><Icon icon="game-icons:tombstone" class="stat-icon stat-loss" /> Straceni</span>
             <span class="stat-val stat-losses">{{ stats.aiKills }}</span>
           </div>
-          <div v-if="stats.isSlava" class="stat-row">
+          <div class="stat-row">
             <span class="stat-label"><Icon icon="game-icons:laurel-crown" class="stat-icon" style="color:#86efac" /> Sława</span>
             <span class="stat-val" style="color:#86efac">{{ stats.playerGlory }} vs {{ stats.aiGlory }}</span>
-          </div>
-          <div v-else class="stat-row">
-            <span class="stat-label"><Icon icon="game-icons:two-coins" class="stat-icon stat-gold" /> Złoto</span>
-            <span class="stat-val stat-gold-val">{{ stats.playerGold }}</span>
           </div>
           <div class="stat-row">
             <span class="stat-label"><Icon icon="game-icons:card-pickup" class="stat-icon" /> Talia</span>

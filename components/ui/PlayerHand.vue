@@ -27,7 +27,7 @@ function onInfoClick(e: Event, card: CardInstance) {
 const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaImg }
 
 const canPlayEnhanced = (card: CardInstance) =>
-  (game.player?.gold ?? 0) >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST
+  (game.player?.glory ?? 0) >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST
 
 const HAND_SIZE = GOLD_EDITION_RULES.STARTING_HAND
 
@@ -137,8 +137,8 @@ const adventureTargetMap: Record<string, 'ally' | 'enemy' | 'any'> = {
 function onPlayAdventure(card: CardInstance, useEnhanced: boolean) {
   if (!game.isPlayerTurn || game.currentPhase !== GamePhase.PLAY) return
 
-  if (useEnhanced && (game.player?.gold ?? 0) < GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST) {
-    ui.showPlayLimitToast(`Potrzebujesz ${GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST} ZŁ na ulepszony efekt!`)
+  if (useEnhanced && (game.player?.glory ?? 0) < GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST) {
+    ui.showPlayLimitToast(`Potrzebujesz ${GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST} PS na ulepszony efekt!`)
     return
   }
 

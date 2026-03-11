@@ -58,12 +58,16 @@ const SUPPORT_EFFECTS = new Set([
 ])
 
 export interface AIDecision {
-  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'activate_effect' | 'end_turn'
+  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'activate_effect' | 'invoke_god' | 'end_turn'
   cardInstanceId?: string
   targetInstanceId?: string
   targetLine?: BattleLine
   targetPosition?: CardPosition
   useEnhanced?: boolean
+  // Slava-specific
+  godId?: number
+  enhanced?: boolean
+  bidAmount?: number
 }
 
 // ===================================================================
@@ -205,8 +209,8 @@ export class AIPlayer {
       const adventure = adventuresInHand[0]
       if (!adventure) return decisions
       const advData = adventure.cardData as any
-      // Enhanced: zagraj wzmocnioną wersję jeśli AI stać (1 ZŁ) i ma sens
-      const canEnhance = player.gold >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId
+      // Enhanced: zagraj wzmocnioną wersję jeśli AI stać (1 PS) i ma sens
+      const canEnhance = player.glory >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId
       const useEnhanced = canEnhance && Math.random() > 0.4 // 60% szans na enhanced
 
       if (advData.adventureType === 1 && myField.length > 0) {
@@ -245,7 +249,7 @@ export class AIPlayer {
       if (!effect) continue
       const cost = effect.activationCost ?? 0
       // Sprawdź czy AI stać na aktywację
-      if (cost > aiPlayer.gold) continue
+      if (cost > aiPlayer.glory) continue
       // Pomiń efekty samobójcze (np. Mara) gdy AI ma mało istot
       if (effect.activationCooldown === 'once') {
         const myCount = getAllCreaturesOnField(currentState, this.side).length
@@ -366,9 +370,9 @@ export class AIPlayer {
       const myFieldNow = getAllCreaturesOnField(currentState, this.side)
       const enemiesNow = getAllCreaturesOnField(currentState, enemySide)
 
-      // Enhanced: używaj gdy złoto ≥ 2 (zachowaj 1 ZŁ w rezerwie na zdolności)
-      const canEnhance = player.gold >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST + 1 && advData.enhancedEffectId
-      const useEnhanced = canEnhance ? true : (player.gold >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && isLosing)
+      // Enhanced: używaj gdy PS ≥ 2 (zachowaj 1 PS w rezerwie na zdolności)
+      const canEnhance = player.glory >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST + 1 && advData.enhancedEffectId
+      const useEnhanced = canEnhance ? true : (player.glory >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && isLosing)
 
       if (advData.adventureType === 1 && myFieldNow.length > 0) {
         // Artefakt → najcenniejsza istota (wysoki ATK + ma efekt)
@@ -390,7 +394,7 @@ export class AIPlayer {
       const effect = getEffect((creature.cardData as any).effectId)
       if (!effect) continue
       const cost = effect.activationCost ?? 0
-      if (cost > currentState.players[this.side].gold) continue
+      if (cost > currentState.players[this.side].glory) continue
       // Samobójcze efekty: aktywuj tylko gdy warto (dużo istot + silny cel)
       if (effect.activationCooldown === 'once') {
         const myCount = getAllCreaturesOnField(currentState, this.side).length
@@ -406,6 +410,69 @@ export class AIPlayer {
         targetId = targets.reduce((a, b) => this.creatureThreatScore(a) > this.creatureThreatScore(b) ? a : b).instanceId
       }
       decisions.push({ type: 'activate_effect', cardInstanceId: creature.instanceId, targetInstanceId: targetId })
+    }
+
+    // === SLAVA: AI proaktywnie invokuje boga ===
+    if (currentState.gameMode === 'slava' && currentState.slavaData) {
+      const aiGlory = currentState.players[this.side].glory
+      const availableGods = currentState.slavaData.gods.filter(g => !g.usedThisCycle)
+      if (availableGods.length > 0 && aiGlory >= 2) {
+        // Proste heurystyki: invoke gdy jest sens
+        const myCreatures = getAllCreaturesOnField(currentState, this.side)
+        const enemyCreatures = getAllCreaturesOnField(currentState, enemySide)
+
+        for (const god of availableGods) {
+          let shouldInvoke = false
+          let useEnhanced = false
+          let bidAmount = 1
+
+          switch (god.id) {
+            case 4: // Jaryło — heal all (korzystny gdy mamy ranne istoty)
+              if (myCreatures.some(c => c.currentStats.defense < c.currentStats.maxDefense * 0.6)) {
+                shouldInvoke = true
+                useEnhanced = aiGlory >= 3 && isLosing
+                bidAmount = useEnhanced ? 2 : 1
+              }
+              break
+            case 2: // Swarożyc — AOE 15 dmg (korzystny gdy wróg ma dużo istot)
+              if (enemyCreatures.length >= 3) {
+                shouldInvoke = true
+                bidAmount = 1
+              }
+              break
+            case 5: // Mokosz — draw 3 (korzystny gdy mała ręka)
+              if (player.hand.length <= 2) {
+                shouldInvoke = true
+                bidAmount = 1
+              }
+              break
+            case 1: // Weles — resurrect (korzystny gdy cmentarz ma dobre istoty)
+              if (player.graveyard.filter(c => c.cardData.cardType === 'creature').length >= 2) {
+                shouldInvoke = true
+                useEnhanced = aiGlory >= 3
+                bidAmount = useEnhanced ? 2 : 1
+              }
+              break
+            case 6: // Perun — nuke (korzystny gdy wróg ma jednego silnego)
+              if (enemyCreatures.some(c => c.currentStats.defense >= 6)) {
+                shouldInvoke = true
+                bidAmount = 1
+              }
+              break
+            default:
+              // Inne bogi: invoke gdy przegrywamy i stać nas
+              if (isLosing && aiGlory >= 2) {
+                shouldInvoke = true
+                bidAmount = 1
+              }
+          }
+
+          if (shouldInvoke && aiGlory >= bidAmount) {
+            decisions.push({ type: 'invoke_god', godId: god.id, enhanced: useEnhanced, bidAmount })
+            break // max 1 god per turn
+          }
+        }
+      }
     }
 
     // === COMBAT: inteligentne pozycjonowanie ===

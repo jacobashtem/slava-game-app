@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, type Ref } from 'vue'
 import { GameEngine } from '../game-engine/GameEngine'
 import { AIPlayer } from '../game-engine/AIPlayer'
 import type { AIDifficulty } from '../game-engine/AIPlayer'
@@ -98,13 +98,34 @@ function getCombatVFXDuration(combat: CombatResult | null): number {
 }
 
 /**
+ * Find a card on the field by instanceId across both sides & all lines.
+ * Mutating its currentStats triggers Vue reactivity (shallow ref spread).
+ */
+function findCardInLiveState(stateRef: Ref<GameState | null>, instanceId: string): CardInstance | null {
+  const s = stateRef.value
+  if (!s) return null
+  for (const side of ['player1', 'player2'] as const) {
+    for (const creatures of Object.values(s.players[side].field.lines)) {
+      const card = (creatures as CardInstance[]).find(c => c.instanceId === instanceId)
+      if (card) return card
+    }
+  }
+  return null
+}
+
+/**
  * Emit SEQUENCED VFX events from a CombatResult.
  * Timeline:
  *   0ms   — hit particles on defender + damage number
- *   700ms — counter-attack hit on attacker + damage number (if counter)
- *   1400ms — death shatter (if someone died)
+ *   BASE_MS — defender DEF updates on card
+ *   BASE_MS — counter-attack hit on attacker + damage number (if counter)
+ *   BASE_MS + COUNTER_MS — attacker DEF updates, then death VFX
  */
-function emitCombatVFX(vfx: ReturnType<typeof useVFXOrchestrator>, combat: CombatResult | null) {
+function emitCombatVFX(
+  vfx: ReturnType<typeof useVFXOrchestrator>,
+  combat: CombatResult | null,
+  stateRef?: Ref<GameState | null>,
+) {
   if (!combat) {
     console.warn('[VFX] emitCombatVFX called with null combat')
     return
@@ -206,6 +227,20 @@ function emitCombatVFX(vfx: ReturnType<typeof useVFXOrchestrator>, combat: Comba
 
   t += COMBAT_VFX_BASE_MS
 
+  // === Intermediate: update defender DEF on card after hit VFX ===
+  if (stateRef && combat.damageToDefender > 0 && !combat.softFail) {
+    setTimeout(() => {
+      const card = findCardInLiveState(stateRef, combat.defender.instanceId)
+      if (card) {
+        card.currentStats = {
+          ...card.currentStats,
+          defense: Math.max(0, card.currentStats.defense - combat.damageToDefender),
+        }
+        stateRef.value = { ...stateRef.value! }
+      }
+    }, t - 200) // slightly before counter starts
+  }
+
   // === PHASE 2: Counter-attack (700ms) ===
   // Overlay: DEFENDER shows shield (they're counter-attacking)
   // Particles + blue damage: on ATTACKER (they're receiving the hit)
@@ -273,6 +308,20 @@ function emitCombatVFX(vfx: ReturnType<typeof useVFXOrchestrator>, combat: Comba
           meta: { pos: attackerPos },
         })
       }, t + 800)
+    }
+
+    // === Intermediate: update attacker DEF on card after counter VFX ===
+    if (stateRef && combat.damageToAttacker > 0) {
+      setTimeout(() => {
+        const card = findCardInLiveState(stateRef, combat.attacker.instanceId)
+        if (card) {
+          card.currentStats = {
+            ...card.currentStats,
+            defense: Math.max(0, card.currentStats.defense - combat.damageToAttacker),
+          }
+          stateRef.value = { ...stateRef.value! }
+        }
+      }, t + COMBAT_VFX_COUNTER_MS - 200) // just before death
     }
 
     t += COMBAT_VFX_COUNTER_MS
@@ -379,7 +428,7 @@ export const useGameStore = defineStore('game', () => {
     arenaFocusedName.value = ''
     aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
     const domainFilter = selectedDomains.value.length > 0 ? selectedDomains.value : undefined
-    state.value = engine.startGame('gold', domainFilter)
+    state.value = engine.startSlavaGame(domainFilter)
     gameStarted.value = true
     playerTurnLogStart.value = state.value.actionLog.length
 
@@ -484,7 +533,7 @@ export const useGameStore = defineStore('game', () => {
       }
 
       // Emit VFX events from combat result
-      emitCombatVFX(vfx, combatResult)
+      emitCombatVFX(vfx, combatResult, state)
       engine.lastCombatResult = null
 
       // Clear selection immediately so player can't double-attack
@@ -795,7 +844,7 @@ export const useGameStore = defineStore('game', () => {
             }
 
             // Emit VFX events from combat result
-            emitCombatVFX(vfx, combatResult)
+            emitCombatVFX(vfx, combatResult, state)
             engine.lastCombatResult = null
 
             // WAIT for VFX to play before updating state (removes dead cards from DOM)
@@ -814,6 +863,11 @@ export const useGameStore = defineStore('game', () => {
           case 'change_position':
             if (decision.cardInstanceId && decision.targetPosition) {
               state.value = engine.aiChangePosition(decision.cardInstanceId, decision.targetPosition)
+            }
+            break
+          case 'invoke_god':
+            if (decision.godId !== undefined && decision.bidAmount !== undefined) {
+              state.value = engine.aiInvokeGod(decision.godId, decision.enhanced ?? false, decision.bidAmount)
             }
             break
           case 'end_turn':

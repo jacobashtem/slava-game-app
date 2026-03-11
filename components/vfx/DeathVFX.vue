@@ -275,9 +275,6 @@ function play(targetEl: HTMLElement) {
   // Restore previous target's styles (showcase/arena reuse)
   if (lastAnimatedEl && lastAnimatedEl.isConnected) {
     lastAnimatedEl.style.visibility = ''
-    if (lastAnimatedEl.parentElement) {
-      lastAnimatedEl.parentElement.style.visibility = ''
-    }
     gsap.set(lastAnimatedEl, { opacity: 1, scale: 1, y: 0 })
     if (lastAnimatedCardInner) {
       gsap.set(lastAnimatedCardInner, { filter: lastOrigFilter || 'none', boxShadow: 'none' })
@@ -404,11 +401,8 @@ function play(targetEl: HTMLElement) {
   tl.to(targetEl, {
     opacity: 0, scale: 0.6, y: 30, duration: 0.3, ease: 'power3.in',
     onComplete: () => {
-      // Hide card + parent wrapper so slot border doesn't flash
+      // Hide card so Vue re-render can't flash it back
       targetEl.style.visibility = 'hidden'
-      if (targetEl.parentElement) {
-        targetEl.parentElement.style.visibility = 'hidden'
-      }
     },
   })
 

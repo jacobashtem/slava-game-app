@@ -84,8 +84,8 @@ export class GameEngine {
     drawCards(this.state.players.player1, GOLD_EDITION_RULES.STARTING_HAND)
     drawCards(this.state.players.player2, GOLD_EDITION_RULES.STARTING_HAND)
 
-    this.state.players.player1.gold = GOLD_EDITION_RULES.STARTING_GOLD
-    this.state.players.player2.gold = GOLD_EDITION_RULES.STARTING_GOLD
+    this.state.players.player1.glory = GOLD_EDITION_RULES.STARTING_GOLD
+    this.state.players.player2.glory = GOLD_EDITION_RULES.STARTING_GOLD
 
     const startLog = addLog(this.state, 'Gra Alpha rozpoczęta! Tylko sprawdzone karty.', 'system')
     this.state.actionLog.push(startLog)
@@ -119,8 +119,15 @@ export class GameEngine {
     drawCards(this.state.players.player1, GOLD_EDITION_RULES.STARTING_HAND)
     drawCards(this.state.players.player2, GOLD_EDITION_RULES.STARTING_HAND)
 
-    this.state.players.player1.gold = GOLD_EDITION_RULES.STARTING_GOLD
-    this.state.players.player2.gold = GOLD_EDITION_RULES.STARTING_GOLD
+    this.state.players.player1.glory = GOLD_EDITION_RULES.STARTING_GOLD
+    this.state.players.player2.glory = GOLD_EDITION_RULES.STARTING_GOLD
+
+    // Initialize slava data if applicable
+    if (gameMode === 'slava') {
+      this.state.slavaData = createInitialSlavaState(this.state.roundNumber)
+      this.state.players.player1.glory = 0
+      this.state.players.player2.glory = 0
+    }
 
     const startLog = addLog(this.state, 'Gra rozpoczęta! Tryb: ' + gameMode, 'system')
     this.state.actionLog.push(startLog)
@@ -156,9 +163,9 @@ export class GameEngine {
     drawCards(this.state.players.player1, SLAVA_RULES.STARTING_HAND)
     drawCards(this.state.players.player2, SLAVA_RULES.STARTING_HAND)
 
-    // W Sława: brak złota, PS startowe = 0 (income +1/turę)
-    this.state.players.player1.gold = 0
-    this.state.players.player2.gold = 0
+    // W Sława: PS startowe = 0 (income +1/turę)
+    this.state.players.player1.glory = 0
+    this.state.players.player2.glory = 0
     this.state.players.player1.glory = 0
     this.state.players.player2.glory = 0
 
@@ -221,6 +228,31 @@ export class GameEngine {
       this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
       this.checkWinAndNotify()
     }
+
+    return cloneGameState(this.state)
+  }
+
+  /** AI przywołuje boga (brak kontr-licytacji — AI płaci cenę bezpośrednio) */
+  aiInvokeGod(godId: number, enhanced: boolean, bid: number): GameState {
+    if (this.state.gameMode !== 'slava' || !this.state.slavaData) {
+      throw new Error('Boże Łaski dostępne tylko w trybie Sława!')
+    }
+
+    const god = this.state.slavaData.gods.find(g => g.id === godId)
+    if (!god) throw new Error('Nieznany bóg!')
+    if (god.usedThisCycle) throw new Error('Bóg już użyty w tej porze roku!')
+    if (this.state.players.player2.glory < bid) throw new Error('AI: Za mało PS!')
+
+    const newState = cloneGameState(this.state)
+    const auction = startAuction(godId, enhanced, 'player2', bid)
+
+    // Gracz od razu dostaje szansę kontrlicytacji
+    // Dla uproszczenia: gracz nie kontrlicytuje (AI automatycznie wygrywa)
+    // TODO: pendingInteraction for player counter-bid
+    const resolveLogs = resolveAuction(newState, auction)
+    const favorLogs = executeDivineFavor(newState, godId, enhanced, 'player2')
+    this.applyStateAndLog(newState, [...resolveLogs, ...favorLogs])
+    this.checkWinAndNotify()
 
     return cloneGameState(this.state)
   }
@@ -784,10 +816,10 @@ export class GameEngine {
         // Odlicz koszt aktywacji (płatna + target)
         if (isActivation && paidCost && paidCost > 0) {
           const owner = newState.players[interaction.respondingPlayer]
-          if (owner.gold < paidCost) {
-            throw new Error('Za mało złota na aktywację zdolności.')
+          if (owner.glory < paidCost) {
+            throw new Error('Za mało PS na aktywację zdolności.')
           }
-          owner.gold -= paidCost
+          owner.glory -= paidCost
         }
         const effect = getEffect((sourceCard.cardData as any).effectId)
         if (effect) {
@@ -874,14 +906,14 @@ export class GameEngine {
       return cloneGameState(this.state)
     }
 
-    // Kościej: gracz decyduje czy wskrzesić za ZŁ
+    // Kościej: gracz decyduje czy wskrzesić za PS
     if (interaction.type === 'kosciej_resurrect') {
       if (choice === 'yes') {
         const side = interaction.respondingPlayer
         const owner = newState.players[side]
         const gravIdx = owner.graveyard.findIndex(c => c.instanceId === interaction.sourceInstanceId)
-        if (gravIdx !== -1 && owner.gold >= 1) {
-          owner.gold -= 1
+        if (gravIdx !== -1 && owner.glory >= 1) {
+          owner.glory -= 1
           const kosciej = owner.graveyard.splice(gravIdx, 1)[0]!
           kosciej.currentStats.defense = (kosciej.cardData as any).stats.defense
           kosciej.line = BattleLine.FRONT
@@ -891,10 +923,10 @@ export class GameEngine {
           const enemySide = side === 'player1' ? 'player2' : 'player1'
           const trophyIdx = newState.players[enemySide].trophies.findIndex(c => c.instanceId === interaction.sourceInstanceId)
           if (trophyIdx !== -1) newState.players[enemySide].trophies.splice(trophyIdx, 1)
-          const log = addLog(newState, `${kosciej.cardData.name}: Wskrzeszony za 1 ZŁ! Wraca na L1!`, 'effect')
+          const log = addLog(newState, `${kosciej.cardData.name}: Wskrzeszony za 1 PS! Wraca na L1!`, 'effect')
           this.applyStateAndLog(newState, [log])
         } else {
-          const failLog = addLog(newState, `${interaction.sourceInstanceId}: Nie można wskrzesić — brak ZŁ lub karty!`, 'system')
+          const failLog = addLog(newState, `${interaction.sourceInstanceId}: Nie można wskrzesić — brak PS lub karty!`, 'system')
           this.applyStateAndLog(newState, [failLog])
         }
       } else {

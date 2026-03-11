@@ -528,8 +528,8 @@ export const useArenaStore = defineStore('arena', () => {
 
     const freshState = createInitialGameState('gold')
     freshState.currentPhase = GamePhase.PLAY
-    freshState.players.player1.gold = 5
-    freshState.players.player2.gold = 5
+    freshState.players.player1.glory = 5
+    freshState.players.player2.glory = 5
     freshState.roundNumber = 1
     freshState.turnNumber = 1
 

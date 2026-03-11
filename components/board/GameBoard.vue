@@ -154,11 +154,11 @@ watch(() => game.state?.players.player1.hand.length ?? 0, (newSize) => {
   if (prevHandSize > 0 && newSize > prevHandSize) sfx.sfxDraw()
   prevHandSize = newSize
 })
-// Gold: watch for gold spent
-let prevGold = 0
-watch(() => game.state?.players.player1.gold ?? 0, (newGold) => {
-  if (prevGold > 0 && newGold !== prevGold) sfx.sfxGold()
-  prevGold = newGold
+// PS: watch for glory spent
+let prevGlory = 0
+watch(() => game.state?.players.player1.glory ?? 0, (newGlory) => {
+  if (prevGlory > 0 && newGlory !== prevGlory) sfx.sfxGold()
+  prevGlory = newGlory
 })
 // Adventure: watch for active events count change
 let prevEventCount = 0
@@ -276,9 +276,7 @@ const onPlayDescription = computed(() => {
           :deck-count="ai.deck.length"
           :hand-count="ai.hand.length"
           :grave-count="ai.graveyard.length"
-          :gold="ai.gold"
           :glory="ai.glory"
-          :game-mode="game.gameMode"
           :is-a-i="true"
           @open-graveyard="ui.openGraveyardViewer('player2')"
         />
@@ -304,9 +302,7 @@ const onPlayDescription = computed(() => {
           :deck-count="player.deck.length"
           :hand-count="player.hand.length"
           :grave-count="player.graveyard.length"
-          :gold="player.gold"
           :glory="player.glory"
-          :game-mode="game.gameMode"
           :is-a-i="false"
           :enhanced-active="ui.isEnhancedMode"
           @open-graveyard="ui.openGraveyardViewer('player1')"
@@ -325,8 +321,7 @@ const onPlayDescription = computed(() => {
         <span class="mhud-label mhud-label-ai">AI</span>
         <span class="mhud-stat" @click="ui.openGraveyardViewer('player2')">💀{{ ai.graveyard.length }}</span>
         <span class="mhud-stat">🃏{{ ai.deck.length }}</span>
-        <span v-if="game.gameMode === 'slava'" class="mhud-stat mhud-glory">⚔{{ ai.glory }}</span>
-        <span v-else class="mhud-stat mhud-gold">🪙{{ ai.gold }}</span>
+        <span class="mhud-stat mhud-glory">⚔{{ ai.glory }}</span>
       </div>
       <!-- Toggle drawer -->
       <button class="mhud-toggle" @click="ui.mobileDrawerOpen = !ui.mobileDrawerOpen">
@@ -334,8 +329,7 @@ const onPlayDescription = computed(() => {
       </button>
       <!-- Player stats (right) -->
       <div class="mhud-side mhud-player">
-        <span v-if="game.gameMode === 'slava'" class="mhud-stat mhud-glory" :class="{ 'mhud-enhanced': ui.isEnhancedMode }" @click="ui.toggleEnhancedMode()">⚔{{ player.glory }}</span>
-        <span v-else class="mhud-stat mhud-gold" :class="{ 'mhud-enhanced': ui.isEnhancedMode }" @click="ui.toggleEnhancedMode()">🪙{{ player.gold }}</span>
+        <span class="mhud-stat mhud-glory" :class="{ 'mhud-enhanced': ui.isEnhancedMode }" @click="ui.toggleEnhancedMode()">⚔{{ player.glory }}</span>
         <span class="mhud-stat">🃏{{ player.deck.length }}</span>
         <span class="mhud-stat" @click="ui.openGraveyardViewer('player1')">💀{{ player.graveyard.length }}</span>
         <span class="mhud-label mhud-label-player">TY</span>
@@ -351,9 +345,7 @@ const onPlayDescription = computed(() => {
               :deck-count="ai.deck.length"
               :hand-count="ai.hand.length"
               :grave-count="ai.graveyard.length"
-              :gold="ai.gold"
               :glory="ai.glory"
-              :game-mode="game.gameMode"
               :is-a-i="true"
               @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer('player2') }"
             />
@@ -362,9 +354,7 @@ const onPlayDescription = computed(() => {
               :deck-count="player.deck.length"
               :hand-count="player.hand.length"
               :grave-count="player.graveyard.length"
-              :gold="player.gold"
               :glory="player.glory"
-              :game-mode="game.gameMode"
               :is-a-i="false"
               :enhanced-active="ui.isEnhancedMode"
               @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer('player1') }"
