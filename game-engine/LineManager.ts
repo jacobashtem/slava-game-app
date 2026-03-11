@@ -123,6 +123,11 @@ export function canAttack(
     return { valid: false, reason: 'Atakujący nie może atakować (efekt statusu).' }
   }
 
+  // Sztandar: nośnik nie może atakować
+  if (attacker.equippedArtifacts.some((a: any) => ['adventure_sztandar', 'adventure_sztandar_enhanced'].includes(a.effectId))) {
+    return { valid: false, reason: `${attacker.cardData.name} trzyma Sztandar — nie może atakować.` }
+  }
+
   // Matecznik: ukryta istota nie może atakować ani być celem
   if (attacker.metadata.matecznikHidden) {
     return { valid: false, reason: `${attacker.cardData.name} ukryta w Mateczniku — nie może atakować.` }
@@ -355,7 +360,11 @@ export function placeCreatureOnField(
   card.turnsInPlay = 0
   card.roundEnteredPlay = roundNumber
   if (!overrideFieldSide) {
-    card.isRevealed = false  // ujawnia się dopiero przy ataku/obronie
+    // Aury są widoczne od razu (wpływają na pole, gracz musi o nich wiedzieć)
+    const hasAura = (card.cardData as any).abilities?.some(
+      (a: { trigger: string }) => a.trigger === 'AURA'
+    )
+    card.isRevealed = !!hasAura
   }
 
   // Usuń z ręki — szukaj w ręce oryginalnego gracza (currentTurn)

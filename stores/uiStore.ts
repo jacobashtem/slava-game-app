@@ -52,6 +52,11 @@ export const useUIStore = defineStore('ui', () => {
   let _infoId = 0
   // Flash na aktywnej karcie przygody
   const flashingEventId = ref<string | null>(null)
+  // Combat overlay flashes (kontratak / odporny)
+  const counterAttackCardId = ref<string | null>(null)
+  const blockCardId = ref<string | null>(null)
+  // Card hit-shake (damage received visual feedback)
+  const shakeCardId = ref<string | null>(null)
   // Mobile drawer
   const mobileDrawerOpen = ref(false)
 
@@ -158,6 +163,27 @@ export const useUIStore = defineStore('ui', () => {
     }, 1200)
   }
 
+  function flashCounterAttack(instanceId: string) {
+    counterAttackCardId.value = instanceId
+    setTimeout(() => {
+      if (counterAttackCardId.value === instanceId) counterAttackCardId.value = null
+    }, 2400)
+  }
+
+  function flashBlock(instanceId: string) {
+    blockCardId.value = instanceId
+    setTimeout(() => {
+      if (blockCardId.value === instanceId) blockCardId.value = null
+    }, 1800)
+  }
+
+  function shakeCard(instanceId: string) {
+    shakeCardId.value = instanceId
+    setTimeout(() => {
+      if (shakeCardId.value === instanceId) shakeCardId.value = null
+    }, 800)
+  }
+
   function showInfoBox(text: string, icon = '📜', type: 'info' | 'effect' | 'warning' = 'effect') {
     const id = ++_infoId
     infoBoxes.value.push({ id, text, icon, type })
@@ -198,6 +224,12 @@ export const useUIStore = defineStore('ui', () => {
     showInfoBox,
     flashingEventId,
     flashEventCard,
+    counterAttackCardId,
+    blockCardId,
+    shakeCardId,
+    flashCounterAttack,
+    flashBlock,
+    shakeCard,
     mobileDrawerOpen,
     isSelectingTarget,
     isPlacingCard,

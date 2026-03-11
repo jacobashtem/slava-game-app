@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import PlayerField from './PlayerField.vue'
 import PlayerHand from '../ui/PlayerHand.vue'
 import TurnIndicator from '../ui/TurnIndicator.vue'
@@ -22,9 +22,65 @@ import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { BattleLine, GamePhase } from '../../game-engine/constants'
 import { useAudio } from '../../composables/useAudio'
+import { useSlashAttack } from '../../composables/useSlashAttack'
+import { useBowAttack } from '../../composables/useBowAttack'
+import { useElementalAttack } from '../../composables/useElementalAttack'
+import { useMagicAttack } from '../../composables/useMagicAttack'
+import { useDeathVFX } from '../../composables/useDeathVFX'
+import SlashAttackVFX from '../vfx/SlashAttackWebGPU.vue'
+import BowAttackVFX from '../vfx/BowAttackVFX.vue'
+import ElementalVFX from '../vfx/ElementalVFX.vue'
+import MagicVFX from '../vfx/MagicVFX.vue'
+import DeathVFX from '../vfx/DeathVFX.vue'
 
 const game = useGameStore()
 const ui = useUIStore()
+
+// Slash Attack VFX (Three.js WebGPU + TSL shader)
+// Registration via watch — <ClientOnly> delays rendering, so ref isn't available in onMounted
+const slashVfxRef = ref<InstanceType<typeof SlashAttackVFX> | null>(null)
+const slash = useSlashAttack()
+watch(slashVfxRef, (comp) => {
+  if (comp) {
+    slash.register((atk, def, dmg) => comp.play(atk, def, dmg))
+  }
+})
+
+// Bow Attack VFX (WebGPU shader — energy bow + arrow projectile)
+const bowVfxRef = ref<InstanceType<typeof BowAttackVFX> | null>(null)
+const bowBridge = useBowAttack()
+watch(bowVfxRef, (comp) => {
+  if (comp) {
+    bowBridge.register((atk, def, dmg) => comp.play(atk, def, dmg))
+  }
+})
+
+// Elemental Attack VFX (WebGPU fire orb projectile)
+const elementalVfxRef = ref<InstanceType<typeof ElementalVFX> | null>(null)
+const elementalBridge = useElementalAttack()
+watch(elementalVfxRef, (comp) => {
+  if (comp) {
+    elementalBridge.register((atk, def, dmg) => comp.play(atk, def, dmg))
+  }
+})
+
+// Magic Attack VFX (WebGPU rune circles + implosion)
+const magicVfxRef = ref<InstanceType<typeof MagicVFX> | null>(null)
+const magicBridge = useMagicAttack()
+watch(magicVfxRef, (comp) => {
+  if (comp) {
+    magicBridge.register((atk, def, dmg) => comp.play(atk, def, dmg))
+  }
+})
+
+// Death VFX (WebGPU smoke + soul wisp)
+const deathVfxRef = ref<InstanceType<typeof DeathVFX> | null>(null)
+const deathBridge = useDeathVFX()
+watch(deathVfxRef, (comp) => {
+  if (comp) {
+    deathBridge.register((el) => comp.play(el))
+  }
+})
 
 // No error suppression — let errors surface so we can fix root causes.
 // The insertBefore/emitsOptions crashes were fixed by:
@@ -405,6 +461,12 @@ const onPlayDescription = computed(() => {
     <GraveyardModal />
     <!-- P3 VFX Overlay — single canvas for all visual effects -->
     <VFXOverlay />
+    <!-- Three.js slash overlay for melee attacks -->
+    <ClientOnly><SlashAttackVFX ref="slashVfxRef" /></ClientOnly>
+    <ClientOnly><BowAttackVFX ref="bowVfxRef" /></ClientOnly>
+    <ClientOnly><ElementalVFX ref="elementalVfxRef" /></ClientOnly>
+    <ClientOnly><MagicVFX ref="magicVfxRef" /></ClientOnly>
+    <ClientOnly><DeathVFX ref="deathVfxRef" /></ClientOnly>
   </div>
 
   <div v-else class="board-loading">

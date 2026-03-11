@@ -629,6 +629,8 @@ export function resolveAttack(
       defenderDied,
       attackerDied,
       counterattackOccurred,
+      softFail: isSoftFail || undefined,
+      softFailReason: isSoftFail ? (validation.reason ?? 'Odporny!') : undefined,
       effectsTriggered,
       log,
     },

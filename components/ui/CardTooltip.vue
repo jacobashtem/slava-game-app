@@ -62,6 +62,11 @@ function findCard(instanceId: string): CardInstance | null {
       currentStats: { attack: 0, defense: 0, maxAttack: 0, maxDefense: 0 },
     } as unknown as CardInstance
   }
+  // Location lookup — activeLocation per player
+  for (const side of ['player1', 'player2'] as const) {
+    const loc = game.state.players[side].activeLocation
+    if (loc && loc.instanceId === instanceId) return loc
+  }
   // Artifact lookup: instanceId = "artifact:<effectId>"
   if (instanceId.startsWith('artifact:')) {
     const artEffectId = instanceId.slice('artifact:'.length)

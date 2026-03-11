@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import BattleLine from './BattleLine.vue'
 import { BattleLine as BL, AdventureType } from '../../game-engine/constants'
-import type { PlayerState, ActiveEventCard } from '../../game-engine/types'
+import type { PlayerState, ActiveEventCard, CardInstance } from '../../game-engine/types'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 
@@ -15,11 +15,14 @@ const props = defineProps<{
 const game = useGameStore()
 const ui = useUIStore()
 
-// Filtruj zdarzenia: pokaż wszystkie OPRÓCZ lokacji (adventureType 2) — lokacje wpływają globalnie, nie idą do linii AKTYWNE
+// Filtruj zdarzenia: pokaż wszystkie OPRÓCZ lokacji (adventureType 2) — lokacje są osobno
 const activeEvents = computed(() => {
   const all = game.state?.activeEvents ?? []
   return all.filter(ev => ev.cardData.adventureType !== AdventureType.LOCATION)
 })
+
+// Aktywna lokacja tego gracza (jeśli istnieje)
+const activeLocation = computed<CardInstance | null>(() => props.playerState.activeLocation)
 
 // Persistence → icon/label/color
 function persistenceInfo(ev: ActiveEventCard) {
@@ -77,7 +80,25 @@ function ownerColor(ev: ActiveEventCard): string {
         <Icon icon="game-icons:scroll-unfurled" class="ez-label-icon" />
         <span>AKTYWNE</span>
       </div>
-      <div v-if="activeEvents.length === 0" class="events-empty">—</div>
+      <!-- Aktywna Lokacja tego gracza -->
+      <div
+        v-if="activeLocation"
+        class="event-scroll event-scroll--location"
+        :style="{ '--ev-color': '#10b981', '--ev-owner-color': isPlayerSide ? '#4ade80' : '#f87171' }"
+        @mouseenter="ui.showTooltip(activeLocation.instanceId)"
+        @mouseleave="ui.hideTooltip()"
+      >
+        <div class="ev-accent" />
+        <div class="ev-header">
+          <span class="ev-name">{{ (activeLocation.cardData as any).name }}</span>
+        </div>
+        <div class="ev-footer ev-footer--location">
+          <Icon icon="game-icons:castle" class="ev-persist-icon" style="color: #10b981" />
+          <span class="ev-persist-label" style="color: #10b981">Lokacja</span>
+        </div>
+      </div>
+
+      <div v-if="activeEvents.length === 0 && !activeLocation" class="events-empty">—</div>
       <div
         v-for="ev in activeEvents"
         :key="ev.instanceId"
@@ -333,6 +354,18 @@ function ownerColor(ev: ActiveEventCard): string {
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.05em;
+}
+
+/* Lokacja — specjalny styl */
+.event-scroll--location {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(10, 10, 30, 0.95) 100%);
+}
+.event-scroll--location:hover {
+  border-color: rgba(16, 185, 129, 0.7);
+}
+.ev-footer--location {
+  background: rgba(6, 78, 59, 0.25);
 }
 
 /* ====== MOBILE RESPONSIVE ====== */

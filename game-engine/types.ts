@@ -237,6 +237,8 @@ export interface CombatResult {
   defenderDied: boolean
   attackerDied: boolean
   counterattackOccurred: boolean
+  softFail?: boolean          // atak chybiony/zablokowany (Odporny) — 0 DMG ale kontratak działa
+  softFailReason?: string     // powód blokady (np. "Tur jest odporny na Dystans i Magię")
   effectsTriggered: string[]  // lista effectId które odpaliły
   log: LogEntry[]
 }

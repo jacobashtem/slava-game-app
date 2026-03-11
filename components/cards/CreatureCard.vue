@@ -274,6 +274,11 @@ const isThreatened = computed(() => {
   return null
 })
 
+// ===== COMBAT OVERLAY FLASHES =====
+const isCounterFlash = computed(() => ui.counterAttackCardId === props.card.instanceId)
+const isBlockFlash = computed(() => ui.blockCardId === props.card.instanceId)
+const isShaking = computed(() => ui.shakeCardId === props.card.instanceId)
+
 // ===== AKTYWNE EFEKTY (widoczne na karcie) =====
 // Mapa czytelnych nazw efektów aktywnych
 const activeEffectNameMap: Record<string, { label: string; icon: string; type: 'buff' | 'debuff' | 'neutral' }> = {
@@ -374,8 +379,7 @@ const cardClass = computed(() => [
     'is-dimmed':       props.dimmed,
     'is-silenced':          props.card.isSilenced,
     'cannot-attack':        props.card.cannotAttack,
-    // Visual indicators stripped — all defined in useCardIndicators.ts registry
-    // VFXOrchestrator will render glows/auras via VFXOverlay
+    'is-hit-shaking':       isShaking.value,
   }
 ])
 
@@ -393,6 +397,7 @@ function onClick() {
   <div
     v-if="isHidden"
     :class="['creature-card', 'card-hidden', { 'card-attack': !inHand && card.position === CardPosition.ATTACK, 'is-valid-target': isValidTarget, 'is-dimmed': dimmed }]"
+    :data-instance-id="card.instanceId"
     @click="emit('click', card)"
     @mouseenter="emit('mouseenter', card)"
     @mouseleave="emit('mouseleave')"
@@ -601,7 +606,17 @@ function onClick() {
       <span class="threat-reason">{{ isThreatened }}</span>
     </div>
 
-    <!-- P1 status overlays (paralysis/disease) stripped — P3 VFXOrchestrator will handle -->
+    <!-- Counter-attack flash overlay -->
+    <div v-if="isCounterFlash" class="state-overlay counter-flash-overlay">
+      <span class="state-overlay-icon">🛡️</span>
+      <span class="state-overlay-label">KONTRATAK</span>
+    </div>
+
+    <!-- Block / Odporny flash overlay -->
+    <div v-if="isBlockFlash" class="state-overlay block-flash-overlay">
+      <span class="state-overlay-icon">✋</span>
+      <span class="state-overlay-label">ODPORNY</span>
+    </div>
 
     <div v-if="isValidTarget" class="target-overlay" />
   </div>
@@ -949,7 +964,7 @@ function onClick() {
   align-items: center;
   gap: 4px;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 500;
   font-family: var(--font-display, Georgia, serif);
 }
 
@@ -1139,6 +1154,56 @@ function onClick() {
 .deathmark-overlay .state-overlay-label {
   color: #fca5a5;
   background: rgba(127, 0, 0, 0.8);
+}
+
+/* Counter-attack: blue shield flash like legacy */
+.counter-flash-overlay {
+  background: rgba(20, 40, 140, 0.7);
+  box-shadow: inset 0 0 20px rgba(59, 130, 246, 0.6), 0 0 12px rgba(59, 130, 246, 0.4);
+  animation: combat-flash-in 0.3s ease-out;
+}
+.counter-flash-overlay .state-overlay-icon { font-size: 28px; }
+.counter-flash-overlay .state-overlay-label {
+  color: #ffffff;
+  background: rgba(30, 64, 175, 0.9);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+
+/* Block / Odporny: golden shield flash */
+.block-flash-overlay {
+  background: rgba(120, 80, 20, 0.7);
+  box-shadow: inset 0 0 20px rgba(245, 158, 11, 0.5), 0 0 12px rgba(245, 158, 11, 0.3);
+  animation: combat-flash-in 0.3s ease-out;
+}
+.block-flash-overlay .state-overlay-icon { font-size: 28px; }
+.block-flash-overlay .state-overlay-label {
+  color: #ffffff;
+  background: rgba(120, 53, 15, 0.9);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+
+@keyframes combat-flash-in {
+  0%   { opacity: 0; transform: scale(0.85); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Hit shake — card vibrates when taking damage.
+   Uses CSS `translate` (not transform) so it won't conflict with card-attack rotate(90deg). */
+.is-hit-shaking {
+  animation: card-hit-shake 0.4s ease-out;
+}
+@keyframes card-hit-shake {
+  0%   { translate: 0 0; }
+  10%  { translate: -6px -1px; }
+  20%  { translate: 5px 1px; }
+  30%  { translate: -4px -1px; }
+  40%  { translate: 3px 1px; }
+  50%  { translate: -2px 0; }
+  60%  { translate: 1px 0; }
+  100% { translate: 0 0; }
 }
 
 /* ===== LICZNIKI (Smocze Jajo, Młot) ===== */

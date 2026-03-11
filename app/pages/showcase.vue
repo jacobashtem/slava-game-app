@@ -4,7 +4,8 @@
  * Klikasz efekt z listy → AI "odgrywa" animację → modal podsumowania → następny efekt.
  */
 definePageMeta({ ssr: false })
-import { ref, reactive, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onUnmounted } from 'vue'
+import gsap from 'gsap'
 import { Icon } from '@iconify/vue'
 import { useAudio } from '../../composables/useAudio'
 import { useUIStore } from '../../stores/uiStore'
@@ -17,14 +18,111 @@ import ConversionSlideVFX from '../../components/ui/ConversionSlideVFX.vue'
 import GorynychMergeVFX from '../../components/ui/GorynychMergeVFX.vue'
 import FireVFX from '../../components/ui/FireVFX.vue'
 import VFXOverlay from '../../components/vfx/VFXOverlay.vue'
+import SwordSlashVFX from '../../components/vfx/SwordSlashVFX.vue'
+import SlashAttackVFX from '../../components/vfx/SlashAttackVFX.vue'
+import TornadoVFX from '../../components/vfx/TornadoVFX.vue'
+import CientosShowcase from '../../components/vfx/CientosShowcase.vue'
+import SlashAttackWebGPU from '../../components/vfx/SlashAttackWebGPU.vue'
+import BowAttackVFX from '../../components/vfx/BowAttackVFX.vue'
+import BowAttackWebGL from '../../components/vfx/BowAttackWebGL.vue'
+import DeathVFX from '../../components/vfx/DeathVFX.vue'
+import ElementalVFX from '../../components/vfx/ElementalVFX.vue'
+import MagicVFX from '../../components/vfx/MagicVFX.vue'
 
 const sfx = useAudio()
 const ui = useUIStore()
 const vfx = useVFXOrchestrator()
 
+// Aktualny efekt (shared between P3 and Legacy)
+const activeEffectId = ref<string | null>(null)
+
 // ===== P3 SHOWCASE STATE =====
 const p3ActiveSeason = ref<'spring' | 'summer' | 'autumn' | 'winter'>('spring')
 const p3Tab = ref<'p3' | 'legacy'>('p3')
+
+// TresJS demos
+const slashActive = ref(false)
+const tornadoActive = ref(true)
+
+// Combat overlay flashes for demo cards
+const p3CounterCard = ref<string | null>(null)
+const p3BlockCard = ref<string | null>(null)
+
+// Slash attack VFX component refs (arena + 3D section)
+const slashAttackRef = ref<InstanceType<typeof SlashAttackVFX> | null>(null)
+const slashAttackRef3d = ref<InstanceType<typeof SlashAttackVFX> | null>(null)
+const slashWebGPURef = ref<InstanceType<typeof SlashAttackWebGPU> | null>(null)
+const bowAttackRef = ref<InstanceType<typeof BowAttackVFX> | null>(null)
+const bowWebGLRef = ref<InstanceType<typeof BowAttackWebGL> | null>(null)
+const bowGPUCompareRef = ref<InstanceType<typeof BowAttackVFX> | null>(null)
+const bowGLCompareRef = ref<InstanceType<typeof BowAttackWebGL> | null>(null)
+const deathVfxRef = ref<InstanceType<typeof DeathVFX> | null>(null)
+const elementalVfxRef = ref<InstanceType<typeof ElementalVFX> | null>(null)
+const magicVfxRef = ref<InstanceType<typeof MagicVFX> | null>(null)
+
+// ===== SANDBOX CONTROLS =====
+const sandboxAutoRepeat = ref(false)
+const sandboxInterval = ref(2000)
+let _sandboxTimer: ReturnType<typeof setInterval> | null = null
+
+interface P3EffectMeta {
+  name: string
+  desc: string
+  color: string
+  trigger: () => void
+}
+
+// Populated after demo functions are defined (see below)
+let p3EffectMeta: Record<string, P3EffectMeta> = {}
+const currentP3Effect = computed(() => activeEffectId.value ? p3EffectMeta[activeEffectId.value] ?? null : null)
+
+// Which view to show in P3 main area
+const p3ViewType = computed(() => {
+  const id = activeEffectId.value
+  if (!id || p3Tab.value !== 'p3') return 'none'
+  if (id in p3EffectMeta) return 'arena'
+  if (id === 'p3-sword-slash') return '3d-slash-old'
+  if (id === 'p3-slash-compare') return '3d-slash-compare'
+  if (id === 'p3-bow-compare') return '3d-bow-compare'
+  if (id === 'p3-tornado') return '3d-tornado'
+  if (id === 'p3-fire') return '3d-fire'
+  if (id === 'p3-cientos') return 'cientos'
+  if (id.startsWith('p3-season-')) return 'season'
+  return 'none'
+})
+
+function triggerCurrentEffect() {
+  currentP3Effect.value?.trigger()
+}
+
+function startAutoRepeat() {
+  stopAutoRepeat()
+  sandboxAutoRepeat.value = true
+  triggerCurrentEffect()
+  _sandboxTimer = setInterval(triggerCurrentEffect, sandboxInterval.value)
+}
+
+function stopAutoRepeat() {
+  sandboxAutoRepeat.value = false
+  if (_sandboxTimer) { clearInterval(_sandboxTimer); _sandboxTimer = null }
+}
+
+// Stop auto-repeat when switching effects, and auto-trigger on sidebar click
+watch(activeEffectId, async (newId) => {
+  stopAutoRepeat()
+  // Auto-trigger arena effect after DOM renders (nextTick needed for view switch)
+  if (newId && p3EffectMeta[newId]) {
+    await nextTick()
+    // Small extra delay to ensure DOM is fully painted
+    setTimeout(() => p3EffectMeta[newId]?.trigger(), 50)
+  }
+})
+
+function triggerSlash() {
+  slashActive.value = false
+  // Next tick to re-trigger
+  setTimeout(() => { slashActive.value = true }, 20)
+}
 
 // Battlefield backgrounds for season panels
 const bgModules = import.meta.glob('../../assets/backgrounds/battlefields/1/*.webp', { eager: true, query: '?url', import: 'default' })
@@ -36,18 +134,202 @@ for (const [path, url] of Object.entries(bgModules)) {
   else if (path.includes('zima')) seasonBgMap.winter = url as string
 }
 
-function demoDamageNumber(targetId: string, value: number, color: string, label?: string) {
+function getCardRect(targetId: string) {
   const el = document.querySelector(`[data-instance-id="${targetId}"]`)
-  if (!el) return
-  const rect = el.getBoundingClientRect()
+  if (!el) return null
+  const r = el.getBoundingClientRect()
+  return { x: r.left, y: r.top, cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width, h: r.height }
+}
+
+function demoDamageNumber(targetId: string, value: number, color: string, label?: string) {
+  const rect = getCardRect(targetId)
+  if (!rect) return
   vfx.emit({
     type: 'damage-number',
     targetId,
     value,
     color,
     label,
-    meta: { pos: { x: rect.left + rect.width / 2, y: rect.top + 20 } },
+    meta: { pos: { x: rect.cx, y: rect.y + 20 } },
   })
+}
+
+function demoHit(targetId: string, attackType: 'melee' | 'elemental' | 'magic' | 'ranged') {
+  const rect = getCardRect(targetId)
+  if (!rect) return
+  vfx.emit({ type: 'hit', targetId, attackType, meta: { rect } })
+  // Also show damage number after short delay
+  setTimeout(() => {
+    const r2 = getCardRect(targetId)
+    if (!r2) return
+    const colors = { melee: '#ef4444', elemental: '#f97316', magic: '#a855f7', ranged: '#60a5fa' }
+    vfx.emit({
+      type: 'damage-number', targetId, value: Math.floor(Math.random() * 5) + 2,
+      color: colors[attackType], meta: { pos: { x: r2.cx, y: r2.y + 20 } },
+    })
+  }, 150)
+}
+
+function demoDeath(targetId: string) {
+  const rect = getCardRect(targetId)
+  if (!rect) return
+  vfx.emit({ type: 'death', targetId, meta: { rect } })
+}
+
+// Counter-attack demo:
+// - Shield overlay on DEFENDER (they're counter-attacking)
+// - Particles + blue damage on ATTACKER (receiving the hit)
+function demoCounter(targetId: string) {
+  // targetId = the card being tested (defender). Other card = attacker.
+  const otherId = targetId === 'p3-defender' ? 'p3-attacker' : 'p3-defender'
+  const defRect = getCardRect(targetId)
+  const atkRect = getCardRect(otherId)
+  if (!defRect) return
+  // Overlay on defender (they counter-attack)
+  p3CounterCard.value = targetId
+  setTimeout(() => { if (p3CounterCard.value === targetId) p3CounterCard.value = null }, 900)
+  // Particles hit the attacker
+  if (atkRect) {
+    vfx.emit({ type: 'hit', targetId: otherId, attackType: 'melee', label: 'kontra', meta: { rect: atkRect } })
+    setTimeout(() => {
+      const r2 = getCardRect(otherId)
+      if (!r2) return
+      vfx.emit({
+        type: 'damage-number', targetId: otherId, value: Math.floor(Math.random() * 4) + 2,
+        color: '#3b82f6', label: 'kontra', meta: { pos: { x: r2.cx, y: r2.y + 20 } },
+      })
+    }, 200)
+  }
+}
+
+// Block/Odporny demo: overlay + particles on target, no floating text (overlay says it)
+function demoBlock(targetId: string) {
+  const rect = getCardRect(targetId)
+  if (!rect) return
+  p3BlockCard.value = targetId
+  setTimeout(() => { if (p3BlockCard.value === targetId) p3BlockCard.value = null }, 900)
+  vfx.emit({ type: 'block', targetId, label: 'Odporny!', meta: { rect } })
+}
+
+// Generic effect on a single target
+function demoEffect(targetId: string, type: string) {
+  const rect = getCardRect(targetId)
+  if (!rect) return
+  vfx.emit({ type: type as any, targetId, meta: { rect } })
+}
+
+// ===== SLASH ATTACK — uses SlashAttackVFX component (Three.js WebGL shaders) =====
+function demoSlashAttack(attackerId: string, defenderId: string) {
+  const atkEl = document.querySelector(`[data-instance-id="${attackerId}"]`) as HTMLElement
+  const defEl = document.querySelector(`[data-instance-id="${defenderId}"]`) as HTMLElement
+  if (!atkEl || !defEl) return
+  slashAttackRef.value?.play(atkEl, defEl, 6)
+}
+
+// 3D section — separate instance with its own mini-cards
+function demoSlashAttack3d() {
+  const atkEl = document.querySelector('[data-instance-id="p3-slash-atk"]') as HTMLElement
+  const defEl = document.querySelector('[data-instance-id="p3-slash-def"]') as HTMLElement
+  if (!atkEl || !defEl) return
+  slashAttackRef3d.value?.play(atkEl, defEl, 8)
+}
+
+// WebGPU bow attack — energy bow + arrow projectile
+function demoBowAttack() {
+  const atkEl = document.querySelector('[data-instance-id="p3-attacker"]') as HTMLElement
+  const defEl = document.querySelector('[data-instance-id="p3-defender"]') as HTMLElement
+  if (!atkEl || !defEl) return
+  bowAttackRef.value?.play(atkEl, defEl, 5)
+}
+
+// Bow compare demos
+function demoBowGPU() {
+  const atkEl = document.querySelector('[data-instance-id="p3-bow-gpu-atk"]') as HTMLElement
+  const defEl = document.querySelector('[data-instance-id="p3-bow-gpu-def"]') as HTMLElement
+  if (!atkEl || !defEl) return
+  bowGPUCompareRef.value?.play(atkEl, defEl, 5)
+}
+
+function demoBowGL() {
+  const atkEl = document.querySelector('[data-instance-id="p3-bow-gl-atk"]') as HTMLElement
+  const defEl = document.querySelector('[data-instance-id="p3-bow-gl-def"]') as HTMLElement
+  if (!atkEl || !defEl) return
+  bowGLCompareRef.value?.play(atkEl, defEl, 5)
+}
+
+// WebGPU slash — uses the TSL material version
+function demoSlashWebGPU() {
+  const atkEl = document.querySelector('[data-instance-id="p3-gpu-atk"]') as HTMLElement
+  const defEl = document.querySelector('[data-instance-id="p3-gpu-def"]') as HTMLElement
+  if (!atkEl || !defEl) return
+  slashWebGPURef.value?.play(atkEl, defEl, 8)
+}
+
+// Arrow flight: from attacker → defender
+function demoArrow(sourceId: string, targetId: string) {
+  const src = getCardRect(sourceId)
+  const tgt = getCardRect(targetId)
+  if (!src || !tgt) return
+  vfx.emit({ type: 'arrow-flight', meta: { sourceRect: src, targetRect: tgt } })
+}
+
+// Full combat sequence: hit → counter → death
+function demoFullCombat(attackerId: string, defenderId: string) {
+  // Phase 1: melee hit on defender (red damage)
+  demoHit(defenderId, 'melee')
+  // Phase 2: counter — overlay on DEFENDER, blue damage on ATTACKER (700ms)
+  setTimeout(() => demoCounter(defenderId), 700)
+  // Phase 3: death on defender (1400ms)
+  setTimeout(() => demoDeath(defenderId), 1400)
+}
+
+// ===== NEW VFX DEMOS (WebGPU) =====
+function demoDeathVFX() {
+  const el = document.querySelector('[data-instance-id="p3-defender"]') as HTMLElement
+  if (!el) return
+  deathVfxRef.value?.play(el)
+}
+
+function demoElementalVFX() {
+  const atkEl = document.querySelector('[data-instance-id="p3-attacker"]') as HTMLElement
+  const defEl = document.querySelector('[data-instance-id="p3-defender"]') as HTMLElement
+  if (!atkEl || !defEl) return
+  elementalVfxRef.value?.play(atkEl, defEl, 7)
+}
+
+function demoMagicVFX() {
+  const atkEl = document.querySelector('[data-instance-id="p3-attacker"]') as HTMLElement
+  const defEl = document.querySelector('[data-instance-id="p3-defender"]') as HTMLElement
+  if (!atkEl || !defEl) return
+  magicVfxRef.value?.play(atkEl, defEl, 6)
+}
+
+// ===== P3 EFFECT METADATA (for sandbox UI) =====
+p3EffectMeta = {
+  'p3-hit-melee': { name: 'Melee Hit (Lightsaber)', desc: 'Potrójne skrzyżowane cięcia — biały rdzeń, bursztynowy krzyż, żar.', color: '#ef4444', trigger: () => demoHit('p3-defender', 'melee') },
+  'p3-hit-elem': { name: 'Elemental Hit (Ogień)', desc: 'Unoszące się cząstki ognia + pomarańczowy pierścień wybuchu.', color: '#f97316', trigger: () => demoHit('p3-defender', 'elemental') },
+  'p3-hit-magic': { name: 'Magic Hit (Runy)', desc: 'Rozchodzące się runy, orbitujące symbole, fioletowe iskry.', color: '#a855f7', trigger: () => demoHit('p3-defender', 'magic') },
+  'p3-hit-ranged': { name: 'Ranged Hit (Krater)', desc: 'Niebieski krater uderzenia + odłamki debris.', color: '#60a5fa', trigger: () => demoHit('p3-defender', 'ranged') },
+  'p3-slash': { name: 'Slash WebGL (NOWY)', desc: 'Three.js GLSL shader — zamach, cięcie, iskry, damage number.', color: '#fbbf24', trigger: () => demoSlashAttack('p3-attacker', 'p3-defender') },
+  'p3-bow': { name: 'Łuk Energii (WebGPU)', desc: 'WebGPU/TSL: łuk energetyczny → naciągnięcie cięciwy → strzała energii → eksplozja uderzenia.', color: '#38bdf8', trigger: () => demoBowAttack() },
+  'p3-arrow': { name: 'Łuk + Strzała (Canvas)', desc: 'Canvas 2D fallback: naciągnięcie łuku → lot strzały z ogonem → uderzenie.', color: '#38bdf8', trigger: () => demoArrow('p3-attacker', 'p3-defender') },
+  'p3-elemental-vfx': { name: 'Żywioł (WebGPU)', desc: 'Kula ognia formuje się → leci łukiem → ognisty pierścień wybuchu + żar.', color: '#f97316', trigger: () => demoElementalVFX() },
+  'p3-magic-vfx': { name: 'Magia (WebGPU)', desc: 'Runiczny krąg → promień energii → implosja + fioletowe iskry.', color: '#a855f7', trigger: () => demoMagicVFX() },
+  'p3-death-vfx': { name: 'Śmierć (WebGPU)', desc: 'Ciemna mgła ogarnia kartę → dusza wyłania się i odchodzi w górę → popiół.', color: '#64748b', trigger: () => demoDeathVFX() },
+  'p3-counter': { name: 'Kontratak', desc: 'Kopuła tarczy na obrońcy + białe iskry + uderzenie zwrotne na atakującym.', color: '#f59e0b', trigger: () => demoCounter('p3-defender') },
+  'p3-block': { name: 'Odporny (Block)', desc: 'Podwójny pierścień (niebieski + złoty) + runy ochronne.', color: '#60a5fa', trigger: () => demoBlock('p3-defender') },
+  'p3-death': { name: 'Śmierć (Shatter)', desc: 'Karta rozpada się na 20 fragmentów + ciemny dym + flash duszy.', color: '#64748b', trigger: () => demoDeath('p3-defender') },
+  'p3-shield-break': { name: 'Rozbicie Tarczy', desc: 'Tarcza pęka na niebieskie odłamki.', color: '#93c5fd', trigger: () => demoEffect('p3-defender', 'shield-break') },
+  'p3-dmg': { name: 'Damage Number', desc: 'Unosząca się liczba obrażeń — GSAP tween (scale + Y + opacity).', color: '#ef4444', trigger: () => demoDamageNumber('p3-defender', Math.floor(Math.random() * 8) + 2, '#ef4444') },
+  'p3-full-combat': { name: 'Pełna Walka', desc: 'Sekwencja: Hit (0ms) → Kontratak (700ms) → Śmierć (1400ms).', color: '#fbbf24', trigger: () => demoFullCombat('p3-attacker', 'p3-defender') },
+  'p3-heal': { name: 'Leczenie', desc: 'Zielone cząstki unoszą się w górę + krzyże + rozszerzający pierścień.', color: '#4ade80', trigger: () => demoEffect('p3-defender', 'heal') },
+  'p3-freeze': { name: 'Zamrożenie', desc: 'Obracające się płatki śniegu + zimna mgła + lodowy pierścień.', color: '#93c5fd', trigger: () => demoEffect('p3-defender', 'freeze') },
+  'p3-poison': { name: 'Trucizna', desc: 'Toksyczne krople + zielony dym + trujący pierścień.', color: '#22c55e', trigger: () => demoEffect('p3-defender', 'poison') },
+  'p3-lightning': { name: 'Piorun', desc: 'Żółte błyskawice + biały flash uderzenia + elektryczne iskry.', color: '#fbbf24', trigger: () => demoEffect('p3-defender', 'lightning') },
+  'p3-stun': { name: 'Ogłuszenie', desc: 'Orbitujące gwiazdki nad głową + elektryczne iskry.', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'stun') },
+  'p3-buff': { name: 'Buff / Wzmocnienie', desc: 'Złote cząstki unoszące się w górę z efektem blasku.', color: '#fbbf24', trigger: () => demoEffect('p3-defender', 'buff') },
+  'p3-resurrect': { name: 'Wskrzeszenie', desc: 'Złote cząstki + promień światła + unoszące się gwiazdy.', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'resurrect') },
+  'p3-summon': { name: 'Przywołanie (Portal)', desc: 'Fioletowy portal + cząstki zbiegające się do centrum.', color: '#c084fc', trigger: () => demoEffect('p3-defender', 'summon') },
 }
 
 // ===== MOCK CARD STATE (do animacji) =====
@@ -93,7 +375,10 @@ function clearTimers() {
   _timers = []
 }
 
-onUnmounted(clearTimers)
+onUnmounted(() => {
+  clearTimers()
+  stopAutoRepeat()
+})
 
 function resetMock() {
   mockCard.isAttacking = false
@@ -469,8 +754,6 @@ const effects: ShowcaseEffect[] = [
 // Kategorie
 const categories = [...new Set(effects.map(e => e.category))]
 
-// Aktualny efekt
-const activeEffectId = ref<string | null>(null)
 </script>
 
 <template>
@@ -495,30 +778,147 @@ const activeEffectId = ref<string | null>(null)
 
       <!-- P3 sidebar -->
       <div v-if="p3Tab === 'p3'" class="effect-list">
-        <div class="cat-label">VFX Pipeline</div>
-        <div
-          :class="['effect-item', { active: activeEffectId === 'p3-dmg' }]"
-          style="--ec: #ef4444"
-          @click="activeEffectId = 'p3-dmg'; demoDamageNumber('showcase-source', 5, '#ef4444')"
-        >
-          <Icon icon="game-icons:drop" class="eff-icon" />
-          <span class="eff-name">Damage Number</span>
+        <div class="cat-label">Uderzenia</div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-hit-melee' }]" style="--ec: #ef4444"
+          @click="activeEffectId = 'p3-hit-melee'">
+          <Icon icon="game-icons:broadsword" class="eff-icon" /><span class="eff-name">Melee (Lightsaber)</span>
         </div>
-        <div
-          :class="['effect-item', { active: activeEffectId === 'p3-counter' }]"
-          style="--ec: #f59e0b"
-          @click="activeEffectId = 'p3-counter'; demoDamageNumber('showcase-source', 3, '#f59e0b', 'kontra')"
-        >
-          <Icon icon="game-icons:crossed-swords" class="eff-icon" />
-          <span class="eff-name">Counter Damage</span>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-hit-elem' }]" style="--ec: #f97316"
+          @click="activeEffectId = 'p3-hit-elem'">
+          <Icon icon="game-icons:fire-dash" class="eff-icon" /><span class="eff-name">Elemental (Ogień)</span>
         </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-hit-magic' }]" style="--ec: #a855f7"
+          @click="activeEffectId = 'p3-hit-magic'">
+          <Icon icon="game-icons:magic-swirl" class="eff-icon" /><span class="eff-name">Magic (Runy)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-hit-ranged' }]" style="--ec: #60a5fa"
+          @click="activeEffectId = 'p3-hit-ranged'">
+          <Icon icon="game-icons:arrow-flights" class="eff-icon" /><span class="eff-name">Ranged (Krater)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-slash' }]" style="--ec: #fbbf24"
+          @click="activeEffectId = 'p3-slash'">
+          <Icon icon="game-icons:saber-slash" class="eff-icon" /><span class="eff-name">Slash WebGL (NOWY)</span>
+        </div>
+
+        <div class="cat-label">Dystansowy (Łucznik)</div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-bow' }]" style="--ec: #38bdf8"
+          @click="activeEffectId = 'p3-bow'">
+          <Icon icon="game-icons:archery-target" class="eff-icon" /><span class="eff-name">Łuk Energii (WebGPU)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-arrow' }]" style="--ec: #38bdf8"
+          @click="activeEffectId = 'p3-arrow'">
+          <Icon icon="game-icons:arrow-flights" class="eff-icon" /><span class="eff-name">Łuk + Strzała (Canvas)</span>
+        </div>
+
+        <div class="cat-label">Nowe 3D Efekty (WebGPU)</div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-elemental-vfx' }]" style="--ec: #f97316"
+          @click="activeEffectId = 'p3-elemental-vfx'">
+          <Icon icon="game-icons:fire-ray" class="eff-icon" /><span class="eff-name">Żywioł (Ognista Kula)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-magic-vfx' }]" style="--ec: #a855f7"
+          @click="activeEffectId = 'p3-magic-vfx'">
+          <Icon icon="game-icons:magic-portal" class="eff-icon" /><span class="eff-name">Magia (Arcana)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-death-vfx' }]" style="--ec: #64748b"
+          @click="activeEffectId = 'p3-death-vfx'">
+          <Icon icon="game-icons:ghost" class="eff-icon" /><span class="eff-name">Śmierć (Cień Odchodzi)</span>
+        </div>
+
+        <div class="cat-label">Walka</div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-counter' }]" style="--ec: #f59e0b"
+          @click="activeEffectId = 'p3-counter'">
+          <Icon icon="game-icons:shield-bash" class="eff-icon" /><span class="eff-name">Kontratak</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-block' }]" style="--ec: #60a5fa"
+          @click="activeEffectId = 'p3-block'">
+          <Icon icon="game-icons:shield-reflect" class="eff-icon" /><span class="eff-name">Odporny (Block)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-death' }]" style="--ec: #64748b"
+          @click="activeEffectId = 'p3-death'">
+          <Icon icon="game-icons:skull-crossed-bones" class="eff-icon" /><span class="eff-name">Śmierć (Shatter)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-shield-break' }]" style="--ec: #93c5fd"
+          @click="activeEffectId = 'p3-shield-break'">
+          <Icon icon="game-icons:broken-shield" class="eff-icon" /><span class="eff-name">Rozbicie Tarczy</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-dmg' }]" style="--ec: #ef4444"
+          @click="activeEffectId = 'p3-dmg'">
+          <Icon icon="game-icons:drop" class="eff-icon" /><span class="eff-name">Damage Number</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-full-combat' }]" style="--ec: #fbbf24"
+          @click="activeEffectId = 'p3-full-combat'">
+          <Icon icon="game-icons:sword-clash" class="eff-icon" /><span class="eff-name">Pełna Walka</span>
+        </div>
+
+        <div class="cat-label">Buffy / Debuffy</div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-heal' }]" style="--ec: #4ade80"
+          @click="activeEffectId = 'p3-heal'">
+          <Icon icon="game-icons:health-potion" class="eff-icon" /><span class="eff-name">Leczenie</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-freeze' }]" style="--ec: #93c5fd"
+          @click="activeEffectId = 'p3-freeze'">
+          <Icon icon="game-icons:ice-cube" class="eff-icon" /><span class="eff-name">Zamrożenie</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-poison' }]" style="--ec: #22c55e"
+          @click="activeEffectId = 'p3-poison'">
+          <Icon icon="game-icons:death-juice" class="eff-icon" /><span class="eff-name">Trucizna</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-lightning' }]" style="--ec: #fbbf24"
+          @click="activeEffectId = 'p3-lightning'">
+          <Icon icon="game-icons:lightning-storm" class="eff-icon" /><span class="eff-name">Piorun</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-stun' }]" style="--ec: #fde68a"
+          @click="activeEffectId = 'p3-stun'">
+          <Icon icon="game-icons:star-swirl" class="eff-icon" /><span class="eff-name">Ogłuszenie</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-buff' }]" style="--ec: #fbbf24"
+          @click="activeEffectId = 'p3-buff'">
+          <Icon icon="game-icons:aura" class="eff-icon" /><span class="eff-name">Buff / Wzmocnienie</span>
+        </div>
+
+        <div class="cat-label">Specjalne</div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-resurrect' }]" style="--ec: #fde68a"
+          @click="activeEffectId = 'p3-resurrect'">
+          <Icon icon="game-icons:angel-wings" class="eff-icon" /><span class="eff-name">Wskrzeszenie</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-summon' }]" style="--ec: #c084fc"
+          @click="activeEffectId = 'p3-summon'">
+          <Icon icon="game-icons:portal" class="eff-icon" /><span class="eff-name">Przywołanie (Portal)</span>
+        </div>
+
+        <div class="cat-label">3D Porównania</div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-bow-compare' }]" style="--ec: #38bdf8"
+          @click="activeEffectId = 'p3-bow-compare'">
+          <Icon icon="game-icons:archery-target" class="eff-icon" /><span class="eff-name">Łuk: WebGPU vs WebGL</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-slash-compare' }]" style="--ec: #fbbf24"
+          @click="activeEffectId = 'p3-slash-compare'">
+          <Icon icon="game-icons:crossed-swords" class="eff-icon" /><span class="eff-name">Slash: WebGPU vs WebGL</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-sword-slash' }]" style="--ec: #94a3b8"
+          @click="activeEffectId = 'p3-sword-slash'; triggerSlash()">
+          <Icon icon="game-icons:sword-wound" class="eff-icon" /><span class="eff-name">TresJS Torus (backup)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-tornado' }]" style="--ec: #f97316"
+          @click="activeEffectId = 'p3-tornado'; tornadoActive = true">
+          <Icon icon="game-icons:tornado" class="eff-icon" /><span class="eff-name">Tornado</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-fire' }]" style="--ec: #ef4444"
+          @click="activeEffectId = 'p3-fire'">
+          <Icon icon="game-icons:fire-zone" class="eff-icon" /><span class="eff-name">Ogień (Fire)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-cientos' }]" style="--ec: #a855f7"
+          @click="activeEffectId = 'p3-cientos'">
+          <Icon icon="game-icons:crystal-ball" class="eff-icon" /><span class="eff-name">Cientos (Gotowce)</span>
+        </div>
+
         <div class="cat-label">Pory Roku</div>
         <div
           v-for="s in (['spring', 'summer', 'autumn', 'winter'] as const)"
           :key="s"
-          :class="['effect-item', { active: p3ActiveSeason === s }]"
+          :class="['effect-item', { active: activeEffectId === `p3-season-${s}` }]"
           :style="{ '--ec': { spring: '#4ade80', summer: '#fbbf24', autumn: '#f97316', winter: '#60a5fa' }[s] }"
-          @click="p3ActiveSeason = s"
+          @click="p3ActiveSeason = s; activeEffectId = `p3-season-${s}`"
         >
           <span class="eff-icon-text">{{ { spring: '🌸', summer: '☀', autumn: '🍂', winter: '❄' }[s] }}</span>
           <span class="eff-name">{{ { spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima' }[s] }}</span>
@@ -546,51 +946,230 @@ const activeEffectId = ref<string | null>(null)
     <!-- Main area -->
     <div class="showcase-main">
 
-      <!-- ===== P3 STAGE: Seasons + Damage Numbers ===== -->
+      <!-- ===== P3 STAGE ===== -->
       <div v-if="p3Tab === 'p3'" class="p3-stage">
-        <!-- Season panels — all 4 side by side -->
-        <div class="p3-seasons-grid">
-          <div
-            v-for="s in (['spring', 'summer', 'autumn', 'winter'] as const)"
-            :key="s"
-            :class="['p3-season-panel', { 'p3-season-active': p3ActiveSeason === s }]"
-            @click="p3ActiveSeason = s"
-          >
-            <div
-              class="p3-season-bg"
-              :class="`p3-bg-${s}`"
-              :style="seasonBgMap[s] ? { backgroundImage: `url(${seasonBgMap[s]})` } : {}"
-            >
-              <WeatherEffects :season="s" />
+
+        <!-- Empty state -->
+        <div v-if="p3ViewType === 'none'" class="p3-empty">
+          <Icon icon="game-icons:sparkles" class="hint-icon" />
+          <p>Wybierz efekt z listy po lewej</p>
+          <p class="hint-sub">Kliknij na efekt aby zobaczyć podgląd</p>
+        </div>
+
+        <!-- ===== ARENA VIEW (particle VFX sandbox) ===== -->
+        <div v-if="p3ViewType === 'arena'" class="p3-arena-view">
+          <!-- Effect info header -->
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" :style="{ color: currentP3Effect?.color }">{{ currentP3Effect?.name }}</div>
+            <div class="p3-effect-desc">{{ currentP3Effect?.desc }}</div>
+          </div>
+
+          <!-- Attacker + Defender pair -->
+          <div class="p3-arena-row" style="position: relative;">
+            <ClientOnly><SlashAttackVFX ref="slashAttackRef" /></ClientOnly>
+            <ClientOnly><BowAttackVFX ref="bowAttackRef" /></ClientOnly>
+            <ClientOnly><DeathVFX ref="deathVfxRef" /></ClientOnly>
+            <ClientOnly><ElementalVFX ref="elementalVfxRef" /></ClientOnly>
+            <ClientOnly><MagicVFX ref="magicVfxRef" /></ClientOnly>
+
+            <div class="p3-demo-card p3-card-attacker" data-instance-id="p3-attacker">
+              <div class="p3-dc-art"><Icon icon="game-icons:werewolf" class="p3-dc-icon" /></div>
+              <div class="p3-dc-name">Atakujący</div>
+              <div class="p3-dc-stats"><span class="p3-atk">6</span>/<span class="p3-def">5</span></div>
+              <div class="p3-dc-badge p3-badge-atk">ATK</div>
+              <div v-if="p3CounterCard === 'p3-attacker'" class="p3-combat-overlay p3-overlay-counter">
+                <span class="p3-ov-icon">🛡️</span><span class="p3-ov-label">KONTRATAK</span>
+              </div>
+              <div v-if="p3BlockCard === 'p3-attacker'" class="p3-combat-overlay p3-overlay-block">
+                <span class="p3-ov-icon">✋</span><span class="p3-ov-label">ODPORNY</span>
+              </div>
             </div>
-            <div class="p3-season-label">
-              {{ { spring: '🌸 Wiosna', summer: '☀ Lato', autumn: '🍂 Jesień', winter: '❄ Zima' }[s] }}
+
+            <div class="p3-arena-arrow"><Icon icon="game-icons:arrow-flights" class="p3-arrow-icon" /></div>
+
+            <div class="p3-demo-card p3-card-defender" data-instance-id="p3-defender">
+              <div class="p3-dc-art"><Icon icon="game-icons:imp" class="p3-dc-icon" /></div>
+              <div class="p3-dc-name">Obrońca</div>
+              <div class="p3-dc-stats"><span class="p3-atk">3</span>/<span class="p3-def">8</span></div>
+              <div class="p3-dc-badge p3-badge-def">DEF</div>
+              <div v-if="p3CounterCard === 'p3-defender'" class="p3-combat-overlay p3-overlay-counter">
+                <span class="p3-ov-icon">🛡️</span><span class="p3-ov-label">KONTRATAK</span>
+              </div>
+              <div v-if="p3BlockCard === 'p3-defender'" class="p3-combat-overlay p3-overlay-block">
+                <span class="p3-ov-icon">✋</span><span class="p3-ov-label">ODPORNY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sandbox controls -->
+          <div class="p3-sandbox-controls">
+            <button class="p3-trigger-btn" :style="{ '--tc': currentP3Effect?.color }" @click="triggerCurrentEffect()">
+              <Icon icon="game-icons:play-button" /> Odpal efekt
+            </button>
+            <div class="p3-repeat-row">
+              <button :class="['p3-repeat-btn', { active: sandboxAutoRepeat }]" @click="sandboxAutoRepeat ? stopAutoRepeat() : startAutoRepeat()">
+                <Icon :icon="sandboxAutoRepeat ? 'game-icons:pause-button' : 'game-icons:cycle'" />
+                {{ sandboxAutoRepeat ? 'Stop' : 'Auto-repeat' }}
+              </button>
+              <label class="p3-delay-label">
+                <span>{{ sandboxInterval }}ms</span>
+                <input type="range" min="500" max="5000" step="100" v-model.number="sandboxInterval" class="p3-delay-slider" />
+              </label>
             </div>
           </div>
         </div>
 
-        <!-- Damage number demo card -->
-        <div class="p3-damage-demo">
-          <div class="p3-demo-title">Damage Numbers (GSAP + VFXOrchestrator)</div>
-          <div class="p3-demo-row">
-            <div class="p3-demo-card" data-instance-id="p3-demo-target">
-              <div class="p3-dc-art">
-                <Icon icon="game-icons:werewolf" class="p3-dc-icon" />
+        <!-- ===== 3D: SLASH COMPARE (WebGPU TSL vs WebGL GLSL) ===== -->
+        <div v-if="p3ViewType === '3d-slash-compare'" class="p3-3d-fullview">
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" style="color: #fbbf24">Porównanie: WebGPU (TSL) vs WebGL (GLSL)</div>
+            <div class="p3-effect-desc">
+              WebGPU: oryginał z <code>mx_noise_float</code> (MaterialX noise) — organiczne, gładkie krawędzie.
+              WebGL: port na GLSL z hash-based noise — prostsze, szybsze, szerszy support.
+            </div>
+          </div>
+          <div class="p3-compare-grid">
+            <div class="p3-compare-panel">
+              <div class="p3-compare-label p3-label-new">WebGPU + TSL (oryginał)</div>
+              <div class="p3-arena-row-mini" style="position: relative;">
+                <ClientOnly><SlashAttackWebGPU ref="slashWebGPURef" /></ClientOnly>
+                <div class="p3-mini-card" data-instance-id="p3-gpu-atk">ATK</div>
+                <div class="p3-mini-card" data-instance-id="p3-gpu-def">DEF</div>
               </div>
-              <div class="p3-dc-name">Cel ataku</div>
-              <div class="p3-dc-stats"><span class="p3-atk">5</span>/<span class="p3-def">7</span></div>
-            </div>
-            <div class="p3-demo-buttons">
-              <button class="p3-btn p3-btn-dmg" @click="demoDamageNumber('p3-demo-target', 3, '#ef4444')">
-                -3 DMG
-              </button>
-              <button class="p3-btn p3-btn-crit" @click="demoDamageNumber('p3-demo-target', 7, '#dc2626')">
-                -7 CRIT
-              </button>
-              <button class="p3-btn p3-btn-counter" @click="demoDamageNumber('p3-demo-target', 2, '#f59e0b', 'kontra')">
-                -2 Kontra
+              <div v-if="slashWebGPURef?.gpuError" class="p3-gpu-error">{{ slashWebGPURef.gpuError }}</div>
+              <button class="p3-btn p3-btn-slash" :disabled="!slashWebGPURef?.gpuReady" @click="demoSlashWebGPU()">
+                {{ slashWebGPURef?.gpuReady ? 'Odpal WebGPU' : 'Ładowanie...' }}
               </button>
             </div>
+            <div class="p3-compare-panel">
+              <div class="p3-compare-label p3-label-old">WebGL + GLSL (obecny)</div>
+              <div class="p3-arena-row-mini" style="position: relative;">
+                <ClientOnly><SlashAttackVFX ref="slashAttackRef3d" /></ClientOnly>
+                <div class="p3-mini-card" data-instance-id="p3-slash-atk">ATK</div>
+                <div class="p3-mini-card" data-instance-id="p3-slash-def">DEF</div>
+              </div>
+              <button class="p3-btn p3-btn-dmg" @click="demoSlashAttack3d()">Odpal WebGL</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 3D: BOW COMPARE (WebGPU TSL vs WebGL GLSL) ===== -->
+        <div v-if="p3ViewType === '3d-bow-compare'" class="p3-3d-fullview">
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" style="color: #38bdf8">Łuk Energii: WebGPU (TSL) vs WebGL (GLSL)</div>
+            <div class="p3-effect-desc">
+              WebGPU: oryginał z <code>mx_noise_float</code> — organiczny noise na łuku i cięciwie.
+              WebGL: port na GLSL z hash-based noise — prostszy, szerszy support.
+            </div>
+          </div>
+          <div class="p3-compare-grid">
+            <div class="p3-compare-panel">
+              <div class="p3-compare-label p3-label-new">WebGPU + TSL</div>
+              <div class="p3-arena-row-mini" style="position: relative;">
+                <ClientOnly><BowAttackVFX ref="bowGPUCompareRef" /></ClientOnly>
+                <div class="p3-mini-card" data-instance-id="p3-bow-gpu-atk">🏹</div>
+                <div class="p3-mini-card" data-instance-id="p3-bow-gpu-def">🎯</div>
+              </div>
+              <div v-if="bowGPUCompareRef?.gpuError" class="p3-gpu-error">{{ bowGPUCompareRef.gpuError }}</div>
+              <button class="p3-btn p3-btn-slash" :disabled="!bowGPUCompareRef?.gpuReady" @click="demoBowGPU()">
+                {{ bowGPUCompareRef?.gpuReady ? 'Odpal WebGPU' : 'Ładowanie...' }}
+              </button>
+            </div>
+            <div class="p3-compare-panel">
+              <div class="p3-compare-label p3-label-old">WebGL + GLSL</div>
+              <div class="p3-arena-row-mini" style="position: relative;">
+                <ClientOnly><BowAttackWebGL ref="bowGLCompareRef" /></ClientOnly>
+                <div class="p3-mini-card" data-instance-id="p3-bow-gl-atk">🏹</div>
+                <div class="p3-mini-card" data-instance-id="p3-bow-gl-def">🎯</div>
+              </div>
+              <button class="p3-btn p3-btn-dmg" @click="demoBowGL()">Odpal WebGL</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 3D: SLASH OLD (full view) ===== -->
+        <div v-if="p3ViewType === '3d-slash-old'" class="p3-3d-fullview">
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" style="color: #94a3b8">Sword Slash (STARY — TresJS)</div>
+            <div class="p3-effect-desc">TresJS canvas — TorusGeometry + custom GLSL shader (0.5s timeline). Backup dla starszych przeglądarek.</div>
+          </div>
+          <div class="p3-3d-canvas-large">
+            <ClientOnly>
+              <SwordSlashVFX :active="slashActive" @complete="slashActive = false" />
+            </ClientOnly>
+          </div>
+          <button class="p3-trigger-btn" style="--tc: #94a3b8" @click="triggerSlash()">
+            <Icon icon="game-icons:play-button" /> Odpal Slash Canvas
+          </button>
+        </div>
+
+        <!-- ===== 3D: TORNADO ===== -->
+        <div v-if="p3ViewType === '3d-tornado'" class="p3-3d-fullview">
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" style="color: #f97316">Tornado (Laska Boga)</div>
+            <div class="p3-effect-desc">CylinderGeometry + procedural noise GLSL — parabolic deformation, FBM, swirl UV.</div>
+          </div>
+          <div class="p3-3d-canvas-large">
+            <ClientOnly>
+              <TornadoVFX :active="tornadoActive" />
+            </ClientOnly>
+          </div>
+          <button class="p3-trigger-btn" style="--tc: #f97316" @click="tornadoActive = !tornadoActive">
+            <Icon :icon="tornadoActive ? 'game-icons:pause-button' : 'game-icons:play-button'" />
+            {{ tornadoActive ? 'Wyłącz' : 'Włącz' }}
+          </button>
+        </div>
+
+        <!-- ===== 3D: FIRE ===== -->
+        <div v-if="p3ViewType === '3d-fire'" class="p3-3d-fullview">
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" style="color: #ef4444">Ogień (Żywioł)</div>
+            <div class="p3-effect-desc">Particle-based fire effect — showcase-only (zbyt ciężki per-card).</div>
+          </div>
+          <div class="p3-3d-canvas-large">
+            <ClientOnly>
+              <FireVFX :active="true" :intensity="0.8" />
+            </ClientOnly>
+          </div>
+        </div>
+
+        <!-- ===== CIENTOS ===== -->
+        <div v-if="p3ViewType === 'cientos'" class="p3-3d-fullview">
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" style="color: #a855f7">@tresjs/cientos — Gotowe efekty 3D</div>
+            <div class="p3-effect-desc">5 demo scen: Sparkles, Levioso, Hologram, Stars, Wobble.</div>
+          </div>
+          <CientosShowcase />
+        </div>
+
+        <!-- ===== SEASON FULLVIEW ===== -->
+        <div v-if="p3ViewType === 'season'" class="p3-season-fullview">
+          <div class="p3-effect-header">
+            <div class="p3-effect-name" :style="{ color: { spring: '#4ade80', summer: '#fbbf24', autumn: '#f97316', winter: '#60a5fa' }[p3ActiveSeason] }">
+              {{ { spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima' }[p3ActiveSeason] }}
+            </div>
+            <div class="p3-effect-desc">Efekt pogodowy na tle bitwy (raw canvas 2D)</div>
+          </div>
+          <div class="p3-season-viewport">
+            <div
+              class="p3-season-bg"
+              :class="`p3-bg-${p3ActiveSeason}`"
+              :style="seasonBgMap[p3ActiveSeason] ? { backgroundImage: `url(${seasonBgMap[p3ActiveSeason]})` } : {}"
+            >
+              <WeatherEffects :season="p3ActiveSeason" />
+            </div>
+            <div class="p3-season-label">
+              {{ { spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima' }[p3ActiveSeason] }}
+            </div>
+          </div>
+          <!-- Season quick-switch -->
+          <div class="p3-season-switch">
+            <button
+              v-for="s in (['spring', 'summer', 'autumn', 'winter'] as const)" :key="s"
+              :class="['p3-btn', { active: p3ActiveSeason === s }]"
+              :style="{ color: { spring: '#4ade80', summer: '#fbbf24', autumn: '#f97316', winter: '#60a5fa' }[s], borderColor: p3ActiveSeason === s ? { spring: '#4ade80', summer: '#fbbf24', autumn: '#f97316', winter: '#60a5fa' }[s] : 'rgba(255,255,255,0.1)' }"
+              @click="p3ActiveSeason = s; activeEffectId = `p3-season-${s}`"
+            >{{ { spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima' }[s] }}</button>
           </div>
         </div>
       </div>
@@ -787,8 +1366,8 @@ const activeEffectId = ref<string | null>(null)
         </div>
         </div>
 
-        <!-- Info when nothing selected -->
-        <div v-if="!activeEffectId && !isPlaying" class="stage-hint">
+        <!-- Info when nothing selected (legacy) -->
+        <div v-if="(!activeEffectId || activeEffectId.startsWith('p3-')) && !isPlaying" class="stage-hint">
           <Icon icon="game-icons:sparkles" class="hint-icon" />
           <p>Wybierz efekt z listy po lewej</p>
           <p class="hint-sub">Każdy efekt odgrywa animację i dźwięk</p>
@@ -1913,9 +2492,230 @@ const activeEffectId = ref<string | null>(null)
   height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 24px;
+  gap: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* P3 Empty state */
+.p3-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+}
+.p3-empty p { margin: 0; font-size: 14px; }
+
+/* P3 Effect header (name + desc) */
+.p3-effect-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.p3-effect-name {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 20px;
+  font-weight: 600;
+  text-shadow: 0 0 20px currentColor;
+}
+.p3-effect-desc {
+  font-size: 12px;
+  color: #64748b;
+  max-width: 500px;
+  line-height: 1.4;
+}
+
+/* P3 Arena View */
+.p3-arena-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 24px;
-  overflow-y: auto;
+}
+
+/* P3 Sandbox controls */
+.p3-sandbox-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.p3-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 28px;
+  border-radius: 8px;
+  border: 2px solid color-mix(in srgb, var(--tc, #c8a84e) 40%, transparent);
+  background: color-mix(in srgb, var(--tc, #c8a84e) 10%, transparent);
+  color: var(--tc, #c8a84e);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s;
+  letter-spacing: 0.04em;
+}
+.p3-trigger-btn:hover {
+  background: color-mix(in srgb, var(--tc, #c8a84e) 18%, transparent);
+}
+.p3-trigger-btn:active {
+  transform: scale(0.97);
+}
+
+.p3-repeat-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.p3-repeat-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.p3-repeat-btn:hover { color: #94a3b8; border-color: rgba(255, 255, 255, 0.15); }
+.p3-repeat-btn.active {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.08);
+  animation: repeat-pulse 1.5s ease-in-out infinite;
+}
+@keyframes repeat-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(74, 222, 128, 0); }
+  50% { box-shadow: 0 0 8px rgba(74, 222, 128, 0.3); }
+}
+
+.p3-delay-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+}
+.p3-delay-slider {
+  width: 120px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.p3-delay-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #c8a84e;
+  border: 2px solid #0a0c14;
+  cursor: pointer;
+}
+
+/* ===== 3D FULL VIEW ===== */
+.p3-3d-fullview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.p3-3d-canvas-large {
+  width: 100%;
+  height: 360px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0a0a1e;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Compare grid (side by side) */
+.p3-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+.p3-compare-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.p3-compare-label {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+.p3-label-new {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+.p3-label-old {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.p3-gpu-error {
+  font-size: 11px;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.08);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* ===== SEASON FULLVIEW ===== */
+.p3-season-fullview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 900px;
+}
+.p3-season-viewport {
+  width: 100%;
+  height: 400px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(200, 168, 78, 0.2);
+}
+.p3-season-switch {
+  display: flex;
+  gap: 8px;
+}
+.p3-season-switch .p3-btn {
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+}
+.p3-season-switch .p3-btn.active {
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 700;
 }
 
 /* Season grid — 4 panels side by side */
@@ -1999,7 +2799,8 @@ const activeEffectId = ref<string | null>(null)
 }
 
 /* Damage demo section */
-.p3-damage-demo {
+/* ===== ARENA TEST SECTION ===== */
+.p3-arena-section {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2018,15 +2819,23 @@ const activeEffectId = ref<string | null>(null)
   text-transform: uppercase;
 }
 
-.p3-demo-row {
+.p3-arena-row {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 30px;
 }
 
+.p3-arena-arrow {
+  display: flex;
+  align-items: center;
+  color: rgba(200, 168, 78, 0.3);
+  font-size: 28px;
+}
+.p3-arrow-icon { filter: drop-shadow(0 0 4px rgba(200, 168, 78, 0.3)); }
+
 .p3-demo-card {
-  width: 100px;
-  height: 140px;
+  width: 110px;
+  height: 150px;
   border-radius: 8px;
   background: linear-gradient(165deg, #1a1520 0%, #0d0a14 100%);
   border: 2px solid rgba(200, 168, 78, 0.2);
@@ -2035,6 +2844,8 @@ const activeEffectId = ref<string | null>(null)
   overflow: hidden;
   position: relative;
 }
+.p3-card-attacker { border-color: rgba(239, 68, 68, 0.3); }
+.p3-card-defender { border-color: rgba(96, 165, 250, 0.3); }
 .p3-dc-art {
   flex: 1;
   display: flex;
@@ -2063,37 +2874,206 @@ const activeEffectId = ref<string | null>(null)
 }
 .p3-atk { color: #f87171; }
 .p3-def { color: #60a5fa; }
+.p3-dc-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.p3-badge-atk { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.p3-badge-def { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
 
-.p3-demo-buttons {
+/* Combat overlay flashes on demo cards */
+.p3-combat-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 7px;
+  pointer-events: none;
+  animation: p3-flash-in 0.3s ease-out;
 }
-.p3-btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid;
-  font-size: 12px;
+.p3-ov-icon { font-size: 36px; text-shadow: 0 0 8px rgba(0,0,0,0.8); }
+.p3-ov-label {
+  font-size: 10px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.p3-overlay-counter {
+  background: rgba(20, 40, 140, 0.8);
+  box-shadow: inset 0 0 30px rgba(59, 130, 246, 0.6), 0 0 16px rgba(59, 130, 246, 0.5);
+}
+.p3-overlay-counter .p3-ov-label { background: rgba(30, 64, 175, 0.9); }
+.p3-overlay-block {
+  background: rgba(120, 80, 20, 0.8);
+  box-shadow: inset 0 0 30px rgba(245, 158, 11, 0.5), 0 0 16px rgba(245, 158, 11, 0.4);
+}
+.p3-overlay-block .p3-ov-label { background: rgba(120, 53, 15, 0.9); }
+@keyframes p3-flash-in {
+  0%   { opacity: 0; transform: scale(0.8); }
+  60%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Button grid under arena cards */
+.p3-arena-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 700px;
+}
+.p3-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.p3-group-label {
+  width: 100%;
+  font-size: 9px;
   font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(200, 168, 78, 0.4);
+  margin-bottom: 2px;
+}
+
+.p3-btn {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s;
+  white-space: nowrap;
 }
-.p3-btn-dmg {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.08);
+.p3-btn-dmg { color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); }
+.p3-btn-dmg:hover { background: rgba(239,68,68,0.15); }
+.p3-btn-elem { color: #f97316; border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.08); }
+.p3-btn-elem:hover { background: rgba(249,115,22,0.15); }
+.p3-btn-magic { color: #a855f7; border-color: rgba(168,85,247,0.3); background: rgba(168,85,247,0.08); }
+.p3-btn-magic:hover { background: rgba(168,85,247,0.15); }
+.p3-btn-ranged { color: #60a5fa; border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.08); }
+.p3-btn-ranged:hover { background: rgba(96,165,250,0.15); }
+.p3-btn-slash { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+.p3-btn-slash:hover { background: rgba(251,191,36,0.15); }
+.p3-btn-counter { color: #f59e0b; border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
+.p3-btn-counter:hover { background: rgba(245,158,11,0.15); }
+.p3-btn-block { color: #60a5fa; border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.08); }
+.p3-btn-block:hover { background: rgba(96,165,250,0.15); }
+.p3-btn-death { color: #64748b; border-color: rgba(100,116,139,0.3); background: rgba(100,116,139,0.08); }
+.p3-btn-death:hover { background: rgba(100,116,139,0.15); }
+.p3-btn-arrow { color: #38bdf8; border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.08); }
+.p3-btn-arrow:hover { background: rgba(56,189,248,0.15); }
+.p3-btn-shield-break { color: #93c5fd; border-color: rgba(147,197,253,0.3); background: rgba(147,197,253,0.08); }
+.p3-btn-shield-break:hover { background: rgba(147,197,253,0.15); }
+.p3-btn-full { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+.p3-btn-full:hover { background: rgba(251,191,36,0.15); }
+.p3-btn-heal { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+.p3-btn-heal:hover { background: rgba(74,222,128,0.15); }
+.p3-btn-freeze { color: #93c5fd; border-color: rgba(147,197,253,0.3); background: rgba(147,197,253,0.08); }
+.p3-btn-freeze:hover { background: rgba(147,197,253,0.15); }
+.p3-btn-poison { color: #22c55e; border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); }
+.p3-btn-poison:hover { background: rgba(34,197,94,0.15); }
+.p3-btn-lightning { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+.p3-btn-lightning:hover { background: rgba(251,191,36,0.15); }
+.p3-btn-stun { color: #fde68a; border-color: rgba(253,230,138,0.3); background: rgba(253,230,138,0.08); }
+.p3-btn-stun:hover { background: rgba(253,230,138,0.15); }
+.p3-btn-buff { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.08); }
+.p3-btn-buff:hover { background: rgba(251,191,36,0.15); }
+.p3-btn-resurrect { color: #fde68a; border-color: rgba(253,230,138,0.3); background: rgba(253,230,138,0.08); }
+.p3-btn-resurrect:hover { background: rgba(253,230,138,0.15); }
+.p3-btn-summon { color: #c084fc; border-color: rgba(192,132,252,0.3); background: rgba(192,132,252,0.08); }
+.p3-btn-summon:hover { background: rgba(192,132,252,0.15); }
+
+/* ===== 3D EFFECTS SECTION ===== */
+.p3-3d-section,
+.p3-cientos-section {
+  margin-top: 20px;
 }
-.p3-btn-dmg:hover { background: rgba(239, 68, 68, 0.15); }
-.p3-btn-crit {
-  color: #dc2626;
-  border-color: rgba(220, 38, 38, 0.3);
-  background: rgba(220, 38, 38, 0.08);
+
+.p3-3d-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 8px;
 }
-.p3-btn-crit:hover { background: rgba(220, 38, 38, 0.15); }
-.p3-btn-counter {
-  color: #f59e0b;
-  border-color: rgba(245, 158, 11, 0.3);
-  background: rgba(245, 158, 11, 0.08);
+
+.p3-3d-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
 }
-.p3-btn-counter:hover { background: rgba(245, 158, 11, 0.15); }
+
+.p3-3d-label {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e8f0;
+  text-align: center;
+}
+
+.p3-3d-canvas {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a0a1e;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.p3-3d-note {
+  font-size: 10px;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.p3-arena-row-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  width: 100%;
+  height: 160px;
+  background: #0a0a1e;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.p3-mini-card {
+  width: 60px;
+  height: 90px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid rgba(200,168,78,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c8a84e;
+  font-family: var(--font-display, Georgia, serif);
+}
 </style>

@@ -15,6 +15,11 @@ import { getEffect } from '../game-engine/EffectRegistry'
 import type { PlayerSide } from '../game-engine/types'
 import { useUIStore } from './uiStore'
 import { useVFXOrchestrator, type AttackVisualType } from '../composables/useVFXOrchestrator'
+import { useSlashAttack } from '../composables/useSlashAttack'
+import { useBowAttack } from '../composables/useBowAttack'
+import { useElementalAttack } from '../composables/useElementalAttack'
+import { useMagicAttack } from '../composables/useMagicAttack'
+import { useDeathVFX } from '../composables/useDeathVFX'
 import type { CombatResult } from '../game-engine/types'
 import { AttackType } from '../game-engine/constants'
 
@@ -32,44 +37,260 @@ function toVisualAttackType(card: CombatResult['attacker']): AttackVisualType {
  * Snapshot a card's screen position BEFORE state update removes it from DOM.
  * Returns center-top coordinates or null if card not found.
  */
-function snapshotCardPosition(instanceId: string): { x: number; y: number } | null {
+interface CardRect { x: number; y: number; cx: number; cy: number; w: number; h: number }
+
+function snapshotCardRect(instanceId: string): CardRect | null {
   const el = document.querySelector(`[data-instance-id="${instanceId}"]`)
   if (!el) return null
-  const rect = el.getBoundingClientRect()
-  return { x: rect.left + rect.width / 2, y: rect.top }
+  const r = el.getBoundingClientRect()
+  return { x: r.left, y: r.top, cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width, h: r.height }
 }
 
-/** Emit VFX events from a CombatResult (damage numbers + hit) */
+/**
+ * Reveal both combatants on the CURRENT state immediately.
+ * This ensures cards are face-up during VFX (before delayed state update).
+ */
+function revealCombatants(currentState: GameState, combat: CombatResult) {
+  for (const side of ['player1', 'player2'] as const) {
+    for (const card of getAllCreaturesOnField(currentState, side)) {
+      if (card.instanceId === combat.attacker.instanceId ||
+          card.instanceId === combat.defender.instanceId) {
+        card.isRevealed = true
+      }
+    }
+  }
+}
+
+/** Legacy compat — returns { x: centerX, y: top } */
+function snapshotCardPosition(instanceId: string): { x: number; y: number } | null {
+  const r = snapshotCardRect(instanceId)
+  if (!r) return null
+  return { x: r.cx, y: r.y }
+}
+
+/**
+ * Total VFX duration for combat sequence.
+ * Used by attack() to delay state update / end-turn.
+ */
+const COMBAT_VFX_BASE_MS = 1200     // hit + shake + damage number (canvas fallback)
+const COMBAT_VFX_SLASH_MS = 2200    // WebGPU slash full choreography (melee)
+const COMBAT_VFX_BOW_MS = 2400      // WebGPU bow draw + arrow flight + impact (ranged)
+const COMBAT_VFX_ELEMENTAL_MS = 2600 // WebGPU fire orb charge + flight + impact (elemental)
+const COMBAT_VFX_MAGIC_MS = 2200    // WebGPU rune circle + crystal orb + implosion (magic)
+const COMBAT_VFX_COUNTER_MS = 1800  // counter overlay (600ms) + hit + damage (1200ms)
+const COMBAT_VFX_DEATH_MS = 2600    // WebGPU death dissolution
+
+function getCombatVFXDuration(combat: CombatResult | null): number {
+  if (!combat) return 0
+  const attackVisual = toVisualAttackType(combat.attacker)
+  const isSlash = attackVisual === 'melee' && useSlashAttack().ready
+  const isBow = attackVisual === 'ranged' && useBowAttack().ready
+  const isElemental = attackVisual === 'elemental' && useElementalAttack().ready
+  const isMagic = attackVisual === 'magic' && useMagicAttack().ready
+  let ms = isSlash ? COMBAT_VFX_SLASH_MS
+    : isBow ? COMBAT_VFX_BOW_MS
+    : isElemental ? COMBAT_VFX_ELEMENTAL_MS
+    : isMagic ? COMBAT_VFX_MAGIC_MS
+    : COMBAT_VFX_BASE_MS
+  if (combat.counterattackOccurred && combat.damageToAttacker > 0) ms += COMBAT_VFX_COUNTER_MS
+  if ((combat.defenderDied || combat.attackerDied) && useDeathVFX().ready) ms += COMBAT_VFX_DEATH_MS
+  return ms
+}
+
+/**
+ * Emit SEQUENCED VFX events from a CombatResult.
+ * Timeline:
+ *   0ms   — hit particles on defender + damage number
+ *   700ms — counter-attack hit on attacker + damage number (if counter)
+ *   1400ms — death shatter (if someone died)
+ */
 function emitCombatVFX(vfx: ReturnType<typeof useVFXOrchestrator>, combat: CombatResult | null) {
-  if (!combat) return
+  if (!combat) {
+    console.warn('[VFX] emitCombatVFX called with null combat')
+    return
+  }
+  const ui = useUIStore()
   const attackVisual = toVisualAttackType(combat.attacker)
 
-  // Snapshot positions NOW — before state update removes dead cards from DOM
-  const defenderPos = snapshotCardPosition(combat.defender.instanceId)
-  const attackerPos = snapshotCardPosition(combat.attacker.instanceId)
+  // Snapshot FULL rects NOW — before state update removes dead cards from DOM
+  const defenderRect = snapshotCardRect(combat.defender.instanceId)
+  const attackerRect = snapshotCardRect(combat.attacker.instanceId)
+  const defenderPos = defenderRect ? { x: defenderRect.cx, y: defenderRect.y } : null
+  const attackerPos = attackerRect ? { x: attackerRect.cx, y: attackerRect.y } : null
 
-  // Damage to defender
-  if (combat.damageToDefender > 0 && defenderPos) {
-    vfx.emit({
-      type: 'damage-number',
-      targetId: combat.defender.instanceId,
-      value: combat.damageToDefender,
-      color: '#ef4444',
-      attackType: attackVisual,
-      meta: { pos: defenderPos },
-    })
+  console.info('[VFX] Combat:', {
+    attacker: combat.attacker.cardData.name,
+    defender: combat.defender.cardData.name,
+    dmgDef: combat.damageToDefender,
+    dmgAtk: combat.damageToAttacker,
+    counter: combat.counterattackOccurred,
+    defDied: combat.defenderDied,
+    atkDied: combat.attackerDied,
+    softFail: combat.softFail,
+    defRect: !!defenderRect,
+    atkRect: !!attackerRect,
+  })
+
+  let t = 0
+
+  // === PHASE 1a: SoftFail / Odporny — shield block VFX (0ms) ===
+  // Card overlay shows "ODPORNY" — no extra floating text needed
+  if (combat.softFail && defenderRect) {
+    setTimeout(() => {
+      ui.flashBlock(combat.defender.instanceId)
+      vfx.emit({
+        type: 'block',
+        targetId: combat.defender.instanceId,
+        attackType: attackVisual,
+        label: combat.softFailReason ?? 'Odporny!',
+        meta: { rect: defenderRect, attackerRect },
+      })
+    }, t)
+  }
+  // === PHASE 1b: Normal hit on defender (0ms) ===
+  else if (combat.damageToDefender > 0 && defenderRect) {
+    const slash = useSlashAttack()
+    const bow = useBowAttack()
+    const elemental = useElementalAttack()
+    const magic = useMagicAttack()
+    const useSlash = attackVisual === 'melee' && slash.ready
+    const useBow = attackVisual === 'ranged' && bow.ready
+    const useElemental = attackVisual === 'elemental' && elemental.ready
+    const useMagic = attackVisual === 'magic' && magic.ready
+
+    if (useSlash) {
+      // Melee: WebGPU slash handles everything (shake, damage glow, damage number, sparks)
+      setTimeout(() => {
+        slash.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
+      }, t)
+    } else if (useBow) {
+      // Ranged: WebGPU bow handles everything (bow draw, arrow flight, impact, damage number)
+      setTimeout(() => {
+        bow.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
+      }, t)
+    } else if (useElemental) {
+      // Elemental: WebGPU fire orb projectile + impact
+      setTimeout(() => {
+        elemental.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
+      }, t)
+    } else if (useMagic) {
+      // Magic: WebGPU rune circles + implosion
+      setTimeout(() => {
+        magic.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
+      }, t)
+    } else {
+      // Fallback: canvas particle hit + shake + damage number
+      setTimeout(() => {
+        ui.shakeCard(combat.defender.instanceId)
+        vfx.emit({
+          type: 'hit',
+          targetId: combat.defender.instanceId,
+          attackType: attackVisual,
+          value: combat.damageToDefender,
+          meta: { rect: defenderRect, attackerRect },
+        })
+      }, t)
+      setTimeout(() => {
+        if (!defenderPos) return
+        vfx.emit({
+          type: 'damage-number',
+          targetId: combat.defender.instanceId,
+          value: combat.damageToDefender,
+          color: '#ef4444',
+          attackType: attackVisual,
+          meta: { pos: defenderPos },
+        })
+      }, t + 200)
+    }
   }
 
-  // Counter-damage to attacker
-  if (combat.counterattackOccurred && combat.damageToAttacker > 0 && attackerPos) {
-    vfx.emit({
-      type: 'damage-number',
-      targetId: combat.attacker.instanceId,
-      value: combat.damageToAttacker,
-      color: '#f59e0b',
-      label: 'kontra',
-      meta: { pos: attackerPos },
-    })
+  t += COMBAT_VFX_BASE_MS
+
+  // === PHASE 2: Counter-attack (700ms) ===
+  // Overlay: DEFENDER shows shield (they're counter-attacking)
+  // Particles + blue damage: on ATTACKER (they're receiving the hit)
+  if (combat.counterattackOccurred && combat.damageToAttacker > 0) {
+    const counterVisual = toVisualAttackType(combat.defender)
+    console.info('[VFX] Phase 2 scheduled: counter on', combat.attacker.cardData.name, 'type:', counterVisual, 'atkRect?', !!attackerRect, 'at t=', t)
+    // Counter overlay on defender (they're counter-attacking) — shows first
+    setTimeout(() => {
+      if (!attackerRect) return
+      ui.flashCounterAttack(combat.defender.instanceId)
+    }, t)
+
+    const slash = useSlashAttack()
+    const bow = useBowAttack()
+    const elemental = useElementalAttack()
+    const magic = useMagicAttack()
+    const useSlashCounter = counterVisual === 'melee' && slash.ready
+    const useBowCounter = counterVisual === 'ranged' && bow.ready
+    const useElementalCounter = counterVisual === 'elemental' && elemental.ready
+    const useMagicCounter = counterVisual === 'magic' && magic.ready
+
+    if (useSlashCounter) {
+      // Melee counter: WebGPU slash (defender strikes back at attacker)
+      setTimeout(() => {
+        slash.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
+      }, t + 600)
+    } else if (useBowCounter) {
+      // Ranged counter: bow attack (defender shoots at attacker)
+      setTimeout(() => {
+        bow.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
+      }, t + 600)
+    } else if (useElementalCounter) {
+      // Elemental counter: fire orb (defender strikes back)
+      setTimeout(() => {
+        elemental.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
+      }, t + 600)
+    } else if (useMagicCounter) {
+      // Magic counter: rune circles + implosion (defender strikes back)
+      setTimeout(() => {
+        magic.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
+      }, t + 600)
+    } else {
+      // Fallback: canvas particle hit
+      setTimeout(() => {
+        if (!attackerRect) return
+        ui.shakeCard(combat.attacker.instanceId)
+        vfx.emit({
+          type: 'hit',
+          targetId: combat.attacker.instanceId,
+          attackType: counterVisual,
+          value: combat.damageToAttacker,
+          label: 'kontra',
+          meta: { rect: attackerRect },
+        })
+      }, t + 600)
+      // Counter damage number — delayed 800ms
+      setTimeout(() => {
+        if (!attackerPos) return
+        vfx.emit({
+          type: 'damage-number',
+          targetId: combat.attacker.instanceId,
+          value: combat.damageToAttacker,
+          color: '#3b82f6',
+          label: 'kontra',
+          meta: { pos: attackerPos },
+        })
+      }, t + 800)
+    }
+
+    t += COMBAT_VFX_COUNTER_MS
+  }
+
+  // === PHASE 3: Death (WebGPU smoke + soul wisp) ===
+  const death = useDeathVFX()
+  if (death.ready) {
+    if (combat.defenderDied) {
+      setTimeout(() => {
+        death.trigger(combat.defender.instanceId)
+      }, t)
+    }
+    if (combat.attackerDied) {
+      setTimeout(() => {
+        death.trigger(combat.attacker.instanceId)
+      }, t + 200) // slight stagger if both die
+    }
   }
 }
 
@@ -253,25 +474,39 @@ export const useGameStore = defineStore('game', () => {
     try {
       // Resolve combat — SYNCHRONOUS, no delays
       const newState = engine.playerAttack(attackerInstanceId, defenderInstanceId)
+      const combatResult = engine.lastCombatResult
+
+      // Reveal combat participants IMMEDIATELY (before delayed state update)
+      // so cards are visible during VFX — especially important for AI cards
+      if (state.value && combatResult) {
+        revealCombatants(state.value, combatResult)
+        state.value = { ...state.value } // trigger reactivity
+      }
 
       // Emit VFX events from combat result
-      emitCombatVFX(vfx, engine.lastCombatResult)
+      emitCombatVFX(vfx, combatResult)
       engine.lastCombatResult = null
 
-      // Apply state
-      safeUpdateState(newState)
+      // Clear selection immediately so player can't double-attack
+      ui.clearSelection()
 
-      // Auto-resolve AI interaction
-      if (newState.pendingInteraction?.respondingPlayer === 'player2') {
-        autoResolveAIInteraction()
-      }
+      // DELAY state update to let VFX play (dead cards need to stay in DOM)
+      const vfxMs = getCombatVFXDuration(combatResult)
+      setTimeout(() => {
+        safeUpdateState(newState)
 
-      // Auto-end turn if no more attacks — delay to let damage number VFX finish
-      if (!state.value?.pendingInteraction && !winner.value) {
-        if (!hasRemainingAttacks(newState)) {
-          setTimeout(() => endTurn(), 1200)
+        // Auto-resolve AI interaction
+        if (newState.pendingInteraction?.respondingPlayer === 'player2') {
+          autoResolveAIInteraction()
         }
-      }
+
+        // Auto-end turn if no more attacks
+        if (!state.value?.pendingInteraction && !winner.value) {
+          if (!hasRemainingAttacks(newState)) {
+            setTimeout(() => endTurn(), 600)
+          }
+        }
+      }, vfxMs)
     } catch (e: any) {
       ui.showPlayLimitToast(e.message ?? 'Nie można zaatakować.')
     }
@@ -551,10 +786,21 @@ export const useGameStore = defineStore('game', () => {
             }
             // Resolve combat IMMEDIATELY
             const newState = engine.aiAttack(decision.cardInstanceId, decision.targetInstanceId)
+            const combatResult = engine.lastCombatResult
+
+            // Reveal combat participants IMMEDIATELY so AI cards are visible during VFX
+            if (state.value && combatResult) {
+              revealCombatants(state.value, combatResult)
+              state.value = { ...state.value }
+            }
 
             // Emit VFX events from combat result
-            emitCombatVFX(vfx, engine.lastCombatResult)
+            emitCombatVFX(vfx, combatResult)
             engine.lastCombatResult = null
+
+            // WAIT for VFX to play before updating state (removes dead cards from DOM)
+            const vfxMs = getCombatVFXDuration(combatResult)
+            if (vfxMs > 0) await delay(vfxMs)
 
             // Apply state
             state.value = newState

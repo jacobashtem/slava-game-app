@@ -47,7 +47,25 @@
       "Bash(git commit:*)",
       "Bash(npm uninstall:*)",
       "Bash(npx:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "WebFetch(domain:tresjs.org)",
+      "WebFetch(domain:docs.pmnd.rs)",
+      "WebFetch(domain:pmndrs.github.io)",
+      "WebFetch(domain:r3f.docs.pmnd.rs)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:discourse.threejs.org)",
+      "WebFetch(domain:www.khronos.org)",
+      "WebFetch(domain:wikis.khronos.org)",
+      "WebFetch(domain:docs.tresjs.org)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:blog.mozvr.com)",
+      "WebFetch(domain:cientos.tresjs.org)",
+      "WebFetch(domain:gsap.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:discoverthreejs.com)",
+      "WebFetch(domain:developer.chrome.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(taskkill //f //im node.exe 2>/dev/null; echo \"done\")"
     ]
   }
 }

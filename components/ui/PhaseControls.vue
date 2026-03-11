@@ -36,10 +36,10 @@ const btnConfig = computed(() => {
     case GamePhase.START:  return { label: 'DOBIERZ',  icon: 'game-icons:card-draw', type: 'next' }
     case GamePhase.DRAW:   return { label: 'DO BOJU',  icon: 'game-icons:crossed-swords', type: 'next' }
     case GamePhase.PLAY:   return skipCombat.value
-      ? { label: 'ZAKOŃCZ', icon: 'game-icons:hourglass', type: 'end' }
+      ? { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
       : { label: 'ATAKUJ',  icon: 'game-icons:sword-clash', type: 'combat' }
-    case GamePhase.COMBAT: return { label: 'ZAKOŃCZ', icon: 'game-icons:hourglass', type: 'end' }
-    case GamePhase.END:    return { label: 'ZAKOŃCZ', icon: 'game-icons:hourglass', type: 'end' }
+    case GamePhase.COMBAT: return { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
+    case GamePhase.END:    return { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
     default:               return { label: 'DALEJ',   icon: 'game-icons:forward', type: 'next' }
   }
 })
@@ -53,8 +53,8 @@ const btnConfig = computed(() => {
       class="ctrl-btn ctrl-pass"
       @click="() => { ui.clearSelection(); game.endTurn() }"
     >
-      <Icon icon="game-icons:fast-forward-button" class="btn-icon" />
-      PAS
+      <Icon icon="game-icons:white-flag" class="btn-icon" />
+      PASUJ
     </button>
     <button
       :disabled="!game.isPlayerTurn || !!game.winner"
@@ -160,18 +160,18 @@ const btnConfig = computed(() => {
   box-shadow: 0 4px 16px rgba(34,197,94,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
-/* Pass */
+/* Pass (PASUJ) — same size as other buttons */
 .ctrl-pass {
-  color: #94a3b8;
-  background: rgba(100,116,139,0.06);
-  border-color: rgba(100,116,139,0.2);
-  font-size: 11px;
-  padding: 5px 12px;
-  letter-spacing: 0.08em;
+  color: #cbd5e1;
+  background: linear-gradient(180deg, rgba(148,163,184,0.18) 0%, rgba(100,116,139,0.10) 100%);
+  border-color: rgba(148,163,184,0.4);
+  box-shadow: 0 2px 8px rgba(100,116,139,0.2);
 }
 .ctrl-pass:hover:not(:disabled) {
-  background: rgba(100,116,139,0.15);
-  border-color: rgba(100,116,139,0.4);
+  color: #e2e8f0;
+  background: linear-gradient(180deg, rgba(148,163,184,0.28) 0%, rgba(100,116,139,0.18) 100%);
+  border-color: rgba(148,163,184,0.6);
+  box-shadow: 0 4px 16px rgba(100,116,139,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 /* ====== MOBILE ====== */
