@@ -189,6 +189,7 @@ export type PendingInteractionType =
   | 'auction_bid'              // Licytacja o Bożą Łaskę
   | 'divine_favor_target'      // Wybór celu mocy boga
   | 'swarozyc_split_damage'    // Swarożyc: rozdziel 15 obrażeń
+  | 'smocze_jajo_hatch'        // Smocze Jajo: wybierz smoka do wyklucia
 
 export interface PendingInteraction {
   type: PendingInteractionType

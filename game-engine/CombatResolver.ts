@@ -19,7 +19,7 @@ export function resolveAttack(
   state: GameState,
   attackerInstanceId: string,
   defenderInstanceId: string,
-  options?: { forceBrzeginaSkip?: boolean }
+  options?: { forceBrzeginaSkip?: boolean; forcedByEffect?: boolean }
 ): { newState: GameState; result: CombatResult } {
   let newState = cloneGameState(state)
 
@@ -30,9 +30,9 @@ export function resolveAttack(
     throw new Error(`[CombatResolver] Nie znaleziono kart: ${attackerInstanceId} / ${defenderInstanceId}`)
   }
 
-  // 1. Walidacja zasięgu
-  const validation = canAttack(newState, attacker, defender)
-  const isSoftFail = !validation.valid && validation.softFail
+  // 1. Walidacja zasięgu (wymuszony atak pomija owner/position/hasAttacked, ale zachowuje zasięg linii)
+  const validation = canAttack(newState, attacker, defender, { forcedByEffect: options?.forcedByEffect })
+  const isSoftFail = !validation.valid && !!validation.softFail
   if (!validation.valid && !validation.softFail) {
     throw new Error(`[CombatResolver] Nieprawidłowy atak: ${validation.reason}`)
   }
@@ -713,8 +713,9 @@ function shouldCounterattack(
   if (defender.cardData.name === 'Dobroochoczy') return { canCounter: false, reason: `${defender.cardData.name}: Dobroochoczy nigdy nie kontratakuje.` }
   if (defender.activeEffects.some(e => e.effectId === 'dobroochoczy_no_counter')) return { canCounter: false, reason: `${defender.cardData.name}: Dobroochoczy nigdy nie kontratakuje.` }
 
-  // Smocze Jajo: nie kontratakuje
+  // Smocze Jajo / Bałwan: nie kontratakuje
   if ((defender.cardData as any).effectId === 'smocze_jajo_hatch') return { canCounter: false }
+  if ((defender.cardData as any).effectId === 'balwan_free_divine_favor') return { canCounter: false }
 
   // Cmuch (#119): atakujący nie otrzymuje kontrataku
   if ((attacker.cardData as any).effectId === 'cmuch_no_counter_received') return { canCounter: false, reason: `${attacker.cardData.name}: Ćmuch unika kontrataku!` }

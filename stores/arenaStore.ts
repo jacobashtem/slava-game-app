@@ -49,6 +49,8 @@ interface ScenarioConfig {
   handExtras?: string[]
   /** effectIds do cmentarza gracza (wskrzeszenia) */
   playerGraveyard?: string[]
+  /** Rany sojuszników: effectId → ile obrażeń zadać (DEF -= wartość) */
+  woundAllies?: Record<string, number>
 }
 
 const SCENARIO_MAP: Record<string, ScenarioConfig> = {
@@ -57,8 +59,22 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     hint: 'Aitwar przy wejściu kradnie kartę z ręki AI. ⚡ = ponowna kradzież za 1 PS (raz na grę). AI ma pełną rękę.',
   },
   'alkonost_redirect_counterattack': {
-    hint: 'Alkonost: gdy wróg kontratakuje sojusznika, Alkonost przejmuje kontratak na siebie.',
-    allyL1: ['dobroochoczy_no_counter', 'blotnik_taunt'],
+    hint: 'Alkonost ⚡ Hipnoza: zahipnotyzuj wroga i każ mu bić sojusznika. L1=Wręcz+Żywioł, L2=Dystans, L3=Magia. Bugaj (0 ATK) = edge case.',
+    allyL1: ['dobroochoczy_no_counter'],
+    aiL1: ['gryf_double_dmg_on_play_turn', 'leszy_post_attack_defend', 'bugaj_def_to_atk'],
+    aiL2: ['chaly_attack_locations', 'guslarka_bonus_vs_demon'],
+    aiL3: ['czarownica_redirect_spell'],
+  },
+  'barstuk_ally_regen': {
+    hint: 'Barstuk ⚡ Uzdrowienie: leczy rannego sojusznika Żywi do pełna. Baba i Czarownica (Żywi) są ranne. Homen (Nieumarli) — nie do uleczenia.',
+    allyL1: ['baba_bonus_vs_type', 'homen_convert_on_death'],
+    allyL2: ['czarownica_redirect_spell'],
+    aiL1: ['gryf_double_dmg_on_play_turn'],
+    woundAllies: {
+      'baba_bonus_vs_type': 2,           // Baba 4→2 DEF
+      'czarownica_redirect_spell': 2,    // Czarownica 4→2 DEF
+      'homen_convert_on_death': 2,       // Homen 4→2 DEF (Nieumarli — nie leczalny)
+    },
   },
   'biali_ludzie_wound_disarm': {
     hint: 'Biali Ludzie: atak rani i rozbrajia cel (nie może atakować przez rundę). Zaatakuj wroga.',
@@ -602,6 +618,20 @@ export const useArenaStore = defineStore('arena', () => {
       if (aId === entry.effectId) continue
       const ally = makeCreature(aId, 'player1', BattleLine.RANGED)
       if (ally) freshState.players.player1.field.lines[BattleLine.RANGED].push(ally)
+    }
+
+    // ===== Rany sojuszników =====
+    if (scenario?.woundAllies) {
+      for (const side of ['player1', 'player2'] as const) {
+        for (const creatures of Object.values(freshState.players[side].field.lines)) {
+          for (const c of creatures as any[]) {
+            const wound = scenario.woundAllies[(c.cardData as any).effectId]
+            if (wound && c.owner === 'player1') {
+              c.currentStats.defense = Math.max(1, c.currentStats.defense - wound)
+            }
+          }
+        }
+      }
     }
 
     // ===== Cmentarz gracza =====

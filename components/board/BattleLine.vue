@@ -141,6 +141,25 @@ function onSlotClick(slotIndex: number) {
 function onCardClick(card: CardInstance) {
   if (!game.isPlayerTurn) return
 
+  // Hipnoza Alkonosta — faza 1: wybierz wroga, faza 2: wybierz ofiarę
+  if (ui.mode === 'hypnosis' && ui.hypnosisTargets.has(card.instanceId)) {
+    const pending = game.state?.pendingInteraction
+    if (pending?.type === 'alkonost_target') {
+      game.resolvePendingInteraction(card.instanceId)
+    } else if (ui.hypnosisSourceId) {
+      game.activateCreatureEffect(ui.hypnosisSourceId, card.instanceId)
+    }
+    return
+  }
+
+  // Generyczny wybór celu zdolności — field highlighting
+  if (ui.mode === 'effect_target' && ui.effectTargetIds.has(card.instanceId) && ui.effectTargetSourceId) {
+    const sourceId = ui.effectTargetSourceId
+    ui.clearEffectTarget()
+    game.activateCreatureEffect(sourceId, card.instanceId)
+    return
+  }
+
   if (ui.pendingArtifactId && game.currentPhase === GamePhase.PLAY) {
     const targetType = ui.pendingAdventureTargetType
     const isValidSide = targetType === 'any'
@@ -312,6 +331,28 @@ function onSlotDrop(e: DragEvent, slotIndex: number) {
   _draggingId = ''
 }
 
+function onCardDragOver(e: DragEvent, card: CardInstance) {
+  if (!props.isPlayerSide || !game.isPlayerTurn || game.currentPhase !== GamePhase.PLAY) return
+  if (card.instanceId === _draggingId) return
+  e.preventDefault()
+  e.stopPropagation()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dragOverSlot.value = (card.metadata.slotPosition as number) ?? null
+}
+
+function onCardDrop(e: DragEvent, card: CardInstance) {
+  e.preventDefault()
+  e.stopPropagation()
+  isDragOver.value = false
+  dragOverSlot.value = null
+  const cardId = e.dataTransfer?.getData('text/plain') || _draggingId
+  if (cardId && cardId !== card.instanceId && props.isPlayerSide && game.isPlayerTurn) {
+    const targetSlot = (card.metadata.slotPosition as number) ?? 0
+    game.moveCreatureLine(cardId, props.line, targetSlot)
+  }
+  _draggingId = ''
+}
+
 function onLineDrop(e: DragEvent) {
   e.preventDefault()
   isDragOver.value = false
@@ -354,9 +395,9 @@ function onLineDrop(e: DragEvent) {
         @click.stop="item.type === 'slot' ? onSlotClick(item.slotIndex) : undefined"
         @dragstart="item.type === 'card' ? onDragStart($event, item.card!) : undefined"
         @dragend="item.type === 'card' ? onDragEnd() : undefined"
-        @dragover="item.type === 'slot' ? onSlotDragOver($event, item.slotIndex) : undefined"
+        @dragover="item.type === 'slot' ? onSlotDragOver($event, item.slotIndex) : (item.type === 'card' ? onCardDragOver($event, item.card!) : undefined)"
         @dragleave="item.type === 'slot' ? onSlotDragLeave(item.slotIndex) : undefined"
-        @drop="item.type === 'slot' ? onSlotDrop($event, item.slotIndex) : undefined"
+        @drop="item.type === 'slot' ? onSlotDrop($event, item.slotIndex) : (item.type === 'card' ? onCardDrop($event, item.card!) : undefined)"
       >
         <!-- Empty slot rune -->
         <template v-if="item.type === 'slot'">
@@ -368,9 +409,9 @@ function onLineDrop(e: DragEvent) {
           <CreatureCard
             :card="item.card!"
             :selected="ui.selectedCardId === item.card!.instanceId || ui.attackingCardId === item.card!.instanceId"
-            :is-valid-target="ui.validAttackTargets.has(item.card!.instanceId)"
-            :dimmed="ui.isSelectingTarget && !ui.validAttackTargets.has(item.card!.instanceId) && !isPlayerSide"
-            :toggle-position-on-click="isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY && !ui.pendingArtifactId && !isDropTarget"
+            :is-valid-target="ui.validAttackTargets.has(item.card!.instanceId) || ui.hypnosisTargets.has(item.card!.instanceId) || ui.effectTargetIds.has(item.card!.instanceId)"
+            :dimmed="(ui.isSelectingTarget && !ui.validAttackTargets.has(item.card!.instanceId) && !isPlayerSide) || (ui.mode === 'hypnosis' && !ui.hypnosisTargets.has(item.card!.instanceId)) || (ui.mode === 'effect_target' && !ui.effectTargetIds.has(item.card!.instanceId))"
+            :toggle-position-on-click="isPlayerSide && game.isPlayerTurn && game.currentPhase === GamePhase.PLAY && !ui.pendingArtifactId && !isDropTarget && ui.mode !== 'effect_target' && ui.mode !== 'hypnosis'"
             :can-toggle-position="isPlayerSide && game.isPlayerTurn && (game.currentPhase === GamePhase.PLAY || (game.currentPhase === GamePhase.COMBAT && !item.card!.hasAttackedThisTurn)) && !ui.pendingArtifactId"
             :effect-available="isEffectAvailable(item.card!)"
             :effect-cost="getEffectCost(item.card!)"

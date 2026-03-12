@@ -575,9 +575,9 @@ export function performAttack(
   state: GameState,
   attackerInstanceId: string,
   defenderInstanceId: string,
-  options?: { skipChowaniecCheck?: boolean; skipBrzeginaCheck?: boolean; forceBrzeginaSkip?: boolean }
+  options?: { skipChowaniecCheck?: boolean; skipBrzeginaCheck?: boolean; forceBrzeginaSkip?: boolean; forcedByEffect?: boolean }
 ): { newState: GameState; log: LogEntry[]; combatResult?: CombatResult } {
-  if (state.currentPhase !== GamePhase.COMBAT) {
+  if (state.currentPhase !== GamePhase.COMBAT && !options?.forcedByEffect) {
     throw new Error(`[TurnManager] Nie jesteś w fazie COMBAT (jesteś w ${state.currentPhase}).`)
   }
 
@@ -661,7 +661,7 @@ export function performAttack(
   const defenderCard = findCardAnywhere(state, defenderInstanceId)
   const defenderLineBefore = defenderCard?.line ?? null
 
-  const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId, { forceBrzeginaSkip: options?.forceBrzeginaSkip })
+  const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId, { forceBrzeginaSkip: options?.forceBrzeginaSkip, forcedByEffect: options?.forcedByEffect })
 
   // Sława: sprawdź przełamanie linii (atak na pustą linię wroga → +1/-1 PS)
   if (result.defenderDied && defenderLineBefore != null) {
@@ -747,8 +747,13 @@ export function moveCreatureLine(
   }
 
   if (foundLine === targetLine) {
-    // Same line — only update slot position if requested
+    // Same line — swap slot positions if target slot is occupied
     if (slotIndex !== undefined) {
+      const occupant = currentPlayer.field.lines[targetLine]
+        .find(c => (c.metadata.slotPosition as number) === slotIndex && c.instanceId !== cardInstanceId)
+      if (occupant) {
+        occupant.metadata.slotPosition = foundCard.metadata.slotPosition
+      }
       foundCard.metadata.slotPosition = slotIndex
     }
     return { newState, log }

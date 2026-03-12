@@ -169,7 +169,9 @@ function emitCombatVFX(
     }, t)
   }
   // === PHASE 1b: Normal hit on defender (0ms) ===
-  else if (combat.damageToDefender > 0 && defenderRect) {
+  else if (defenderRect) {
+    // Nawet przy 0 dmg — pokaż animację ataku (np. Bugaj 0 ATK, hipnoza)
+    const hasDamage = combat.damageToDefender > 0
     const slash = useSlashAttack()
     const bow = useBowAttack()
     const elemental = useElementalAttack()
@@ -179,28 +181,24 @@ function emitCombatVFX(
     const useElemental = attackVisual === 'elemental' && elemental.ready
     const useMagic = attackVisual === 'magic' && magic.ready
 
-    if (useSlash) {
-      // Melee: WebGPU slash handles everything (shake, damage glow, damage number, sparks)
+    if (hasDamage && useSlash) {
       setTimeout(() => {
         slash.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
-    } else if (useBow) {
-      // Ranged: WebGPU bow handles everything (bow draw, arrow flight, impact, damage number)
+    } else if (hasDamage && useBow) {
       setTimeout(() => {
         bow.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
-    } else if (useElemental) {
-      // Elemental: WebGPU fire orb projectile + impact
+    } else if (hasDamage && useElemental) {
       setTimeout(() => {
         elemental.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
-    } else if (useMagic) {
-      // Magic: WebGPU rune circles + implosion
+    } else if (hasDamage && useMagic) {
       setTimeout(() => {
         magic.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
     } else {
-      // Fallback: canvas particle hit + shake + damage number
+      // Fallback / 0-dmg: canvas particle hit + shake + damage number
       setTimeout(() => {
         ui.shakeCard(combat.defender.instanceId)
         vfx.emit({
@@ -217,7 +215,7 @@ function emitCombatVFX(
           type: 'damage-number',
           targetId: combat.defender.instanceId,
           value: combat.damageToDefender,
-          color: '#ef4444',
+          color: hasDamage ? '#ef4444' : '#94a3b8',
           attackType: attackVisual,
           meta: { pos: defenderPos },
         })
@@ -654,8 +652,26 @@ export const useGameStore = defineStore('game', () => {
     try {
       const prevGrave1 = state.value?.players.player1.graveyard.length ?? 0
       const prevGrave2 = state.value?.players.player2.graveyard.length ?? 0
+      const wasHypnosis = ui.mode === 'hypnosis' && ui.hypnosisPhase === 2
+      if (wasHypnosis) ui.clearHypnosis()
       const newState = engine.resolvePendingInteraction(choice)
+
+      // Wymuszony atak (hipnoza) — emituj VFX przed aktualizacją stanu
+      const combatResult = engine.lastCombatResult
+      if (wasHypnosis && combatResult) {
+        const vfx = useVFXOrchestrator()
+        if (state.value) {
+          revealCombatants(state.value, combatResult)
+          state.value = { ...state.value }
+        }
+        emitCombatVFX(vfx, combatResult, state)
+        engine.lastCombatResult = null
+        const vfxMs = getCombatVFXDuration(combatResult)
+        await delay(vfxMs)
+      }
+
       state.value = newState
+      checkHypnosisMode(newState)
       // Animacje śmierci jeśli ktoś zginął (np. sojusznik trafiony przez Alkonosta)
       const died1 = newState.players.player1.graveyard.length > prevGrave1
       const died2 = newState.players.player2.graveyard.length > prevGrave2
@@ -670,6 +686,8 @@ export const useGameStore = defineStore('game', () => {
         endTurn()
       }
     } catch (e: any) {
+      console.error('[gameStore] resolvePendingInteraction error:', e)
+      ui.showPlayLimitToast(e.message ?? 'Błąd rozwiązywania interakcji.')
     }
   }
 
@@ -697,9 +715,10 @@ export const useGameStore = defineStore('game', () => {
     const effect = getEffect((card.cardData as any).effectId)
     const cost = effect?.activationCost ?? 0
 
-    // Zdolność wymaga celu → pendingInteraction z listą celów
+    // Zdolność wymaga celu → podświetlenie na polu lub pendingInteraction
     if (effect?.activationRequiresTarget) {
       if (!state.value) return
+      const ui = useUIStore()
       // Zbierz wszystkie istoty na polu (obie strony) jako potencjalne cele
       const allTargets: string[] = []
       for (const side of ['player1', 'player2'] as const) {
@@ -716,13 +735,19 @@ export const useGameStore = defineStore('game', () => {
         }
       }
       if (allTargets.length === 0) {
-        const ui = useUIStore()
         ui.showPlayLimitToast('Brak dostępnych celów dla tej zdolności.')
         return
       }
+
+      // Alkonost — hipnoza na planszy (faza 1: wybierz wroga)
+      const effectId = (card.cardData as any).effectId
+      if (effectId === 'alkonost_redirect_counterattack') {
+        ui.enterHypnosisPhase1(cardInstanceId, allTargets)
+        return
+      }
+
       // Jeśli jest koszt, najpierw potwierdź koszt
       if (cost > 0) {
-        const ui = useUIStore()
         ui.pendingActivation = {
           cardInstanceId,
           cost,
@@ -732,14 +757,8 @@ export const useGameStore = defineStore('game', () => {
           availableTargetIds: allTargets,
         }
       } else {
-        // Darmowa + wymaga cel → od razu pendingInteraction (przez engine żeby sync)
-        state.value = engine.injectPendingInteraction({
-          type: 'on_play_target' as const,
-          sourceInstanceId: cardInstanceId,
-          respondingPlayer: 'player1',
-          availableTargetIds: allTargets,
-          metadata: { isActivation: true },
-        })
+        // Darmowa + wymaga cel → podświetl cele na planszy (field highlighting)
+        ui.enterEffectTargetMode(cardInstanceId, allTargets)
       }
       return
     }
@@ -761,7 +780,47 @@ export const useGameStore = defineStore('game', () => {
     if (!isPlayerTurn.value) return
     if (mpSend) { mpSend({ type: 'activate_effect', cardInstanceId, targetInstanceId }); return }
     try {
-      safeUpdateState(engine.playerActivateEffect(cardInstanceId, targetInstanceId))
+      const newState = engine.playerActivateEffect(cardInstanceId, targetInstanceId)
+
+      // Heal VFX: efekt zostawia metadata.lastHealTargetId + lastHealAmount
+      let cardAfter: CardInstance | null = null
+      for (const side of ['player1', 'player2'] as const) {
+        for (const creatures of Object.values(newState.players[side].field.lines)) {
+          const found = (creatures as CardInstance[]).find(c => c.instanceId === cardInstanceId)
+          if (found) { cardAfter = found; break }
+        }
+        if (cardAfter) break
+      }
+      if (cardAfter?.metadata.lastHealTargetId) {
+        const healTargetId = cardAfter.metadata.lastHealTargetId as string
+        const healAmount = (cardAfter.metadata.lastHealAmount as number) ?? 0
+        delete cardAfter.metadata.lastHealTargetId
+        delete cardAfter.metadata.lastHealAmount
+
+        const rect = snapshotCardRect(healTargetId)
+        if (rect) {
+          const vfx = useVFXOrchestrator()
+          vfx.emit({
+            type: 'heal',
+            targetId: healTargetId,
+            value: healAmount,
+            meta: { rect },
+          })
+          // Floating heal number (+X zielony)
+          setTimeout(() => {
+            vfx.emit({
+              type: 'damage-number',
+              targetId: healTargetId,
+              value: 0,
+              label: `+${healAmount}`,
+              color: '#4ade80',
+              meta: { pos: { x: rect.cx, y: rect.y } },
+            })
+          }, 300)
+        }
+      }
+
+      safeUpdateState(newState)
     } catch (e: any) {
       const ui = useUIStore()
       ui.showPlayLimitToast(e.message ?? 'Nie można aktywować zdolności.')
@@ -1144,6 +1203,18 @@ export const useGameStore = defineStore('game', () => {
         state.value = newState
       })
     }
+    // Hipnoza Alkonosta — podświetl cele na polu zamiast modalu
+    checkHypnosisMode(newState)
+  }
+
+  function checkHypnosisMode(gs: GameState) {
+    const ui = useUIStore()
+    const pi = gs.pendingInteraction
+    if (pi?.type === 'alkonost_target' && pi.respondingPlayer === 'player1') {
+      ui.enterHypnosisPhase2(pi.attackerInstanceId!, pi.availableTargetIds ?? [])
+    } else if (ui.mode === 'hypnosis' && ui.hypnosisPhase === 2) {
+      ui.clearHypnosis()
+    }
   }
 
   /**
@@ -1191,8 +1262,9 @@ export const useGameStore = defineStore('game', () => {
 
   // ===== INFO BOX: śledzenie ważnych zdarzeń z logów =====
   let _lastLogLen = 0
-  const infoPatterns: { pattern: RegExp; icon: string; type: 'effect' | 'info' | 'warning' }[] = [
-    { pattern: /Kluwa się.*dobiera (\d+) kart/i, icon: '🥚', type: 'effect' },
+  const infoPatterns: { pattern: RegExp; icon: string; type: 'effect' | 'info' | 'warning'; delay?: number; override?: string }[] = [
+    { pattern: /Wykluwa się/i, icon: '🐉', type: 'effect' },
+    { pattern: /Bałwan odchodzi.*łask/i, icon: '⛩', type: 'effect', delay: 800, override: 'Bogowie okazali swą łaskę. Dobierasz 3 karty!' },
     { pattern: /Likantropia.*absorb|wchłania/i, icon: '🐺', type: 'effect' },
     { pattern: /Wskrze(sza|szony|szenie)/i, icon: '💀', type: 'effect' },
     { pattern: /Przejmuje zdolnoś/i, icon: '🧙', type: 'effect' },
@@ -1255,8 +1327,12 @@ export const useGameStore = defineStore('game', () => {
       if (entry.type !== 'effect') continue
       for (const p of infoPatterns) {
         if (p.pattern.test(entry.message)) {
-          const msg = entry.message.length > 80 ? entry.message.slice(0, 77) + '...' : entry.message
-          ui.showInfoBox(msg, p.icon, p.type)
+          const msg = p.override ?? (entry.message.length > 80 ? entry.message.slice(0, 77) + '...' : entry.message)
+          if (p.delay) {
+            setTimeout(() => ui.showInfoBox(msg, p.icon, p.type), p.delay)
+          } else {
+            ui.showInfoBox(msg, p.icon, p.type)
+          }
           break
         }
       }

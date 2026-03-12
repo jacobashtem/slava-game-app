@@ -6,7 +6,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-export type UIMode = 'idle' | 'placing' | 'attacking' | 'moving'
+export type UIMode = 'idle' | 'placing' | 'attacking' | 'moving' | 'hypnosis' | 'effect_target'
 
 export const useUIStore = defineStore('ui', () => {
   // Zaznaczona karta (instanceId)
@@ -57,6 +57,14 @@ export const useUIStore = defineStore('ui', () => {
   const blockCardId = ref<string | null>(null)
   // Card hit-shake (damage received visual feedback)
   const shakeCardId = ref<string | null>(null)
+  // Hipnoza Alkonosta — podświetlenie celów na polu
+  const hypnosisTargets = ref<Set<string>>(new Set())
+  const hypnosisAttackerId = ref<string | null>(null)
+  const hypnosisSourceId = ref<string | null>(null) // Alkonost instanceId (faza 1)
+  const hypnosisPhase = ref<1 | 2>(1)
+  // Generyczny wybór celu zdolności na polu (zamiast modala)
+  const effectTargetSourceId = ref<string | null>(null)
+  const effectTargetIds = ref<Set<string>>(new Set())
   // Mobile drawer
   const mobileDrawerOpen = ref(false)
 
@@ -95,6 +103,43 @@ export const useUIStore = defineStore('ui', () => {
     highlightedLines.value = new Set(lineKeys)
   }
 
+  function enterHypnosisPhase1(sourceId: string, enemyTargetIds: string[]) {
+    clearSelection()
+    mode.value = 'hypnosis'
+    hypnosisPhase.value = 1
+    hypnosisSourceId.value = sourceId
+    hypnosisAttackerId.value = null
+    hypnosisTargets.value = new Set(enemyTargetIds)
+  }
+
+  function enterHypnosisPhase2(attackerId: string, victimIds: string[]) {
+    mode.value = 'hypnosis'
+    hypnosisPhase.value = 2
+    hypnosisAttackerId.value = attackerId
+    hypnosisTargets.value = new Set(victimIds)
+  }
+
+  function clearHypnosis() {
+    hypnosisTargets.value = new Set()
+    hypnosisAttackerId.value = null
+    hypnosisSourceId.value = null
+    hypnosisPhase.value = 1
+    if (mode.value === 'hypnosis') mode.value = 'idle'
+  }
+
+  function enterEffectTargetMode(sourceId: string, targetIds: string[]) {
+    clearSelection()
+    mode.value = 'effect_target'
+    effectTargetSourceId.value = sourceId
+    effectTargetIds.value = new Set(targetIds)
+  }
+
+  function clearEffectTarget() {
+    effectTargetSourceId.value = null
+    effectTargetIds.value = new Set()
+    if (mode.value === 'effect_target') mode.value = 'idle'
+  }
+
   function clearSelection() {
     selectedCardId.value = null
     attackingCardId.value = null
@@ -102,6 +147,8 @@ export const useUIStore = defineStore('ui', () => {
     validAttackTargets.value = new Set()
     highlightedLines.value = new Set()
     placingOnEnemyField.value = false
+    clearEffectTarget()
+    clearHypnosis()
   }
 
   function showTooltip(instanceId: string) {
@@ -230,6 +277,17 @@ export const useUIStore = defineStore('ui', () => {
     flashCounterAttack,
     flashBlock,
     shakeCard,
+    hypnosisTargets,
+    hypnosisAttackerId,
+    hypnosisSourceId,
+    hypnosisPhase,
+    enterHypnosisPhase1,
+    enterHypnosisPhase2,
+    clearHypnosis,
+    effectTargetSourceId,
+    effectTargetIds,
+    enterEffectTargetMode,
+    clearEffectTarget,
     mobileDrawerOpen,
     isSelectingTarget,
     isPlacingCard,

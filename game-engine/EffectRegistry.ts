@@ -19,6 +19,8 @@ import type { EffectDefinition, EffectContext, EffectResult, GameState, CardInst
 import { EffectTrigger, EffectPriority, CardPosition, BattleLine, AttackType } from './constants'
 import { cloneGameState, addLog, dealDamage, removeCardFromField, moveToGraveyard, getAllCreaturesOnField } from './GameStateUtils'
 import { drawCards } from './DeckBuilder'
+import { canAttack } from './LineManager'
+import { createCreatureInstance } from './CardFactory'
 
 // ===== REGISTRY MAP =====
 
@@ -66,16 +68,19 @@ export function canActivateEffect(state: import('./types').GameState, card: impo
   const cost = effect.activationCost ?? 0
   if (state.players[card.owner].glory < cost) return false
 
+  // Sprawdź customowe canActivate
+  if (effect.canActivate && !effect.canActivate({ state, source: card, target: card, trigger: EffectTrigger.ON_ACTIVATE })) {
+    return false
+  }
+
   // Sprawdź czy są dostępne cele (jeśli efekt wymaga celu z filtrem)
   if (effect.activationRequiresTarget && effect.activationTargetFilter) {
     let hasValidTarget = false
     for (const side of ['player1', 'player2'] as const) {
       for (const line of Object.values(state.players[side].field.lines)) {
         for (const c of line as CardInstance[]) {
-          if (c.instanceId !== card.instanceId && c.currentStats.defense > 0 && effect.activationTargetFilter(c, card, state)) {
-            hasValidTarget = true
-            break
-          }
+          if (c.instanceId === card.instanceId || c.currentStats.defense <= 0) continue
+          if (effect.activationTargetFilter(c, card, state)) { hasValidTarget = true; break }
         }
         if (hasValidTarget) break
       }
@@ -149,46 +154,7 @@ registerEffect({
 registerEffect({
   id: 'alkonost_redirect_counterattack',
   name: 'Hipnoza Alkonosty',
-  description: '[ODWET] Gdy Alkonost zostaje zaatakowany, właściciel wybiera sojusznika — atakujący MUSI go zaatakować.',
-  trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
-  priority: EffectPriority.REACTION,
-  execute: (ctx) => {
-    const { state, source, target } = ctx
-    if (source.isSilenced) return effectResult(cloneGameState(state))
-    // target = atakujący (ON_DAMAGE_RECEIVED: source=obrońca, target=atakujący)
-    if (!target) return effectResult(cloneGameState(state))
-
-    const newState = cloneGameState(state)
-    const alkonostOwner = source.owner as PlayerSide
-
-    // Zbierz sojuszników Alkonosta (bez niego samego)
-    const allies = getAllCreaturesOnField(newState, alkonostOwner)
-      .filter(c => c.instanceId !== source.instanceId && c.currentStats.defense > 0)
-
-    if (allies.length === 0) return effectResult(newState)
-
-    // Ustaw pendingInteraction — UI pokaże modal z wyborem sojusznika
-    newState.pendingInteraction = {
-      type: 'alkonost_target',
-      sourceInstanceId: source.instanceId,
-      respondingPlayer: alkonostOwner,
-      attackerInstanceId: target.instanceId,
-      availableTargetIds: allies.map(a => a.instanceId),
-    }
-
-    const log = addLog(newState,
-      `Alkonost: Hipnoza! ${target.cardData.name} musi zaatakować sojusznika — czekam na wybór.`,
-      'effect'
-    )
-    return effectResult(newState, [log])
-  },
-})
-
-// 📋 BARSTUK — Wybrany sojusznik regeneruje obronę (aktywowane przez gracza raz na turę)
-registerEffect({
-  id: 'barstuk_ally_regen',
-  name: 'Wsparcie Barstuka',
-  description: '[AKCJA] Wybrany sojusznik Żywi regeneruje swoją obronę do maksimum. Raz na turę.',
+  description: '[AKCJA] Hipnotyzuje wrogą istotę, zmuszając ją do zaatakowania sojusznika.',
   trigger: [EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.MODIFIER,
   activatable: true,
@@ -196,36 +162,110 @@ registerEffect({
   activationCooldown: 'per_turn',
   activationRequiresTarget: true,
   activationTargetFilter: (card, source, _state) => {
-    return card.owner === source.owner && card.instanceId !== source.instanceId
+    // Cel: wroga istota (nie własna)
+    return card.owner !== source.owner && card.currentStats.defense > 0
   },
   execute: (ctx) => {
-    // ctx.target = wybrany sojusznik (target selection w UI)
-    const newState = cloneGameState(ctx.state)
-    if (ctx.target) {
-      const targetInState = findCardInState(newState, ctx.target.instanceId)
-      if (targetInState) {
-        targetInState.currentStats.defense = targetInState.currentStats.maxDefense
-        const log = addLog(ctx.state, `${ctx.source.cardData.name}: ${ctx.target.cardData.name} regeneruje obronę do ${targetInState.currentStats.maxDefense}.`, 'effect')
-        return effectResult(newState, [log])
-      }
+    const { state, source, target } = ctx
+    if (source.isSilenced) return effectResult(cloneGameState(state))
+    // target = wybrana wroga istota (zhipnotyzowana)
+    if (!target) return effectResult(cloneGameState(state))
+
+    const newState = cloneGameState(state)
+    const enemySide = target.owner as PlayerSide
+
+    // Zbierz sojuszników zhipnotyzowanej istoty w zasięgu ataku (bez niej samej)
+    const enemyAllies = getAllCreaturesOnField(newState, enemySide)
+      .filter(c => c.instanceId !== target.instanceId && c.currentStats.defense > 0)
+      .filter(c => {
+        const check = canAttack(newState, target, c, { forcedByEffect: true })
+        return check.valid || check.softFail // softFail = Odporny (atak dojdzie, ale z efektem blokady)
+      })
+
+    if (enemyAllies.length === 0) {
+      const log = addLog(newState, `Alkonost: Hipnoza na ${target.cardData.name}, ale brak sojuszników do zaatakowania.`, 'effect')
+      return effectResult(newState, [log])
     }
-    const log = addLog(ctx.state, `${ctx.source.cardData.name}: Leczy sojusznika do pełnej Obrony (zdolność: pełna regeneracja HP).`, 'effect')
+
+    const alkonostOwner = source.owner as PlayerSide
+
+    // Krok 2: gracz Alkonosta wybiera cel ataku spośród sojuszników wroga
+    newState.pendingInteraction = {
+      type: 'alkonost_target',
+      sourceInstanceId: source.instanceId,
+      respondingPlayer: alkonostOwner,
+      attackerInstanceId: target.instanceId,
+      availableTargetIds: enemyAllies.map(a => a.instanceId),
+    }
+
+    const log = addLog(newState,
+      `Alkonost: Hipnoza! ${target.cardData.name} musi zaatakować sojusznika — wybierz cel.`,
+      'effect'
+    )
     return effectResult(newState, [log])
   },
 })
 
-// 📋 BAŁWAN — Raz skorzystaj z Bożej Łaski za darmo
+// 📋 BARSTUK — Przywraca pełną obronę wybranemu rannemu sojusznikowi z domeny Żywi
+registerEffect({
+  id: 'barstuk_ally_regen',
+  name: 'Leśne Uzdrowienie',
+  description: '[AKCJA] Przywraca pełną obronę rannemu Żywi. Raz na turę.',
+  trigger: [EffectTrigger.ON_ACTIVATE],
+  priority: EffectPriority.MODIFIER,
+  activatable: true,
+  activationCost: 0,
+  activationCooldown: 'per_turn',
+  activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.owner === source.owner
+      && card.instanceId !== source.instanceId
+      && (card.cardData as any).domain === 2 // tylko Żywi
+      && card.currentStats.defense < card.currentStats.maxDefense // musi być ranny
+  },
+  execute: (ctx) => {
+    const newState = cloneGameState(ctx.state)
+    if (ctx.target) {
+      const targetInState = findCardInState(newState, ctx.target.instanceId)
+      if (targetInState) {
+        const healed = targetInState.currentStats.maxDefense - targetInState.currentStats.defense
+        targetInState.currentStats.defense = targetInState.currentStats.maxDefense
+        // Metadata dla VFX — gameStore odczyta i wyemituje animację leczenia
+        const sourceInState = findCardInState(newState, ctx.source.instanceId)
+        if (sourceInState) {
+          sourceInState.metadata.lastHealTargetId = ctx.target.instanceId
+          sourceInState.metadata.lastHealAmount = healed
+        }
+        const log = addLog(newState, `${ctx.source.cardData.name} uzdrawia ${ctx.target.cardData.name} — przywrócono ${healed} pkt obrony.`, 'effect')
+        return effectResult(newState, [log])
+      }
+    }
+    return effectResult(newState)
+  },
+})
+
+// ✅ BAŁWAN — Nie kontratakuje, odporny na Żywioł. Po 3 rundach ginie, właściciel dobiera 3 karty.
 registerEffect({
   id: 'balwan_free_divine_favor',
-  name: 'Bożej Łaski Dar',
-  description: '[WEJŚCIE] Możesz raz skorzystać z wybranej Bożej Łaski, nie płacąc za nią.',
-  trigger: EffectTrigger.ON_PLAY,
-  priority: EffectPriority.MODIFIER,
+  name: 'Dar Bogów',
+  description: '[AURA] Nie kontratakuje. Odporny na Żywioł. Po 3 rundach karta trafia na cmentarz. Dobierasz 3 karty.',
+  trigger: EffectTrigger.ON_TURN_START,
+  priority: EffectPriority.REACTION,
   execute: (ctx) => {
-    // TODO: Integracja z Panteonem (Etap 6)
-    const newState = cloneGameState(ctx.state)
-    const log = addLog(ctx.state, `${ctx.source.cardData.name}: Boża Łaska jest teraz dostępna za darmo (1x).`, 'effect')
-    return effectResult(newState, [log])
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, source.instanceId)
+    if (!card) return effectResult(newState)
+
+    const roundsInPlay = newState.roundNumber - (card.roundEnteredPlay ?? newState.roundNumber)
+    if (roundsInPlay < 3) return effectResult(newState)
+
+    // Po 3 rundach: bałwan pęka — właściciel dobiera 3 karty
+    const log: LogEntry[] = []
+    log.push(addLog(newState, `${source.cardData.name}: Bałwan odchodzi! Bogowie okazali swą łaskę — dobierasz 3 karty.`, 'effect'))
+    moveToGraveyard(newState, card)
+    drawCards(newState.players[source.owner], 3)
+    return effectResult(newState, log)
   },
 })
 
@@ -2971,29 +3011,103 @@ registerEffect({
 // SMOCZE JAJO (#113) — Nie kontratakie, blokuje Żywioł; po 5 rundach kluwa się
 // ===================================================================
 
+// Mapa smoków do wyklucia (id z JSON → dane do wyświetlenia w modalu)
+const HATCHABLE_DRAGONS: { choiceId: string; cardId: number; name: string; atk: number; def: number; attackType: AttackType; isFlying: boolean; domain: number; effectId: string; desc: string; triggerLabel: string }[] = [
+  { choiceId: 'azdacha',     cardId: 61,  name: 'Ażdacha',      atk: 9,  def: 8,  attackType: AttackType.MELEE,     isFlying: false, domain: 3, effectId: 'azdacha_vanilia',             desc: 'Potężny smok. Brak zdolności.',                         triggerLabel: '' },
+  { choiceId: 'gorynych',    cardId: 103, name: 'Gorynych',     atk: 10, def: 10, attackType: AttackType.ELEMENTAL, isFlying: true,  domain: 4, effectId: 'gorynych_merge_dragons',      desc: 'Wchłania sojusznicze Smoki — sumuje ich staty.',        triggerLabel: 'WEJŚCIE' },
+  { choiceId: 'tugaryn',     cardId: 117, name: 'Wąż Tugaryn',  atk: 8,  def: 8,  attackType: AttackType.ELEMENTAL, isFlying: false, domain: 4, effectId: 'waz_tugaryn_cleave',          desc: 'Nadmiar obrażeń przy zabiciu uderza następnego wroga.', triggerLabel: 'ZABÓJSTWO' },
+  { choiceId: 'wij',         cardId: 116, name: 'Wij',           atk: 9,  def: 9,  attackType: AttackType.ELEMENTAL, isFlying: true,  domain: 4, effectId: 'wij_revive_once',             desc: 'Wskrzesza się z cmentarza na 1 turę (raz na grę).',     triggerLabel: 'POŻEGNANIE' },
+  { choiceId: 'zar_ptak',    cardId: 29,  name: 'Żar-ptak',     atk: 10, def: 10, attackType: AttackType.ELEMENTAL, isFlying: true,  domain: 1, effectId: 'zar_ptak_death_explosion',    desc: 'Wszystkie istoty na polu tracą 4 DEF.',                 triggerLabel: 'POŻEGNANIE' },
+  { choiceId: 'zmije',       cardId: 30,  name: 'Żmije',         atk: 9,  def: 9,  attackType: AttackType.ELEMENTAL, isFlying: false, domain: 1, effectId: 'zmije_glory_on_empty_field',   desc: 'Pole wroga puste na koniec tury: +1 PS.',               triggerLabel: 'AURA' },
+  { choiceId: 'chaly',       cardId: 32,  name: 'Chały / Ały',   atk: 6,  def: 6,  attackType: AttackType.RANGED,    isFlying: false, domain: 2, effectId: 'chaly_attack_locations',      desc: 'Może atakować Lokacje (12 obrażeń = zniszczenie).',     triggerLabel: 'AURA' },
+  { choiceId: 'aitwar',      cardId: 1,   name: 'Aitwar',        atk: 2,  def: 2,  attackType: AttackType.MELEE,     isFlying: true,  domain: 1, effectId: 'aitwar_steal_hand',           desc: 'Kradnie 1 kartę z ręki wroga. Powtarzalne za 1 PS.',    triggerLabel: 'WEJŚCIE + AKCJA' },
+  { choiceId: 'krol_wezow',  cardId: 15,  name: 'Król wężów',    atk: 3,  def: 6,  attackType: AttackType.MELEE,     isFlying: false, domain: 1, effectId: 'krol_wezow_always_counter',   desc: 'Kontratakuje ZAWSZE — nawet w Pozycji Ataku.',          triggerLabel: 'AURA' },
+  { choiceId: 'lamia',       cardId: 107, name: 'Lamia',         atk: 5,  def: 4,  attackType: AttackType.MELEE,     isFlying: true,  domain: 4, effectId: 'lamia_death_reward',          desc: 'Wybierz: +1 PS albo dociągnij 5 kart.',                 triggerLabel: 'POŻEGNANIE' },
+]
+
 registerEffect({
   id: 'smocze_jajo_hatch',
   name: 'Smocze Jajo',
-  description: '[AURA] Nie kontratakuje. Blokuje wrogie Żywioły. Po 5 rundach od wystawienia: ginie, gracz dobiera 3 karty.',
+  description: '[AURA] Nie kontratakuje. Blokuje wrogie Żywioły. Po 5 rundach wykluwa się w wybranego Smoka.',
   trigger: EffectTrigger.ON_TURN_START,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
     const { state, source } = ctx
     const newState = cloneGameState(state)
-    const card = findCardInState(newState, source.instanceId)
-    if (!card) return effectResult(newState)
+    const egg = findCardInState(newState, source.instanceId)
+    if (!egg) return effectResult(newState)
 
-    const roundsInPlay = newState.roundNumber - (card.roundEnteredPlay ?? newState.roundNumber)
+    const roundsInPlay = newState.roundNumber - (egg.roundEnteredPlay ?? newState.roundNumber)
     if (roundsInPlay < 5) return effectResult(newState)
 
-    // Po 5 rundach: kluwa się — ginie, właściciel dobiera 3 karty
     const log: LogEntry[] = []
-    log.push(addLog(newState, `${source.cardData.name}: Kluwa się po ${roundsInPlay} rundach! Właściciel dobiera 3 karty.`, 'effect'))
-    moveToGraveyard(newState, card)
-    drawCards(newState.players[source.owner], 3)
+    const owner = newState.players[source.owner]
+
+    // AI: wybiera najsilniejszego smoka (wg ATK+DEF)
+    if (owner.isAI) {
+      const best = [...HATCHABLE_DRAGONS].sort((a, b) => (b.atk + b.def) - (a.atk + a.def))[0]!
+      return hatchDragon(newState, egg, source, best, log)
+    }
+
+    // Gracz: modal z wyborem smoka
+    log.push(addLog(newState, `${source.cardData.name}: Jajo pęka po ${roundsInPlay} rundach! Wybierz smoka do wyklucia!`, 'effect'))
+    newState.pendingInteraction = {
+      type: 'smocze_jajo_hatch',
+      sourceInstanceId: source.instanceId,
+      respondingPlayer: source.owner as PlayerSide,
+      availableChoices: HATCHABLE_DRAGONS.map(d => d.choiceId),
+      metadata: {
+        eggLine: egg.line ?? BattleLine.FRONT,
+        eggSlot: (egg.metadata.slotPosition as number) ?? 0,
+        dragons: HATCHABLE_DRAGONS.map(d => ({
+          choiceId: d.choiceId, cardId: d.cardId, name: d.name, atk: d.atk, def: d.def,
+          attackType: d.attackType, isFlying: d.isFlying, domain: d.domain, desc: d.desc,
+        })),
+      },
+    }
     return effectResult(newState, log)
   },
 })
+
+// Resolve: gracz wybrał smoka
+function hatchDragon(
+  state: GameState, egg: CardInstance, source: { instanceId: string; owner: string; cardData: any },
+  dragon: typeof HATCHABLE_DRAGONS[number], logArr: LogEntry[],
+): EffectResult {
+  const eggLine = egg.line ?? BattleLine.FRONT
+  const eggSlot = (egg.metadata.slotPosition as number) ?? 0
+  const owner = source.owner as PlayerSide
+
+  moveToGraveyard(state, egg)
+
+  const dragonData = {
+    id: dragon.cardId,
+    cardType: 'creature' as const,
+    domain: dragon.domain,
+    name: dragon.name,
+    stats: { attack: dragon.atk, defense: dragon.def, maxDefense: dragon.def, maxAttack: dragon.atk },
+    attackType: dragon.attackType,
+    isFlying: dragon.isFlying,
+    effectId: dragon.effectId,
+    effectDescription: dragon.desc,
+    lore: '',
+    abilities: [],
+  }
+  const instance = createCreatureInstance(dragonData as any, owner)
+  instance.line = eggLine
+  instance.position = CardPosition.DEFENSE
+  instance.isRevealed = true
+  instance.roundEnteredPlay = state.roundNumber
+  instance.metadata.slotPosition = eggSlot
+
+  state.players[owner].field.lines[eggLine].push(instance)
+
+  logArr.push(addLog(state, `Smocze Jajo: Wykluwa się ${dragon.name} (${dragon.atk}/${dragon.def})!`, 'effect'))
+  return effectResult(state, logArr)
+}
+
+// Export for resolveInteraction in GameEngine
+export { HATCHABLE_DRAGONS, hatchDragon }
 
 // ===================================================================
 // BELT (#93) — Aktywowalne: zmień ustawienie wrogich istot (1. raz gratis)

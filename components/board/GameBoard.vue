@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import PlayerField from './PlayerField.vue'
 import PlayerHand from '../ui/PlayerHand.vue'
 import TurnIndicator from '../ui/TurnIndicator.vue'
@@ -422,20 +423,11 @@ const onPlayDescription = computed(() => {
           <div class="onplay-btns">
             <button class="onplay-yes" @click="() => {
               const pa = ui.pendingActivation!
-              try {
-                if (pa.requiresTarget && pa.availableTargetIds?.length) {
-                  game.injectPendingInteraction({
-                    type: 'on_play_target',
-                    sourceInstanceId: pa.cardInstanceId,
-                    respondingPlayer: 'player1',
-                    availableTargetIds: pa.availableTargetIds,
-                    metadata: { isActivation: true, paidCost: pa.cost },
-                  })
-                } else {
-                  game.activateCreatureEffect(pa.cardInstanceId)
-                }
-              } finally {
-                ui.pendingActivation = null
+              ui.pendingActivation = null
+              if (pa.requiresTarget && pa.availableTargetIds?.length) {
+                ui.enterEffectTargetMode(pa.cardInstanceId, pa.availableTargetIds)
+              } else {
+                game.activateCreatureEffect(pa.cardInstanceId)
               }
             }">TAK — Aktywuj</button>
             <button class="onplay-no" @click="ui.pendingActivation = null">NIE — Anuluj</button>
@@ -445,6 +437,31 @@ const onPlayDescription = computed(() => {
     </Transition>
 
     <TurnBanner />
+
+    <!-- Hipnoza Alkonosta — info banner zamiast modalu -->
+    <Transition name="fade">
+      <div v-if="ui.mode === 'hypnosis'" class="hypnosis-banner" :key="ui.hypnosisPhase">
+        <Icon icon="game-icons:hypnotize" class="hypnosis-icon" />
+        <div class="hypnosis-text">
+          <strong>Hipnoza Alkonosta</strong>
+          <span v-if="ui.hypnosisPhase === 1">Wybierz wrogą istotę do zhipnotyzowania.</span>
+          <span v-else>Wybierz cel — zhipnotyzowany wróg zaatakuje go.</span>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Generyczny wybór celu zdolności — info banner -->
+    <Transition name="fade">
+      <div v-if="ui.mode === 'effect_target'" class="effect-target-banner">
+        <Icon icon="game-icons:on-target" class="effect-target-icon" />
+        <div class="effect-target-text">
+          <strong>Wybierz cel zdolności</strong>
+          <span>Kliknij podświetloną istotę na polu.</span>
+        </div>
+        <button class="effect-target-cancel" @click="ui.clearEffectTarget()">Anuluj</button>
+      </div>
+    </Transition>
+
     <InfoBox />
     <CardTooltip />
     <GameOverModal />
@@ -1156,5 +1173,93 @@ const onPlayDescription = computed(() => {
     max-width: 92vw;
     padding: 14px;
   }
+}
+
+/* ====== HIPNOZA BANNER ====== */
+.hypnosis-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(90, 40, 140, 0.92), rgba(60, 20, 100, 0.95));
+  border: 1px solid rgba(180, 120, 255, 0.4);
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(140, 80, 220, 0.3);
+  color: #e8d8ff;
+  pointer-events: none;
+}
+.hypnosis-icon {
+  font-size: 28px;
+  color: #c8a0ff;
+}
+.hypnosis-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hypnosis-text strong {
+  font-size: 14px;
+  color: #e0c0ff;
+  letter-spacing: 0.5px;
+}
+.hypnosis-text span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* ====== EFFECT TARGET BANNER ====== */
+.effect-target-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(40, 100, 140, 0.92), rgba(20, 70, 110, 0.95));
+  border: 1px solid rgba(100, 200, 255, 0.4);
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(60, 160, 220, 0.3);
+  color: #d8f0ff;
+  pointer-events: auto;
+}
+.effect-target-icon {
+  font-size: 28px;
+  color: #80d0ff;
+}
+.effect-target-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.effect-target-text strong {
+  font-size: 14px;
+  color: #a0e0ff;
+  letter-spacing: 0.5px;
+}
+.effect-target-text span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.effect-target-cancel {
+  margin-left: 8px;
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #d8f0ff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.effect-target-cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>

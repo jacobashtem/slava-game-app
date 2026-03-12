@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import CreatureCard from '../cards/CreatureCard.vue'
 import { Icon } from '@iconify/vue'
 import type { CardInstance } from '../../game-engine/types'
@@ -204,6 +204,34 @@ function fanStyle(idx: number, total: number) {
   } as Record<string, string | number>
 }
 
+// ===== CARD DRAW ANIMATION — track newly added cards for staggered entrance =====
+const _prevHandIds = ref<Set<string>>(new Set())
+const drawAnimCards = ref<Set<string>>(new Set())
+let _drawAnimTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(hand, (newHand) => {
+  const newIds = new Set(newHand.map(c => c.instanceId))
+  const appeared: string[] = []
+  for (const id of newIds) {
+    if (!_prevHandIds.value.has(id)) appeared.push(id)
+  }
+  _prevHandIds.value = newIds
+
+  if (appeared.length === 0) return
+
+  // Stagger: add each new card with a delay
+  if (_drawAnimTimer) clearTimeout(_drawAnimTimer)
+  appeared.forEach((id, i) => {
+    setTimeout(() => {
+      drawAnimCards.value = new Set([...drawAnimCards.value, id])
+    }, i * 180) // 180ms stagger between cards
+  })
+  // Clear after animation completes
+  _drawAnimTimer = setTimeout(() => {
+    drawAnimCards.value = new Set()
+  }, appeared.length * 180 + 600)
+}, { deep: false })
+
 const adventureTypeLabel = (card: CardInstance) => {
   const type = (card.cardData as any).adventureType
   return type === 0 ? 'Zdarzenie' : type === 1 ? 'Artefakt' : 'Lokacja'
@@ -222,7 +250,7 @@ const adventureTypeColor = (card: CardInstance) => {
       <div
         v-for="(card, idx) in hand"
         :key="card.instanceId"
-        :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId }]"
+        :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId, 'draw-enter': drawAnimCards.has(card.instanceId) }]"
         :style="fanStyle(idx, hand.length)"
         @click="onCardClick(card)"
         @mouseenter="!isMobile && ui.showTooltip(card.instanceId)"
@@ -506,6 +534,28 @@ const adventureTypeColor = (card: CardInstance) => {
 }
 .adv-btn-enhanced:hover:not(:disabled) { background: rgba(251,191,36,0.2); }
 .adv-btn-enhanced:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* ===== CARD DRAW ENTRANCE ===== */
+.draw-enter {
+  animation: card-draw-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-draw-in {
+  0% {
+    opacity: 0;
+    transform: translateY(80px) scale(0.6) rotate(var(--fan-angle, 0deg));
+    filter: brightness(2.5) saturate(0);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.4) saturate(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(var(--fan-lift, 0px)) scale(1) rotate(var(--fan-angle, 0deg));
+    filter: brightness(1) saturate(1);
+  }
+}
 
 .hand-empty {
   font-size: 12px;

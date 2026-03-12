@@ -25,7 +25,7 @@ import {
 } from './TurnManager'
 import { GOLD_EDITION_RULES, SLAVA_RULES, EffectTrigger } from './constants'
 import { buildAlphaDeck } from './DeckBuilder'
-import { getEffect } from './EffectRegistry'
+import { getEffect, HATCHABLE_DRAGONS, hatchDragon } from './EffectRegistry'
 import {
   createInitialSlavaState,
   checkSlavaWinCondition,
@@ -738,23 +738,26 @@ export class GameEngine {
     }
 
     if (interaction.type === 'alkonost_target') {
-      const attackerInstanceId = interaction.attackerInstanceId!
-      const targetInstanceId = choice
+      // Hipnoza: zhipnotyzowana wroga istota atakuje swojego sojusznika
+      const hypnotizedId = interaction.attackerInstanceId!
+      const victimId = choice
 
-      // Atakujący już użył hasAttackedThisTurn — chwilowo zresetuj żeby resolveAttack przeszedł
+      // Zhipnotyzowany mógł już atakować w tej turze — chwilowo zresetuj flagę
       const fields = [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT] as const
       for (const side of ['player1', 'player2'] as PlayerSide[]) {
         for (const line of fields) {
-          const card = newState.players[side].field.lines[line].find(c => c.instanceId === attackerInstanceId)
+          const card = newState.players[side].field.lines[line].find(c => c.instanceId === hypnotizedId)
           if (card) card.hasAttackedThisTurn = false
         }
       }
 
-      const { newState: afterForced, log } = performAttack(newState, attackerInstanceId, targetInstanceId)
-      // Po wymuszonym ataku: przywróć hasAttackedThisTurn = true (to był dodatkowy atak, nie normalny slot)
+      const { newState: afterForced, log, combatResult } = performAttack(newState, hypnotizedId, victimId, { forcedByEffect: true })
+      // Zachowaj combatResult żeby gameStore mógł emitować VFX
+      if (combatResult) this.lastCombatResult = combatResult
+      // Po wymuszonym ataku: przywróć flagę (to był dodatkowy atak, nie normalny slot)
       for (const side of ['player1', 'player2'] as PlayerSide[]) {
         for (const line of fields) {
-          const card = afterForced.players[side].field.lines[line].find(c => c.instanceId === attackerInstanceId)
+          const card = afterForced.players[side].field.lines[line].find(c => c.instanceId === hypnotizedId)
           if (card) card.hasAttackedThisTurn = true
         }
       }
@@ -893,6 +896,19 @@ export class GameEngine {
         this.applyStateAndLog(newState, [])
       }
       this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Smocze Jajo: gracz wybrał smoka do wyklucia
+    if (interaction.type === 'smocze_jajo_hatch') {
+      const egg = this.findCardInState(newState, interaction.sourceInstanceId)
+      const dragon = HATCHABLE_DRAGONS.find(d => d.choiceId === choice)
+      if (egg && dragon) {
+        const result = hatchDragon(newState, egg, { instanceId: egg.instanceId, owner: egg.owner, cardData: egg.cardData }, dragon, [])
+        this.applyStateAndLog(result.newState, result.log)
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
       return cloneGameState(this.state)
     }
 

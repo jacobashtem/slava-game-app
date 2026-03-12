@@ -52,29 +52,17 @@ function ownerColor(ev: ActiveEventCard): string {
 </script>
 
 <template>
-  <!-- Template order: SUPPORT, RANGED, FRONT
-       AI (left side): flex-direction row → SUPPORT|RANGED|FRONT — FRONT rightmost (nearest center divider)
-       Player (right side): flex-direction row-reverse → renders as FRONT|RANGED|SUPPORT — FRONT leftmost (nearest center divider)
+  <!-- Template order: EVENTS, SUPPORT, RANGED, FRONT
+       AI (left side, flex-direction: row):    EVENTS | L3 | L2 | L1 — EVENTS far left edge, FRONT near center divider
+       Player (right side, flex-direction: row-reverse): L1 | L2 | L3 | EVENTS — FRONT near center divider, EVENTS far right edge
   -->
   <div :class="['player-field', { 'player-field--player': isPlayerSide, 'player-field--enemy': !isPlayerSide }]">
     <!-- Label: TY / WRÓG -->
     <div :class="['field-label', isPlayerSide ? 'field-label--player' : 'field-label--enemy']">
       {{ isPlayerSide ? 'TY' : 'WRÓG' }}
     </div>
-    <BattleLine
-      :cards="playerState.field.lines[BL.SUPPORT]"
-      :line="BL.SUPPORT"
-      :side="playerState.side"
-      :is-player-side="isPlayerSide"
-    />
-    <BattleLine
-      :cards="playerState.field.lines[BL.RANGED]"
-      :line="BL.RANGED"
-      :side="playerState.side"
-      :is-player-side="isPlayerSide"
-    />
 
-    <!-- Aktywne zdarzenia: między L1 a L2, widoczne na OBU polach — zawsze widoczna strefa -->
+    <!-- Aktywne zdarzenia: L4 — na zewnętrznej krawędzi pola, nie zaburza widoku linii bitwy -->
     <div class="events-zone">
       <div class="events-zone-label">
         <Icon icon="game-icons:scroll-unfurled" class="ez-label-icon" />
@@ -133,6 +121,18 @@ function ownerColor(ev: ActiveEventCard): string {
     </div>
 
     <BattleLine
+      :cards="playerState.field.lines[BL.SUPPORT]"
+      :line="BL.SUPPORT"
+      :side="playerState.side"
+      :is-player-side="isPlayerSide"
+    />
+    <BattleLine
+      :cards="playerState.field.lines[BL.RANGED]"
+      :line="BL.RANGED"
+      :side="playerState.side"
+      :is-player-side="isPlayerSide"
+    />
+    <BattleLine
       :cards="playerState.field.lines[BL.FRONT]"
       :line="BL.FRONT"
       :side="playerState.side"
@@ -144,7 +144,7 @@ function ownerColor(ev: ActiveEventCard): string {
 <style scoped>
 .player-field {
   display: flex;
-  flex-direction: row;   /* AI default: L3 | L2 | L1, FRONT rightmost (nearest divider) */
+  flex-direction: row;   /* AI: EVENTS | L3 | L2 | L1, FRONT rightmost (nearest divider), EVENTS on far edge */
   flex: 1;
   gap: 2px;
   min-height: 0;
@@ -153,7 +153,7 @@ function ownerColor(ev: ActiveEventCard): string {
 }
 
 .player-field--player {
-  flex-direction: row-reverse;  /* Player: renders as L1 | L2 | L3, FRONT leftmost (nearest divider) */
+  flex-direction: row-reverse;  /* Player: L1 | L2 | L3 | EVENTS, FRONT leftmost (nearest divider), EVENTS on far edge */
   border-bottom: 1px solid rgba(34, 197, 94, 0.12);
 }
 

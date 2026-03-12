@@ -50,12 +50,13 @@
         "lore": "<i>\"Jej narodzinom zwykle towarzyszyły potężne sztormy. Mityczny ptak, o kobiecej twarzy. Jej śpiew hipnotyzował, a słuchacze robili wszystko, czego Alkonost by sobie zażyczyła.\"</i>",
         "abilities": [
             {
-                "trigger": "REACTION",
-                "reactionTrigger": "ON_DEFEND",
-                "text": "Gdy zaatakowany: Napastnik zadaje te same {DMG} jednemu ze SWOICH sojuszników."
+                "trigger": "ACTION",
+                "cost": 0,
+                "limit": "ONCE_PER_TURN",
+                "text": "Hipnotyzuje wrogą istotę, zmuszając ją do zaatakowania sojusznika."
             }
         ],
-        "effectDescription": "Zaatakowana istota, dodatkowo atakuje wybranego przez Alkonosta sojusznika.",
+        "effectDescription": "[AKCJA] Hipnotyzuje wrogą istotę, zmuszając ją do zaatakowania sojusznika.",
         "effectId": "alkonost_redirect_counterattack"
     },
     {
@@ -73,17 +74,17 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Wybrany {Slavic/zywi-icon}  regeneruje swoją {Slavic/obrona-ikona}",
+        "effect": "Przywraca pełną {Slavic/obrona-ikona} rannemu {Slavic/zywi-icon}.",
         "lore": "<i>\"Niewielkie skrzaty, żyjące w mazurskich puszczach. Mimo, że unikali ludzi, wspierali ich, gdy ci potrzebowali pomocy.\"</i>",
         "abilities": [
             {
                 "trigger": "ACTION",
                 "cost": 0,
                 "limit": "ONCE_PER_TURN",
-                "text": "Ulecz wybranego sojusznika ({ZYVI}) do pełna."
+                "text": "Przywróć pełną {DEF} rannemu {ZYVI}."
             }
         ],
-        "effectDescription": "Wybrany {Slavic/zywi-icon}  regeneruje swoją {Slavic/obrona-ikona}",
+        "effectDescription": "[AKCJA] Przywraca pełną {DEF} rannemu {ZYVI}.",
         "effectId": "barstuk_ally_regen"
     },
     {
@@ -93,25 +94,28 @@
         "name": "Bałwan",
         "stats": {
             "attack": 0,
-            "defense": 5
+            "defense": 8
         },
-        "oldStats": "0/2500",
+        "oldStats": "0/4000",
         "combat": {
             "attackType": 0,
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Możesz raz skorzystać z wybranej, nawet niedostępnej Bożej Łaski, nie płacąc za nią.",
+        "effect": "Nie kontratakuje. Odporny na Żywioł. Po 3 rundach karta trafia na cmentarz. Dobierasz 3 karty.",
         "lore": "Budowany ku czci bogów jest świadectwem ich obecności, dowodem czci i szacunku całego ludu. Zdarza się, że przemawiają przez niego sami bogowie, obwieszczając swą wolę. Świadectwo namacalnej obecności bogów. Obiekt kultu i cel pielgrzymek wiernych chcących przebłagać bóstwo. Zdarza się, że przemawiają przez niego bogowie i  obwieszczają swą wolę.",
         "abilities": [
             {
-                "trigger": "ACTION",
-                "cost": 0,
-                "limit": "ONCE_PER_GAME",
-                "text": "Użyj dowolnej Bożej Łaski za darmo."
+                "trigger": "AURA",
+                "text": "Nie kontratakuje. Odporny na {ELEMENTAL}."
+            },
+            {
+                "trigger": "ON_TURN_START",
+                "condition": "3_rounds",
+                "text": "Po 3 rundach karta trafia na cmentarz. Dobierasz 3 karty."
             }
         ],
-        "effectDescription": "Możesz raz skorzystać z wybranej, nawet niedostępnej Bożej Łaski, nie płacąc za nią.",
+        "effectDescription": "[AURA] Nie kontratakuje. Odporny na {ELEMENTAL}. Po 3 rundach karta trafia na cmentarz. Dobierasz 3 karty.",
         "effectId": "balwan_free_divine_favor"
     },
     {
@@ -3024,7 +3028,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Nie kontratakuje. Dopóki jest w polu, żaden wrogi <ogień> nie może atakować; Nie kontratakuje. Po 5 rundach od wystawienia ginie, a gracz posiadający Jajo dobiera dodatkowe 3 karty spoza talii.",
+        "effect": "Nie kontratakuje. Blokuje wrogie Żywioły. Po 5 rundach wykluwa się w wybranego Smoka!",
         "lore": "Mimo, że niepozorne, wykluć się z niego może bestia pokroju samego Wija czy Gorynycha. Znalezienie takiego jaja nie wróżyło nic dobego - w końcu nieopodal musiał być jego ogromny rodzic.",
         "abilities": [
             {
@@ -3034,10 +3038,10 @@
             {
                 "trigger": "ON_TURN_START",
                 "condition": "5_rounds",
-                "text": "Pęka — dostajesz 3 karty spoza talii."
+                "text": "Wykluwa się w wybranego Smoka!"
             }
         ],
-        "effectDescription": "Nie kontratakuje. Dopóki jest w polu, żaden wrogi <ogień> nie może atakować; Nie kontratakuje. Po 5 rundach od wystawienia ginie, a gracz posiadający Jajo dobiera dodatkowe 3 karty spoza talii.",
+        "effectDescription": "[AURA] Nie kontratakuje. Blokuje wrogie {ELEMENTAL}. Po 5 rundach wykluwa się w wybranego Smoka!",
         "effectId": "smocze_jajo_hatch"
     },
     {

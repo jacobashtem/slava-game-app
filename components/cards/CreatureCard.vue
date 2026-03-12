@@ -141,6 +141,7 @@ const isWijRevived  = computed(() => !props.inHand && !!props.card.metadata?.wij
 const isGuardian    = computed(() => !props.inHand && (cardData.value as any).effectId === 'niedzwiedzioak_guardian' && !props.card.isSilenced)
 const isRiding      = computed(() => !props.inHand && !!props.card.metadata?.rumakActive)
 const isHomenCursed = computed(() => !props.inHand && !!props.card.metadata?.homenCurseOwner)
+const isHypnotized  = computed(() => !props.inHand && ui.mode === 'hypnosis' && ui.hypnosisAttackerId === props.card.instanceId && ui.hypnosisPhase === 2)
 
 // ===== P1 VFX STATUSY =====
 const isParalyzed   = computed(() => !props.inHand && props.card.paralyzeRoundsLeft !== null && props.card.paralyzeRoundsLeft !== 0)
@@ -213,6 +214,13 @@ const jajoCounter = computed(() => {
   if (props.inHand || (props.card.cardData as any).effectId !== 'smocze_jajo_hatch') return null
   const roundsInPlay = (game.state?.roundNumber ?? 0) - (props.card.roundEnteredPlay ?? 0)
   return { current: Math.min(roundsInPlay, 5), max: 5 }
+})
+
+// Bałwan: odliczanie do pęknięcia (3 rundy)
+const balwanCounter = computed(() => {
+  if (props.inHand || (props.card.cardData as any).effectId !== 'balwan_free_divine_favor') return null
+  const roundsInPlay = (game.state?.roundNumber ?? 0) - (props.card.roundEnteredPlay ?? 0)
+  return { current: Math.min(roundsInPlay, 3), max: 3 }
 })
 
 // Młot Swaroga: ile ataków zostało
@@ -464,7 +472,11 @@ function onClick() {
         >{{ passiveAura.icon }}</span>
         <!-- Licznik: Smocze Jajo -->
         <span v-if="jajoCounter" class="badge-tag badge-counter badge-jajo" v-tip="`Wylęg za ${jajoCounter.max - jajoCounter.current} rund`">
-          🥚 {{ jajoCounter.current }}/{{ jajoCounter.max }}
+          <Icon icon="game-icons:hatch" class="counter-icon" /> {{ jajoCounter.current }}/{{ jajoCounter.max }}
+        </span>
+        <!-- Licznik: Bałwan -->
+        <span v-if="balwanCounter" class="badge-tag badge-counter badge-balwan" v-tip="`Dar bogów za ${balwanCounter.max - balwanCounter.current} rund`">
+          <Icon icon="game-icons:sands-of-time" class="counter-icon" /> {{ balwanCounter.current }}/{{ balwanCounter.max }}
         </span>
         <!-- Licznik: Młot Swaroga ataków -->
         <span v-if="mlotCounter !== null" class="badge-tag badge-counter badge-mlot" v-tip="`Pozostało ataków Młota: ${mlotCounter}`">
@@ -616,6 +628,12 @@ function onClick() {
     <div v-if="isBlockFlash" class="state-overlay block-flash-overlay">
       <span class="state-overlay-icon">✋</span>
       <span class="state-overlay-label">ODPORNY</span>
+    </div>
+
+    <!-- Hipnoza: zahipnotyzowana istota wroga (faza 2 — wybierz cel ataku) -->
+    <div v-if="isHypnotized" class="state-overlay hypnosis-overlay">
+      <Icon icon="game-icons:hypnotize" class="hypnosis-card-icon" />
+      <span class="state-overlay-label">HIPNOZA</span>
     </div>
 
     <div v-if="isValidTarget" class="target-overlay" />
@@ -1184,6 +1202,24 @@ function onClick() {
   letter-spacing: 0.1em;
 }
 
+/* Hipnoza: fioletowy overlay z ikoną spirali */
+.hypnosis-overlay {
+  background: rgba(100, 20, 160, 0.35);
+  box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.5), 0 0 14px rgba(168, 85, 247, 0.4);
+  animation: combat-flash-in 0.3s ease-out;
+}
+.hypnosis-card-icon {
+  font-size: 28px;
+  color: #d8b4fe;
+  filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.8));
+}
+.hypnosis-overlay .state-overlay-label {
+  color: #f3e8ff;
+  background: rgba(88, 28, 135, 0.9);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+
 @keyframes combat-flash-in {
   0%   { opacity: 0; transform: scale(0.85); }
   60%  { opacity: 1; transform: scale(1.05); }
@@ -1206,17 +1242,32 @@ function onClick() {
   100% { translate: 0 0; }
 }
 
-/* ===== LICZNIKI (Smocze Jajo, Młot) ===== */
+/* ===== LICZNIKI (Smocze Jajo, Bałwan, Młot) ===== */
 .badge-counter {
-  font-size: 8px;
-  font-weight: 700;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 3px;
-  padding: 0 3px;
+  font-family: var(--font-display, 'Kanyon', Georgia, serif);
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.88);
+  border-radius: 4px;
+  padding: 2px 5px;
   color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  letter-spacing: 0.03em;
+}
+.counter-icon {
+  font-size: 12px;
+  flex-shrink: 0;
 }
 .badge-jajo {
-  border: 1px solid rgba(251, 191, 36, 0.5);
+  border: 1.5px solid rgba(251, 191, 36, 0.6);
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.25);
+}
+.badge-balwan {
+  border: 1.5px solid rgba(96, 165, 250, 0.6);
+  color: #93c5fd;
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.25);
 }
 .badge-mlot {
   border: 1px solid rgba(239, 68, 68, 0.5);

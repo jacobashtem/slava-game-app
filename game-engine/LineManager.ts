@@ -113,22 +113,54 @@ export function canPlaceInLine(state: GameState, side: PlayerSide, line: BattleL
 export function canAttack(
   state: GameState,
   attacker: CardInstance,
-  target: CardInstance
+  target: CardInstance,
+  options?: { forcedByEffect?: boolean }
 ): { valid: boolean; reason?: string; softFail?: boolean } {
-  if (attacker.position !== CardPosition.ATTACK) {
-    return { valid: false, reason: 'Atakujący jest w pozycji obrony.' }
+  const forced = !!options?.forcedByEffect
+
+  // Wymuszony atak (Hipnoza) pomija: pozycję, hasAttacked, owner check, taunt, arena lock
+  if (!forced) {
+    if (attacker.position !== CardPosition.ATTACK) {
+      return { valid: false, reason: 'Atakujący jest w pozycji obrony.' }
+    }
+
+    if (attacker.cannotAttack) {
+      return { valid: false, reason: 'Atakujący nie może atakować (efekt statusu).' }
+    }
+
+    // Sztandar: nośnik nie może atakować
+    if (attacker.equippedArtifacts.some((a: any) => ['adventure_sztandar', 'adventure_sztandar_enhanced'].includes(a.effectId))) {
+      return { valid: false, reason: `${attacker.cardData.name} trzyma Sztandar — nie może atakować.` }
+    }
+
+    if (attacker.hasAttackedThisTurn) {
+      // Leśnica: może atakować 2 razy na turę
+      if ((attacker.cardData as any).effectId === 'lesnica_double_attack') {
+        const attacks = (attacker.metadata.attacksThisTurn as number) ?? 0
+        if (attacks >= 2) return { valid: false, reason: 'Leśnica już atakowała 2 razy w tej turze.' }
+        // allow second attack — fall through
+      } else {
+        return { valid: false, reason: 'Atakujący już atakował w tej turze.' }
+      }
+    }
+
+    if (attacker.owner === target.owner) {
+      return { valid: false, reason: 'Nie można atakować własnych istot.' }
+    }
+
+    // Sprawdź Błotnik — jeśli wróg ma Błotnika w zasięgu, musi go atakować
+    const tauntTarget = findTauntTarget(state, attacker)
+    if (tauntTarget && tauntTarget.instanceId !== target.instanceId) {
+      return { valid: false, reason: `Musisz atakować ${tauntTarget.cardData.name} (Błotnik).` }
+    }
+
+    // Sprawdź Arena (enhanced) — czy karta ma lock na konkretny cel
+    if (attacker.metadata.arenaLocked && attacker.metadata.arenaLockedToTarget !== target.instanceId) {
+      return { valid: false, reason: 'Zraniona karta musi atakować swego oprawcę (Arena).' }
+    }
   }
 
-  if (attacker.cannotAttack) {
-    return { valid: false, reason: 'Atakujący nie może atakować (efekt statusu).' }
-  }
-
-  // Sztandar: nośnik nie może atakować
-  if (attacker.equippedArtifacts.some((a: any) => ['adventure_sztandar', 'adventure_sztandar_enhanced'].includes(a.effectId))) {
-    return { valid: false, reason: `${attacker.cardData.name} trzyma Sztandar — nie może atakować.` }
-  }
-
-  // Matecznik: ukryta istota nie może atakować ani być celem
+  // Matecznik: ukryta istota nie może atakować ani być celem (nawet wymuszony)
   if (attacker.metadata.matecznikHidden) {
     return { valid: false, reason: `${attacker.cardData.name} ukryta w Mateczniku — nie może atakować.` }
   }
@@ -144,47 +176,48 @@ export function canAttack(
     return { valid: false, reason: `${target.cardData.name} jest już martwa.` }
   }
 
-  if (attacker.hasAttackedThisTurn) {
-    // Leśnica: może atakować 2 razy na turę
-    if ((attacker.cardData as any).effectId === 'lesnica_double_attack') {
-      const attacks = (attacker.metadata.attacksThisTurn as number) ?? 0
-      if (attacks >= 2) return { valid: false, reason: 'Leśnica już atakowała 2 razy w tej turze.' }
-      // allow second attack — fall through
-    } else {
-      return { valid: false, reason: 'Atakujący już atakował w tej turze.' }
-    }
-  }
-
-  if (attacker.owner === target.owner) {
-    return { valid: false, reason: 'Nie można atakować własnych istot.' }
-  }
-
-  const attackerSide = attacker.owner
-  const defenderSide = target.owner
   const attackType = ((attacker.cardData as any).attackType as AttackType) ?? AttackType.MELEE
 
-  // Bitwa Nad Tollense: all creatures ignore line restrictions
-  const bitwaActive = state.activeEvents?.some(e => e.cardData.effectId === 'adventure_bitwa_nad_tollense')
-  if (!bitwaActive) {
-    const rangeCheck = checkAttackRange(state, attackType, attacker, target)
-    if (!rangeCheck.valid) return rangeCheck
+  // Zasięg linii — zachowany nawet przy wymuszonym ataku (hipnoza respektuje zasięg)
+  // Przy wymuszonym ataku: atakujący i cel są na tej samej stronie → symuluj zasięg jak gdyby byli naprzeciwko
+  if (!forced) {
+    const bitwaActive = state.activeEvents?.some(e => e.cardData.effectId === 'adventure_bitwa_nad_tollense')
+    if (!bitwaActive) {
+      const rangeCheck = checkAttackRange(state, attackType, attacker, target)
+      if (!rangeCheck.valid) return rangeCheck
+    }
+  } else {
+    // Wymuszony atak (hipnoza): zasięg na tej samej stronie
+    const lineOrder = [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]
+    const atkIdx = lineOrder.indexOf(attacker.line as BattleLine)
+    const defIdx = lineOrder.indexOf(target.line as BattleLine)
+    if (atkIdx >= 0 && defIdx >= 0) {
+      if (attackType === AttackType.MELEE) {
+        // Wręcz: ta sama linia lub sąsiednia
+        if (Math.abs(atkIdx - defIdx) > 1) {
+          return { valid: false, reason: `${attacker.cardData.name} (Wręcz) nie dosięgnie — za daleko.` }
+        }
+      } else if (attackType === AttackType.ELEMENTAL) {
+        // Żywioł: jak wręcz (ta sama + sąsiednia), ALE latające gdziekolwiek
+        if (isFlying(target)) {
+          // Żywioł bije latające w dowolnej linii
+        } else if (Math.abs(atkIdx - defIdx) > 1) {
+          return { valid: false, reason: `${attacker.cardData.name} (Żywioł) nie dosięgnie — za daleko.` }
+        }
+      } else if (attackType === AttackType.RANGED) {
+        // Dystans: własna linia + dalsze (L2→L2+L3, L1→L1+L2+L3)
+        if (defIdx < atkIdx) {
+          return { valid: false, reason: `${attacker.cardData.name} (Dystans) nie strzeli w tę stronę.` }
+        }
+      }
+      // Magia: dowolna linia — brak ograniczeń
+    }
   }
 
   // Sprawdź czy cel jest latający i czy atakujący może bić latające
   const targetFlying = isFlying(target)
   if (targetFlying && attackType === AttackType.MELEE && !isFlying(attacker)) {
     return { valid: false, reason: 'Atak Wręcz nie może bić latających istot.', softFail: true }
-  }
-
-  // Sprawdź Błotnik — jeśli wróg ma Błotnika w zasięgu, musi go atakować
-  const tauntTarget = findTauntTarget(state, attacker)
-  if (tauntTarget && tauntTarget.instanceId !== target.instanceId) {
-    return { valid: false, reason: `Musisz atakować ${tauntTarget.cardData.name} (Błotnik).` }
-  }
-
-  // Sprawdź Arena (enhanced) — czy karta ma lock na konkretny cel
-  if (attacker.metadata.arenaLocked && attacker.metadata.arenaLockedToTarget !== target.instanceId) {
-    return { valid: false, reason: 'Zraniona karta musi atakować swego oprawcę (Arena).' }
   }
 
   // ===== PASYWNE ODPORNOŚCI CELU =====
@@ -196,7 +229,7 @@ export function canAttack(
   }
 
   // Matoha (#17): wrogie istoty z typem Magia nie mogą atakować (sprawdzone po stronie atakującego)
-  const hasMaToha = getAllCreaturesOnField(state, defenderSide)
+  const hasMaToha = getAllCreaturesOnField(state, target.owner)
     .some(c => (c.cardData as any).effectId === 'matoha_anti_magic')
   if (hasMaToha && attackType === AttackType.MAGIC) {
     return { valid: false, reason: 'Matoha blokuje ataki Magii.', softFail: true }
@@ -242,6 +275,11 @@ export function canAttack(
     return { valid: false, reason: `${target.cardData.name}: Grad jest odporny na ten typ ataku.`, softFail: true }
   }
 
+  // Bałwan (#4): odporny na Żywioł
+  if (targetEffectId === 'balwan_free_divine_favor' && attackType === AttackType.ELEMENTAL) {
+    return { valid: false, reason: `${target.cardData.name}: Bałwan jest odporny na Żywioł!`, softFail: true }
+  }
+
   // Mavka (#111): sojusznicy w tej samej linii co Mavka nie mogą być celem ataków
   const hasMavkaShield = getAllCreaturesOnField(state, target.owner)
     .some(c => (c.cardData as any).effectId === 'mavka_line_shield'
@@ -253,7 +291,7 @@ export function canAttack(
   }
 
   // Smocze Jajo (#113): blokuje wrogie ataki Żywiołem po stronie posiadacza
-  const hasJajoShield = getAllCreaturesOnField(state, defenderSide)
+  const hasJajoShield = getAllCreaturesOnField(state, target.owner)
     .some(c => (c.cardData as any).effectId === 'smocze_jajo_hatch' && !c.isSilenced)
   if (hasJajoShield && attackType === AttackType.ELEMENTAL) {
     return { valid: false, reason: 'Smocze Jajo chroni przed atakami Żywiołu!', softFail: true }
