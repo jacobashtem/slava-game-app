@@ -443,13 +443,21 @@ function onLineDrop(e: DragEvent) {
   position: relative;
   gap: 2px;
   overflow: visible;
+  transition: border-color 0.6s ease, box-shadow 0.6s ease;
 }
 
 /* Per-zone styling with atmospheric gradients */
 .battle-line.line-1 {
-  background: linear-gradient(180deg, rgba(200, 160, 60, 0.06) 0%, rgba(180, 130, 60, 0.02) 100%);
-  border-color: rgba(200, 160, 60, 0.15);
-  box-shadow: inset 0 0 20px rgba(200, 160, 60, 0.03);
+  background: linear-gradient(180deg, rgba(200, 160, 60, 0.08) 0%, rgba(180, 130, 60, 0.03) 100%);
+  border-color: rgba(200, 160, 60, 0.2);
+  box-shadow:
+    inset 0 0 20px rgba(200, 160, 60, 0.05),
+    0 0 12px rgba(200, 160, 60, 0.06);
+  animation: line1-glow 5s ease-in-out infinite;
+}
+@keyframes line1-glow {
+  0%, 100% { box-shadow: inset 0 0 20px rgba(200, 160, 60, 0.04), 0 0 8px rgba(200, 160, 60, 0.04); }
+  50% { box-shadow: inset 0 0 25px rgba(200, 160, 60, 0.08), 0 0 16px rgba(200, 160, 60, 0.08); }
 }
 .battle-line.line-2 {
   background: linear-gradient(180deg, rgba(99, 102, 241, 0.05) 0%, rgba(79, 70, 229, 0.02) 100%);
@@ -476,9 +484,16 @@ function onLineDrop(e: DragEvent) {
   border-color: rgba(239, 68, 68, 0.08);
 }
 .battle-line.enemy-line.line-1 {
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 50, 50, 0.02) 100%);
-  border-color: rgba(239, 68, 68, 0.12);
-  box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.03);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.07) 0%, rgba(220, 50, 50, 0.03) 100%);
+  border-color: rgba(239, 68, 68, 0.18);
+  box-shadow:
+    inset 0 0 20px rgba(239, 68, 68, 0.04),
+    0 0 12px rgba(239, 68, 68, 0.05);
+  animation: enemy-line1-glow 5s ease-in-out infinite;
+}
+@keyframes enemy-line1-glow {
+  0%, 100% { box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.03), 0 0 8px rgba(239, 68, 68, 0.03); }
+  50% { box-shadow: inset 0 0 25px rgba(239, 68, 68, 0.07), 0 0 16px rgba(239, 68, 68, 0.07); }
 }
 .battle-line.enemy-line.line-2 {
   background: linear-gradient(180deg, rgba(200, 50, 50, 0.04) 0%, rgba(180, 40, 40, 0.01) 100%);

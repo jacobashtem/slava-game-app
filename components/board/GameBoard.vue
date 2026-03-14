@@ -318,11 +318,15 @@ const onPlayDescription = computed(() => {
       <!-- POLE WALKI AI (3 kolumny: L3|L2|L1, L1 przy środku) -->
       <PlayerField :player-state="ai" :is-player-side="false" />
 
-      <!-- ŚRODKOWY SEPARATOR (pionowy) -->
-      <div class="center-divider">
-        <div class="divider-line" />
+      <!-- ŚRODKOWY SEPARATOR (pionowy) — energetyczna linia podziału -->
+      <div :class="['center-divider', { 'divider-combat': isCombatPhase }]">
+        <div class="divider-line">
+          <div class="divider-energy" />
+        </div>
         <div class="divider-badge">⚔</div>
-        <div class="divider-line" />
+        <div class="divider-line">
+          <div class="divider-energy" />
+        </div>
       </div>
 
       <!-- POLE WALKI GRACZA (3 kolumny: L1|L2|L3, L1 przy środku) -->
@@ -646,26 +650,31 @@ const onPlayDescription = computed(() => {
       rgba(96, 165, 250, 0.05) 100%);
 }
 
-/* Combat phase glow — subtle red pulse when combat is active */
+/* Combat phase glow — visible red vignette pulse when combat is active */
 .combat-glow-overlay {
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  mix-blend-mode: soft-light;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 50%,
-      rgba(239, 68, 68, 0.08) 0%,
-      rgba(220, 38, 38, 0.04) 40%,
-      transparent 70%);
-  animation: combat-pulse 2s ease-in-out infinite;
+    /* Inner darkening — battlefield feels intense */
+    radial-gradient(ellipse 90% 70% at 50% 50%,
+      transparent 20%,
+      rgba(0, 0, 0, 0.15) 70%,
+      rgba(0, 0, 0, 0.3) 100%),
+    /* Red combat tint */
+    radial-gradient(ellipse 70% 50% at 50% 50%,
+      rgba(239, 68, 68, 0.1) 0%,
+      rgba(220, 38, 38, 0.05) 50%,
+      transparent 80%);
+  animation: combat-pulse 2.5s ease-in-out infinite;
 }
 @keyframes combat-pulse {
-  0%, 100% { opacity: 0.5; }
+  0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
 }
-.combat-glow-enter-active { transition: opacity 0.6s ease; }
-.combat-glow-leave-active { transition: opacity 0.4s ease; }
+.combat-glow-enter-active { transition: opacity 0.8s ease; }
+.combat-glow-leave-active { transition: opacity 0.5s ease; }
 .combat-glow-enter-from,
 .combat-glow-leave-to { opacity: 0; }
 
@@ -899,36 +908,101 @@ const onPlayDescription = computed(() => {
 }
 
 
-/* ====== SEPARATOR ŚRODKOWY (pionowy) ====== */
+/* ====== SEPARATOR ŚRODKOWY (pionowy) — energetyczny ====== */
 .center-divider {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 8px 0;
   flex-shrink: 0;
-  width: 24px;
+  width: 28px;
+  transition: filter 0.4s ease;
 }
 
 .divider-line {
   flex: 1;
-  width: 1px;
+  width: 2px;
+  position: relative;
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(200, 168, 78, 0.2) 30%,
-    rgba(200, 168, 78, 0.35) 50%,
-    rgba(200, 168, 78, 0.2) 70%,
+    rgba(200, 168, 78, 0.25) 20%,
+    rgba(200, 168, 78, 0.5) 50%,
+    rgba(200, 168, 78, 0.25) 80%,
     transparent
   );
+  box-shadow: 0 0 8px rgba(200, 168, 78, 0.15);
+}
+/* Animated energy pulse traveling along the line */
+.divider-energy {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(251, 191, 36, 0.7) 45%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(251, 191, 36, 0.7) 55%,
+    transparent 100%
+  );
+  background-size: 100% 200%;
+  animation: energy-flow 3s ease-in-out infinite;
+  border-radius: 1px;
+}
+@keyframes energy-flow {
+  0%   { background-position: 0% -50%; opacity: 0.3; }
+  50%  { background-position: 0% 150%; opacity: 0.8; }
+  100% { background-position: 0% -50%; opacity: 0.3; }
 }
 
 .divider-badge {
-  font-size: 16px;
-  color: rgba(200, 168, 78, 0.35);
+  font-size: 18px;
+  color: rgba(200, 168, 78, 0.6);
   padding: 6px 0;
   writing-mode: vertical-rl;
-  text-shadow: 0 0 12px rgba(200, 168, 78, 0.2);
-  /* rune-glow animation removed — static for performance */
+  text-shadow:
+    0 0 12px rgba(200, 168, 78, 0.4),
+    0 0 24px rgba(200, 168, 78, 0.15);
+  animation: badge-pulse 4s ease-in-out infinite;
+  position: relative;
+}
+@keyframes badge-pulse {
+  0%, 100% { text-shadow: 0 0 12px rgba(200, 168, 78, 0.3), 0 0 24px rgba(200, 168, 78, 0.1); }
+  50% { text-shadow: 0 0 16px rgba(251, 191, 36, 0.6), 0 0 32px rgba(251, 191, 36, 0.25), 0 0 48px rgba(200, 168, 78, 0.1); }
+}
+
+/* Combat mode: divider intensifies dramatically */
+.divider-combat .divider-line {
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(239, 68, 68, 0.4) 20%,
+    rgba(251, 146, 60, 0.7) 50%,
+    rgba(239, 68, 68, 0.4) 80%,
+    transparent
+  );
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.3), 0 0 32px rgba(239, 68, 68, 0.1);
+}
+.divider-combat .divider-energy {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(239, 68, 68, 0.8) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(239, 68, 68, 0.8) 60%,
+    transparent 100%
+  );
+  animation-duration: 1.5s;
+}
+.divider-combat .divider-badge {
+  color: rgba(239, 68, 68, 0.8);
+  animation: badge-combat-pulse 1.5s ease-in-out infinite;
+}
+@keyframes badge-combat-pulse {
+  0%, 100% { text-shadow: 0 0 12px rgba(239, 68, 68, 0.4), 0 0 24px rgba(239, 68, 68, 0.15); transform: scale(1); }
+  50% { text-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(251, 146, 60, 0.4), 0 0 60px rgba(239, 68, 68, 0.15); transform: scale(1.15); }
 }
 
 
@@ -1263,19 +1337,37 @@ const onPlayDescription = computed(() => {
     flex-direction: row;
     width: 100%;
     padding: 0 12px;
-    height: 14px;
+    height: 16px;
     flex-shrink: 0;
   }
   .divider-line {
-    height: 1px;
+    height: 2px;
     width: auto;
     flex: 1;
-    background: linear-gradient(90deg, transparent, rgba(200,168,78,0.25) 30%, rgba(200,168,78,0.35) 50%, rgba(200,168,78,0.25) 70%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(200,168,78,0.3) 20%, rgba(200,168,78,0.5) 50%, rgba(200,168,78,0.3) 80%, transparent);
+  }
+  .divider-energy {
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(251, 191, 36, 0.7) 45%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(251, 191, 36, 0.7) 55%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: energy-flow-h 3s ease-in-out infinite;
+    height: 100%;
+  }
+  @keyframes energy-flow-h {
+    0%   { background-position: -50% 0%; opacity: 0.3; }
+    50%  { background-position: 150% 0%; opacity: 0.8; }
+    100% { background-position: -50% 0%; opacity: 0.3; }
   }
   .divider-badge {
     writing-mode: horizontal-tb;
     padding: 0 6px;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   /* === PLAY LIMIT TOAST === */
