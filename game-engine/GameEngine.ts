@@ -71,9 +71,11 @@ export class GameEngine {
     this.arenaMode = false
     this.state = createInitialGameState('gold')
 
-    // Losowa pora roku startowa (runda 1, 4, 7 lub 10)
-    const seasonStarts = [1, 4, 7, 10]
-    this.state.roundNumber = seasonStarts[Math.floor(Math.random() * seasonStarts.length)]!
+    // Losowa pora roku startowa (offset 0–3 przesuwa sezon, runda zawsze = 1)
+    this.state.seasonOffset = Math.floor(Math.random() * 4)
+
+    // Losowy gracz zaczyna
+    this.state.currentTurn = Math.random() < 0.5 ? 'player1' : 'player2'
 
     const playerConfig = playerDomainFilter
       ? { ...GOLD_EDITION_DECK_CONFIG, domainFilter: playerDomainFilter }
@@ -90,7 +92,8 @@ export class GameEngine {
     this.state.players.player1.glory = GOLD_EDITION_RULES.STARTING_GOLD
     this.state.players.player2.glory = GOLD_EDITION_RULES.STARTING_GOLD
 
-    const startLog = addLog(this.state, 'Gra Alpha rozpoczęta! Tylko sprawdzone karty.', 'system')
+    const who = this.state.currentTurn === 'player1' ? 'Ty zaczynasz!' : 'Przeciwnik zaczyna!'
+    const startLog = addLog(this.state, `Gra Alpha rozpoczęta! ${who}`, 'system')
     this.state.actionLog.push(startLog)
     this.onLogEntry?.(startLog)
 
@@ -104,9 +107,11 @@ export class GameEngine {
     this.arenaMode = false
     this.state = createInitialGameState(gameMode)
 
-    // Losowa pora roku startowa (runda 1, 4, 7 lub 10)
-    const seasonStarts = [1, 4, 7, 10]
-    this.state.roundNumber = seasonStarts[Math.floor(Math.random() * seasonStarts.length)]!
+    // Losowa pora roku startowa (offset 0–3 przesuwa sezon, runda zawsze = 1)
+    this.state.seasonOffset = Math.floor(Math.random() * 4)
+
+    // Losowy gracz zaczyna
+    this.state.currentTurn = Math.random() < 0.5 ? 'player1' : 'player2'
 
     // Zbuduj talie
     const playerConfig = playerDomainFilter
@@ -127,12 +132,13 @@ export class GameEngine {
 
     // Initialize slava data if applicable
     if (gameMode === 'slava') {
-      this.state.slavaData = createInitialSlavaState(this.state.roundNumber)
+      this.state.slavaData = createInitialSlavaState(this.state.roundNumber, this.state.seasonOffset)
       this.state.players.player1.glory = 5
       this.state.players.player2.glory = 5
     }
 
-    const startLog = addLog(this.state, 'Gra rozpoczęta! Tryb: ' + gameMode, 'system')
+    const who = this.state.currentTurn === 'player1' ? 'Ty zaczynasz!' : 'Przeciwnik zaczyna!'
+    const startLog = addLog(this.state, `Gra rozpoczęta! ${who}`, 'system')
     this.state.actionLog.push(startLog)
     this.onLogEntry?.(startLog)
 
@@ -149,8 +155,11 @@ export class GameEngine {
     this.arenaMode = false
     this.state = createInitialGameState('slava')
 
-    // Sława zawsze zaczyna od rundy 1 (Zima)
-    this.state.roundNumber = 1
+    // Sława: runda 1, losowy sezon startowy
+    this.state.seasonOffset = Math.floor(Math.random() * 4)
+
+    // Losowy gracz zaczyna
+    this.state.currentTurn = Math.random() < 0.5 ? 'player1' : 'player2'
 
     // Zbuduj talie (losowe, pełna pula)
     const playerConfig = playerDomainFilter
@@ -171,7 +180,7 @@ export class GameEngine {
     this.state.players.player2.glory = 0
 
     // Inicjalizuj SlavaState
-    this.state.slavaData = createInitialSlavaState(this.state.roundNumber)
+    this.state.slavaData = createInitialSlavaState(this.state.roundNumber, this.state.seasonOffset)
 
     const startLog = addLog(this.state, '⚔ TRYB SŁAWA! Cel: zdobądź 10 Punktów Sławy!', 'system')
     this.state.actionLog.push(startLog)
@@ -325,7 +334,7 @@ export class GameEngine {
     if (this.state.currentPhase !== GamePhase.PLAY && this.state.currentPhase !== GamePhase.COMBAT) {
       throw new Error('Łupienie możliwe tylko w fazie gry lub walki!')
     }
-    if (this.state.roundNumber < 2) throw new Error('Łupienie dostępne od 2. rundy!')
+    if (this.state.roundNumber < 3) throw new Error('Łupienie dostępne od 3. rundy!')
 
     const newState = cloneGameState(this.state)
     const log = performPlunder(newState, 'player1')

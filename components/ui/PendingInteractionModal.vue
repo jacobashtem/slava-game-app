@@ -4,10 +4,10 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 
 // Creature portraits (same glob as CreatureCard.vue)
-const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' })
+const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.webp', { eager: true, import: 'default' })
 const creatureImgs: Record<number, string> = {}
 for (const [path, url] of Object.entries(_creatureImgModules)) {
-  const match = path.match(/(\d+)\.png$/)
+  const match = path.match(/(\d+)\.webp$/)
   if (match?.[1]) creatureImgs[parseInt(match[1])] = url as string
 }
 

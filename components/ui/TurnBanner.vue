@@ -2,23 +2,48 @@
 import { ref, watch, onUnmounted } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 
+import { useUIStore } from '../../stores/uiStore'
+
 const game = useGameStore()
+const ui = useUIStore()
 const showBanner = ref(false)
 const bannerText = ref('')
 const bannerSubText = ref('')
-const bannerType = ref<'player' | 'ai' | 'season' | 'plunder'>('player')
+const bannerType = ref<'player' | 'ai' | 'season' | 'plunder' | 'timeout'>('player')
 let bannerTimer: ReturnType<typeof setTimeout> | null = null
+const bannerQueue: Array<{ text: string; type: typeof bannerType.value; duration: number; sub?: string }> = []
+let _processingQueue = false
 
-function showFor(text: string, type: 'player' | 'ai' | 'season' | 'plunder', duration: number, sub = '') {
+function showFor(text: string, type: typeof bannerType.value, duration: number, sub = '') {
   if (bannerTimer) clearTimeout(bannerTimer)
   bannerText.value = text
   bannerSubText.value = sub
   bannerType.value = type
   showBanner.value = true
-  bannerTimer = setTimeout(() => { showBanner.value = false; bannerTimer = null }, duration)
+  bannerTimer = setTimeout(() => {
+    showBanner.value = false
+    bannerTimer = null
+    processQueue()
+  }, duration)
 }
 
-onUnmounted(() => { if (bannerTimer) clearTimeout(bannerTimer) })
+function queueBanner(text: string, type: typeof bannerType.value, duration: number, sub = '') {
+  bannerQueue.push({ text, type, duration, sub })
+  if (!_processingQueue) processQueue()
+}
+
+function processQueue() {
+  if (bannerQueue.length === 0) { _processingQueue = false; return }
+  _processingQueue = true
+  const next = bannerQueue.shift()!
+  // Small delay between banners for smooth transition
+  setTimeout(() => showFor(next.text, next.type, next.duration, next.sub), 300)
+}
+
+onUnmounted(() => {
+  if (bannerTimer) clearTimeout(bannerTimer)
+  bannerQueue.length = 0
+})
 
 const seasonNames: Record<string, string> = {
   spring: '🌸 Wiosna',
@@ -33,10 +58,27 @@ watch(() => game.season, (season, prevSeason) => {
   showFor(seasonNames[season] ?? season, 'season', 1800)
 })
 
+// Timeout banner — detect glory loss from timeout in actionLog
+let _lastTimeoutLogLen = 0
+watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
+  if (newLen <= _lastTimeoutLogLen) { _lastTimeoutLogLen = newLen; return }
+  const log = game.state?.actionLog ?? []
+  const newEntries = log.slice(_lastTimeoutLogLen)
+  _lastTimeoutLogLen = newLen
+  for (const entry of newEntries) {
+    if (entry.type === 'glory' && entry.message.includes('CZAS MINĄŁ')) {
+      // Show timeout banner, then queue the normal turn banner
+      showFor('Czas minął!', 'timeout', 2200, 'Tracisz punkt sławy')
+      queueBanner('Tura przeciwnika', 'ai', 1200)
+      return // skip normal turn announcement for this cycle
+    }
+  }
+})
+
 // Turn change announcement
 watch(() => game.currentTurn, (turn, prevTurn) => {
   if (!prevTurn || !turn) return
-  if (showBanner.value && bannerType.value === 'season') return
+  if (showBanner.value && (bannerType.value === 'season' || bannerType.value === 'timeout')) return
   showFor(turn === 'player1' ? 'Twoja tura' : 'Tura przeciwnika', turn === 'player1' ? 'player' : 'ai', 1200)
 })
 
@@ -116,6 +158,14 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
   background: rgba(249, 115, 22, 0.18);
   border: 2px solid rgba(249, 115, 22, 0.5);
   box-shadow: 0 0 50px rgba(249, 115, 22, 0.3);
+  text-align: center;
+}
+
+.banner-timeout {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.2);
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 60px rgba(239, 68, 68, 0.35);
   text-align: center;
 }
 

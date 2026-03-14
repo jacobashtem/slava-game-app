@@ -21,7 +21,7 @@ const skipCombat = computed(() =>
 const canPlunder = computed(() => {
   if (!game.state) return false
   const s = game.state
-  if (s.roundNumber < 2 || hasEnemiesOnField.value || !game.isPlayerTurn) return false
+  if (s.roundNumber < 3 || hasEnemiesOnField.value || !game.isPlayerTurn) return false
   if (s.currentPhase !== GamePhase.PLAY && s.currentPhase !== GamePhase.COMBAT) return false
   const enemyCurrency = s.gameMode === 'slava' ? s.players.player2.glory : s.players.player2.gold
   return (enemyCurrency ?? 0) > 0
@@ -74,7 +74,7 @@ const btnConfig = computed(() => {
       class="ctrl-btn ctrl-pass"
       @click="() => { ui.clearSelection(); game.endTurn() }"
     >
-      <Icon icon="game-icons:white-flag" class="btn-icon" />
+      <Icon icon="mdi:hand-back-left" class="btn-icon" />
       PASUJ
     </button>
     <button
@@ -98,12 +98,12 @@ const btnConfig = computed(() => {
 .ctrl-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 22px;
+  gap: 8px;
+  padding: 10px 24px;
   border: 1px solid;
   border-radius: 5px;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 19px;
+  font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
@@ -115,8 +115,8 @@ const btnConfig = computed(() => {
 }
 
 .btn-icon {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
 }
 
@@ -224,8 +224,8 @@ const btnConfig = computed(() => {
     height: 12px;
   }
   .ctrl-pass {
-    font-size: 8px;
-    padding: 3px 6px;
+    font-size: 9px;
+    padding: 4px 8px;
   }
 }
 </style>

@@ -13,6 +13,8 @@
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
+import { Spark, tickSparks, acquireSpark } from '../../composables/useParticleSystem'
+import { rafLoop } from '../../composables/useRAFLoop'
 
 let THREE_GPU: typeof import('three/webgpu') | null = null
 let TSL: {
@@ -33,73 +35,19 @@ const gpuError = ref<string | null>(null)
 let renderer: any = null
 let scene: any = null
 let camera: any = null
-let animationId = 0
+let rafHandle = -1
+
 let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
 let mounted = false
 let loopActive = false
-
-// ===== SPARK PARTICLE =====
-
-class Spark {
-  x: number; y: number; vx: number; vy: number
-  life: number; decay: number; size: number
-  color: string; type: 'ember' | 'flame' | 'smoke'
-  gravity: number; friction: number
-
-  constructor(x: number, y: number, o: Partial<Spark> = {}) {
-    this.x = x; this.y = y
-    this.vx = o.vx ?? 0; this.vy = o.vy ?? 0
-    this.life = o.life ?? 1; this.decay = o.decay ?? 0.02
-    this.size = o.size ?? 2; this.color = o.color ?? '255,160,40'
-    this.type = o.type ?? 'ember'; this.gravity = o.gravity ?? 0
-    this.friction = o.friction ?? 0.98
-  }
-
-  update(): boolean {
-    this.vx *= this.friction; this.vy *= this.friction
-    this.vy += this.gravity; this.x += this.vx; this.y += this.vy
-    this.life -= this.decay
-    return this.life > 0
-  }
-
-  draw(c: CanvasRenderingContext2D) {
-    const a = Math.max(0, this.life)
-    c.save()
-    if (this.type === 'ember') {
-      c.fillStyle = `rgba(${this.color},${a * 0.8})`
-      c.shadowColor = `rgba(${this.color},${a})`
-      c.shadowBlur = this.size * 3
-      c.beginPath()
-      c.arc(this.x, this.y, this.size * 0.6, 0, Math.PI * 2)
-      c.fill()
-    } else if (this.type === 'flame') {
-      const grad = c.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size)
-      grad.addColorStop(0, `rgba(255,240,200,${a * 0.6})`)
-      grad.addColorStop(0.5, `rgba(${this.color},${a * 0.4})`)
-      grad.addColorStop(1, `rgba(${this.color},0)`)
-      c.fillStyle = grad
-      c.beginPath()
-      c.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-      c.fill()
-    } else if (this.type === 'smoke') {
-      const grad = c.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size)
-      grad.addColorStop(0, `rgba(${this.color},${a * 0.25})`)
-      grad.addColorStop(1, `rgba(${this.color},0)`)
-      c.fillStyle = grad
-      c.beginPath()
-      c.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-      c.fill()
-    }
-    c.restore()
-  }
-}
+const pendingTimeouts: number[] = []
 
 function spawnEmbers(cx: number, cy: number, count: number, spread: number, color = '255,140,30') {
   for (let i = 0; i < count; i++) {
     const a = Math.random() * Math.PI * 2
     const speed = 1 + Math.random() * 4
-    sparks.push(new Spark(cx, cy, {
+    sparks.push(acquireSpark(cx, cy, {
       vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
       life: 0.4 + Math.random() * 0.5, decay: 0.012,
       size: 1.5 + Math.random() * 2, color,
@@ -238,17 +186,16 @@ function createFireImpactMaterial(): ImpactObj {
 function startLoop() {
   if (loopActive) return
   loopActive = true
-  animationId = requestAnimationFrame(animate)
+  rafHandle = rafLoop.register(animate)
 }
 
 function stopLoop() {
   loopActive = false
-  if (animationId) { cancelAnimationFrame(animationId); animationId = 0 }
+  if (rafHandle >= 0) { rafLoop.unregister(rafHandle); rafHandle = -1 }
 }
 
 function animate() {
   if (!mounted || !loopActive) return
-  animationId = requestAnimationFrame(animate)
 
   if (renderer && scene && camera) renderer.render(scene, camera)
 
@@ -256,11 +203,7 @@ function animate() {
     const w = sparkCanvasRef.value.width / (window.devicePixelRatio || 1)
     const h = sparkCanvasRef.value.height / (window.devicePixelRatio || 1)
     sCtx.clearRect(0, 0, w, h)
-    sparks = sparks.filter(s => {
-      const alive = s.update()
-      if (alive) s.draw(sCtx!)
-      return alive
-    })
+    tickSparks(sparks, sCtx!)
   }
 }
 
@@ -271,12 +214,16 @@ function s2t(sx: number, sy: number, W: number, H: number) {
 // ===== PUBLIC: play(attackerEl, defenderEl, damage?) =====
 
 let isPlaying = false
+let currentTl: gsap.core.Timeline | null = null
 
 function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number) {
   if (isPlaying || !gpuReady.value) return
   if (!containerRef.value || !renderer || !scene || !camera) return
   if (!orbObj || !impactObj) return
   isPlaying = true
+
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
 
   const container = containerRef.value
   const sceneEl = attackerEl.closest('.game-board') || attackerEl.closest('.va-battlefield') || attackerEl.closest('.p3-arena-row') || attackerEl.closest('.p3-arena-row-mini') || container.parentElement!
@@ -323,9 +270,11 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   const orb = orbObj!
   const impact = impactObj!
 
+  if (currentTl) currentTl.kill()
   const tl = gsap.timeline({
     onComplete: () => {
       isPlaying = false
+      currentTl = null
       container.style.display = 'none'
       orb.mesh.visible = false
       impact.mesh.visible = false
@@ -333,6 +282,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       stopLoop()
     },
   })
+  currentTl = tl
 
   // ── Phase 1: Orb charges at attacker (0–0.6s) ──
   const op = s2t(acx, acy, W, H)
@@ -372,7 +322,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
 
       // Trail flame
       if (Math.random() > 0.3) {
-        sparks.push(new Spark(fx, fy, {
+        sparks.push(acquireSpark(fx, fy, {
           vx: (Math.random() - 0.5) * 1.5,
           vy: (Math.random() - 0.5) * 1.5,
           life: 0.3 + Math.random() * 0.2, decay: 0.025,
@@ -410,7 +360,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
 
       // Dark smoke after impact
       for (let i = 0; i < 6; i++) {
-        sparks.push(new Spark(dcx + (Math.random() - 0.5) * 40, dcy + (Math.random() - 0.5) * 30, {
+        sparks.push(acquireSpark(dcx + (Math.random() - 0.5) * 40, dcy + (Math.random() - 0.5) * 30, {
           vx: (Math.random() - 0.5) * 0.5,
           vy: -0.5 - Math.random() * 0.8,
           life: 0.8, decay: 0.008,
@@ -457,8 +407,8 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   // Lingering embers after impact
   tl.call(() => {
     for (let i = 0; i < 10; i++) {
-      setTimeout(() => {
-        sparks.push(new Spark(
+      pendingTimeouts.push(setTimeout(() => {
+        sparks.push(acquireSpark(
           dcx + (Math.random() - 0.5) * 60,
           dcy + (Math.random() - 0.5) * 30,
           {
@@ -470,7 +420,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
             type: 'ember', gravity: -0.02, friction: 0.998,
           }
         ))
-      }, i * 70)
+      }, i * 70) as unknown as number)
     }
   }, undefined, '+=0.3')
 }
@@ -519,6 +469,9 @@ async function initWebGPU() {
     impactObj = createFireImpactMaterial()
     scene.add(impactObj.mesh)
 
+    // Render one clear frame so the canvas buffer is transparent before first play()
+    renderer.render(scene, camera)
+
     gpuReady.value = true
     console.info('[ElementalVFX] Initialized successfully')
   } catch (e: any) {
@@ -530,7 +483,11 @@ async function initWebGPU() {
 onMounted(() => { mounted = true; initWebGPU() })
 
 onUnmounted(() => {
-  mounted = false; stopLoop()
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
+  mounted = false
+  if (currentTl) { currentTl.kill(); currentTl = null }
+  stopLoop()
   orbObj?.mesh.geometry?.dispose(); orbObj?.mesh.material?.dispose()
   impactObj?.mesh.geometry?.dispose(); impactObj?.mesh.material?.dispose()
   renderer?.dispose()

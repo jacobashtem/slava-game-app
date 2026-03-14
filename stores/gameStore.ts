@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed, watch, nextTick, type Ref } from 'vue'
+import { ref, shallowRef, computed, watch, nextTick, type Ref } from 'vue'
 import { GameEngine } from '../game-engine/GameEngine'
 import { AIPlayer } from '../game-engine/AIPlayer'
 import type { AIDifficulty } from '../game-engine/AIPlayer'
@@ -76,7 +76,7 @@ const COMBAT_VFX_BASE_MS = 1200     // hit + shake + damage number (canvas fallb
 const COMBAT_VFX_SLASH_MS = 2200    // WebGPU slash full choreography (melee)
 const COMBAT_VFX_BOW_MS = 2400      // WebGPU bow draw + arrow flight + impact (ranged)
 const COMBAT_VFX_ELEMENTAL_MS = 2600 // WebGPU fire orb charge + flight + impact (elemental)
-const COMBAT_VFX_MAGIC_MS = 2200    // WebGPU rune circle + crystal orb + implosion (magic)
+const COMBAT_VFX_MAGIC_MS = 1600    // WebGPU crystal orb + explosion (magic)
 const COMBAT_VFX_COUNTER_MS = 1800  // counter overlay (600ms) + hit + damage (1200ms)
 const COMBAT_VFX_DEATH_MS = 2000    // WebGPU death dissolution
 
@@ -113,6 +113,18 @@ function findCardInLiveState(stateRef: Ref<GameState | null>, instanceId: string
   return null
 }
 
+// Track combat VFX timeouts for cleanup on unmount/new combat
+const _combatTimeouts: ReturnType<typeof setTimeout>[] = []
+
+function clearCombatTimeouts() {
+  _combatTimeouts.forEach(clearTimeout)
+  _combatTimeouts.length = 0
+}
+
+function combatTimeout(fn: () => void, ms: number) {
+  _combatTimeouts.push(setTimeout(fn, ms))
+}
+
 /**
  * Emit SEQUENCED VFX events from a CombatResult.
  * Timeline:
@@ -127,9 +139,10 @@ function emitCombatVFX(
   stateRef?: Ref<GameState | null>,
 ) {
   if (!combat) {
-    console.warn('[VFX] emitCombatVFX called with null combat')
+    if (import.meta.dev) console.warn('[VFX] emitCombatVFX called with null combat')
     return
   }
+  clearCombatTimeouts()
   const ui = useUIStore()
   const attackVisual = toVisualAttackType(combat.attacker)
 
@@ -139,25 +152,17 @@ function emitCombatVFX(
   const defenderPos = defenderRect ? { x: defenderRect.cx, y: defenderRect.y } : null
   const attackerPos = attackerRect ? { x: attackerRect.cx, y: attackerRect.y } : null
 
-  console.info('[VFX] Combat:', {
-    attacker: combat.attacker.cardData.name,
-    defender: combat.defender.cardData.name,
-    dmgDef: combat.damageToDefender,
-    dmgAtk: combat.damageToAttacker,
-    counter: combat.counterattackOccurred,
-    defDied: combat.defenderDied,
-    atkDied: combat.attackerDied,
-    softFail: combat.softFail,
-    defRect: !!defenderRect,
-    atkRect: !!attackerRect,
-  })
+  if (import.meta.dev) {
+    console.info('[VFX] Combat:', combat.attacker.cardData.name, '→', combat.defender.cardData.name,
+      'dmg:', combat.damageToDefender, '/', combat.damageToAttacker)
+  }
 
   let t = 0
 
   // === PHASE 1a: SoftFail / Odporny — shield block VFX (0ms) ===
   // Card overlay shows "ODPORNY" — no extra floating text needed
   if (combat.softFail && defenderRect) {
-    setTimeout(() => {
+    combatTimeout(() => {
       ui.flashBlock(combat.defender.instanceId)
       vfx.emit({
         type: 'block',
@@ -182,24 +187,24 @@ function emitCombatVFX(
     const useMagic = attackVisual === 'magic' && magic.ready
 
     if (hasDamage && useSlash) {
-      setTimeout(() => {
+      combatTimeout(() => {
         slash.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
     } else if (hasDamage && useBow) {
-      setTimeout(() => {
+      combatTimeout(() => {
         bow.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
     } else if (hasDamage && useElemental) {
-      setTimeout(() => {
+      combatTimeout(() => {
         elemental.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
     } else if (hasDamage && useMagic) {
-      setTimeout(() => {
+      combatTimeout(() => {
         magic.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
       }, t)
     } else {
       // Fallback / 0-dmg: canvas particle hit + shake + damage number
-      setTimeout(() => {
+      combatTimeout(() => {
         ui.shakeCard(combat.defender.instanceId)
         vfx.emit({
           type: 'hit',
@@ -209,7 +214,7 @@ function emitCombatVFX(
           meta: { rect: defenderRect, attackerRect },
         })
       }, t)
-      setTimeout(() => {
+      combatTimeout(() => {
         if (!defenderPos) return
         vfx.emit({
           type: 'damage-number',
@@ -227,7 +232,7 @@ function emitCombatVFX(
 
   // === Intermediate: update defender DEF on card after hit VFX ===
   if (stateRef && combat.damageToDefender > 0 && !combat.softFail) {
-    setTimeout(() => {
+    combatTimeout(() => {
       const card = findCardInLiveState(stateRef, combat.defender.instanceId)
       if (card) {
         card.currentStats = {
@@ -244,9 +249,9 @@ function emitCombatVFX(
   // Particles + blue damage: on ATTACKER (they're receiving the hit)
   if (combat.counterattackOccurred && combat.damageToAttacker > 0) {
     const counterVisual = toVisualAttackType(combat.defender)
-    console.info('[VFX] Phase 2 scheduled: counter on', combat.attacker.cardData.name, 'type:', counterVisual, 'atkRect?', !!attackerRect, 'at t=', t)
+    if (import.meta.dev) console.info('[VFX] Counter:', combat.attacker.cardData.name, counterVisual)
     // Counter overlay on defender (they're counter-attacking) — shows first
-    setTimeout(() => {
+    combatTimeout(() => {
       if (!attackerRect) return
       ui.flashCounterAttack(combat.defender.instanceId)
     }, t)
@@ -262,27 +267,27 @@ function emitCombatVFX(
 
     if (useSlashCounter) {
       // Melee counter: WebGPU slash (defender strikes back at attacker)
-      setTimeout(() => {
+      combatTimeout(() => {
         slash.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
       }, t + 600)
     } else if (useBowCounter) {
       // Ranged counter: bow attack (defender shoots at attacker)
-      setTimeout(() => {
+      combatTimeout(() => {
         bow.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
       }, t + 600)
     } else if (useElementalCounter) {
       // Elemental counter: fire orb (defender strikes back)
-      setTimeout(() => {
+      combatTimeout(() => {
         elemental.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
       }, t + 600)
     } else if (useMagicCounter) {
       // Magic counter: rune circles + implosion (defender strikes back)
-      setTimeout(() => {
+      combatTimeout(() => {
         magic.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
       }, t + 600)
     } else {
       // Fallback: canvas particle hit
-      setTimeout(() => {
+      combatTimeout(() => {
         if (!attackerRect) return
         ui.shakeCard(combat.attacker.instanceId)
         vfx.emit({
@@ -295,7 +300,7 @@ function emitCombatVFX(
         })
       }, t + 600)
       // Counter damage number — delayed 800ms
-      setTimeout(() => {
+      combatTimeout(() => {
         if (!attackerPos) return
         vfx.emit({
           type: 'damage-number',
@@ -310,7 +315,7 @@ function emitCombatVFX(
 
     // === Intermediate: update attacker DEF on card after counter VFX ===
     if (stateRef && combat.damageToAttacker > 0) {
-      setTimeout(() => {
+      combatTimeout(() => {
         const card = findCardInLiveState(stateRef, combat.attacker.instanceId)
         if (card) {
           card.currentStats = {
@@ -329,12 +334,12 @@ function emitCombatVFX(
   const death = useDeathVFX()
   if (death.ready) {
     if (combat.defenderDied) {
-      setTimeout(() => {
+      combatTimeout(() => {
         death.trigger(combat.defender.instanceId)
       }, t)
     }
     if (combat.attackerDied) {
-      setTimeout(() => {
+      combatTimeout(() => {
         death.trigger(combat.attacker.instanceId)
       }, t + 200) // slight stagger if both die
     }
@@ -348,7 +353,7 @@ export const useGameStore = defineStore('game', () => {
   const selectedDifficulty = ref<AIDifficulty>('medium')
   const selectedDomains = ref<number[]>([]) // empty = all domains
 
-  const state = ref<GameState | null>(null)
+  const state = shallowRef<GameState | null>(null)
   const isAIThinking = ref(false)
   const gameStarted = ref(false)
   const aiTurnSummary = ref<string[]>([])
@@ -403,10 +408,12 @@ export const useGameStore = defineStore('game', () => {
       const seasonMap = ['winter', 'spring', 'summer', 'autumn'] as const
       return seasonMap[state.value.slavaData.currentSeason] ?? 'winter'
     }
-    // Gold Edition: cycling seasons (2 rounds per season)
+    // Gold Edition: cycling seasons (2 rounds per season), z losowym offsetem startowym
     const r = roundNumber.value
+    const offset = state.value?.seasonOffset ?? 0
     const seasons = ['spring', 'summer', 'autumn', 'winter'] as const
-    const idx = Math.floor(((r - 1) % (ROUNDS_PER_SEASON * 4)) / ROUNDS_PER_SEASON)
+    const shifted = (r - 1) + offset * ROUNDS_PER_SEASON
+    const idx = Math.floor((shifted % (ROUNDS_PER_SEASON * 4)) / ROUNDS_PER_SEASON)
     return seasons[idx] ?? 'spring'
   })
   const gameMode = computed(() => state.value?.gameMode ?? 'gold')
@@ -455,6 +462,7 @@ export const useGameStore = defineStore('game', () => {
   function startGame() {
     isArenaMode.value = false
     arenaFocusedName.value = ''
+    useUIStore().resetAll()
     aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
     const domainFilter = selectedDomains.value.length > 0 ? selectedDomains.value : undefined
     state.value = engine.startSlavaGame(domainFilter)
@@ -463,6 +471,8 @@ export const useGameStore = defineStore('game', () => {
 
     if (state.value.players[state.value.currentTurn].isAI) {
       runAITurn()
+    } else {
+      useUIStore().startTurnTimer()
     }
   }
 
@@ -476,6 +486,7 @@ export const useGameStore = defineStore('game', () => {
   function startAlphaGame() {
     isArenaMode.value = false
     arenaFocusedName.value = ''
+    useUIStore().resetAll()
     aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
     const domainFilter = selectedDomains.value.length > 0 ? selectedDomains.value : undefined
     state.value = engine.startAlphaGame(domainFilter)
@@ -484,12 +495,15 @@ export const useGameStore = defineStore('game', () => {
 
     if (state.value.players[state.value.currentTurn].isAI) {
       runAITurn()
+    } else {
+      useUIStore().startTurnTimer()
     }
   }
 
   function startSlavaGame() {
     isArenaMode.value = false
     arenaFocusedName.value = ''
+    useUIStore().resetAll()
     aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
     const domainFilter = selectedDomains.value.length > 0 ? selectedDomains.value : undefined
     state.value = engine.startSlavaGame(domainFilter)
@@ -498,6 +512,8 @@ export const useGameStore = defineStore('game', () => {
 
     if (state.value.players[state.value.currentTurn].isAI) {
       runAITurn()
+    } else {
+      useUIStore().startTurnTimer()
     }
   }
 
@@ -508,7 +524,7 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerInvokeGod(godId, bid)
     } catch (err: any) {
-      console.warn('[gameStore] invokeGod error:', err)
+      if (import.meta.dev) console.warn('[gameStore] invokeGod error:', err)
       const ui = useUIStore()
       ui.showPlayLimitToast(err.message ?? 'Nie można przyzwać boga.')
     }
@@ -520,7 +536,7 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerActivateFavor(targetInstanceId)
     } catch (err: any) {
-      console.warn('[gameStore] activateFavor error:', err)
+      if (import.meta.dev) console.warn('[gameStore] activateFavor error:', err)
       const ui = useUIStore()
       ui.showPlayLimitToast(err.message ?? 'Nie można złożyć ofiary.')
     }
@@ -532,7 +548,7 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerClaimHoliday()
     } catch (err: any) {
-      console.warn('[gameStore] claimHoliday error:', err)
+      if (import.meta.dev) console.warn('[gameStore] claimHoliday error:', err)
     }
   }
 
@@ -542,7 +558,7 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = engine.playerPlunder()
     } catch (err: any) {
-      console.warn('[gameStore] plunder error:', err)
+      if (import.meta.dev) console.warn('[gameStore] plunder error:', err)
       const ui = useUIStore()
       ui.showPlayLimitToast(err.message ?? 'Nie można łupić.')
     }
@@ -686,7 +702,7 @@ export const useGameStore = defineStore('game', () => {
         endTurn()
       }
     } catch (e: any) {
-      console.error('[gameStore] resolvePendingInteraction error:', e)
+      if (import.meta.dev) console.error('[gameStore] resolvePendingInteraction error:', e)
       ui.showPlayLimitToast(e.message ?? 'Błąd rozwiązywania interakcji.')
     }
   }
@@ -887,7 +903,7 @@ export const useGameStore = defineStore('game', () => {
         runAITurn()
       }
     } catch (e: any) {
-      console.error('[gameStore] advancePhase error:', e)
+      if (import.meta.dev) console.error('[gameStore] advancePhase error:', e)
     }
   }
 
@@ -909,7 +925,7 @@ export const useGameStore = defineStore('game', () => {
         runAITurn()
       }
     } catch (e: any) {
-      console.error('[gameStore] endTurn error:', e)
+      if (import.meta.dev) console.error('[gameStore] endTurn error:', e)
     }
   }
 
@@ -954,14 +970,14 @@ export const useGameStore = defineStore('game', () => {
         await delay(AI_PACE_MS)
       }
     } catch (e) {
-      console.warn('[gameStore] AI activateFavor error:', e)
+      if (import.meta.dev) console.warn('[gameStore] AI activateFavor error:', e)
     }
 
     let decisions: ReturnType<typeof aiPlayer.planTurn>
     try {
       decisions = aiPlayer.planTurn(engine.getState())
     } catch (e) {
-      console.error('[gameStore] AI planTurn error:', e)
+      if (import.meta.dev) console.error('[gameStore] AI planTurn error:', e)
       decisions = [{ type: 'end_turn' as const }]
     }
 
@@ -978,7 +994,7 @@ export const useGameStore = defineStore('game', () => {
 
       // Validate decision against CURRENT engine state (cards may have died since planning)
       if (!validateAIDecision(decision)) {
-        console.info('[gameStore] Skipping stale AI decision:', decision.type, decision.cardInstanceId)
+        if (import.meta.dev) console.info('[gameStore] Skipping stale AI decision:', decision.type, decision.cardInstanceId)
         continue
       }
 
@@ -1041,7 +1057,7 @@ export const useGameStore = defineStore('game', () => {
             break
         }
       } catch (e: any) {
-        console.warn('[gameStore] AI decision error:', decision.type, e?.message)
+        if (import.meta.dev) console.warn('[gameStore] AI decision error:', decision.type, e?.message)
       }
 
       // Auto-resolve ANY pending interaction for AI after each decision
@@ -1083,7 +1099,7 @@ export const useGameStore = defineStore('game', () => {
     playerTurnLogStart.value = state.value?.actionLog.length ?? 0
 
     } catch (err) {
-      console.error('[gameStore] AI turn fatal error:', err)
+      if (import.meta.dev) console.error('[gameStore] AI turn fatal error:', err)
       try { state.value = engine.aiEndTurn() } catch {
         try { state.value = engine.forcePlayerTurn() } catch {}
       }
@@ -1198,7 +1214,7 @@ export const useGameStore = defineStore('game', () => {
     try {
       state.value = newState
     } catch (e) {
-      console.warn('[gameStore] Vue re-render error during state update, retrying via nextTick:', e)
+      if (import.meta.dev) console.warn('[gameStore] Vue re-render error during state update, retrying via nextTick:', e)
       nextTick(() => {
         state.value = newState
       })
@@ -1345,6 +1361,56 @@ export const useGameStore = defineStore('game', () => {
           break
         }
       }
+    }
+  })
+
+  // ===== TURN TIMER =====
+  // Start/stop timer when turn changes
+  watch(currentTurn, (turn) => {
+    const ui = useUIStore()
+    if (!gameStarted.value || winner.value || isArenaMode.value) {
+      ui.stopTurnTimer()
+      return
+    }
+    const isMy = turn === mySide.value
+    if (isMy && !isAIThinking.value) {
+      ui.startTurnTimer()
+    } else {
+      ui.stopTurnTimer()
+    }
+  })
+
+  // Handle timeout — deduct 1 glory, end turn
+  watch(() => useUIStore().turnTimedOut, (timedOut) => {
+    if (!timedOut) return
+    if (!state.value || winner.value) return
+    const ui = useUIStore()
+    ui.turnTimedOut = false // reset flag
+
+    // Deduct 1 glory from current player (clone to trigger shallowRef reactivity)
+    const side = mySide.value
+    if (state.value.players[side].glory > 0) {
+      const s = { ...state.value }
+      s.players = { ...s.players }
+      s.players[side] = { ...s.players[side], glory: s.players[side].glory - 1 }
+      s.actionLog = [...s.actionLog, {
+        type: 'glory' as const,
+        message: `${side === 'player1' ? 'Gracz' : 'AI'} traci 1 PS — CZAS MINĄŁ!`,
+        turn: s.turnNumber,
+        round: s.roundNumber,
+        phase: s.currentPhase,
+      }]
+      state.value = s
+    }
+
+    // Force end turn
+    try {
+      state.value = engine.playerEndTurn()
+      if (state.value?.players[state.value.currentTurn].isAI && !winner.value) {
+        runAITurn()
+      }
+    } catch (e: any) {
+      if (import.meta.dev) console.error('[gameStore] timeout endTurn error:', e)
     }
   })
 

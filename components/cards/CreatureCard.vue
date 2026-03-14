@@ -6,11 +6,11 @@ import { AttackType, CardPosition } from '../../game-engine/constants'
 import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import { parseTokens } from '../../composables/useTokenIcons'
-// Grafiki stworzeń: automatycznie wczytuje assets/cards/creature/{id}.png
-const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
+// Grafiki stworzeń: automatycznie wczytuje assets/cards/creature/{id}.webp
+const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.webp', { eager: true, import: 'default' }) as Record<string, string>
 const creatureImgs = Object.fromEntries(
   Object.entries(_creatureImgModules)
-    .map(([key, val]) => { const m = key.match(/(\d+)\.png$/); return m ? [parseInt(m[1]!), val] : null })
+    .map(([key, val]) => { const m = key.match(/(\d+)\.webp$/); return m ? [parseInt(m[1]!), val] : null })
     .filter(Boolean) as [number, string][]
 ) as Record<number, string>
 
@@ -355,6 +355,7 @@ const defDelta = computed(() => {
 })
 const isDefense = computed(() => !props.inHand && props.card.position === CardPosition.DEFENSE)
 const isFlying = computed(() => cardData.value.isFlying && !props.card.isGrounded)
+const isDragon = computed(() => (cardData.value.tags ?? []).includes('dragon'))
 // Karta jest widoczna: własna ZAWSZE, wroga dopiero po ujawnieniu (lub tymczasowym reveal przed atakiem)
 const isHidden = computed(() =>
   !props.card.isRevealed
@@ -447,6 +448,7 @@ function onClick() {
         <img :src="flyingImg" class="flying-img" v-tip="'Latający'" />
       </div>
       <div class="card-badges">
+        <Icon v-if="isDragon" icon="game-icons:spiked-dragon-head" class="badge-icon badge-dragon" v-tip="'Smok'" />
         <Icon v-if="card.isSilenced"   icon="game-icons:silenced"       class="badge-icon badge-silenced" v-tip="'Uciszony'" />
         <Icon v-if="card.isImmune"     icon="game-icons:shield-reflect" class="badge-icon badge-immune"   v-tip="'Odporny'" />
         <Icon v-if="card.cannotAttack" icon="game-icons:chains"         class="badge-icon badge-disarmed" v-tip="'Nie może atakować'" />
@@ -819,6 +821,7 @@ function onClick() {
 .badge-icon    { font-size: 11px; }
 .stat-img      { width: 20px; height: 20px; object-fit: contain; opacity: 0.9; flex-shrink: 0; }
 .badge-immune   { color: #a78bfa; }
+.badge-dragon   { color: #f59e0b; font-size: 14px; filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.7)); }
 .badge-silenced { color: #94a3b8; }
 .badge-disarmed { color: #f87171; }
 .badge-poison   { font-size: 9px; color: #86efac; }

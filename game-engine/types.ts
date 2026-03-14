@@ -68,6 +68,7 @@ export interface CreatureCardData {
   effectDescription: string  // tekst do UI
   lore: string
   abilities: AbilityEntry[]
+  tags?: string[]
 }
 
 export interface AdventureCardData {
@@ -212,6 +213,8 @@ export interface GameState {
   currentTurn: PlayerSide
   currentPhase: GamePhase
   roundNumber: number
+  /** Offset pory roku (0–3): losowany na starcie, przesuwa sezon bez zmiany roundNumber */
+  seasonOffset: number
   turnNumber: number
   actionLog: LogEntry[]
   winner: PlayerSide | null

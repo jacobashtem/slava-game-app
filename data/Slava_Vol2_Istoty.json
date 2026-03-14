@@ -29,7 +29,10 @@
             }
         ],
         "effectDescription": "Kradnie jedną kartę z rąk przeciwnika. W każdej nowej rundzie akcję można powtórzyć, każdorazowo płacąc 1 <Zł>.",
-        "effectId": "aitwar_steal_hand"
+        "effectId": "aitwar_steal_hand",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 2,
@@ -411,7 +414,10 @@
             }
         ],
         "effectDescription": "Nawet w ataku kontratakuje.",
-        "effectId": "krol_wezow_always_counter"
+        "effectId": "krol_wezow_always_counter",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 16,
@@ -779,7 +785,10 @@
             }
         ],
         "effectDescription": "W chwili śmierci wszystkie istoty w polu tracą 4 {stats.defense}.",
-        "effectId": "zar_ptak_death_explosion"
+        "effectId": "zar_ptak_death_explosion",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 30,
@@ -807,7 +816,10 @@
             }
         ],
         "effectDescription": "Gdy pole wroga jest puste na koniec Twojej tury — zdobywasz 1 PS.",
-        "effectId": "zmije_glory_on_empty_field"
+        "effectId": "zmije_glory_on_empty_field",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 31,
@@ -863,7 +875,10 @@
             }
         ],
         "effectDescription": "Można atakować karty lokacji. Zadając im 12 obrażeń, niszczy je.",
-        "effectId": "chaly_attack_locations"
+        "effectId": "chaly_attack_locations",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 33,
@@ -1636,7 +1651,10 @@
         "lore": "<i>\"Wielki smok, żyjący wysoko w chmurach. Jako wróg Swaroga, wielokrotnie próbował połknąć słońce, powodując zaćmienia.\nRuch skrzydłami, zsyłał wichury, a ogonem - grady i deszcze. Jakby było tego mało, lubował się też w ludzkim mięsie.\"</i>",
         "abilities": [],
         "effectDescription": "",
-        "effectId": "azdacha_vanilia"
+        "effectId": "azdacha_vanilia",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 62,
@@ -2773,7 +2791,10 @@
             }
         ],
         "effectDescription": "Łączy się z innymi smokami.",
-        "effectId": "gorynych_merge_dragons"
+        "effectId": "gorynych_merge_dragons",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 104,
@@ -2878,7 +2899,10 @@
             }
         ],
         "effectDescription": "Gdy ginie, jego posiadacz otrzymuje 1 <ZŁ> lub dociąga 5 kart.",
-        "effectId": "lamia_death_reward"
+        "effectId": "lamia_death_reward",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 108,
@@ -3042,7 +3066,10 @@
             }
         ],
         "effectDescription": "[AURA] Nie kontratakuje. Blokuje wrogie {ELEMENTAL}. Po 5 rundach wykluwa się w wybranego Smoka!",
-        "effectId": "smocze_jajo_hatch"
+        "effectId": "smocze_jajo_hatch",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 114,
@@ -3125,7 +3152,10 @@
             }
         ],
         "effectDescription": "Wskrzesza się na jedną turę, w wybranym przez gracza momencie gry.",
-        "effectId": "wij_revive_once"
+        "effectId": "wij_revive_once",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 117,
@@ -3151,7 +3181,10 @@
             }
         ],
         "effectDescription": "Gdy kogoś zabije, niewykorzystane obrażenia otrzymuje inny wrogi potwór",
-        "effectId": "waz_tugaryn_cleave"
+        "effectId": "waz_tugaryn_cleave",
+        "tags": [
+            "dragon"
+        ]
     },
     {
         "id": 118,

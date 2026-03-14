@@ -8,10 +8,10 @@ const ui = useUIStore()
 const game = useGameStore()
 
 // Creature images
-const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
+const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.webp', { eager: true, import: 'default' }) as Record<string, string>
 const creatureImgs = Object.fromEntries(
   Object.entries(_creatureImgModules)
-    .map(([key, val]) => { const m = key.match(/(\d+)\.png$/); return m ? [parseInt(m[1]!), val] : null })
+    .map(([key, val]) => { const m = key.match(/(\d+)\.webp$/); return m ? [parseInt(m[1]!), val] : null })
     .filter(Boolean) as [number, string][]
 ) as Record<number, string>
 

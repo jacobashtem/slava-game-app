@@ -15,10 +15,11 @@ import panteonData from '../data/Slava_Vol2_Panteon_Normalized.json'
 /** Ile rund trwa jedna pora roku */
 const ROUNDS_PER_SEASON = 12
 
-/** Oblicza porę roku z numeru rundy (Sława: 12 rund/porę, start od Zimy) */
-export function getSeasonFromRound(round: number): Season {
+/** Oblicza porę roku z numeru rundy + offset sezonu (0–3) */
+export function getSeasonFromRound(round: number, seasonOffset: number = 0): Season {
   const cycleLen = ROUNDS_PER_SEASON * 4 // 48 rund = pełny cykl
-  const cyclePos = ((round - 1) % cycleLen)
+  const shifted = round - 1 + seasonOffset * ROUNDS_PER_SEASON
+  const cyclePos = ((shifted % cycleLen) + cycleLen) % cycleLen
   if (cyclePos < ROUNDS_PER_SEASON) return Season.WINTER
   if (cyclePos < ROUNDS_PER_SEASON * 2) return Season.SPRING
   if (cyclePos < ROUNDS_PER_SEASON * 3) return Season.SUMMER
@@ -37,8 +38,8 @@ export function getRoundsPerSeason(): number {
 
 // ===== INITIAL SLAVA STATE =====
 
-export function createInitialSlavaState(startRound: number): SlavaState {
-  const season = getSeasonFromRound(startRound)
+export function createInitialSlavaState(startRound: number, seasonOffset: number = 0): SlavaState {
+  const season = getSeasonFromRound(startRound, seasonOffset)
   const gods = getGodsForSeason(season)
 
   return {
@@ -174,9 +175,9 @@ export function checkBreakthrough(state: GameState, attackerSide: PlayerSide, ta
   return []
 }
 
-/** Złupienie: gdy wróg nie ma istot na polu, zabierz mu 1 walutę (od rundy 2) */
+/** Złupienie: gdy wróg nie ma istot na polu, zabierz mu 1 walutę (od rundy 3) */
 export function performPlunder(state: GameState, attackerSide: PlayerSide): LogEntry[] {
-  if (state.roundNumber < 2) return []
+  if (state.roundNumber < 3) return []
   const log: LogEntry[] = []
 
   const defenderSide: PlayerSide = attackerSide === 'player1' ? 'player2' : 'player1'
@@ -223,7 +224,7 @@ export function processSeasonChange(state: GameState): LogEntry[] {
   const log: LogEntry[] = []
   const slava = state.slavaData
 
-  const newSeason = getSeasonFromRound(state.roundNumber)
+  const newSeason = getSeasonFromRound(state.roundNumber, state.seasonOffset)
   const newSeasonRound = getSeasonRound(state.roundNumber)
   slava.seasonRound = newSeasonRound
 

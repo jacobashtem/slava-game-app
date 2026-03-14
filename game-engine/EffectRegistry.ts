@@ -143,6 +143,7 @@ registerEffect({
     if (!stolen) return effectResult(newState)
     stolen.owner = source.owner
     stolen.isRevealed = true  // karta jest widoczna dla nowego właściciela
+    stolen.metadata.cardOrigin = 'stolen'
     owner.hand.push(stolen)
 
     const log = addLog(newState, `${source.cardData.name} ukradł kartę "${stolen.cardData.name}" z ręki przeciwnika!`, 'effect')
@@ -1468,6 +1469,8 @@ registerEffect({
       const healed = Math.min(value, maxDef - card.currentStats.defense)
       if (healed > 0) {
         card.currentStats.defense += healed
+        card.metadata.lastHealTargetId = card.instanceId
+        card.metadata.lastHealAmount = healed
         const log = addLog(newState, `${source.cardData.name}: Wampiryzm! Regeneruje ${healed} DEF.`, 'effect')
         return effectResult(newState, [log])
       }
@@ -1656,6 +1659,11 @@ registerEffect({
     const maxDef = (ally.cardData as any).stats?.defense ?? ally.currentStats.maxDefense
     const healed = maxDef - ally.currentStats.defense
     ally.currentStats.defense = maxDef
+    const srcInState = findCardInState(newState, ctx.source.instanceId)
+    if (srcInState) {
+      srcInState.metadata.lastHealTargetId = ally.instanceId
+      srcInState.metadata.lastHealAmount = healed
+    }
     const log = addLog(newState, `Wołch uzdrawia ${ally.cardData.name} (+${healed} Obrony).`, 'effect')
     return effectResult(newState, [log])
   },
@@ -2316,7 +2324,10 @@ registerEffect({
     const card = findCardInState(newState, source.instanceId)
     if (card) {
       const maxDef = (card.cardData as any).stats.defense
+      const healed = maxDef - card.currentStats.defense
       card.currentStats.defense = maxDef
+      card.metadata.lastHealTargetId = card.instanceId
+      card.metadata.lastHealAmount = healed
       const log = addLog(newState, `${source.cardData.name}: Regeneruje się do ${maxDef} HP po zabiciu Żywi!`, 'effect')
       return effectResult(newState, [log])
     }
@@ -2946,13 +2957,12 @@ registerEffect({
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
     const { state, source } = ctx
-    const DRAGON_EFFECT_IDS = new Set(['azdacha_vanilia', 'smocze_jajo_hatch'])
     const newState = cloneGameState(state)
     const gorynych = findCardInState(newState, source.instanceId)
     if (!gorynych) return effectResult(newState)
 
     const alliedDragons = getAllCreaturesOnField(newState, source.owner)
-      .filter(c => DRAGON_EFFECT_IDS.has((c.cardData as any).effectId) && c.instanceId !== source.instanceId)
+      .filter(c => ((c.cardData as any).tags ?? []).includes('dragon') && c.instanceId !== source.instanceId)
     if (alliedDragons.length === 0) return effectResult(newState)
 
     const log: LogEntry[] = []

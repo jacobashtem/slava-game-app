@@ -6,7 +6,7 @@ import type { CardInstance } from '../../game-engine/types'
 import { BattleLine, GamePhase, GOLD_EDITION_RULES } from '../../game-engine/constants'
 import lokacjaImg from '~/assets/cards/lokacja.png'
 import artefaktImg from '~/assets/cards/artefakt.png'
-import defaultAdvImg from '~/assets/cards/creature/117.png'
+import defaultAdvImg from '~/assets/cards/creature/117.webp'
 import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import { getAllCreaturesOnField } from '../../game-engine/LineManager'
@@ -207,30 +207,60 @@ function fanStyle(idx: number, total: number) {
 // ===== CARD DRAW ANIMATION — track newly added cards for staggered entrance =====
 const _prevHandIds = ref<Set<string>>(new Set())
 const drawAnimCards = ref<Set<string>>(new Set())
+const stolenAnimCards = ref<Set<string>>(new Set())
 let _drawAnimTimer: ReturnType<typeof setTimeout> | null = null
+const _staggerTimers: ReturnType<typeof setTimeout>[] = []
 
 watch(hand, (newHand) => {
   const newIds = new Set(newHand.map(c => c.instanceId))
   const appeared: string[] = []
-  for (const id of newIds) {
-    if (!_prevHandIds.value.has(id)) appeared.push(id)
+  const appearedStolen: string[] = []
+  for (const card of newHand) {
+    if (!_prevHandIds.value.has(card.instanceId)) {
+      if (card.metadata.cardOrigin === 'stolen') {
+        appearedStolen.push(card.instanceId)
+        // Clear origin flag so it doesn't re-trigger
+        card.metadata.cardOrigin = undefined
+      } else {
+        appeared.push(card.instanceId)
+      }
+    }
   }
   _prevHandIds.value = newIds
 
-  if (appeared.length === 0) return
+  if (appeared.length === 0 && appearedStolen.length === 0) return
 
-  // Stagger: add each new card with a delay
+  // Clear previous stagger timers
   if (_drawAnimTimer) clearTimeout(_drawAnimTimer)
+  _staggerTimers.forEach(clearTimeout)
+  _staggerTimers.length = 0
+
+  // Stagger drawn cards
   appeared.forEach((id, i) => {
-    setTimeout(() => {
+    _staggerTimers.push(setTimeout(() => {
       drawAnimCards.value = new Set([...drawAnimCards.value, id])
-    }, i * 180) // 180ms stagger between cards
+    }, i * 180))
   })
+
+  // Stagger stolen cards (separate animation)
+  appearedStolen.forEach((id, i) => {
+    _staggerTimers.push(setTimeout(() => {
+      stolenAnimCards.value = new Set([...stolenAnimCards.value, id])
+    }, i * 180))
+  })
+
   // Clear after animation completes
+  const totalCards = appeared.length + appearedStolen.length
   _drawAnimTimer = setTimeout(() => {
     drawAnimCards.value = new Set()
-  }, appeared.length * 180 + 600)
+    stolenAnimCards.value = new Set()
+  }, totalCards * 180 + 700)
 }, { deep: false })
+
+onUnmounted(() => {
+  if (_drawAnimTimer) clearTimeout(_drawAnimTimer)
+  _staggerTimers.forEach(clearTimeout)
+})
 
 const adventureTypeLabel = (card: CardInstance) => {
   const type = (card.cardData as any).adventureType
@@ -250,7 +280,7 @@ const adventureTypeColor = (card: CardInstance) => {
       <div
         v-for="(card, idx) in hand"
         :key="card.instanceId"
-        :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId, 'draw-enter': drawAnimCards.has(card.instanceId) }]"
+        :class="['hand-card-wrap', { selected: ui.selectedCardId === card.instanceId, 'draw-enter': drawAnimCards.has(card.instanceId), 'steal-enter': stolenAnimCards.has(card.instanceId) }]"
         :style="fanStyle(idx, hand.length)"
         @click="onCardClick(card)"
         @mouseenter="!isMobile && ui.showTooltip(card.instanceId)"
@@ -535,25 +565,47 @@ const adventureTypeColor = (card: CardInstance) => {
 .adv-btn-enhanced:hover:not(:disabled) { background: rgba(251,191,36,0.2); }
 .adv-btn-enhanced:disabled { opacity: 0.25; cursor: not-allowed; }
 
-/* ===== CARD DRAW ENTRANCE ===== */
+/* ===== CARD DRAW ENTRANCE — karta leci z talii (prawy-górny) do ręki ===== */
 .draw-enter {
-  animation: card-draw-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: card-draw-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes card-draw-in {
   0% {
     opacity: 0;
-    transform: translateY(80px) scale(0.6) rotate(var(--fan-angle, 0deg));
-    filter: brightness(2.5) saturate(0);
+    transform: translate(40vw, -40vh) scale(0.35) rotate(8deg);
   }
-  50% {
+  40% {
     opacity: 1;
-    filter: brightness(1.4) saturate(0.7);
+    transform: translate(8vw, -8vh) scale(0.7) rotate(2deg);
   }
   100% {
     opacity: 1;
     transform: translateY(var(--fan-lift, 0px)) scale(1) rotate(var(--fan-angle, 0deg));
-    filter: brightness(1) saturate(1);
+  }
+}
+
+/* ===== CARD STEAL ENTRANCE — karta leci z talii wroga (lewy-górny) do ręki ===== */
+.steal-enter {
+  animation: card-steal-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-steal-in {
+  0% {
+    opacity: 0;
+    transform: translate(-45vw, -40vh) scale(0.3) rotate(-12deg);
+  }
+  30% {
+    opacity: 0.7;
+    transform: translate(-15vw, -15vh) scale(0.6) rotate(-5deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(0, -5vh) scale(0.85) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(var(--fan-lift, 0px)) scale(1) rotate(var(--fan-angle, 0deg));
   }
 }
 

@@ -11,6 +11,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import gsap from 'gsap'
+import { Spark, tickSparks, acquireSpark } from '../../composables/useParticleSystem'
+import { rafLoop } from '../../composables/useRAFLoop'
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const threeCanvasRef = ref<HTMLCanvasElement | null>(null)
@@ -23,11 +25,12 @@ const ready = ref(false)
 let renderer: THREE.WebGLRenderer | null = null
 let scene: THREE.Scene | null = null
 let camera: THREE.OrthographicCamera | null = null
-let animationId = 0
+let rafHandle = -1
 let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
 let mounted = false
 let loopActive = false
+const pendingTimeouts: number[] = []
 
 // ===== GLSL SHADERS =====
 
@@ -242,45 +245,9 @@ const impactFrag = /* glsl */ `
   }
 `
 
-// ===== SPARK PARTICLE SYSTEM (2D Canvas) =====
-
-class Spark {
-  x: number; y: number; vx: number; vy: number
-  life: number; decay: number; size: number
-  color: string; gravity: number; friction: number
-
-  constructor(x: number, y: number, o: Partial<Spark> = {}) {
-    this.x = x; this.y = y
-    this.vx = o.vx ?? 0; this.vy = o.vy ?? 0
-    this.life = o.life ?? 1; this.decay = o.decay ?? 0.02
-    this.size = o.size ?? 2; this.color = o.color ?? '100,180,255'
-    this.gravity = o.gravity ?? 0; this.friction = o.friction ?? 0.99
-  }
-
-  update(): boolean {
-    this.vx *= this.friction; this.vy *= this.friction
-    this.vy += this.gravity
-    this.x += this.vx; this.y += this.vy
-    this.life -= this.decay
-    return this.life > 0
-  }
-
-  draw(c: CanvasRenderingContext2D) {
-    const a = Math.max(0, this.life)
-    c.save()
-    c.fillStyle = `rgba(${this.color},${a * 0.8})`
-    c.shadowColor = `rgba(${this.color},${a})`
-    c.shadowBlur = this.size * 3
-    c.beginPath()
-    c.arc(this.x, this.y, this.size * 0.6, 0, Math.PI * 2)
-    c.fill()
-    c.restore()
-  }
-}
-
 function spawnEmbers(x: number, y: number, count: number, spread = 30, col = '100,180,255') {
   for (let i = 0; i < count; i++) {
-    sparks.push(new Spark(
+    sparks.push(acquireSpark(
       x + (Math.random() - 0.5) * spread,
       y + (Math.random() - 0.5) * spread * 0.5,
       {
@@ -375,17 +342,16 @@ function createImpactMesh(): ImpactObj {
 function startLoop() {
   if (loopActive) return
   loopActive = true
-  animationId = requestAnimationFrame(animate)
+  rafHandle = rafLoop.register(animate)
 }
 
 function stopLoop() {
   loopActive = false
-  if (animationId) { cancelAnimationFrame(animationId); animationId = 0 }
+  if (rafHandle >= 0) { rafLoop.unregister(rafHandle); rafHandle = -1 }
 }
 
 function animate() {
   if (!mounted || !loopActive) return
-  animationId = requestAnimationFrame(animate)
 
   const t = clock?.getElapsedTime() ?? 0
   if (bowObj) bowObj.u.uTime.value = t
@@ -400,11 +366,7 @@ function animate() {
     const w = sparkCanvasRef.value.width / (window.devicePixelRatio || 1)
     const h = sparkCanvasRef.value.height / (window.devicePixelRatio || 1)
     sCtx.clearRect(0, 0, w, h)
-    sparks = sparks.filter(s => {
-      const alive = s.update()
-      if (alive) s.draw(sCtx!)
-      return alive
-    })
+    tickSparks(sparks, sCtx!)
   }
 }
 
@@ -417,12 +379,16 @@ function s2t(sx: number, sy: number, W: number, H: number) {
 // ===== PUBLIC: play(attackerEl, defenderEl, damage?) =====
 
 let isPlaying = false
+let currentTl: gsap.core.Timeline | null = null
 
 function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number) {
   if (isPlaying || !ready.value) return
   if (!containerRef.value || !renderer || !scene || !camera) return
   if (!bowObj || !arrowObj || !impactObj) return
   isPlaying = true
+
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
 
   const container = containerRef.value
   const sceneEl = attackerEl.closest('.game-board') || attackerEl.closest('.va-battlefield') || attackerEl.closest('.p3-arena-row') || attackerEl.closest('.p3-arena-row-mini') || container.parentElement!
@@ -469,9 +435,11 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   const arrow = arrowObj!
   const impact = impactObj!
 
+  if (currentTl) currentTl.kill()
   const tl = gsap.timeline({
     onComplete: () => {
       isPlaying = false
+      currentTl = null
       container.style.display = 'none'
       bow.mesh.visible = false
       arrow.mesh.visible = false
@@ -480,6 +448,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       stopLoop()
     },
   })
+  currentTl = tl
 
   // ── Phase 1: BOW APPEARS ──
   const bp = s2t(acx, acy, W, H)
@@ -547,7 +516,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       arrow.mesh.scale.set(60, 14, 1)
 
       if (Math.random() > 0.4) {
-        sparks.push(new Spark(ax, ay, {
+        sparks.push(acquireSpark(ax, ay, {
           vx: (Math.random() - 0.5) * 1,
           vy: (Math.random() - 0.5) * 1,
           life: 0.3 + Math.random() * 0.3,
@@ -620,8 +589,8 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
 
   tl.call(() => {
     for (let i = 0; i < 10; i++) {
-      setTimeout(() => {
-        sparks.push(new Spark(
+      pendingTimeouts.push(setTimeout(() => {
+        sparks.push(acquireSpark(
           dcx + (Math.random() - 0.5) * 80,
           dcy + (Math.random() - 0.5) * 40,
           {
@@ -631,7 +600,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
             gravity: 0.03, friction: 0.998,
           }
         ))
-      }, i * 80)
+      }, i * 80) as unknown as number)
     }
   }, undefined, '+=0.1')
 }
@@ -661,6 +630,9 @@ function initWebGL() {
     impactObj = createImpactMesh()
     scene.add(impactObj.mesh)
 
+    // Render one clear frame so the canvas buffer is transparent before first play()
+    renderer.render(scene, camera)
+
     ready.value = true
     console.info('[BowWebGL] Initialized successfully')
   } catch (e: any) {
@@ -674,7 +646,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
   mounted = false
+  if (currentTl) { currentTl.kill(); currentTl = null }
   stopLoop()
   bowObj?.mesh.geometry?.dispose()
   ;(bowObj?.mesh.material as THREE.ShaderMaterial)?.dispose()

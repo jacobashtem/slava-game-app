@@ -5,14 +5,16 @@
  *
  * Phases:
  *   1. Big rune circle on ATTACKER (mage casting)
- *   2. Small rune circle appears on DEFENDER
- *   3. Implosion on defender — circle contracts, flash, scatter
- *   4. Big circle on attacker fades away
+ *   2. Crystal orb condenses on DEFENDER with converging sparks
+ *   3. Explosion — orb detonates, scatter, flash, shake
+ *   4. Attacker rune circle fades away
  *
  * API: <MagicVFX ref="r" />  →  r.play(attackerEl, defenderEl, damage?)
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
+import { Spark, tickSparks, acquireSpark } from '../../composables/useParticleSystem'
+import { rafLoop } from '../../composables/useRAFLoop'
 
 let THREE_GPU: typeof import('three/webgpu') | null = null
 let TSL: {
@@ -34,69 +36,13 @@ const gpuError = ref<string | null>(null)
 let renderer: any = null
 let scene: any = null
 let camera: any = null
-let animationId = 0
+let rafHandle = -1
+
 let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
 let mounted = false
 let loopActive = false
-
-// ===== SPARK PARTICLE =====
-
-class Spark {
-  x: number; y: number; vx: number; vy: number
-  life: number; decay: number; size: number
-  color: string; type: 'rune' | 'energy' | 'mote'
-  gravity: number; friction: number
-
-  constructor(x: number, y: number, o: Partial<Spark> = {}) {
-    this.x = x; this.y = y
-    this.vx = o.vx ?? 0; this.vy = o.vy ?? 0
-    this.life = o.life ?? 1; this.decay = o.decay ?? 0.02
-    this.size = o.size ?? 2; this.color = o.color ?? '160,100,255'
-    this.type = o.type ?? 'rune'; this.gravity = o.gravity ?? 0
-    this.friction = o.friction ?? 0.98
-  }
-
-  update(): boolean {
-    this.vx *= this.friction; this.vy *= this.friction
-    this.vy += this.gravity; this.x += this.vx; this.y += this.vy
-    this.life -= this.decay
-    return this.life > 0
-  }
-
-  draw(c: CanvasRenderingContext2D) {
-    const a = Math.max(0, this.life)
-    c.save()
-    if (this.type === 'rune') {
-      c.fillStyle = `rgba(${this.color},${a * 0.8})`
-      c.shadowColor = `rgba(${this.color},${a})`
-      c.shadowBlur = this.size * 4
-      c.beginPath()
-      c.arc(this.x, this.y, this.size * 0.5, 0, Math.PI * 2)
-      c.fill()
-    } else if (this.type === 'energy') {
-      // Elongated energy streak
-      c.translate(this.x, this.y)
-      c.rotate(Math.atan2(this.vy, this.vx))
-      const len = this.size * 3
-      const grad = c.createLinearGradient(-len, 0, len, 0)
-      grad.addColorStop(0, `rgba(${this.color},0)`)
-      grad.addColorStop(0.5, `rgba(${this.color},${a})`)
-      grad.addColorStop(1, `rgba(${this.color},0)`)
-      c.fillStyle = grad
-      c.fillRect(-len, -0.8, len * 2, 1.6)
-    } else if (this.type === 'mote') {
-      const grad = c.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size)
-      grad.addColorStop(0, `rgba(${this.color},${a * 0.6})`)
-      grad.addColorStop(1, `rgba(${this.color},0)`)
-      c.fillStyle = grad
-      c.beginPath()
-      c.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-      c.fill()
-    }
-    c.restore()
-  }
-}
+const pendingTimeouts: number[] = []
 
 // ===== WEBGPU MATERIALS =====
 
@@ -158,7 +104,7 @@ function createRuneCircleMaterial(): RuneCircleObj {
     // Colors: violet core → blue edges
     const runeColor = vec3(0.7, 0.3, 1.0)
     const glowColor = vec3(0.4, 0.2, 0.8)
-    const coreColor = vec3(0.9, 0.8, 1.0) // bright rune marks
+    const coreColor = vec3(0.9, 0.8, 1.0)
 
     const baseColor = mix(glowColor, runeColor, shimmerMask)
     const color = mix(baseColor, coreColor, runeGlow.mul(0.6))
@@ -262,17 +208,16 @@ function createImplosionMaterial(): ImplosionObj {
 function startLoop() {
   if (loopActive) return
   loopActive = true
-  animationId = requestAnimationFrame(animate)
+  rafHandle = rafLoop.register(animate)
 }
 
 function stopLoop() {
   loopActive = false
-  if (animationId) { cancelAnimationFrame(animationId); animationId = 0 }
+  if (rafHandle >= 0) { rafLoop.unregister(rafHandle); rafHandle = -1 }
 }
 
 function animate() {
   if (!mounted || !loopActive) return
-  animationId = requestAnimationFrame(animate)
 
   if (renderer && scene && camera) renderer.render(scene, camera)
 
@@ -280,11 +225,7 @@ function animate() {
     const w = sparkCanvasRef.value.width / (window.devicePixelRatio || 1)
     const h = sparkCanvasRef.value.height / (window.devicePixelRatio || 1)
     sCtx.clearRect(0, 0, w, h)
-    sparks = sparks.filter(s => {
-      const alive = s.update()
-      if (alive) s.draw(sCtx!)
-      return alive
-    })
+    tickSparks(sparks, sCtx!)
   }
 }
 
@@ -295,12 +236,16 @@ function s2t(sx: number, sy: number, W: number, H: number) {
 // ===== PUBLIC: play(attackerEl, defenderEl, damage?) =====
 
 let isPlaying = false
+let currentTl: gsap.core.Timeline | null = null
 
 function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number) {
   if (isPlaying || !gpuReady.value) return
   if (!containerRef.value || !renderer || !scene || !camera) return
   if (!runeObj || !implosionObj) return
   isPlaying = true
+
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
 
   const container = containerRef.value
   const sceneEl = attackerEl.closest('.game-board') || attackerEl.closest('.va-battlefield') || attackerEl.closest('.p3-arena-row') || attackerEl.closest('.p3-arena-row-mini') || container.parentElement!
@@ -342,9 +287,11 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   const rune = runeObj!
   const implode = implosionObj!
 
+  if (currentTl) currentTl.kill()
   const tl = gsap.timeline({
     onComplete: () => {
       isPlaying = false
+      currentTl = null
       container.style.display = 'none'
       rune.mesh.visible = false
       implode.mesh.visible = false
@@ -352,8 +299,9 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       stopLoop()
     },
   })
+  currentTl = tl
 
-  // ── Phase 1: BIG rune circle on ATTACKER (the mage casting) (0–0.8s) ──
+  // ── Phase 1: BIG rune circle on ATTACKER (the mage casting) ──
   const bigSize = Math.max(atkRect.width, atkRect.height) * 2.4
   const ap = s2t(acx, acy, W, H)
   rune.mesh.position.set(ap.x, ap.y, 1)
@@ -364,7 +312,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   rune.uRotation.value = 0
 
   tl.to(rune.uIntensity, { value: 2.0, duration: 0.35, ease: 'power2.out' })
-  // Rotation runs independently — must NOT sit on main timeline (would push playhead to 4s)
+  // Rotation runs independently
   gsap.to(rune.uRotation, { value: Math.PI * 4, duration: 3.0, ease: 'none' })
 
   // Attacker glow
@@ -375,7 +323,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2
       const r = bigSize * 0.17
-      sparks.push(new Spark(acx + Math.cos(a) * r, acy + Math.sin(a) * r, {
+      sparks.push(acquireSpark(acx + Math.cos(a) * r, acy + Math.sin(a) * r, {
         vx: -Math.sin(a) * 1.5, vy: Math.cos(a) * 1.5,
         life: 0.8, decay: 0.015,
         size: 1.5 + Math.random(), color: '160,100,255',
@@ -384,7 +332,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
     }
   }, undefined, 0.15)
 
-  // ── Phase 2: Crystal orb appears directly on DEFENDER (no ring) ──
+  // ── Phase 2: Crystal orb condenses on DEFENDER ──
   const smallSize = Math.max(defRect.width, defRect.height) * 1.6
   const dp = s2t(dcx, dcy, W, H)
 
@@ -393,22 +341,25 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
     implode.mesh.scale.set(smallSize, smallSize, 1)
     implode.mesh.visible = true
     implode.uIntensity.value = 0
-    implode.uPhase.value = 0.42
+    implode.uPhase.value = 0.35
 
-    gsap.to(implode.uIntensity, { value: 2.5, duration: 0.15, ease: 'power2.out' })
+    gsap.to(implode.uIntensity, { value: 2.5, duration: 0.25, ease: 'power2.out' })
+
+    // Orb pulsing condensation
+    gsap.to(implode.uPhase, { value: 0.55, duration: 0.6, ease: 'sine.inOut' })
 
     // Sparks converging inward toward orb
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 14; i++) {
       const a = Math.random() * Math.PI * 2
-      const r = 25 + Math.random() * 15
-      sparks.push(new Spark(dcx + Math.cos(a) * r, dcy + Math.sin(a) * r, {
-        vx: -Math.cos(a) * 2, vy: -Math.sin(a) * 2,
-        life: 0.4, decay: 0.02,
+      const r = 30 + Math.random() * 20
+      sparks.push(acquireSpark(dcx + Math.cos(a) * r, dcy + Math.sin(a) * r, {
+        vx: -Math.cos(a) * 2.5, vy: -Math.sin(a) * 2.5,
+        life: 0.5, decay: 0.02,
         size: 1.5 + Math.random(), color: '200,180,255',
         type: 'rune', gravity: 0, friction: 0.95,
       }))
     }
-  }, undefined, 0.4)
+  }, undefined, 0.15)
 
   // ── Phase 3: Explosion — orb detonates after visible hold ──
   tl.call(() => {
@@ -429,7 +380,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
     for (let i = 0; i < 25; i++) {
       const a = Math.random() * Math.PI * 2
       const speed = 2 + Math.random() * 5
-      sparks.push(new Spark(dcx, dcy, {
+      sparks.push(acquireSpark(dcx, dcy, {
         vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
         life: 0.4 + Math.random() * 0.4, decay: 0.015,
         size: 1.5 + Math.random() * 2, color: '160,100,255',
@@ -441,7 +392,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
     for (let i = 0; i < 8; i++) {
       const a = Math.random() * Math.PI * 2
       const speed = 0.5 + Math.random() * 1.5
-      sparks.push(new Spark(dcx + (Math.random() - 0.5) * 20, dcy + (Math.random() - 0.5) * 20, {
+      sparks.push(acquireSpark(dcx + (Math.random() - 0.5) * 20, dcy + (Math.random() - 0.5) * 20, {
         vx: Math.cos(a) * speed, vy: Math.sin(a) * speed - 0.5,
         life: 0.8, decay: 0.008,
         size: 5 + Math.random() * 6, color: '100,60,200',
@@ -477,9 +428,9 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
         { opacity: 0, y: -70, scale: 1.4, duration: 1.2, ease: 'power2.out' }
       )
     }
-  }, undefined, '+=0.5')
+  }, undefined, '+=0.55')
 
-  // ── Phase 4: Attacker circle lingers a moment after explosion, then fades ──
+  // ── Phase 4: Attacker rune circle lingers, then fades ──
   tl.to(rune.uIntensity, { value: 0, duration: 0.5, ease: 'power2.in' }, '+=0.25')
   tl.to(attackerEl, { boxShadow: 'none', duration: 0.35 }, '<')
   tl.call(() => { rune.mesh.visible = false })
@@ -487,8 +438,8 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   // Lingering motes
   tl.call(() => {
     for (let i = 0; i < 6; i++) {
-      setTimeout(() => {
-        sparks.push(new Spark(
+      pendingTimeouts.push(setTimeout(() => {
+        sparks.push(acquireSpark(
           dcx + (Math.random() - 0.5) * 50,
           dcy + (Math.random() - 0.5) * 30,
           {
@@ -500,7 +451,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
             type: 'mote', gravity: -0.01, friction: 0.998,
           }
         ))
-      }, i * 50)
+      }, i * 50) as unknown as number)
     }
   }, undefined, '-=0.3')
 }
@@ -550,6 +501,9 @@ async function initWebGPU() {
     implosionObj = createImplosionMaterial()
     scene.add(implosionObj.mesh)
 
+    // Render one clear frame so the canvas buffer is transparent before first play()
+    renderer.render(scene, camera)
+
     gpuReady.value = true
     console.info('[MagicVFX] Initialized successfully')
   } catch (e: any) {
@@ -561,7 +515,11 @@ async function initWebGPU() {
 onMounted(() => { mounted = true; initWebGPU() })
 
 onUnmounted(() => {
-  mounted = false; stopLoop()
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
+  mounted = false
+  if (currentTl) { currentTl.kill(); currentTl = null }
+  stopLoop()
   runeObj?.mesh.geometry?.dispose(); runeObj?.mesh.material?.dispose()
   implosionObj?.mesh.geometry?.dispose(); implosionObj?.mesh.material?.dispose()
   renderer?.dispose()

@@ -37,6 +37,7 @@ export function parseCreatureCard(raw: RawCreatureCard): CreatureCardData {
     effectDescription: (raw as any).effectDescription ?? raw.effect ?? '',
     lore: raw.lore,
     abilities: (raw as any).abilities ?? [],
+    tags: (raw as any).tags ?? [],
   }
 }
 

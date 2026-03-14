@@ -92,11 +92,11 @@ html, body {
   75%       { transform: translateX(6px); }
 }
 @keyframes death-fade {
-  0%   { opacity: 1; transform: scale(1) rotate(0deg); filter: brightness(1); }
-  20%  { opacity: 1; transform: scale(1.25) rotate(-6deg); filter: brightness(2.5) saturate(2); }
-  50%  { opacity: 0.7; transform: scale(0.85) rotate(10deg); filter: brightness(1.2); }
-  80%  { opacity: 0.2; transform: scale(0.5) rotate(-18deg); filter: brightness(0.4); }
-  100% { opacity: 0; transform: scale(0.05) rotate(25deg); filter: brightness(0); }
+  0%   { opacity: 1; transform: scale(1) rotate(0deg); }
+  20%  { opacity: 1; transform: scale(1.25) rotate(-6deg); }
+  50%  { opacity: 0.5; transform: scale(0.85) rotate(10deg); }
+  80%  { opacity: 0.15; transform: scale(0.5) rotate(-18deg); }
+  100% { opacity: 0; transform: scale(0.05) rotate(25deg); }
 }
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; }

@@ -17,16 +17,16 @@ import attackTypeImg3 from '~/assets/cards/attackType3.png'
 import flyingImg from '~/assets/cards/isFlying.png'
 import lokacjaImg from '~/assets/cards/lokacja.png'
 import artefaktImg from '~/assets/cards/artefakt.png'
-import defaultAdvImg from '~/assets/cards/creature/117.png'
+import defaultAdvImg from '~/assets/cards/creature/117.webp'
 
 const domainImgs: Record<number, string> = { 1: domainImg1, 2: domainImg2, 3: domainImg3, 4: domainImg4 }
 const attackTypeImgs: Record<number, string> = { 1: attackTypeImg1, 2: attackTypeImg2, 3: attackTypeImg3 }
 const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaImg }
 
-const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.png', { eager: true, import: 'default' }) as Record<string, string>
+const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.webp', { eager: true, import: 'default' }) as Record<string, string>
 const creatureImgs = Object.fromEntries(
   Object.entries(_creatureImgModules)
-    .map(([key, val]) => { const m = key.match(/(\d+)\.png$/); return m ? [parseInt(m[1]!), val] : null })
+    .map(([key, val]) => { const m = key.match(/(\d+)\.webp$/); return m ? [parseInt(m[1]!), val] : null })
     .filter(Boolean) as [number, string][]
 ) as Record<number, string>
 

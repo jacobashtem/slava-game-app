@@ -258,14 +258,20 @@ export function useMultiplayer() {
     sendMessage({ type: 'plunder' })
   }
 
-  // Event listener management
+  // Event listener management — track per-component listeners for cleanup
+  const _componentListeners = new Set<EventCallback>()
+
   function onServerMessage(cb: EventCallback) {
     listeners.add(cb)
+    _componentListeners.add(cb)
   }
 
   // Cleanup on component unmount (don't disconnect — other components may use it)
   onUnmounted(() => {
-    // Remove component-specific listeners only
+    for (const cb of _componentListeners) {
+      listeners.delete(cb)
+    }
+    _componentListeners.clear()
   })
 
   return {

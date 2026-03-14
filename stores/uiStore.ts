@@ -67,6 +67,13 @@ export const useUIStore = defineStore('ui', () => {
   const effectTargetIds = ref<Set<string>>(new Set())
   // Mobile drawer
   const mobileDrawerOpen = ref(false)
+  // Turn timer (2-minute countdown)
+  const turnTimeLeft = ref(120) // seconds remaining
+  let _turnTimerInterval: ReturnType<typeof setInterval> | null = null
+  const turnTimerActive = ref(false)
+  const turnTimedOut = ref(false)
+  // Track UI flash/shake timeouts for cleanup on resetAll
+  const _uiTimeouts: ReturnType<typeof setTimeout>[] = []
 
   // ===== COMPUTED =====
   const isSelectingTarget = computed(() => mode.value === 'attacking' && attackingCardId.value !== null)
@@ -151,6 +158,33 @@ export const useUIStore = defineStore('ui', () => {
     clearHypnosis()
   }
 
+  /** Pełny reset UI — wywoływany przy starcie nowej gry */
+  function resetAll() {
+    clearSelection()
+    stopTurnTimer()
+    turnTimedOut.value = false
+    turnTimeLeft.value = 120
+    if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null }
+    _uiTimeouts.forEach(clearTimeout)
+    _uiTimeouts.length = 0
+    playLimitToast.value = null
+    showGameOver.value = false
+    tooltipCardId.value = null
+    graveyardViewerSide.value = null
+    isEnhancedMode.value = false
+    confirmingSurrender.value = false
+    pendingActivation.value = null
+    pendingArtifactId.value = null
+    pendingAdventureEnhanced.value = false
+    pendingAdventureTargetType.value = null
+    flashingEventId.value = null
+    counterAttackCardId.value = null
+    blockCardId.value = null
+    shakeCardId.value = null
+    infoBoxes.value = []
+    mobileDrawerOpen.value = false
+  }
+
   function showTooltip(instanceId: string) {
     tooltipCardId.value = instanceId
   }
@@ -205,38 +239,62 @@ export const useUIStore = defineStore('ui', () => {
 
   function flashEventCard(instanceId: string) {
     flashingEventId.value = instanceId
-    setTimeout(() => {
+    _uiTimeouts.push(setTimeout(() => {
       if (flashingEventId.value === instanceId) flashingEventId.value = null
-    }, 1200)
+    }, 1200))
   }
 
   function flashCounterAttack(instanceId: string) {
     counterAttackCardId.value = instanceId
-    setTimeout(() => {
+    _uiTimeouts.push(setTimeout(() => {
       if (counterAttackCardId.value === instanceId) counterAttackCardId.value = null
-    }, 2400)
+    }, 2400))
   }
 
   function flashBlock(instanceId: string) {
     blockCardId.value = instanceId
-    setTimeout(() => {
+    _uiTimeouts.push(setTimeout(() => {
       if (blockCardId.value === instanceId) blockCardId.value = null
-    }, 1800)
+    }, 1800))
   }
 
   function shakeCard(instanceId: string) {
     shakeCardId.value = instanceId
-    setTimeout(() => {
+    _uiTimeouts.push(setTimeout(() => {
       if (shakeCardId.value === instanceId) shakeCardId.value = null
-    }, 800)
+    }, 800))
   }
 
   function showInfoBox(text: string, icon = '📜', type: 'info' | 'effect' | 'warning' = 'effect') {
     const id = ++_infoId
     infoBoxes.value.push({ id, text, icon, type })
-    setTimeout(() => {
+    _uiTimeouts.push(setTimeout(() => {
       infoBoxes.value = infoBoxes.value.filter(b => b.id !== id)
-    }, 3500)
+    }, 3500))
+  }
+
+  function startTurnTimer() {
+    stopTurnTimer()
+    turnTimeLeft.value = 120
+    turnTimedOut.value = false
+    turnTimerActive.value = true
+    _turnTimerInterval = setInterval(() => {
+      if (turnTimeLeft.value > 0) {
+        turnTimeLeft.value--
+      }
+      if (turnTimeLeft.value <= 0) {
+        stopTurnTimer()
+        turnTimedOut.value = true
+      }
+    }, 1000)
+  }
+
+  function stopTurnTimer() {
+    if (_turnTimerInterval) {
+      clearInterval(_turnTimerInterval)
+      _turnTimerInterval = null
+    }
+    turnTimerActive.value = false
   }
 
   function toggleEnhancedMode() {
@@ -289,6 +347,11 @@ export const useUIStore = defineStore('ui', () => {
     enterEffectTargetMode,
     clearEffectTarget,
     mobileDrawerOpen,
+    turnTimeLeft,
+    turnTimerActive,
+    turnTimedOut,
+    startTurnTimer,
+    stopTurnTimer,
     isSelectingTarget,
     isPlacingCard,
     isMovingCard,
@@ -297,6 +360,7 @@ export const useUIStore = defineStore('ui', () => {
     setValidAttackTargets,
     setHighlightedLines,
     clearSelection,
+    resetAll,
     showTooltip,
     hideTooltip,
     openGameOver,

@@ -10,6 +10,8 @@
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
+import { Spark, tickSparks, acquireSpark } from '../../composables/useParticleSystem'
+import { rafLoop } from '../../composables/useRAFLoop'
 
 // Dynamic imports — WebGPU + TSL are heavy, load on demand
 let THREE_GPU: typeof import('three/webgpu') | null = null
@@ -32,70 +34,13 @@ const gpuError = ref<string | null>(null)
 let renderer: any = null
 let scene: any = null
 let camera: any = null
-let animationId = 0
+let rafHandle = -1
+
 let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
 let mounted = false
 let loopActive = false
-
-// ===== SPARK PARTICLE SYSTEM (2D Canvas — identical to WebGL version) =====
-
-class Spark {
-  x: number; y: number; vx: number; vy: number
-  life: number; decay: number; size: number
-  color: string; type: 'spark' | 'ember' | 'shard'
-  gravity: number; friction: number
-  angle: number; spin: number
-
-  constructor(x: number, y: number, o: Partial<Spark> = {}) {
-    this.x = x; this.y = y
-    this.vx = o.vx ?? 0; this.vy = o.vy ?? 0
-    this.life = o.life ?? 1; this.decay = o.decay ?? 0.02
-    this.size = o.size ?? 2; this.color = o.color ?? '255,220,180'
-    this.type = o.type ?? 'spark'; this.gravity = o.gravity ?? 0
-    this.friction = o.friction ?? 0.98
-    this.angle = o.angle ?? 0; this.spin = o.spin ?? 0
-  }
-
-  update(): boolean {
-    this.vx *= this.friction; this.vy *= this.friction
-    this.vy += this.gravity
-    this.x += this.vx; this.y += this.vy
-    this.life -= this.decay; this.angle += this.spin
-    return this.life > 0
-  }
-
-  draw(c: CanvasRenderingContext2D) {
-    const a = Math.max(0, this.life)
-    c.save()
-    if (this.type === 'spark') {
-      c.translate(this.x, this.y)
-      c.rotate(this.angle)
-      const len = this.size * 4
-      const grad = c.createLinearGradient(-len, 0, len, 0)
-      grad.addColorStop(0, `rgba(${this.color},0)`)
-      grad.addColorStop(0.5, `rgba(${this.color},${a})`)
-      grad.addColorStop(1, `rgba(${this.color},0)`)
-      c.fillStyle = grad
-      c.fillRect(-len, -0.7, len * 2, 1.4)
-    } else if (this.type === 'ember') {
-      c.fillStyle = `rgba(${this.color},${a * 0.7})`
-      c.shadowColor = `rgba(${this.color},${a})`
-      c.shadowBlur = this.size * 3
-      c.beginPath()
-      c.arc(this.x, this.y, this.size * 0.6, 0, Math.PI * 2)
-      c.fill()
-    } else if (this.type === 'shard') {
-      c.translate(this.x, this.y)
-      c.rotate(this.angle)
-      c.fillStyle = `rgba(${this.color},${a})`
-      c.shadowColor = `rgba(${this.color},${a * 0.5})`
-      c.shadowBlur = 4
-      c.fillRect(-this.size, -this.size * 0.3, this.size * 2, this.size * 0.6)
-    }
-    c.restore()
-  }
-}
+const pendingTimeouts: number[] = []
 
 function spawnSlashSparks(x1: number, y1: number, x2: number, y2: number, count: number) {
   const dx = x2 - x1, dy = y2 - y1
@@ -106,7 +51,7 @@ function spawnSlashSparks(x1: number, y1: number, x2: number, y2: number, count:
     const px = x1 + dx * t, py = y1 + dy * t
     const side = (Math.random() - 0.5) * 2
     const speed = 2 + Math.random() * 7
-    sparks.push(new Spark(px, py, {
+    sparks.push(acquireSpark(px, py, {
       vx: nx * side * speed + (Math.random() - 0.5) * 2,
       vy: ny * side * speed + (Math.random() - 0.5) * 2,
       life: 0.3 + Math.random() * 0.5,
@@ -122,7 +67,7 @@ function spawnSlashSparks(x1: number, y1: number, x2: number, y2: number, count:
   for (let i = 0; i < Math.floor(count * 0.3); i++) {
     const angle = Math.random() * Math.PI * 2
     const speed = 1 + Math.random() * 5
-    sparks.push(new Spark((x1 + x2) / 2, (y1 + y2) / 2, {
+    sparks.push(acquireSpark((x1 + x2) / 2, (y1 + y2) / 2, {
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       life: 0.3 + Math.random() * 0.3,
@@ -244,17 +189,16 @@ function positionSlash(
 function startLoop() {
   if (loopActive) return
   loopActive = true
-  animationId = requestAnimationFrame(animate)
+  rafHandle = rafLoop.register(animate)
 }
 
 function stopLoop() {
   loopActive = false
-  if (animationId) { cancelAnimationFrame(animationId); animationId = 0 }
+  if (rafHandle >= 0) { rafLoop.unregister(rafHandle); rafHandle = -1 }
 }
 
 function animate() {
   if (!mounted || !loopActive) return
-  animationId = requestAnimationFrame(animate)
 
   // WebGPU renderer handles time via TSL `time` node automatically
   if (renderer && scene && camera) {
@@ -266,22 +210,22 @@ function animate() {
     const w = sparkCanvasRef.value.width / (window.devicePixelRatio || 1)
     const h = sparkCanvasRef.value.height / (window.devicePixelRatio || 1)
     sCtx.clearRect(0, 0, w, h)
-    sparks = sparks.filter(s => {
-      const alive = s.update()
-      if (alive) s.draw(sCtx!)
-      return alive
-    })
+    tickSparks(sparks, sCtx!)
   }
 }
 
 // ===== PUBLIC: play(attackerEl, defenderEl, damage?) =====
 
 let isPlaying = false
+let currentTl: gsap.core.Timeline | null = null
 
 function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number) {
   if (isPlaying || !gpuReady.value) return
   if (!containerRef.value || !renderer || !scene || !camera) return
   isPlaying = true
+
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
 
   const container = containerRef.value
   const sceneEl = attackerEl.closest('.game-board') || attackerEl.closest('.va-battlefield') || attackerEl.closest('.p3-arena-row') || attackerEl.closest('.p3-arena-row-mini') || container.parentElement!
@@ -328,15 +272,18 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   const dist = Math.sqrt(dirX * dirX + dirY * dirY) || 1
   const nx = dirX / dist, ny = dirY / dist
 
+  if (currentTl) currentTl.kill()
   const tl = gsap.timeline({
     onComplete: () => {
       isPlaying = false
+      currentTl = null
       container.style.display = 'none'
       slashPool.forEach(s => { s.mesh.visible = false })
       sparks = []
       stopLoop()
     },
   })
+  currentTl = tl
 
   // WINDUP
   tl.to(attackerEl, { x: -nx * 14, y: -ny * 14, duration: 0.3, ease: 'power2.in' })
@@ -347,7 +294,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
     for (let i = 0; i < 12; i++) {
       const angle = Math.random() * Math.PI * 2
       const d = 25 + Math.random() * 35
-      sparks.push(new Spark(ax + Math.cos(angle) * d, ay + Math.sin(angle) * d, {
+      sparks.push(acquireSpark(ax + Math.cos(angle) * d, ay + Math.sin(angle) * d, {
         vx: -Math.cos(angle) * 3, vy: -Math.sin(angle) * 3,
         life: 0.5, decay: 0.025, size: 1.5, color: '220,200,255', type: 'ember', friction: 0.94,
       }))
@@ -363,7 +310,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
     const ax = aRect2.left - sceneRect.left + aRect2.width / 2
     const ay = aRect2.top - sceneRect.top + aRect2.height / 2
     for (let i = 0; i < 15; i++) {
-      sparks.push(new Spark(ax - nx * i * 14, ay - ny * i * 14 + (Math.random() - 0.5) * 25, {
+      sparks.push(acquireSpark(ax - nx * i * 14, ay - ny * i * 14 + (Math.random() - 0.5) * 25, {
         vx: -nx * 3 - Math.random() * 3 * nx, vy: -ny * 3 + (Math.random() - 0.5) * 0.5,
         life: 0.15 + Math.random() * 0.15, decay: 0.035, size: 2 + Math.random() * 3,
         color: '180,170,210', type: 'ember', friction: 0.94,
@@ -393,12 +340,12 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       gsap.to(s.uLife, { value: 0, duration: 0.9, delay: 0.08, ease: 'power2.in' })
     }
 
-    setTimeout(() => {
+    pendingTimeouts.push(setTimeout(() => {
       spawnSlashSparks(sx1, sy1, sx2, sy2, 50)
       for (let i = 0; i < 15; i++) {
         const angle = Math.random() * Math.PI * 2
         const speed = 1 + Math.random() * 4
-        sparks.push(new Spark(dcx, dcy, {
+        sparks.push(acquireSpark(dcx, dcy, {
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed - 1,
           life: 0.5 + Math.random() * 0.5, decay: 0.01,
@@ -406,9 +353,9 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
           gravity: 0.1, friction: 0.98,
         }))
       }
-    }, 40)
+    }, 40) as unknown as number)
 
-    setTimeout(() => {
+    pendingTimeouts.push(setTimeout(() => {
       const shakeTl = gsap.timeline()
       for (let i = 0; i < 12; i++) {
         const int = 12 * (1 - i / 12)
@@ -419,7 +366,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
         })
       }
       shakeTl.to(defenderEl, { x: 0, y: 0, duration: 0.15 })
-    }, 50)
+    }, 50) as unknown as number)
 
     gsap.fromTo(defInner,
       { boxShadow: 'inset 0 0 80px rgba(255,30,10,0.85), 0 0 25px rgba(255,40,20,0.6)', borderColor: '#ff2020' },
@@ -443,8 +390,8 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   // LINGERING EMBERS
   tl.call(() => {
     for (let i = 0; i < 12; i++) {
-      setTimeout(() => {
-        sparks.push(new Spark(
+      pendingTimeouts.push(setTimeout(() => {
+        sparks.push(acquireSpark(
           dcx + (Math.random() - 0.5) * dw,
           dcy + (Math.random() - 0.5) * dh * 0.4,
           {
@@ -455,7 +402,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
             gravity: 0.04, friction: 0.998,
           }
         ))
-      }, i * 80)
+      }, i * 80) as unknown as number)
     }
   }, undefined, '-=0.2')
 }
@@ -511,6 +458,9 @@ async function initWebGPU() {
       slashPool.push(s)
     }
 
+    // Render one clear frame so the canvas buffer is transparent before first play()
+    renderer.render(scene, camera)
+
     gpuReady.value = true
     console.info('[SlashWebGPU] Initialized successfully')
   } catch (e: any) {
@@ -525,7 +475,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
   mounted = false
+  if (currentTl) { currentTl.kill(); currentTl = null }
   stopLoop()
   slashPool.forEach(s => {
     s.mesh.geometry?.dispose()

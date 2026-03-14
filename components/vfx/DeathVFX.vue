@@ -14,6 +14,8 @@
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
+import { Spark, tickSparks, acquireSpark } from '../../composables/useParticleSystem'
+import { rafLoop } from '../../composables/useRAFLoop'
 
 let THREE_GPU: typeof import('three/webgpu') | null = null
 let TSL: {
@@ -32,70 +34,13 @@ const gpuError = ref<string | null>(null)
 let renderer: any = null
 let scene: any = null
 let camera: any = null
-let animationId = 0
+let rafHandle = -1
+
 let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
 let mounted = false
 let loopActive = false
-
-// ===== SPARK PARTICLE SYSTEM (2D Canvas) =====
-
-class Spark {
-  x: number; y: number; vx: number; vy: number
-  life: number; decay: number; size: number
-  color: string; type: 'smoke' | 'soul' | 'ash'
-  gravity: number; friction: number
-  alpha: number
-
-  constructor(x: number, y: number, o: Partial<Spark> = {}) {
-    this.x = x; this.y = y
-    this.vx = o.vx ?? 0; this.vy = o.vy ?? 0
-    this.life = o.life ?? 1; this.decay = o.decay ?? 0.01
-    this.size = o.size ?? 4; this.color = o.color ?? '20,15,30'
-    this.type = o.type ?? 'smoke'; this.gravity = o.gravity ?? 0
-    this.friction = o.friction ?? 0.99
-    this.alpha = o.alpha ?? 0.6
-  }
-
-  update(): boolean {
-    this.vx *= this.friction; this.vy *= this.friction
-    this.vy += this.gravity
-    this.x += this.vx; this.y += this.vy
-    this.life -= this.decay
-    return this.life > 0
-  }
-
-  draw(c: CanvasRenderingContext2D) {
-    const a = Math.max(0, this.life) * this.alpha
-    c.save()
-    if (this.type === 'smoke') {
-      // Soft, large, blurry smoke puff
-      const grad = c.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size)
-      grad.addColorStop(0, `rgba(${this.color},${a * 0.5})`)
-      grad.addColorStop(0.6, `rgba(${this.color},${a * 0.3})`)
-      grad.addColorStop(1, `rgba(${this.color},0)`)
-      c.fillStyle = grad
-      c.beginPath()
-      c.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-      c.fill()
-    } else if (this.type === 'soul') {
-      // Tiny bright mote
-      c.fillStyle = `rgba(${this.color},${a})`
-      c.shadowColor = `rgba(${this.color},${a})`
-      c.shadowBlur = this.size * 4
-      c.beginPath()
-      c.arc(this.x, this.y, this.size * 0.5, 0, Math.PI * 2)
-      c.fill()
-    } else if (this.type === 'ash') {
-      // Grey mote drifting down
-      c.fillStyle = `rgba(${this.color},${a * 0.4})`
-      c.beginPath()
-      c.arc(this.x, this.y, this.size * 0.3, 0, Math.PI * 2)
-      c.fill()
-    }
-    c.restore()
-  }
-}
+const pendingTimeouts: number[] = []
 
 // ===== WEBGPU + TSL MATERIALS =====
 
@@ -230,17 +175,16 @@ function createSoulMaterial(): SoulObj {
 function startLoop() {
   if (loopActive) return
   loopActive = true
-  animationId = requestAnimationFrame(animate)
+  rafHandle = rafLoop.register(animate)
 }
 
 function stopLoop() {
   loopActive = false
-  if (animationId) { cancelAnimationFrame(animationId); animationId = 0 }
+  if (rafHandle >= 0) { rafLoop.unregister(rafHandle); rafHandle = -1 }
 }
 
 function animate() {
   if (!mounted || !loopActive) return
-  animationId = requestAnimationFrame(animate)
 
   if (renderer && scene && camera) {
     renderer.render(scene, camera)
@@ -250,11 +194,7 @@ function animate() {
     const w = sparkCanvasRef.value.width / (window.devicePixelRatio || 1)
     const h = sparkCanvasRef.value.height / (window.devicePixelRatio || 1)
     sCtx.clearRect(0, 0, w, h)
-    sparks = sparks.filter(s => {
-      const alive = s.update()
-      if (alive) s.draw(sCtx!)
-      return alive
-    })
+    tickSparks(sparks, sCtx!)
   }
 }
 
@@ -267,6 +207,7 @@ function s2t(sx: number, sy: number, W: number, H: number) {
 // ===== PUBLIC: play(targetEl) =====
 
 let isPlaying = false
+let currentTl: gsap.core.Timeline | null = null
 let lastAnimatedEl: HTMLElement | null = null
 let lastAnimatedCardInner: HTMLElement | null = null
 let lastOrigFilter: string | null = null
@@ -286,6 +227,9 @@ function play(targetEl: HTMLElement) {
   if (!containerRef.value || !renderer || !scene || !camera) return
   if (!smokeObj || !soulObj) return
   isPlaying = true
+
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
 
   const container = containerRef.value
   const sceneEl = targetEl.closest('.game-board') || targetEl.closest('.va-battlefield') || targetEl.closest('.p3-arena-row') || targetEl.closest('.p3-arena-row-mini') || container.parentElement!
@@ -352,9 +296,11 @@ function play(targetEl: HTMLElement) {
   lastAnimatedCardInner = cardInner as HTMLElement
   lastOrigFilter = origFilter
 
+  if (currentTl) currentTl.kill()
   const tl = gsap.timeline({
     onComplete: () => {
       isPlaying = false
+      currentTl = null
       container.style.display = 'none'
       smoke.mesh.visible = false
       soul.mesh.visible = false
@@ -365,6 +311,7 @@ function play(targetEl: HTMLElement) {
       // next play() call for showcase/arena reuse.
     },
   })
+  currentTl = tl
 
   // ── Phase 1: Card darkens + smoke gathers + card sinks (single pass, no re-brighten) ──
   tl.to(cardInner, {
@@ -385,7 +332,7 @@ function play(targetEl: HTMLElement) {
       const edge = Math.random() > 0.5
       const sx = tcx + (edge ? (Math.random() > 0.5 ? -1 : 1) * tw * 0.5 : (Math.random() - 0.5) * tw)
       const sy = tcy + (Math.random() - 0.5) * th * 0.8
-      sparks.push(new Spark(sx, sy, {
+      sparks.push(acquireSpark(sx, sy, {
         vx: (Math.random() - 0.5) * 0.3,
         vy: -0.5 - Math.random() * 1.0,
         life: 0.7, decay: 0.012,
@@ -417,7 +364,7 @@ function play(targetEl: HTMLElement) {
     for (let i = 0; i < 8; i++) {
       const a = Math.random() * Math.PI * 2
       const r = 5 + Math.random() * 15
-      sparks.push(new Spark(tcx + Math.cos(a) * r, tcy + Math.sin(a) * r, {
+      sparks.push(acquireSpark(tcx + Math.cos(a) * r, tcy + Math.sin(a) * r, {
         vx: Math.cos(a) * -0.3, vy: -0.3 - Math.random() * 0.4,
         life: 0.6, decay: 0.02, size: 1.5 + Math.random(),
         color: '255,230,170', type: 'soul', gravity: -0.02, friction: 0.98, alpha: 0.8,
@@ -437,7 +384,7 @@ function play(targetEl: HTMLElement) {
     onUpdate: () => {
       if (Math.random() > 0.6) {
         const cy = tcy - trailObj.progress * th * 1.2
-        sparks.push(new Spark(tcx + (Math.random() - 0.5) * 8, cy, {
+        sparks.push(acquireSpark(tcx + (Math.random() - 0.5) * 8, cy, {
           vx: (Math.random() - 0.5) * 0.5, vy: 0.1 + Math.random() * 0.3,
           life: 0.4, decay: 0.025, size: 1 + Math.random(),
           color: '255,210,130', type: 'soul', gravity: 0.01, friction: 0.99, alpha: 0.6,
@@ -452,8 +399,8 @@ function play(targetEl: HTMLElement) {
   // Ash drifting
   tl.call(() => {
     for (let i = 0; i < 8; i++) {
-      setTimeout(() => {
-        sparks.push(new Spark(
+      pendingTimeouts.push(setTimeout(() => {
+        sparks.push(acquireSpark(
           tcx + (Math.random() - 0.5) * tw * 0.8,
           tcy - th * 0.3 + (Math.random() - 0.5) * th * 0.3,
           {
@@ -462,7 +409,7 @@ function play(targetEl: HTMLElement) {
             color: '80,70,90', type: 'ash', gravity: 0.02, friction: 0.997, alpha: 0.3,
           }
         ))
-      }, i * 40)
+      }, i * 40) as unknown as number)
     }
   }, undefined, '-=0.3')
 }
@@ -511,6 +458,9 @@ async function initWebGPU() {
     soulObj = createSoulMaterial()
     scene.add(soulObj.mesh)
 
+    // Render one clear frame so the canvas buffer is transparent before first play()
+    renderer.render(scene, camera)
+
     gpuReady.value = true
     console.info('[DeathVFX] Initialized successfully')
   } catch (e: any) {
@@ -525,7 +475,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  pendingTimeouts.forEach(clearTimeout)
+  pendingTimeouts.length = 0
   mounted = false
+  if (currentTl) { currentTl.kill(); currentTl = null }
   stopLoop()
   smokeObj?.mesh.geometry?.dispose()
   smokeObj?.mesh.material?.dispose()

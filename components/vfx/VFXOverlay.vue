@@ -15,13 +15,26 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
 import { useVFXOrchestrator, type VFXEvent, type AttackVisualType } from '../../composables/useVFXOrchestrator'
+import { rafLoop } from '../../composables/useRAFLoop'
+import { useGameStore } from '../../stores/gameStore'
 
 const vfx = useVFXOrchestrator()
+const game = useGameStore()
 
 let overlayEl: HTMLElement | null = null
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
-let rafId = 0
+let rafHandle = -1
+const _vfxTimeouts: ReturnType<typeof setTimeout>[] = []
+
+function vfxTimeout(fn: () => void, ms: number) {
+  _vfxTimeouts.push(setTimeout(fn, ms))
+}
+
+function clearVfxTimeouts() {
+  _vfxTimeouts.forEach(clearTimeout)
+  _vfxTimeouts.length = 0
+}
 
 // ===== PARTICLE SYSTEM =====
 
@@ -37,7 +50,7 @@ interface Particle {
   friction: number
   rotation: number
   rotSpeed: number
-  shape: 'circle' | 'spark' | 'slash' | 'energyslash' | 'shard' | 'ring' | 'rune' | 'ember' | 'shield' | 'arrow' | 'snowflake' | 'bolt' | 'cross' | 'star' | 'droplet'
+  shape: 'circle' | 'spark' | 'slash' | 'energyslash' | 'shard' | 'ring' | 'rune' | 'ember' | 'shield' | 'arrow' | 'snowflake' | 'bolt' | 'cross' | 'star' | 'droplet' | 'leaf'
   /** For ring shape: current scale */
   scale: number
   scaleSpeed: number
@@ -543,41 +556,77 @@ function emitArrowProjectile(
   }
 }
 
-// ===== HEAL EFFECT =====
+// ===== HEAL EFFECT — Slavic nature theme =====
 
 function emitHeal(rect: { cx: number; cy: number; w: number; h: number }) {
   const { cx, cy, w, h } = rect
+  const radius = Math.max(w, h) * 0.45
 
-  // Rising green particles
-  for (let i = 0; i < 16; i++) {
+  // 1) Spiraling leaves wrapping around the card (12 leaves)
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2
+    const spiralR = radius * rand(0.3, 0.7)
+    const delay = i * 1.8 // staggered spawn
     particles.push({
-      x: cx + rand(-w * 0.4, w * 0.4), y: cy + rand(0, h * 0.3),
-      vx: rand(-0.5, 0.5), vy: rand(-3, -1),
-      size: rand(2, 4), opacity: 0.9,
-      color: ['#4ade80', '#86efac', '#34d399', '#a7f3d0'][Math.floor(Math.random() * 4)]!,
-      life: rand(-3, 0), maxLife: rand(30, 50), gravity: -0.05, friction: 0.97,
-      rotation: 0, rotSpeed: rand(-0.1, 0.1), shape: 'circle', scale: 1, scaleSpeed: 0,
+      x: cx + Math.cos(angle) * spiralR,
+      y: cy + Math.sin(angle) * spiralR + rand(-5, 5),
+      vx: Math.cos(angle + Math.PI * 0.5) * rand(1.5, 3), // tangential velocity → spiral
+      vy: rand(-2.5, -1), // float upward
+      size: rand(6, 11), opacity: 0.85,
+      color: ['#4ade80', '#22c55e', '#86efac', '#a3e635', '#65a30d'][Math.floor(Math.random() * 5)]!,
+      life: -delay, maxLife: rand(45, 65), gravity: -0.04, friction: 0.965,
+      rotation: rand(0, Math.PI * 2), rotSpeed: rand(-0.08, 0.08),
+      shape: 'leaf', scale: 1, scaleSpeed: -0.008,
     })
   }
 
-  // Cross symbols floating up
-  for (let i = 0; i < 3; i++) {
+  // 2) Gold-green glow motes — tiny sparkles like sunlight through canopy (20 motes)
+  for (let i = 0; i < 20; i++) {
+    const a = rand(0, Math.PI * 2)
+    const r = rand(0, radius * 0.6)
     particles.push({
-      x: cx + rand(-w * 0.25, w * 0.25), y: cy + rand(-h * 0.1, h * 0.2),
-      vx: rand(-0.3, 0.3), vy: rand(-2.5, -1),
-      size: rand(8, 14), opacity: 0.8, color: '#4ade80',
-      life: -i * 4, maxLife: rand(35, 50), gravity: -0.03, friction: 0.98,
-      rotation: 0, rotSpeed: rand(-0.02, 0.02), shape: 'cross', scale: 1, scaleSpeed: -0.005,
+      x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r,
+      vx: rand(-0.6, 0.6), vy: rand(-1.8, -0.4),
+      size: rand(1.5, 3.5), opacity: rand(0.5, 1),
+      color: ['#fbbf24', '#fde68a', '#d9f99d', '#bef264'][Math.floor(Math.random() * 4)]!,
+      life: rand(-5, 0), maxLife: rand(30, 50), gravity: -0.02, friction: 0.98,
+      rotation: 0, rotSpeed: 0, shape: 'circle', scale: 1, scaleSpeed: 0,
     })
   }
 
-  // Green ring expanding
+  // 3) Central bloom — large soft green circle that expands and fades
   particles.push({
     x: cx, y: cy, vx: 0, vy: 0,
-    size: Math.max(w, h) * 0.5, opacity: 0.6, color: '#4ade80',
-    life: 0, maxLife: 24, gravity: 0, friction: 1,
-    rotation: 0, rotSpeed: 0, shape: 'ring', scale: 0.1, scaleSpeed: 0.1,
+    size: radius * 0.8, opacity: 0.35, color: '#4ade80',
+    life: 0, maxLife: 30, gravity: 0, friction: 1,
+    rotation: 0, rotSpeed: 0, shape: 'circle', scale: 0.3, scaleSpeed: 0.04,
   })
+
+  // 4) Double expanding rings — inner gold, outer green (staggered)
+  particles.push({
+    x: cx, y: cy, vx: 0, vy: 0,
+    size: radius * 0.7, opacity: 0.7, color: '#fbbf24',
+    life: 0, maxLife: 28, gravity: 0, friction: 1,
+    rotation: 0, rotSpeed: 0, shape: 'ring', scale: 0.15, scaleSpeed: 0.1,
+  })
+  particles.push({
+    x: cx, y: cy, vx: 0, vy: 0,
+    size: radius * 0.9, opacity: 0.55, color: '#4ade80',
+    life: -6, maxLife: 32, gravity: 0, friction: 1,
+    rotation: 0, rotSpeed: 0, shape: 'ring', scale: 0.1, scaleSpeed: 0.09,
+  })
+
+  // 5) Rising rune marks — Slavic accent (3 small runes floating up)
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      x: cx + rand(-w * 0.2, w * 0.2), y: cy + rand(-h * 0.05, h * 0.15),
+      vx: rand(-0.2, 0.2), vy: rand(-1.8, -0.8),
+      size: rand(8, 12), opacity: 0.6, color: '#fde68a',
+      life: -i * 6, maxLife: rand(40, 55), gravity: -0.02, friction: 0.985,
+      rotation: rand(0, Math.PI), rotSpeed: rand(-0.03, 0.03),
+      shape: 'rune', scale: 1, scaleSpeed: -0.008,
+    })
+  }
 }
 
 // ===== FREEZE EFFECT =====
@@ -1072,6 +1121,145 @@ function emitSlashAttack(rect: { cx: number; cy: number; w: number; h: number })
   })
 }
 
+// ===== SEASON TRANSITION BURST =====
+
+const seasonColors: Record<string, string[]> = {
+  spring: ['#4ade80', '#86efac', '#f9a8d4', '#fbcfe8', '#a7f3d0'],
+  summer: ['#fbbf24', '#fde68a', '#fb923c', '#fdba74', '#f59e0b'],
+  autumn: ['#f97316', '#ea580c', '#dc2626', '#b45309', '#92400e'],
+  winter: ['#93c5fd', '#bfdbfe', '#dbeafe', '#e0f2fe', '#60a5fa'],
+}
+const seasonShapes: Record<string, Particle['shape'][]> = {
+  spring: ['leaf', 'circle', 'circle'],
+  summer: ['ember', 'circle', 'spark'],
+  autumn: ['leaf', 'leaf', 'ember'],
+  winter: ['snowflake', 'circle', 'circle'],
+}
+
+function emitSeasonTransition(oldSeason: string, newSeason: string) {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  const cw = canvas.width
+  const ch = canvas.height
+
+  // OLD season particles burst outward from center
+  const oldColors = seasonColors[oldSeason] ?? seasonColors.spring!
+  const oldShapes = seasonShapes[oldSeason] ?? seasonShapes.spring!
+  for (let i = 0; i < 30; i++) {
+    const angle = rand(0, Math.PI * 2)
+    const speed = rand(3, 8)
+    particles.push({
+      x: cw * 0.5 + rand(-cw * 0.3, cw * 0.3),
+      y: ch * 0.5 + rand(-ch * 0.2, ch * 0.2),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: rand(4, 10), opacity: 0.7,
+      color: oldColors[Math.floor(Math.random() * oldColors.length)]!,
+      life: rand(-3, 0), maxLife: rand(40, 70),
+      gravity: rand(-0.02, 0.02), friction: 0.975,
+      rotation: rand(0, Math.PI * 2), rotSpeed: rand(-0.06, 0.06),
+      shape: oldShapes[Math.floor(Math.random() * oldShapes.length)]!,
+      scale: 1, scaleSpeed: -0.012,
+    })
+  }
+
+  // NEW season particles converge inward from edges
+  const newColors = seasonColors[newSeason] ?? seasonColors.spring!
+  const newShapes = seasonShapes[newSeason] ?? seasonShapes.spring!
+  for (let i = 0; i < 35; i++) {
+    // Spawn on screen edges
+    const edge = Math.floor(Math.random() * 4) // 0=top, 1=right, 2=bottom, 3=left
+    let sx: number, sy: number
+    switch (edge) {
+      case 0: sx = rand(0, cw); sy = -20; break
+      case 1: sx = cw + 20; sy = rand(0, ch); break
+      case 2: sx = rand(0, cw); sy = ch + 20; break
+      default: sx = -20; sy = rand(0, ch); break
+    }
+    // Velocity toward center area
+    const tx = cw * 0.5 + rand(-cw * 0.25, cw * 0.25)
+    const ty = ch * 0.5 + rand(-ch * 0.2, ch * 0.2)
+    const dx = tx - sx, dy = ty - sy
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const spd = rand(2, 5)
+    particles.push({
+      x: sx, y: sy,
+      vx: (dx / dist) * spd, vy: (dy / dist) * spd,
+      size: rand(3, 8), opacity: 0,
+      color: newColors[Math.floor(Math.random() * newColors.length)]!,
+      life: -i * 0.8, maxLife: rand(50, 80),
+      gravity: 0, friction: 0.985,
+      rotation: rand(0, Math.PI * 2), rotSpeed: rand(-0.05, 0.05),
+      shape: newShapes[Math.floor(Math.random() * newShapes.length)]!,
+      scale: 0.5, scaleSpeed: 0.01,
+    })
+  }
+
+  // Expanding ring in new season color
+  const ringColor = newColors[0]!
+  particles.push({
+    x: cw * 0.5, y: ch * 0.5, vx: 0, vy: 0,
+    size: Math.max(cw, ch) * 0.4, opacity: 0.4, color: ringColor,
+    life: -5, maxLife: 40, gravity: 0, friction: 1,
+    rotation: 0, rotSpeed: 0, shape: 'ring', scale: 0.05, scaleSpeed: 0.06,
+  })
+}
+
+// ===== AMBIENT BOARD PARTICLES =====
+// Subtle always-on atmospheric particles — dust motes, faint runes, tiny sparkles.
+// Spawns ~1 particle per second, max ~15 alive at a time.
+
+let ambientFrameCounter = 0
+const AMBIENT_INTERVAL = 50 // frames between spawns (~0.8s at 60fps)
+const AMBIENT_MAX = 18
+
+function tickAmbient() {
+  ambientFrameCounter++
+  if (ambientFrameCounter < AMBIENT_INTERVAL) return
+  ambientFrameCounter = 0
+
+  // Don't spawn if game isn't active or too many ambient particles
+  if (!game.state) return
+  const ambientCount = particles.filter(p => (p as any)._ambient).length
+  if (ambientCount >= AMBIENT_MAX) return
+
+  const canvas = canvasRef.value
+  if (!canvas) return
+  const cw = canvas.width
+  const ch = canvas.height
+
+  const season = game.season
+  const colors = seasonColors[season] ?? seasonColors.spring!
+  const shapes = seasonShapes[season] ?? seasonShapes.spring!
+
+  // Spawn 1-2 particles
+  const count = Math.random() > 0.6 ? 2 : 1
+  for (let i = 0; i < count; i++) {
+    const isRune = Math.random() < 0.15
+    const p: Particle & { _ambient?: boolean } = {
+      x: rand(cw * 0.1, cw * 0.9),
+      y: rand(ch * 0.15, ch * 0.85),
+      vx: rand(-0.3, 0.3),
+      vy: rand(-0.6, -0.15),
+      size: isRune ? rand(6, 10) : rand(1.5, 3.5),
+      opacity: rand(0.15, 0.35),
+      color: colors[Math.floor(Math.random() * colors.length)]!,
+      life: 0, maxLife: rand(80, 140),
+      gravity: isRune ? -0.01 : -0.005,
+      friction: 0.998,
+      rotation: rand(0, Math.PI * 2),
+      rotSpeed: rand(-0.02, 0.02),
+      shape: isRune ? 'rune' : (Math.random() < 0.3
+        ? shapes[Math.floor(Math.random() * shapes.length)]!
+        : 'circle'),
+      scale: 1,
+      scaleSpeed: -0.003,
+      _ambient: true,
+    } as any
+    particles.push(p)
+  }
+}
+
 // ===== PARTICLE DRAW FUNCTIONS =====
 
 function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
@@ -1082,7 +1270,11 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
   if (alpha <= 0.01) return
 
   c.save()
+  try {
   c.globalAlpha = alpha
+  // Disable shadowBlur globally — it's the most expensive canvas op.
+  // Glow is achieved via radial gradients or layered strokes instead.
+  c.shadowBlur = 0
   c.translate(p.x, p.y)
   c.rotate(p.rotation)
 
@@ -1110,10 +1302,9 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       c.ellipse(0, 0, len * Math.min(vel * 0.2 + 0.5, 1.5), p.size * 0.5, 0, 0, Math.PI * 2)
       c.fill()
       // Glow
-      c.shadowColor = p.color
-      c.shadowBlur = p.size * 2
       c.beginPath()
       c.arc(0, 0, p.size * 0.4, 0, Math.PI * 2)
+      c.fillStyle = p.color
       c.fill()
       break
     }
@@ -1123,8 +1314,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       c.strokeStyle = p.color
       c.lineWidth = 2.5
       c.lineCap = 'round'
-      c.shadowColor = p.color
-      c.shadowBlur = 8
       c.beginPath()
       c.moveTo(-len * 0.5, len * 0.5)
       c.lineTo(len * 0.5, -len * 0.5)
@@ -1138,8 +1327,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       const taper = len * 0.015
 
       // Outer glow layer (wide, soft, colored)
-      c.shadowColor = p.color === '#ffffff' ? '#fbbf24' : p.color
-      c.shadowBlur = thickness * 4
       c.strokeStyle = p.color === '#ffffff' ? 'rgba(251,191,36,0.6)' : p.color
       c.lineWidth = thickness * 2.5
       c.lineCap = 'round'
@@ -1149,8 +1336,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       c.stroke()
 
       // Mid layer (narrower, brighter)
-      c.shadowBlur = thickness * 2
-      c.shadowColor = '#ffffff'
       c.strokeStyle = 'rgba(255,255,255,0.8)'
       c.lineWidth = thickness * 1.2
       c.beginPath()
@@ -1159,7 +1344,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       c.stroke()
 
       // Core line (thin, pure white, hottest)
-      c.shadowBlur = thickness
       c.strokeStyle = '#ffffff'
       c.lineWidth = thickness * 0.5
       c.beginPath()
@@ -1173,8 +1357,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       const r = p.size * p.scale
       c.strokeStyle = p.color
       c.lineWidth = Math.max(2, 4 - progress * 4)
-      c.shadowColor = p.color
-      c.shadowBlur = r * 0.5
       c.lineCap = 'round'
 
       // Draw upper half dome
@@ -1215,8 +1397,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       const r = p.size * p.scale
       c.strokeStyle = p.color
       c.lineWidth = Math.max(1, 3 - progress * 3)
-      c.shadowColor = p.color
-      c.shadowBlur = r * 0.3
       c.beginPath()
       c.arc(0, 0, r, 0, Math.PI * 2)
       c.stroke()
@@ -1227,8 +1407,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       const s = p.size
       c.strokeStyle = p.color
       c.lineWidth = 1.5
-      c.shadowColor = p.color
-      c.shadowBlur = s
       c.lineCap = 'round'
       c.beginPath()
       c.moveTo(0, -s * 0.4); c.lineTo(0, s * 0.4)
@@ -1246,8 +1424,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       // Teardrop shape rising upward
       const s = p.size * p.scale
       c.fillStyle = p.color
-      c.shadowColor = p.color
-      c.shadowBlur = s * 3
       c.beginPath()
       c.moveTo(0, -s)
       c.quadraticCurveTo(s * 0.6, -s * 0.3, s * 0.3, s * 0.3)
@@ -1260,8 +1436,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       // Arrowhead + shaft
       const s = p.size * p.scale
       c.fillStyle = p.color
-      c.shadowColor = p.color
-      c.shadowBlur = s * 0.5
       // Shaft
       c.fillRect(-s * 0.5, -s * 0.04, s * 0.7, s * 0.08)
       // Arrowhead
@@ -1285,8 +1459,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       const s = p.size * p.scale
       c.strokeStyle = p.color
       c.lineWidth = 1.5
-      c.shadowColor = p.color
-      c.shadowBlur = s * 2
       c.lineCap = 'round'
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * Math.PI * 2
@@ -1311,8 +1483,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       const s = p.size * p.scale
       c.strokeStyle = p.color
       c.lineWidth = 2.5
-      c.shadowColor = p.color
-      c.shadowBlur = s * 3
       c.lineCap = 'round'
       c.lineJoin = 'round'
       c.beginPath()
@@ -1324,7 +1494,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       // Bright white core
       c.lineWidth = 1
       c.strokeStyle = '#ffffff'
-      c.shadowBlur = s
       c.beginPath()
       c.moveTo(-s * 0.1, -s * 0.5)
       c.lineTo(s * 0.15, -s * 0.15)
@@ -1337,18 +1506,32 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       // Healing plus symbol
       const s = p.size * p.scale
       c.fillStyle = p.color
-      c.shadowColor = p.color
-      c.shadowBlur = s * 2
       c.fillRect(-s * 0.1, -s * 0.4, s * 0.2, s * 0.8)
       c.fillRect(-s * 0.3, -s * 0.1, s * 0.6, s * 0.2)
+      break
+    }
+    case 'leaf': {
+      // Slavic leaf — asymmetric curved shape with vein
+      const s = p.size * p.scale
+      c.fillStyle = p.color
+      c.beginPath()
+      c.moveTo(0, -s * 0.5)
+      c.bezierCurveTo(s * 0.45, -s * 0.35, s * 0.5, s * 0.1, 0, s * 0.5)
+      c.bezierCurveTo(-s * 0.5, s * 0.1, -s * 0.45, -s * 0.35, 0, -s * 0.5)
+      c.fill()
+      // Central vein
+      c.strokeStyle = 'rgba(255,255,255,0.3)'
+      c.lineWidth = 0.7
+      c.beginPath()
+      c.moveTo(0, -s * 0.4)
+      c.lineTo(0, s * 0.4)
+      c.stroke()
       break
     }
     case 'star': {
       // 5-pointed star
       const s = p.size * p.scale
       c.fillStyle = p.color
-      c.shadowColor = p.color
-      c.shadowBlur = s * 2
       c.beginPath()
       for (let i = 0; i < 5; i++) {
         const outerA = (i / 5) * Math.PI * 2 - Math.PI / 2
@@ -1365,8 +1548,6 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
       // Toxic teardrop falling
       const s = p.size * p.scale
       c.fillStyle = p.color
-      c.shadowColor = p.color
-      c.shadowBlur = s * 2
       c.beginPath()
       c.moveTo(0, -s * 0.5)
       c.quadraticCurveTo(s * 0.35, s * 0.1, 0, s * 0.4)
@@ -1376,7 +1557,9 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
     }
   }
 
-  c.restore()
+  } finally {
+    c.restore()
+  }
 }
 
 // ===== ANIMATION LOOP =====
@@ -1384,11 +1567,13 @@ function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
 let lastTime = 0
 
 function animate(time: number) {
-  rafId = requestAnimationFrame(animate)
   const canvas = canvasRef.value
   if (!canvas || !ctx) return
+
+  // Always tick ambient — spawns subtle particles even when queue is empty
+  tickAmbient()
+
   if (particles.length === 0) {
-    // Nothing to render — just clear and skip
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     return
   }
@@ -1400,7 +1585,9 @@ function animate(time: number) {
   const h = canvas.height
   ctx.clearRect(0, 0, w, h)
 
-  for (let i = particles.length - 1; i >= 0; i--) {
+  // In-place swap-and-pop removal — zero array allocation per frame
+  let len = particles.length
+  for (let i = len - 1; i >= 0; i--) {
     const p = particles[i]!
     p.life += dt
 
@@ -1417,12 +1604,14 @@ function animate(time: number) {
     p.scale += p.scaleSpeed * dt
 
     if (p.life >= p.maxLife || p.opacity <= 0 || p.scale <= 0) {
-      particles.splice(i, 1)
+      particles[i] = particles[len - 1]!
+      len--
       continue
     }
 
     drawParticle(ctx, p)
   }
+  particles.length = len
 }
 
 function resizeCanvas() {
@@ -1441,7 +1630,7 @@ function handleHit(event: VFXEvent) {
   // Counter-attack uses dedicated effect
   if (event.label === 'kontra') {
     emitCounterattack(rect)
-    setTimeout(() => vfx.complete(event.id), 600)
+    vfxTimeout(() => vfx.complete(event.id), 600)
     return
   }
 
@@ -1454,7 +1643,7 @@ function handleHit(event: VFXEvent) {
   }
 
   // Auto-complete after effect duration
-  setTimeout(() => vfx.complete(event.id), 800)
+  vfxTimeout(() => vfx.complete(event.id), 800)
 }
 
 type Rect = { cx: number; cy: number; w: number; h: number }
@@ -1465,16 +1654,16 @@ function handleArrowFlight(event: VFXEvent) {
   if (!src || !tgt) { vfx.complete(event.id); return }
 
   emitBowDraw(src)
-  setTimeout(() => emitArrowProjectile(src, tgt), 200)
-  setTimeout(() => emitRangedHit(tgt), 500)
-  setTimeout(() => vfx.complete(event.id), 1200)
+  vfxTimeout(() => emitArrowProjectile(src, tgt), 200)
+  vfxTimeout(() => emitRangedHit(tgt), 500)
+  vfxTimeout(() => vfx.complete(event.id), 1200)
 }
 
 function handleSimpleEffect(event: VFXEvent, emitter: (rect: Rect) => void, duration: number) {
   const rect = event.meta?.rect as Rect | undefined
   if (!rect) { vfx.complete(event.id); return }
   emitter(rect)
-  setTimeout(() => vfx.complete(event.id), duration)
+  vfxTimeout(() => vfx.complete(event.id), duration)
 }
 
 function handleBlock(event: VFXEvent) {
@@ -1482,7 +1671,7 @@ function handleBlock(event: VFXEvent) {
   if (!rect) { vfx.complete(event.id); return }
 
   emitBlock(rect)
-  setTimeout(() => vfx.complete(event.id), 800)
+  vfxTimeout(() => vfx.complete(event.id), 800)
 }
 
 function handleDeath(event: VFXEvent) {
@@ -1490,7 +1679,7 @@ function handleDeath(event: VFXEvent) {
   if (!rect) { vfx.complete(event.id); return }
 
   emitDeath(rect)
-  setTimeout(() => vfx.complete(event.id), 1200)
+  vfxTimeout(() => vfx.complete(event.id), 1200)
 }
 
 function handleScreenFlash(event: VFXEvent) {
@@ -1498,10 +1687,15 @@ function handleScreenFlash(event: VFXEvent) {
   const color = (event.meta?.color as string) ?? '#ffffff'
   const opacity = (event.meta?.opacity as number) ?? 0.5
   const flash = document.createElement('div')
-  flash.style.cssText = `position:fixed;inset:0;z-index:10000;pointer-events:none;background:${color};opacity:${opacity};transition:opacity 0.15s ease-out;`
+  // Start at opacity 0 to avoid first-frame flash, then transition in and out
+  flash.style.cssText = `position:fixed;inset:0;z-index:10000;pointer-events:none;background:${color};opacity:0;transition:opacity 0.08s ease-out;`
   document.body.appendChild(flash)
-  requestAnimationFrame(() => { flash.style.opacity = '0' })
-  setTimeout(() => { flash.remove(); vfx.complete(event.id) }, 200)
+  // Force reflow so the browser registers opacity:0 before transitioning
+  flash.offsetHeight
+  flash.style.opacity = String(opacity)
+  // After flash peaks, fade out
+  vfxTimeout(() => { flash.style.transition = 'opacity 0.15s ease-out'; flash.style.opacity = '0' }, 80)
+  vfxTimeout(() => { flash.remove(); vfx.complete(event.id) }, 280)
 }
 
 function renderDamageNumber(event: VFXEvent) {
@@ -1553,13 +1747,9 @@ const processedIds = new Set<string>()
 watch(
   () => vfx.queue.value,
   (events) => {
-    if (events.length > 0) {
-      console.info('[VFXOverlay] Queue changed, events:', events.length, events.map(e => `${e.type}(${e.id})`))
-    }
     for (const event of events) {
       if (processedIds.has(event.id)) continue
       processedIds.add(event.id)
-      console.info('[VFXOverlay] Processing:', event.type, event.id, 'rect?', !!event.meta?.rect, 'pos?', !!event.meta?.pos)
 
       switch (event.type) {
         case 'damage-number': renderDamageNumber(event); break
@@ -1578,6 +1768,13 @@ watch(
         case 'buff': handleSimpleEffect(event, emitBuff, 900); break
         case 'slash-attack': handleSimpleEffect(event, emitSlashAttack, 1200); break
         case 'screen-flash': handleScreenFlash(event); break
+        case 'season-transition': {
+          const old = (event.meta?.oldSeason as string) ?? 'spring'
+          const nw = (event.meta?.newSeason as string) ?? 'summer'
+          emitSeasonTransition(old, nw)
+          vfxTimeout(() => vfx.complete(event.id), 2000)
+          break
+        }
         default: vfx.complete(event.id)
       }
     }
@@ -1599,18 +1796,21 @@ onMounted(() => {
   if (canvas) {
     ctx = canvas.getContext('2d')
     resizeCanvas()
+    // Explicitly clear canvas to transparent on first init to prevent flash
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
     console.info('[VFXOverlay] Canvas size:', canvas.width, 'x', canvas.height)
     window.addEventListener('resize', resizeCanvas)
-    rafId = requestAnimationFrame(animate)
+    rafHandle = rafLoop.register(animate)
   }
   vfx.setReady(true)
 })
 
 onUnmounted(() => {
+  clearVfxTimeouts()
   vfx.setReady(false)
   vfx.clear()
   overlayEl = null
-  if (rafId) cancelAnimationFrame(rafId)
+  if (rafHandle >= 0) { rafLoop.unregister(rafHandle); rafHandle = -1 }
   window.removeEventListener('resize', resizeCanvas)
   particles = []
 })

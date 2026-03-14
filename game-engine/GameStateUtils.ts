@@ -146,6 +146,7 @@ export function createInitialGameState(gameMode: 'gold' | 'slava' = 'gold'): Gam
     currentTurn: 'player1',
     currentPhase: GamePhase.START,
     roundNumber: 1,
+    seasonOffset: 0,
     turnNumber: 1,
     actionLog: [],
     winner: null,

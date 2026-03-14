@@ -115,11 +115,11 @@ export function createRoom(peerId: string, displayName: string, settings: RoomSe
   return room
 }
 
-export function joinRoom(peerId: string, code: string, displayName: string): { room: Room; error?: string } {
+export function joinRoom(peerId: string, code: string, displayName: string): { room: Room | null; error?: string } {
   const room = findRoomByCode(code)
-  if (!room) return { room: null as any, error: 'Nie znaleziono pokoju o tym kodzie.' }
-  if (room.status !== 'waiting') return { room: null as any, error: 'Gra w tym pokoju już trwa.' }
-  if (room.players.length >= 2) return { room: null as any, error: 'Pokój jest pełny.' }
+  if (!room) return { room: null, error: 'Nie znaleziono pokoju o tym kodzie.' }
+  if (room.status !== 'waiting') return { room: null, error: 'Gra w tym pokoju już trwa.' }
+  if (room.players.length >= 2) return { room: null, error: 'Pokój jest pełny.' }
 
   const player: RoomPlayer = {
     peerId,

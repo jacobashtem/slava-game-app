@@ -23,6 +23,7 @@ import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { BattleLine, GamePhase } from '../../game-engine/constants'
 import { useAudio } from '../../composables/useAudio'
+import { useVFXOrchestrator } from '../../composables/useVFXOrchestrator'
 import { useSlashAttack } from '../../composables/useSlashAttack'
 import { useBowAttack } from '../../composables/useBowAttack'
 import { useElementalAttack } from '../../composables/useElementalAttack'
@@ -36,6 +37,7 @@ import DeathVFX from '../vfx/DeathVFX.vue'
 
 const game = useGameStore()
 const ui = useUIStore()
+const vfxOrch = useVFXOrchestrator()
 
 // Slash Attack VFX (Three.js WebGPU + TSL shader)
 // Registration via watch — <ClientOnly> delays rendering, so ref isn't available in onMounted
@@ -92,6 +94,14 @@ watch(deathVfxRef, (comp) => {
 const player = computed(() => game.state?.players.player1)
 const ai = computed(() => game.state?.players.player2)
 
+// Turn timer display (MM:SS)
+const timerDisplay = computed(() => {
+  const t = ui.turnTimeLeft
+  const m = Math.floor(t / 60)
+  const s = t % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+})
+
 // ===== SEASON-BASED BATTLEFIELD BACKGROUND =====
 // Dynamic imports for season backgrounds (WebP, with PNG fallback)
 const bgModules = import.meta.glob('../../assets/backgrounds/battlefields/1/*.webp', { eager: true, query: '?url', import: 'default' })
@@ -118,6 +128,16 @@ const isCrossfading = ref(false)
 
 watch(() => game.season, (newSeason, oldSeason) => {
   if (newSeason === oldSeason) return
+  // SFX
+  if (oldSeason) sfx.sfxSeasonChange()
+  // Season transition particle burst
+  if (oldSeason) {
+    vfxOrch.emit({
+      type: 'season-transition',
+      meta: { oldSeason, newSeason },
+    })
+  }
+  // Crossfade background
   const newUrl = seasonBgMap[newSeason]
   if (!newUrl) return
   prevBg.value = currentBg.value
@@ -134,6 +154,11 @@ const bgStyle = computed(() => {
   const bg = url ? `url(${url})` : (seasonGradients[game.season] ?? seasonGradients.summer)
   return { '--bf-bg': bg }
 })
+
+// Combat phase glow — subtle red tint overlay during combat
+const isCombatPhase = computed(() =>
+  game.state?.currentPhase === GamePhase.COMBAT
+)
 
 
 
@@ -176,10 +201,7 @@ watch(() => game.actionLog.length, () => {
     sfx.sfxActivate()
   }
 }, { deep: false })
-// Season change: watch season computed
-watch(() => game.season, (newSeason, oldSeason) => {
-  if (oldSeason && newSeason !== oldSeason) sfx.sfxSeasonChange()
-})
+// Season change: merged into crossfade watcher above
 
 // P1/P2 VFX watchers removed — will be replaced by VFXOrchestrator typed events (P3)
 
@@ -240,14 +262,23 @@ const onPlayDescription = computed(() => {
     <!-- ===== SEASON LIGHT TINT — color temperature per season ===== -->
     <div :class="['season-tint', `tint-${game.season}`]" />
 
+    <!-- ===== COMBAT PHASE GLOW — subtle red pulse during combat ===== -->
+    <Transition name="combat-glow">
+      <div v-if="isCombatPhase" class="combat-glow-overlay" />
+    </Transition>
+
     <!-- ===== PASEK GÓRNY (minimalny) ===== -->
     <div class="top-bar">
-      <div :class="['turn-badge', game.isPlayerTurn ? 'tb-player' : 'tb-ai']">
-        {{ game.isPlayerTurn ? 'TWOJA TURA' : 'TURA WROGA' }}
-      </div>
       <div class="round-counter" v-tip="'Numer rundy'">
         <span class="round-label">Runda</span>
         <span class="round-number">{{ game.roundNumber }}</span>
+      </div>
+      <div :class="['turn-badge', game.isPlayerTurn ? 'tb-player' : 'tb-ai']">
+        {{ game.isPlayerTurn ? 'TWOJA TURA' : 'TURA WROGA' }}
+      </div>
+      <div v-if="game.isPlayerTurn" :class="['turn-timer', { 'timer-critical': ui.turnTimeLeft <= 20 }]" v-tip="'Czas na turę'">
+        <Icon icon="game-icons:sands-of-time" class="timer-icon" />
+        <span class="timer-value">{{ timerDisplay }}</span>
       </div>
       <div class="top-bar-spacer" />
       <div :class="['season-badge', `season-${game.season}`]" v-tip="'Aktualna pora roku'">
@@ -554,7 +585,7 @@ const onPlayDescription = computed(() => {
     );
 }
 
-/* Season light tint — color temperature overlay */
+/* Season light tint — color temperature overlay with breathing pulse */
 .season-tint {
   position: absolute;
   inset: 0;
@@ -562,39 +593,81 @@ const onPlayDescription = computed(() => {
   pointer-events: none;
   transition: background 1.5s ease;
   mix-blend-mode: soft-light;
+  animation: tint-breathe 6s ease-in-out infinite;
+}
+@keyframes tint-breathe {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 .tint-spring {
-  background: radial-gradient(ellipse 100% 80% at 50% 30%,
-    rgba(74, 222, 128, 0.08) 0%,
-    rgba(167, 243, 208, 0.04) 40%,
-    transparent 70%);
+  background:
+    radial-gradient(ellipse 100% 80% at 50% 30%,
+      rgba(74, 222, 128, 0.14) 0%,
+      rgba(167, 243, 208, 0.06) 40%,
+      transparent 70%),
+    radial-gradient(ellipse 60% 40% at 30% 70%,
+      rgba(134, 239, 172, 0.06) 0%,
+      transparent 60%);
 }
 .tint-summer {
   background:
     radial-gradient(ellipse 70% 50% at 65% 15%,
-      rgba(251, 191, 36, 0.12) 0%,
-      rgba(251, 146, 60, 0.06) 40%,
+      rgba(251, 191, 36, 0.18) 0%,
+      rgba(251, 146, 60, 0.08) 40%,
       transparent 65%),
+    radial-gradient(ellipse 50% 60% at 35% 80%,
+      rgba(245, 158, 11, 0.06) 0%,
+      transparent 50%),
     linear-gradient(180deg,
-      rgba(251, 191, 36, 0.04) 0%,
+      rgba(251, 191, 36, 0.05) 0%,
       transparent 40%);
 }
 .tint-autumn {
-  background: radial-gradient(ellipse 90% 70% at 40% 50%,
-    rgba(249, 115, 22, 0.06) 0%,
-    rgba(220, 38, 38, 0.03) 40%,
-    transparent 65%);
+  background:
+    radial-gradient(ellipse 90% 70% at 40% 50%,
+      rgba(249, 115, 22, 0.1) 0%,
+      rgba(220, 38, 38, 0.05) 40%,
+      transparent 65%),
+    radial-gradient(ellipse 60% 50% at 70% 30%,
+      rgba(180, 83, 9, 0.06) 0%,
+      transparent 55%);
 }
 .tint-winter {
   background:
     radial-gradient(ellipse 100% 80% at 50% 40%,
-      rgba(96, 165, 250, 0.08) 0%,
-      rgba(147, 197, 253, 0.04) 40%,
+      rgba(96, 165, 250, 0.12) 0%,
+      rgba(147, 197, 253, 0.06) 40%,
       transparent 65%),
+    radial-gradient(ellipse 50% 40% at 25% 20%,
+      rgba(191, 219, 254, 0.06) 0%,
+      transparent 50%),
     linear-gradient(180deg,
       transparent 60%,
-      rgba(96, 165, 250, 0.04) 100%);
+      rgba(96, 165, 250, 0.05) 100%);
 }
+
+/* Combat phase glow — subtle red pulse when combat is active */
+.combat-glow-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 50%,
+      rgba(239, 68, 68, 0.08) 0%,
+      rgba(220, 38, 38, 0.04) 40%,
+      transparent 70%);
+  animation: combat-pulse 2s ease-in-out infinite;
+}
+@keyframes combat-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.combat-glow-enter-active { transition: opacity 0.6s ease; }
+.combat-glow-leave-active { transition: opacity 0.4s ease; }
+.combat-glow-enter-from,
+.combat-glow-leave-to { opacity: 0; }
 
 /* Layout children above the ::before/::after pseudo-elements and .season-bg layers */
 .board-main, .mobile-hud { position: relative; z-index: 3; }
@@ -681,12 +754,54 @@ const onPlayDescription = computed(() => {
   50% { opacity: 0.5; }
 }
 
+/* ====== TURN TIMER ====== */
+.turn-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: #c8a84e;
+  padding: 3px 12px;
+  border-radius: 5px;
+  border: 1px solid rgba(200, 168, 78, 0.2);
+  background: rgba(200, 168, 78, 0.06);
+  transition: color 0.3s, border-color 0.3s, background 0.3s, text-shadow 0.3s;
+}
+.timer-icon {
+  font-size: 20px;
+  opacity: 0.8;
+}
+.timer-value {
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: center;
+}
+.timer-critical {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  animation: timer-pulse 1s ease infinite;
+}
+.timer-critical .timer-icon {
+  opacity: 1;
+  color: #ef4444;
+}
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .season-badge {
   font-family: var(--font-display, Georgia, serif);
   font-size: 20px;
   font-weight: 500;
   padding: 5px 16px;
   border-radius: 6px;
+  text-transform: uppercase;
   white-space: nowrap;
   letter-spacing: 0.06em;
   transition: color 0.4s, background-color 0.4s, border-color 0.4s, text-shadow 0.4s;
@@ -718,20 +833,22 @@ const onPlayDescription = computed(() => {
 }
 
 .surrender-top-btn {
-  padding: 4px 8px;
-  background: transparent;
-  border: 1px solid rgba(239, 68, 68, 0.15);
+  padding: 4px 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
   border-radius: 4px;
-  color: rgba(239, 68, 68, 0.35);
-  font-size: 14px;
+  color: #ef4444;
+  font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
   line-height: 1;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
 }
 .surrender-top-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.2);
   color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.4);
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
 }
 
 /* ====== GŁÓWNA PLANSZA ====== */

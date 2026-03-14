@@ -198,10 +198,8 @@ export function canAttack(
           return { valid: false, reason: `${attacker.cardData.name} (Wręcz) nie dosięgnie — za daleko.` }
         }
       } else if (attackType === AttackType.ELEMENTAL) {
-        // Żywioł: jak wręcz (ta sama + sąsiednia), ALE latające gdziekolwiek
-        if (isFlying(target)) {
-          // Żywioł bije latające w dowolnej linii
-        } else if (Math.abs(atkIdx - defIdx) > 1) {
+        // Żywioł: jak wręcz (ta sama + sąsiednia), może bić latające ale tylko w zasięgu
+        if (Math.abs(atkIdx - defIdx) > 1) {
           return { valid: false, reason: `${attacker.cardData.name} (Żywioł) nie dosięgnie — za daleko.` }
         }
       } else if (attackType === AttackType.RANGED) {
@@ -328,10 +326,6 @@ function checkAttackRange(
       const frontLine = getEnemyFrontLine(state, attackerSide)
       if (frontLine === null) {
         return { valid: false, reason: 'Wróg nie ma istot na polu.' }
-      }
-      // Wyjątek: Żywioł może bić latające w dowolnej linii
-      if (attackType === AttackType.ELEMENTAL && isFlying(target)) {
-        return { valid: true }
       }
       if (targetLine !== frontLine) {
         return { valid: false, reason: `Wręcz/Żywioł musi celować w linię L${frontLine} (aktualny front wroga).` }
@@ -462,12 +456,18 @@ export function removeFromField(state: GameState, instanceId: string): CardInsta
 /**
  * Gold Edition: wróg przegrywa gdy nie ma istot na polu ORAZ talia jest pusta
  * lub nie ma istot nigdzie (pole + ręka + talia).
+ * Alternatywna wygrana: zgromadzenie 15 PS (łupienie).
  */
 export function checkWinCondition(state: GameState): PlayerSide | null {
   // Nie sprawdzaj wygranej przed pierwszą turą (obie talie jeszcze niedobrane)
   if (state.turnNumber <= 1 && state.roundNumber <= 1) return null
 
   for (const side of ['player1', 'player2'] as PlayerSide[]) {
+    // Alternatywna wygrana: 15 PS
+    if (state.players[side].glory >= GOLD_EDITION_RULES.GLORY_WIN_TARGET) {
+      return side
+    }
+
     const opponent: PlayerSide = side === 'player1' ? 'player2' : 'player1'
     const opp = state.players[opponent]
 
