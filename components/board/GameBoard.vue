@@ -23,7 +23,6 @@ import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { BattleLine, GamePhase } from '../../game-engine/constants'
 import { useAudio } from '../../composables/useAudio'
-import { useVFXOrchestrator } from '../../composables/useVFXOrchestrator'
 import { useSlashAttack } from '../../composables/useSlashAttack'
 import { useBowAttack } from '../../composables/useBowAttack'
 import { useElementalAttack } from '../../composables/useElementalAttack'
@@ -37,7 +36,6 @@ import DeathVFX from '../vfx/DeathVFX.vue'
 
 const game = useGameStore()
 const ui = useUIStore()
-const vfxOrch = useVFXOrchestrator()
 
 // Slash Attack VFX (Three.js WebGPU + TSL shader)
 // Registration via watch — <ClientOnly> delays rendering, so ref isn't available in onMounted
@@ -130,13 +128,6 @@ watch(() => game.season, (newSeason, oldSeason) => {
   if (newSeason === oldSeason) return
   // SFX
   if (oldSeason) sfx.sfxSeasonChange()
-  // Season transition particle burst
-  if (oldSeason) {
-    vfxOrch.emit({
-      type: 'season-transition',
-      meta: { oldSeason, newSeason },
-    })
-  }
   // Crossfade background
   const newUrl = seasonBgMap[newSeason]
   if (!newUrl) return
@@ -155,10 +146,6 @@ const bgStyle = computed(() => {
   return { '--bf-bg': bg }
 })
 
-// Combat phase glow — subtle red tint overlay during combat
-const isCombatPhase = computed(() =>
-  game.state?.currentPhase === GamePhase.COMBAT
-)
 
 
 
@@ -262,10 +249,6 @@ const onPlayDescription = computed(() => {
     <!-- ===== SEASON LIGHT TINT — color temperature per season ===== -->
     <div :class="['season-tint', `tint-${game.season}`]" />
 
-    <!-- ===== COMBAT PHASE GLOW — subtle red pulse during combat ===== -->
-    <Transition name="combat-glow">
-      <div v-if="isCombatPhase" class="combat-glow-overlay" />
-    </Transition>
 
     <!-- ===== PASEK GÓRNY (minimalny) ===== -->
     <div class="top-bar">
@@ -585,7 +568,7 @@ const onPlayDescription = computed(() => {
     );
 }
 
-/* Season light tint — color temperature overlay with breathing pulse */
+/* Season light tint — color temperature overlay */
 .season-tint {
   position: absolute;
   inset: 0;
@@ -593,81 +576,39 @@ const onPlayDescription = computed(() => {
   pointer-events: none;
   transition: background 1.5s ease;
   mix-blend-mode: soft-light;
-  animation: tint-breathe 6s ease-in-out infinite;
-}
-@keyframes tint-breathe {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
 }
 .tint-spring {
-  background:
-    radial-gradient(ellipse 100% 80% at 50% 30%,
-      rgba(74, 222, 128, 0.14) 0%,
-      rgba(167, 243, 208, 0.06) 40%,
-      transparent 70%),
-    radial-gradient(ellipse 60% 40% at 30% 70%,
-      rgba(134, 239, 172, 0.06) 0%,
-      transparent 60%);
+  background: radial-gradient(ellipse 100% 80% at 50% 30%,
+    rgba(74, 222, 128, 0.08) 0%,
+    rgba(167, 243, 208, 0.04) 40%,
+    transparent 70%);
 }
 .tint-summer {
   background:
     radial-gradient(ellipse 70% 50% at 65% 15%,
-      rgba(251, 191, 36, 0.18) 0%,
-      rgba(251, 146, 60, 0.08) 40%,
+      rgba(251, 191, 36, 0.12) 0%,
+      rgba(251, 146, 60, 0.06) 40%,
       transparent 65%),
-    radial-gradient(ellipse 50% 60% at 35% 80%,
-      rgba(245, 158, 11, 0.06) 0%,
-      transparent 50%),
     linear-gradient(180deg,
-      rgba(251, 191, 36, 0.05) 0%,
+      rgba(251, 191, 36, 0.04) 0%,
       transparent 40%);
 }
 .tint-autumn {
-  background:
-    radial-gradient(ellipse 90% 70% at 40% 50%,
-      rgba(249, 115, 22, 0.1) 0%,
-      rgba(220, 38, 38, 0.05) 40%,
-      transparent 65%),
-    radial-gradient(ellipse 60% 50% at 70% 30%,
-      rgba(180, 83, 9, 0.06) 0%,
-      transparent 55%);
+  background: radial-gradient(ellipse 90% 70% at 40% 50%,
+    rgba(249, 115, 22, 0.06) 0%,
+    rgba(220, 38, 38, 0.03) 40%,
+    transparent 65%);
 }
 .tint-winter {
   background:
     radial-gradient(ellipse 100% 80% at 50% 40%,
-      rgba(96, 165, 250, 0.12) 0%,
-      rgba(147, 197, 253, 0.06) 40%,
+      rgba(96, 165, 250, 0.08) 0%,
+      rgba(147, 197, 253, 0.04) 40%,
       transparent 65%),
-    radial-gradient(ellipse 50% 40% at 25% 20%,
-      rgba(191, 219, 254, 0.06) 0%,
-      transparent 50%),
     linear-gradient(180deg,
       transparent 60%,
-      rgba(96, 165, 250, 0.05) 100%);
+      rgba(96, 165, 250, 0.04) 100%);
 }
-
-/* Combat phase glow — subtle red pulse when combat is active */
-.combat-glow-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  mix-blend-mode: soft-light;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 50%,
-      rgba(239, 68, 68, 0.08) 0%,
-      rgba(220, 38, 38, 0.04) 40%,
-      transparent 70%);
-  animation: combat-pulse 2s ease-in-out infinite;
-}
-@keyframes combat-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-.combat-glow-enter-active { transition: opacity 0.6s ease; }
-.combat-glow-leave-active { transition: opacity 0.4s ease; }
-.combat-glow-enter-from,
-.combat-glow-leave-to { opacity: 0; }
 
 /* Layout children above the ::before/::after pseudo-elements and .season-bg layers */
 .board-main, .mobile-hud { position: relative; z-index: 3; }

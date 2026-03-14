@@ -50,7 +50,6 @@ export type VFXEventType =
   | 'summon'
   | 'buff'
   | 'slash-attack'
-  | 'season-transition'
 
 export type AttackVisualType = 'melee' | 'elemental' | 'magic' | 'ranged'
 

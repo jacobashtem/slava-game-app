@@ -16,10 +16,8 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import gsap from 'gsap'
 import { useVFXOrchestrator, type VFXEvent, type AttackVisualType } from '../../composables/useVFXOrchestrator'
 import { rafLoop } from '../../composables/useRAFLoop'
-import { useGameStore } from '../../stores/gameStore'
 
 const vfx = useVFXOrchestrator()
-const game = useGameStore()
 
 let overlayEl: HTMLElement | null = null
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -1121,145 +1119,6 @@ function emitSlashAttack(rect: { cx: number; cy: number; w: number; h: number })
   })
 }
 
-// ===== SEASON TRANSITION BURST =====
-
-const seasonColors: Record<string, string[]> = {
-  spring: ['#4ade80', '#86efac', '#f9a8d4', '#fbcfe8', '#a7f3d0'],
-  summer: ['#fbbf24', '#fde68a', '#fb923c', '#fdba74', '#f59e0b'],
-  autumn: ['#f97316', '#ea580c', '#dc2626', '#b45309', '#92400e'],
-  winter: ['#93c5fd', '#bfdbfe', '#dbeafe', '#e0f2fe', '#60a5fa'],
-}
-const seasonShapes: Record<string, Particle['shape'][]> = {
-  spring: ['leaf', 'circle', 'circle'],
-  summer: ['ember', 'circle', 'spark'],
-  autumn: ['leaf', 'leaf', 'ember'],
-  winter: ['snowflake', 'circle', 'circle'],
-}
-
-function emitSeasonTransition(oldSeason: string, newSeason: string) {
-  const canvas = canvasRef.value
-  if (!canvas) return
-  const cw = canvas.width
-  const ch = canvas.height
-
-  // OLD season particles burst outward from center
-  const oldColors = seasonColors[oldSeason] ?? seasonColors.spring!
-  const oldShapes = seasonShapes[oldSeason] ?? seasonShapes.spring!
-  for (let i = 0; i < 30; i++) {
-    const angle = rand(0, Math.PI * 2)
-    const speed = rand(3, 8)
-    particles.push({
-      x: cw * 0.5 + rand(-cw * 0.3, cw * 0.3),
-      y: ch * 0.5 + rand(-ch * 0.2, ch * 0.2),
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      size: rand(4, 10), opacity: 0.7,
-      color: oldColors[Math.floor(Math.random() * oldColors.length)]!,
-      life: rand(-3, 0), maxLife: rand(40, 70),
-      gravity: rand(-0.02, 0.02), friction: 0.975,
-      rotation: rand(0, Math.PI * 2), rotSpeed: rand(-0.06, 0.06),
-      shape: oldShapes[Math.floor(Math.random() * oldShapes.length)]!,
-      scale: 1, scaleSpeed: -0.012,
-    })
-  }
-
-  // NEW season particles converge inward from edges
-  const newColors = seasonColors[newSeason] ?? seasonColors.spring!
-  const newShapes = seasonShapes[newSeason] ?? seasonShapes.spring!
-  for (let i = 0; i < 35; i++) {
-    // Spawn on screen edges
-    const edge = Math.floor(Math.random() * 4) // 0=top, 1=right, 2=bottom, 3=left
-    let sx: number, sy: number
-    switch (edge) {
-      case 0: sx = rand(0, cw); sy = -20; break
-      case 1: sx = cw + 20; sy = rand(0, ch); break
-      case 2: sx = rand(0, cw); sy = ch + 20; break
-      default: sx = -20; sy = rand(0, ch); break
-    }
-    // Velocity toward center area
-    const tx = cw * 0.5 + rand(-cw * 0.25, cw * 0.25)
-    const ty = ch * 0.5 + rand(-ch * 0.2, ch * 0.2)
-    const dx = tx - sx, dy = ty - sy
-    const dist = Math.sqrt(dx * dx + dy * dy)
-    const spd = rand(2, 5)
-    particles.push({
-      x: sx, y: sy,
-      vx: (dx / dist) * spd, vy: (dy / dist) * spd,
-      size: rand(3, 8), opacity: 0,
-      color: newColors[Math.floor(Math.random() * newColors.length)]!,
-      life: -i * 0.8, maxLife: rand(50, 80),
-      gravity: 0, friction: 0.985,
-      rotation: rand(0, Math.PI * 2), rotSpeed: rand(-0.05, 0.05),
-      shape: newShapes[Math.floor(Math.random() * newShapes.length)]!,
-      scale: 0.5, scaleSpeed: 0.01,
-    })
-  }
-
-  // Expanding ring in new season color
-  const ringColor = newColors[0]!
-  particles.push({
-    x: cw * 0.5, y: ch * 0.5, vx: 0, vy: 0,
-    size: Math.max(cw, ch) * 0.4, opacity: 0.4, color: ringColor,
-    life: -5, maxLife: 40, gravity: 0, friction: 1,
-    rotation: 0, rotSpeed: 0, shape: 'ring', scale: 0.05, scaleSpeed: 0.06,
-  })
-}
-
-// ===== AMBIENT BOARD PARTICLES =====
-// Subtle always-on atmospheric particles — dust motes, faint runes, tiny sparkles.
-// Spawns ~1 particle per second, max ~15 alive at a time.
-
-let ambientFrameCounter = 0
-const AMBIENT_INTERVAL = 50 // frames between spawns (~0.8s at 60fps)
-const AMBIENT_MAX = 18
-
-function tickAmbient() {
-  ambientFrameCounter++
-  if (ambientFrameCounter < AMBIENT_INTERVAL) return
-  ambientFrameCounter = 0
-
-  // Don't spawn if game isn't active or too many ambient particles
-  if (!game.state) return
-  const ambientCount = particles.filter(p => (p as any)._ambient).length
-  if (ambientCount >= AMBIENT_MAX) return
-
-  const canvas = canvasRef.value
-  if (!canvas) return
-  const cw = canvas.width
-  const ch = canvas.height
-
-  const season = game.season
-  const colors = seasonColors[season] ?? seasonColors.spring!
-  const shapes = seasonShapes[season] ?? seasonShapes.spring!
-
-  // Spawn 1-2 particles
-  const count = Math.random() > 0.6 ? 2 : 1
-  for (let i = 0; i < count; i++) {
-    const isRune = Math.random() < 0.15
-    const p: Particle & { _ambient?: boolean } = {
-      x: rand(cw * 0.1, cw * 0.9),
-      y: rand(ch * 0.15, ch * 0.85),
-      vx: rand(-0.3, 0.3),
-      vy: rand(-0.6, -0.15),
-      size: isRune ? rand(6, 10) : rand(1.5, 3.5),
-      opacity: rand(0.15, 0.35),
-      color: colors[Math.floor(Math.random() * colors.length)]!,
-      life: 0, maxLife: rand(80, 140),
-      gravity: isRune ? -0.01 : -0.005,
-      friction: 0.998,
-      rotation: rand(0, Math.PI * 2),
-      rotSpeed: rand(-0.02, 0.02),
-      shape: isRune ? 'rune' : (Math.random() < 0.3
-        ? shapes[Math.floor(Math.random() * shapes.length)]!
-        : 'circle'),
-      scale: 1,
-      scaleSpeed: -0.003,
-      _ambient: true,
-    } as any
-    particles.push(p)
-  }
-}
-
 // ===== PARTICLE DRAW FUNCTIONS =====
 
 function drawParticle(c: CanvasRenderingContext2D, p: Particle) {
@@ -1570,9 +1429,6 @@ function animate(time: number) {
   const canvas = canvasRef.value
   if (!canvas || !ctx) return
 
-  // Always tick ambient — spawns subtle particles even when queue is empty
-  tickAmbient()
-
   if (particles.length === 0) {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     return
@@ -1768,13 +1624,6 @@ watch(
         case 'buff': handleSimpleEffect(event, emitBuff, 900); break
         case 'slash-attack': handleSimpleEffect(event, emitSlashAttack, 1200); break
         case 'screen-flash': handleScreenFlash(event); break
-        case 'season-transition': {
-          const old = (event.meta?.oldSeason as string) ?? 'spring'
-          const nw = (event.meta?.newSeason as string) ?? 'summer'
-          emitSeasonTransition(old, nw)
-          vfxTimeout(() => vfx.complete(event.id), 2000)
-          break
-        }
         default: vfx.complete(event.id)
       }
     }

@@ -27,10 +27,8 @@ function tick(time: number) {
   if (!running) return
   rafId = requestAnimationFrame(tick)
   if (paused) return
-  // Iterate a snapshot of values — callbacks may unregister during iteration
-  for (const cb of Array.from(callbacks.values())) {
-    cb(time)
-  }
+  // Iterate directly — callbacks should not unregister during their own tick
+  callbacks.forEach((cb) => cb(time))
 }
 
 function startIfNeeded() {
