@@ -107,7 +107,6 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
 <template>
   <Transition name="banner-slide">
     <div v-if="showBanner" :class="['turn-banner', `banner-${bannerType}`]" :key="bannerText">
-      <div class="banner-light-sweep" />
       <div>{{ bannerText }}</div>
       <div v-if="bannerSubText" class="banner-sub">{{ bannerSubText }}</div>
     </div>
@@ -131,36 +130,12 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
   white-space: nowrap;
   text-shadow: 0 2px 12px rgba(0,0,0,0.8);
 }
-/* Expanding shockwave ring behind banner */
-.turn-banner::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 120px;
-  height: 120px;
-  transform: translate(-50%, -50%) scale(0.5);
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  opacity: 0;
-  animation: shockwave 0.8s ease-out forwards;
-  pointer-events: none;
-}
-@keyframes shockwave {
-  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0.6; border-width: 3px; }
-  100% { transform: translate(-50%, -50%) scale(6); opacity: 0; border-width: 1px; }
-}
 
 .banner-player {
   color: #86efac;
   background: rgba(34, 197, 94, 0.15);
   border: 2px solid rgba(34, 197, 94, 0.4);
   box-shadow: 0 0 40px rgba(34, 197, 94, 0.2);
-  animation: banner-glow-green 1.2s ease-out;
-}
-@keyframes banner-glow-green {
-  0%   { box-shadow: 0 0 80px rgba(34, 197, 94, 0.5), 0 0 120px rgba(34, 197, 94, 0.2); }
-  100% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.2); }
 }
 
 .banner-ai {
@@ -168,11 +143,6 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
   background: rgba(239, 68, 68, 0.15);
   border: 2px solid rgba(239, 68, 68, 0.4);
   box-shadow: 0 0 40px rgba(239, 68, 68, 0.2);
-  animation: banner-glow-red 1.2s ease-out;
-}
-@keyframes banner-glow-red {
-  0%   { box-shadow: 0 0 80px rgba(239, 68, 68, 0.5), 0 0 120px rgba(239, 68, 68, 0.2); }
-  100% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.2); }
 }
 
 .banner-season {
@@ -205,34 +175,6 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
   letter-spacing: 0.06em;
   opacity: 0.8;
   margin-top: 4px;
-}
-
-/* Horizontal light sweep across banner */
-.banner-light-sweep {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  overflow: hidden;
-  pointer-events: none;
-}
-.banner-light-sweep::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(90deg,
-    transparent,
-    rgba(255, 255, 255, 0.15) 40%,
-    rgba(255, 255, 255, 0.25) 50%,
-    rgba(255, 255, 255, 0.15) 60%,
-    transparent);
-  animation: light-sweep 0.6s ease-out 0.15s forwards;
-}
-@keyframes light-sweep {
-  0%   { left: -60%; }
-  100% { left: 120%; }
 }
 
 .banner-slide-enter-active {
