@@ -4,6 +4,14 @@
  * Usage: <span v-tip="'Tooltip text'">...</span>
  */
 
+// Inline SVG icons for v-tip tokens
+const S = 'display:inline-block;width:14px;height:14px;vertical-align:-2px;margin:0 1px;'
+const TIP_ICONS: Record<string, string> = {
+  DEF: `<svg style="${S}color:#60a5fa" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M256 16C175 76.38 82.31 96 16 96c0 148.3 71.38 344.7 240 400c168.6-55.31 240-251.7 240-400c-66.31 0-159-19.63-240-80z"/></svg>`,
+  POISON: `<svg style="${S}color:#a3e635" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M13 4h-2l-1-2h4zm6 9v9H5v-9c0-2.76 2.24-5 5-5V6H9V5h6v1h-1v2c2.76 0 5 2.24 5 5"/></svg>`,
+  ATK: `<svg style="${S}color:#fb923c" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M440.7 57.3L382.3 115.7L396.3 129.7L454.7 71.3C458.8 67.2 458.8 60.6 454.7 56.5C450.6 52.4 444 52.4 440.7 57.3zM294 166l-25 25l52 52l25-25L294 166zM227 233l-25 25l52 52l25-25L227 233zM160 300l-25 25l52 52l25-25L160 300zM93 367l-25 25l52 52l25-25L93 367z"/></svg>`,
+}
+
 let tooltipEl: HTMLDivElement | null = null
 let arrowEl: HTMLDivElement | null = null
 let currentTarget: HTMLElement | null = null
@@ -51,7 +59,15 @@ function showTooltip(target: HTMLElement, text: string) {
   createTooltip()
   if (!tooltipEl || !arrowEl || !text) return
   currentTarget = target
-  tooltipEl.textContent = text
+  // Support inline icon tokens: {DEF}, {POISON}, {ATK} etc.
+  if (text.includes('{')) {
+    tooltipEl.innerHTML = text.replace(/\{([A-Z_]+)\}/g, (_m, token) => {
+      const icon = TIP_ICONS[token]
+      return icon ?? `{${token}}`
+    })
+  } else {
+    tooltipEl.textContent = text
+  }
   tooltipEl.style.opacity = '0'
   arrowEl.style.opacity = '0'
 

@@ -517,6 +517,64 @@ export class GameEngine {
 
   sideActivateEffect(side: PlayerSide, cardInstanceId: string, targetInstanceId?: string): GameState {
     this.assertTurnOf(side)
+
+    // Dziewiątko: AKCJA = pełny atak dystansowy → kamikaze → trucizna/paraliż
+    const dziewiatkoCard = getAllCreaturesOnField(this.state, side).find(c => c.instanceId === cardInstanceId)
+    if (dziewiatkoCard && (dziewiatkoCard.cardData as any).effectId === 'dziewiatko_deathmark' && targetInstanceId) {
+      // Override attackType to Ranged BEFORE activation (karta i tak ginie)
+      const cardBefore = getAllCreaturesOnField(this.state, side).find(c => c.instanceId === cardInstanceId)
+      if (cardBefore) {
+        (cardBefore.cardData as any).attackType = 3 // AttackType.RANGED
+      }
+
+      // Run activateCreatureEffect for cooldown/cost/validation only
+      const { newState: activatedState, log: activateLog } = activateCreatureEffect(this.state, cardInstanceId, targetInstanceId)
+      this.applyStateAndLog(activatedState, activateLog)
+
+      // Perform real ranged attack through combat pipeline
+      try {
+        const { newState: combatState, log: combatLog, combatResult } = performAttack(
+          this.state, cardInstanceId, targetInstanceId,
+          { forcedByEffect: true, skipChowaniecCheck: true, skipBrzeginaCheck: true }
+        )
+        this.lastCombatResult = combatResult ?? null
+        this.applyStateAndLog(combatState, combatLog)
+      } catch {
+        // Attack failed (target died, etc.)
+      }
+
+      // Kamikaze: Dziewiątko ginie (jeśli jeszcze na polu — mogło zginąć od kontrataku)
+      const dziewiatkoStillAlive = getAllCreaturesOnField(this.state, side).find(c => c.instanceId === cardInstanceId)
+      if (dziewiatkoStillAlive) {
+        const kamikazeState = cloneGameState(this.state)
+        const kamikazeCard = getAllCreaturesOnField(kamikazeState, side).find(c => c.instanceId === cardInstanceId)
+        if (kamikazeCard) {
+          kamikazeCard.currentStats.defense = 0
+          moveToGraveyard(kamikazeState, kamikazeCard)
+          const kamikazeLog = [addLog(kamikazeState, `Dziewiątko poświęca się — śmiertelne żądło!`, 'death')]
+          this.applyStateAndLog(kamikazeState, kamikazeLog)
+        }
+      }
+
+      // Jeśli cel przeżył — modal trucizna/paraliż
+      const targetStillAlive = getAllCreaturesOnField(this.state, opponentOf(side)).find(c => c.instanceId === targetInstanceId)
+      if (targetStillAlive && targetStillAlive.currentStats.defense > 0) {
+        const poisonState = cloneGameState(this.state)
+        poisonState.pendingInteraction = {
+          type: 'dziewiatko_poison',
+          sourceInstanceId: cardInstanceId,
+          respondingPlayer: side,
+          targetInstanceId,
+          availableChoices: ['trucizna', 'paraliz'],
+        }
+        addLog(poisonState, `Wybierz efekt trucizny na ${targetStillAlive.cardData.name}!`, 'effect')
+        this.applyStateAndLog(poisonState, [])
+      }
+
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
     const { newState, log } = activateCreatureEffect(this.state, cardInstanceId, targetInstanceId)
     this.applyStateAndLog(newState, log)
     this.checkWinAndNotify()

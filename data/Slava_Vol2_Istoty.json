@@ -323,15 +323,15 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Żądli wroga za swój atak i ginie. Cel zostaje zatruty lub sparaliżowany.",
+        "effect": "Wykonaj atak dystansowy i zatruj lub sparaliżuj wroga. Odrzuć Dziewiątko na cmentarz.",
         "lore": "Niepozorny owad żyjący pod ziemią, którego ugryzienie powoduje groźną chorobę. Nawet jeśli ofiarą jest rosły chłop, bez pomocy Guślarki czy Znachora, w kilka dni padnie trupem.",
         "abilities": [
             {
                 "trigger": "AKCJA",
-                "text": "Żądli wroga za {ATK} i ginie. Wybierz: {POISON} lub Paraliż."
+                "text": "Wykonaj atak {RANGED} i nałóż {POISON} na wroga. Odrzuć Dziewiątko na cmentarz."
             }
         ],
-        "effectDescription": "Żądli wroga za swój atak i ginie. Cel zostaje zatruty lub sparaliżowany.",
+        "effectDescription": "[AKCJA] Wykonaj atak {RANGED} i nałóż {POISON} na wroga. Odrzuć Dziewiątko na cmentarz.",
         "effectId": "dziewiatko_deathmark"
     },
     {

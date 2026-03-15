@@ -413,11 +413,12 @@ registerEffect({
   execute: (ctx) => effectResult(cloneGameState(ctx.state), [], false, false),
 })
 
-// ✅ DZIEWIĄTKO — AKCJA kamikaze: wybierz wroga → atak dystansowy → trucizna/paraliż → Dziewiątko ginie
+// ✅ DZIEWIĄTKO — AKCJA kamikaze: pełny atak dystansowy → trucizna/paraliż → Dziewiątko ginie
+// Execute jest no-op — combat obsługiwany przez GameEngine.sideActivateEffect
 registerEffect({
   id: 'dziewiatko_deathmark',
   name: 'Ukąszenie Dziewiątka',
-  description: '[AKCJA] Kamikaze: Wybierz wroga, zaatakuj dystansowo za swój ATK, ginie — wybierz Truciznę (-3 DEF/turę) lub Paraliż (3 tury).',
+  description: '[AKCJA] Wykonaj atak dystansowy i nałóż truciznę na wroga. Odrzuć Dziewiątko na cmentarz.',
   trigger: [EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.REACTION,
   activatable: true,
@@ -426,38 +427,8 @@ registerEffect({
   activationRequiresTarget: true,
   activationTargetFilter: (target, source) => target.owner !== source.owner && target.currentStats.defense > 0,
   execute: (ctx) => {
-    const { state, source, target } = ctx
-    if (!target) return effectResult(cloneGameState(state))
-
-    const newState = cloneGameState(state)
-    const sourceInState = findCardInState(newState, source.instanceId)
-    const targetInState = findCardInState(newState, target.instanceId)
-    if (!sourceInState || !targetInState) return effectResult(newState)
-
-    const dmg = sourceInState.currentStats.attack
-    const logs: LogEntry[] = []
-
-    // Zadaj obrażenia celowi (atak dystansowy)
-    targetInState.currentStats.defense -= dmg
-    logs.push(addLog(newState, `Dziewiątko żądli ${target.cardData.name} za ${dmg} obrażeń! (DEF: ${targetInState.currentStats.defense + dmg} → ${targetInState.currentStats.defense})`, 'damage'))
-
-    // Dziewiątko ginie (kamikaze)
-    sourceInState.currentStats.defense = 0
-    logs.push(addLog(newState, `Dziewiątko poświęca się — śmiertelne żądło!`, 'death'))
-
-    // Jeśli cel przeżył — gracz wybiera truciznę
-    if (targetInState.currentStats.defense > 0) {
-      newState.pendingInteraction = {
-        type: 'dziewiatko_poison',
-        sourceInstanceId: source.instanceId,
-        respondingPlayer: source.owner,
-        targetInstanceId: target.instanceId,
-        availableChoices: ['trucizna', 'paraliz'],
-      }
-      logs.push(addLog(newState, `Wybierz efekt trucizny na ${target.cardData.name}!`, 'effect'))
-    }
-
-    return effectResult(newState, logs)
+    // No-op: combat delegowany do GameEngine.sideActivateEffect → performAttack
+    return effectResult(cloneGameState(ctx.state))
   },
 })
 

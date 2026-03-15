@@ -191,6 +191,7 @@ export type PendingInteractionType =
   | 'divine_favor_target'      // Wybór celu mocy boga
   | 'swarozyc_split_damage'    // Swarożyc: rozdziel 15 obrażeń
   | 'smocze_jajo_hatch'        // Smocze Jajo: wybierz smoka do wyklucia
+  | 'dziewiatko_poison'        // Dziewiątko: wybierz truciznę lub paraliż
 
 export interface PendingInteraction {
   type: PendingInteractionType

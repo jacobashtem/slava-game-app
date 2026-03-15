@@ -53,7 +53,7 @@ const triggerLabels: Record<string, string> = {
   // Display labels z JSON (abilities[].trigger mogą być już po polsku)
   'WEJŚCIE': 'WEJŚCIE',
   'AKCJA': 'AKCJA',
-  'AURA': 'AURA',
+  // 'AURA' already mapped above
   'ODWET': 'ODWET',
   'NATARCIE': 'NATARCIE',
   'ZRANIENIE': 'ZRANIENIE',
@@ -410,7 +410,7 @@ function onClick() {
 
     <!-- Status (trucizna/paraliż) — lewa krawędź, kolumna badge'ów z licznikiem -->
     <div v-if="card.metadata?.dziewiatkoPoison || card.metadata?.dziewiatkoParalyze" class="status-stack">
-      <div v-if="card.metadata?.dziewiatkoPoison" class="keyword-badge keyword-poison" v-tip="'Trucizna: -3 🛡 co turę (trwała)'">
+      <div v-if="card.metadata?.dziewiatkoPoison" class="keyword-badge keyword-poison" v-tip="'Trucizna: -3 {DEF} co turę'">
         <Icon icon="mdi:bottle-tonic" class="keyword-icon" />
       </div>
       <div v-if="card.metadata?.dziewiatkoParalyze" class="keyword-badge keyword-paralyze-badge" v-tip="`Paraliż: ${card.paralyzeRoundsLeft} tur — premie i Pożegnanie zablokowane`">

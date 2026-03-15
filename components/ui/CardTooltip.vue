@@ -193,6 +193,10 @@ const ttTriggerLabels: Record<string, string> = {
   ON_ENEMY_PLAY: 'CZUJNOŚĆ', ENEMY_ACTION: 'CZUJNOŚĆ', PASSIVE: 'AURA',
   ON_DAMAGE_DEALT: 'ZRANIENIE', ON_DAMAGE_RECEIVED: 'ODWET', ON_ACTIVATE: 'AKCJA',
   ON_ALLY_ATTACKED: 'CZUJNOŚĆ',
+  // Polish display labels (abilities[].trigger mogą być już po polsku)
+  'WEJŚCIE': 'WEJŚCIE', 'AKCJA': 'AKCJA', 'ODWET': 'ODWET',
+  'NATARCIE': 'NATARCIE', 'ZRANIENIE': 'ZRANIENIE', 'ZABÓJSTWO': 'ZABÓJSTWO',
+  'POŻEGNANIE': 'POŻEGNANIE', 'CZUJNOŚĆ': 'CZUJNOŚĆ',
 }
 const ttTriggerColors: Record<string, string> = {
   'WEJŚCIE': '#22c55e', 'AKCJA': '#a855f7', 'AURA': '#3b82f6', 'ODWET': '#f97316',
@@ -283,7 +287,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
             <div v-if="data.tags?.includes('dragon')" class="pv-attr-badge pv-badge-dragon" v-tip="'Smok'">
               <svg viewBox="0 0 4335 4335" class="pv-attr-icon-svg" style="width:20px;height:20px"><path d="m577 1824c22-37 60-92 98-110 60-29 105 42 114 86-117-21-120-9-212 24zm2953 2391h-2467c427-580 1127-908 1545-1427l57-77c62-83 108-198 71-309-32-98-70-99-110-158l87-64c646-835-92-6-129 21-205 148-252 56-464 8-131-30-274 14-367 59l-150 79c-46 28-92 57-135 88-87 64-164 139-258 193-77 44-183 55-278 62-105 8-191 35-287-3-35-14-114-66-131-92 80 0 186-14 246-33 190-59 362-195 502-334l113-98c92-72 185-142 290-195 18-9 30-16 48-24s29-11 47-20l186-87c-26-39-112-88-162-95-151-22-428 89-566 181-101 68-187 180-281 226-39 19-146 56-174 77-70 52-32 125-32 196-61-14-134-92-139-156-12 6-126 18-147 21-152 21-45 116-81 152-12 12 0 5-11 0-30-13-53-55-60-86-8-36 1-32-20-58-259-71-90-472-76-491 39-52 114-101 177-67 15 8 42 29 57 32 83 18 137-37 184-81 107-100 145-21 191-31 48-10 166-104 210-147 24-23 110-116 126-142l185-261c68-86 25-38 41-126 59-319 421-380 762-241 56-5 69 0 101-32 116-114 250-205 396-278 95-48 303-141 399-141-6 5-11 9-19 15-7 5-10 6-18 10-88 44-169 106-247 165l-66 57c-11 11-21 20-31 31l-78 95c-13 15-39 54-43 74 27 2 50 4 84 6 81 4 63 35 119-32 54-64 149-134 220-176 85-50 172-95 262-134 20-8 39-13 58-21 73-29 168-60 245-67-13 19-18 17-39 28-127 64-246 149-347 249l-62 67c-12 14-20 20-32 35-24 31-74 74-84 111 15 7 56 17 74 21 90 23 194 59 277 96 20 9 42 15 63 26 169 82 350 166 474 312 21 25 46 45 54 80-97-51-120-106-268-106 15 28 34 45 54 69 497 584 673 1595 403 2267-68 169-62 79-61-22 0-84-39-279-112-295 0 84-22 190-42 270-22 86-44 159-74 233-70 174-166 338-262 499zm-2058-2802c18-18 34-28 50-45 73-248 185-275 395-143-16 46-362 182-445 188z" fill="#e07060"/></svg>
             </div>
-            <div v-if="card?.metadata?.dziewiatkoPoison" class="pv-attr-badge pv-badge-poison" v-tip="'Trucizna: -3 🛡 co turę'">
+            <div v-if="card?.metadata?.dziewiatkoPoison" class="pv-attr-badge pv-badge-poison" v-tip="'Trucizna: -3 {DEF} co turę'">
               <Icon icon="mdi:bottle-tonic" class="pv-attr-icon-svg" style="color: #a3e635" />
             </div>
             <div v-if="card?.metadata?.dziewiatkoParalyze" class="pv-attr-badge pv-badge-paralyze-tt" :v-tip="`Paraliż: ${card?.paralyzeRoundsLeft} tur`">
@@ -363,7 +367,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
           </div>
 
           <!-- Traits (silenced, immune, etc.) with descriptions -->
-          <div v-if="isCreature && (card.isSilenced || card.isImmune || card.cannotAttack || card.poisonRoundsLeft)" class="pv-traits">
+          <div v-if="isCreature && (card.isSilenced || card.isImmune || card.cannotAttack || card.poisonRoundsLeft || card.metadata?.dziewiatkoPoison)" class="pv-traits">
             <div v-if="card.isSilenced" class="pv-trait-block">
               <span class="pv-trait pv-trait-bad">Uciszony</span>
               <span class="pv-trait-desc">Zdolność istoty wyłączona.</span>
@@ -375,9 +379,25 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
               <span class="pv-trait pv-trait-bad">Choroba — Nie może atakować</span>
               <span class="pv-trait-desc">Nałożona przez efekt karty wroga.</span>
             </div>
-            <div v-if="card.poisonRoundsLeft" class="pv-trait-block">
-              <span class="pv-trait pv-trait-bad">☠ Trucizna ({{ card.poisonRoundsLeft }}t)</span>
-              <span class="pv-trait-desc">Traci 1 DEF na początku każdej tury.</span>
+            <div v-if="card.metadata?.dziewiatkoPoison" class="pv-ability">
+              <span class="pv-trigger-badge" :style="{ background: '#a3e63518', color: '#a3e635', borderColor: '#a3e63544' }">TRUCIZNA</span>
+              <span class="pv-ability-text">
+                <template v-for="(seg, si) in parseTokens('{POISON} Traci 3 {DEF} na początku każdej tury. Trwała — działa do śmierci.')" :key="si">
+                  <span v-if="seg.type === 'text'">{{ seg.value }}</span>
+                  <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
+                  <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+                </template>
+              </span>
+            </div>
+            <div v-else-if="card.poisonRoundsLeft" class="pv-ability">
+              <span class="pv-trigger-badge" :style="{ background: '#a3e63518', color: '#a3e635', borderColor: '#a3e63544' }">TRUCIZNA</span>
+              <span class="pv-ability-text">
+                <template v-for="(seg, si) in parseTokens(`{POISON} Traci 1 {DEF} co turę. Pozostało: ${card.poisonRoundsLeft} tur.`)" :key="si">
+                  <span v-if="seg.type === 'text'">{{ seg.value }}</span>
+                  <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
+                  <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+                </template>
+              </span>
             </div>
           </div>
 
@@ -798,7 +818,6 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   border-color: rgba(167,139,250,0.3);
   background: rgba(167,139,250,0.08);
 }
-
 /* STATS BAR */
 .pv-stats-bar {
   display: flex;

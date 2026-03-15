@@ -186,7 +186,7 @@ const description = computed(() => {
     return `Brzegina może ochronić ${targetName} przed obrażeniami. Koszt: ${cost === 0 ? 'GRATIS (pierwsze użycie)' : `${cost} PS`}.`
   }
   if (t === 'kosciej_resurrect') return 'Kościej zginął od Wręcz — jego serce wciąż bije! Wydaj 1 PS, by wskrzesić go na L1.'
-  if (t === 'dziewiatko_poison') return 'Dziewiątko ukąsiło wroga! Wybierz efekt trucizny.'
+  if (t === 'dziewiatko_poison') return 'Dziewiątko otruło wroga! Wybierz efekt trucizny.'
   return 'Wybierz opcję.'
 })
 

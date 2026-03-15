@@ -9,6 +9,7 @@ import domainImg1 from '~/assets/cards/domain-1.svg'
 import domainImg2 from '~/assets/cards/domain-2.svg'
 import domainImg3 from '~/assets/cards/domain-3.svg'
 import domainImg4 from '~/assets/cards/domain-4.svg'
+import attackTypeImg0 from '~/assets/cards/attackType0.svg'
 import attackTypeImg1 from '~/assets/cards/attackType1.svg'
 import attackTypeImg2 from '~/assets/cards/attackType2.svg'
 import attackTypeImg3 from '~/assets/cards/attackType3.svg'
@@ -22,8 +23,9 @@ export interface TokenSegment {
   label?: string       // tooltip label
 }
 
-// Attack type → image mapping (1=Melee, 2=Elemental, 3=Magic)
+// Attack type → image mapping (0=Melee, 1=Elemental, 2=Magic, 3=Ranged)
 const attackTypeImgMap: Record<number, string> = {
+  0: attackTypeImg0,
   1: attackTypeImg1,
   2: attackTypeImg2,
   3: attackTypeImg3,
@@ -35,13 +37,13 @@ const tokenMap: Record<string, { img?: string; iconify?: string; color: string; 
   DMG:       { iconify: 'game-icons:battle-axe', color: '#ef4444', label: 'Obrażenia' },
   FLY:       { iconify: 'game-icons:liberty-wing', color: '#ffffff', label: 'Lot' },
   GOLD:      { iconify: 'game-icons:two-coins', color: '#eab308', label: 'Punkty Sławy' },
-  POISON:    { iconify: 'game-icons:poison-bottle', color: '#22c55e', label: 'Trucizna' },
+  POISON:    { iconify: 'mdi:bottle-tonic', color: '#a3e635', label: 'Trucizna' },
   SILENCE:   { iconify: 'game-icons:silenced', color: '#6b7280', label: 'Uciszenie' },
   COMBAT:    { iconify: 'game-icons:sword-clash', color: '#fbbf24', label: 'Atak' },
-  MELEE:     { iconify: 'game-icons:battle-axe', color: '#ef4444', label: 'Wręcz' },
-  ELEMENTAL: { img: attackTypeImg1, color: '#f97316', label: 'Żywioł' },
-  MAGIC:     { img: attackTypeImg2, color: '#fb923c', label: 'Magia' },
-  RANGED:    { iconify: 'game-icons:bow-arrow', color: '#22d3ee', label: 'Dystans' },
+  MELEE:     { iconify: 'game-icons:battle-axe', color: '#fb923c', label: 'Wręcz' },
+  ELEMENTAL: { iconify: 'bi:fire', color: '#fb923c', label: 'Żywioł' },
+  MAGIC:     { iconify: 'fa6-solid:wand-sparkles', color: '#fb923c', label: 'Magia' },
+  RANGED:    { iconify: 'boxicons:bow-filled', color: '#fb923c', label: 'Dystans' },
   DEMON:     { img: domainImg4, color: '#a855f7', label: 'Demony' },
   UNDEAD:    { img: domainImg3, color: '#6b7280', label: 'Nieumarli' },
   ZYVI:      { img: domainImg2, color: '#22c55e', label: 'Żywi' },

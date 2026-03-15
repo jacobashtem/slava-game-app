@@ -727,6 +727,13 @@ export const useGameStore = defineStore('game', () => {
       const died2 = newState.players.player2.graveyard.length > prevGrave2
       if (died1 || died2) await delay(600)
 
+      // Dziewiątko: atak kończy turę — wywołaj endTurn
+      if (wasDziewiatko && state.value && !winner.value && !state.value.pendingInteraction) {
+        await delay(400)
+        endTurn()
+        return
+      }
+
       // Po Chowańcu w arenie: AI loop już zakończył for-loop, musimy dokończyć turę AI
       if (wasChowaniec && isArenaMode.value && state.value && !winner.value && !state.value.pendingInteraction) {
         try { state.value = engine.aiEndTurn() } catch { try { state.value = engine.forcePlayerTurn() } catch {} }
@@ -762,6 +769,21 @@ export const useGameStore = defineStore('game', () => {
     if (!isPlayerTurn.value) return
     const card = findCardOnField(mySide.value, cardInstanceId)
     if (!card) return
+
+    // Dziewiątko: zmień attackType na Ranged od razu przy kliknięciu aktywacji
+    if ((card.cardData as any).effectId === 'dziewiatko_deathmark' && state.value) {
+      // Nowy cardData + nowy CardInstance → Vue widzi zmianę referencji na miniaturce
+      card.cardData = { ...card.cardData, attackType: 3 } as any
+      const side = card.owner as 'player1' | 'player2'
+      for (const line of Object.values(state.value.players[side].field.lines)) {
+        const idx = (line as CardInstance[]).findIndex(c => c.instanceId === cardInstanceId)
+        if (idx !== -1) {
+          (line as CardInstance[])[idx] = { ...card }
+          break
+        }
+      }
+      state.value = { ...state.value }
+    }
 
     // Darmowa aktywacja oczekująca (ON_PLAY pominięty) — wykonaj bez opłaty
     if (card.metadata.freeActivationPending) {
@@ -831,50 +853,53 @@ export const useGameStore = defineStore('game', () => {
     if (!isPlayerTurn.value) return
     if (mpSend) { mpSend({ type: 'activate_effect', cardInstanceId, targetInstanceId }); return }
     try {
-      // Snapshot karty PRZED efektem (do VFX pozycji)
       const sourceCard = state.value ? findCardOnField(mySide.value, cardInstanceId) : null
       const isDziewiatko = sourceCard && (sourceCard.cardData as any).effectId === 'dziewiatko_deathmark' && targetInstanceId
 
-      // Dziewiątko: emituj bow attack VFX PRZED state update
-      if (isDziewiatko && targetInstanceId && state.value) {
-        const vfx = useVFXOrchestrator()
-        const sourceEl = document.querySelector(`[data-instance-id="${cardInstanceId}"]`)
-        const targetEl = document.querySelector(`[data-instance-id="${targetInstanceId}"]`)
-        if (sourceEl && targetEl) {
-          const sRect = sourceEl.getBoundingClientRect()
-          const tRect = targetEl.getBoundingClientRect()
-          const dmg = sourceCard!.currentStats.attack
-
-          // Emit bow attack (dystansowy)
-          vfx.emit({
-            type: 'attack',
-            targetId: targetInstanceId,
-            attackType: 'ranged',
-            meta: {
-              source: { x: sRect.left + sRect.width / 2, y: sRect.top + sRect.height / 2 },
-              target: { x: tRect.left + tRect.width / 2, y: tRect.top + tRect.height / 2 },
-              damage: dmg,
-            },
-          })
-
-          // Damage number na celu
-          setTimeout(() => {
-            vfx.emit({
-              type: 'damage-number',
-              targetId: targetInstanceId,
-              value: dmg,
-              color: '#ef4444',
-              meta: { pos: { x: tRect.left + tRect.width / 2, y: tRect.top + tRect.height / 2 } },
-            })
-            useUIStore().shakeCard(targetInstanceId)
-          }, 400)
-
-          // Poczekaj na VFX
-          await delay(1200)
+      // Dziewiątko: engine robi pełny performAttack → VFX z combatResult
+      if (isDziewiatko && state.value) {
+        // Reveal target before combat VFX (AI cards)
+        if (targetInstanceId) {
+          const tgt = findCardOnField('player1', targetInstanceId) ?? findCardOnField('player2', targetInstanceId)
+          if (tgt && !tgt.isRevealed) {
+            tgt.isRevealed = true
+            state.value = { ...state.value }
+          }
         }
+
+        const newState = engine.playerActivateEffect(cardInstanceId, targetInstanceId)
+        const combatResult = engine.lastCombatResult
+
+        // Combat VFX (strzała, obrażenia, kontratak, shake, śmierć)
+        if (combatResult) {
+          const vfx = useVFXOrchestrator()
+          emitCombatVFX(vfx, combatResult, state)
+          engine.lastCombatResult = null
+          const vfxMs = getCombatVFXDuration(combatResult)
+          if (vfxMs > 0) await delay(vfxMs)
+        }
+
+        safeUpdateState(newState)
+
+        // Atak Dziewiątka kończy turę (jeśli nie ma pendingInteraction — cel zginął)
+        if (!newState.pendingInteraction && !winner.value) {
+          await delay(400)
+          endTurn()
+        }
+        return
       }
 
       const newState = engine.playerActivateEffect(cardInstanceId, targetInstanceId)
+
+      // Combat VFX z aktywacji (dla przyszłych efektów z combatResult)
+      const combatResult = engine.lastCombatResult
+      if (combatResult) {
+        const vfx = useVFXOrchestrator()
+        emitCombatVFX(vfx, combatResult, state)
+        engine.lastCombatResult = null
+        const vfxMs = getCombatVFXDuration(combatResult)
+        if (vfxMs > 0) await delay(vfxMs)
+      }
 
       // Heal VFX: efekt zostawia metadata.lastHealTargetId + lastHealAmount
       let cardAfter: CardInstance | null = null
@@ -1007,7 +1032,7 @@ export const useGameStore = defineStore('game', () => {
     // Poison + damage + shake — natychmiast
     for (const p of poisoned) {
       vfx.emit({ type: 'poison', targetId: p.instanceId, meta: { rect: { cx: p.pos.x, cy: p.pos.y, w: p.pos.w, h: p.pos.h } } })
-      vfx.emit({ type: 'damage-number', targetId: p.instanceId, value: 3, color: '#a3e635', meta: { pos: p.pos } })
+      vfx.emit({ type: 'damage-number', targetId: p.instanceId, value: 3, color: '#a3e635', meta: { pos: p.pos, icon: 'poison' } })
       ui.shakeCard(p.instanceId)
     }
 
@@ -1205,7 +1230,16 @@ export const useGameStore = defineStore('game', () => {
           }
           case 'activate_effect':
             if (decision.cardInstanceId) {
-              state.value = engine.aiActivateEffect(decision.cardInstanceId, decision.targetInstanceId)
+              const newActivateState = engine.aiActivateEffect(decision.cardInstanceId, decision.targetInstanceId)
+              const activateCombat = engine.lastCombatResult
+              if (activateCombat) {
+                // Dziewiątko AI: pełny combat VFX
+                emitCombatVFX(vfx, activateCombat, state)
+                engine.lastCombatResult = null
+                const activateVfxMs = getCombatVFXDuration(activateCombat)
+                if (activateVfxMs > 0) await delay(activateVfxMs)
+              }
+              state.value = newActivateState
             }
             break
           case 'change_position':

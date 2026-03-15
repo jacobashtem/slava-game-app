@@ -1571,7 +1571,16 @@ function renderDamageNumber(event: VFXEvent) {
     el.textContent = event.label
     el.classList.add('vfx-damage-block')
   } else {
-    el.textContent = `-${event.value}`
+    // Icon prefix (e.g. poison bottle next to damage)
+    const iconId = event.meta?.icon as string | undefined
+    if (iconId === 'poison') {
+      const iconEl = document.createElement('span')
+      iconEl.className = 'vfx-damage-icon'
+      iconEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M13 4h-2l-1-2h4zm6 9v9H5v-9c0-2.76 2.24-5 5-5V6H9V5h6v1h-1v2c2.76 0 5 2.24 5 5"/></svg>'
+      el.appendChild(iconEl)
+    }
+    const textNode = document.createTextNode(`-${event.value}`)
+    el.appendChild(textNode)
     if (event.label) {
       el.classList.add('vfx-damage-counter')
     }
@@ -1705,6 +1714,18 @@ onUnmounted(() => {
   white-space: nowrap;
   will-change: transform, opacity;
   letter-spacing: -0.02em;
+}
+
+.vfx-damage-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 2px;
+  font-size: 0.75em;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+.vfx-damage-icon svg {
+  width: 1em;
+  height: 1em;
 }
 
 .vfx-damage-counter {
