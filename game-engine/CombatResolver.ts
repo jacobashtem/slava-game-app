@@ -19,7 +19,7 @@ export function resolveAttack(
   state: GameState,
   attackerInstanceId: string,
   defenderInstanceId: string,
-  options?: { forceBrzeginaSkip?: boolean; forcedByEffect?: boolean }
+  options?: { forceBrzeginaSkip?: boolean; forcedByEffect?: boolean; skipRangeCheck?: boolean }
 ): { newState: GameState; result: CombatResult } {
   let newState = cloneGameState(state)
 
@@ -31,7 +31,7 @@ export function resolveAttack(
   }
 
   // 1. Walidacja zasięgu (wymuszony atak pomija owner/position/hasAttacked, ale zachowuje zasięg linii)
-  const validation = canAttack(newState, attacker, defender, { forcedByEffect: options?.forcedByEffect })
+  const validation = canAttack(newState, attacker, defender, { forcedByEffect: options?.forcedByEffect, skipRangeCheck: options?.skipRangeCheck })
   const isSoftFail = !validation.valid && !!validation.softFail
   if (!validation.valid && !validation.softFail) {
     throw new Error(`[CombatResolver] Nieprawidłowy atak: ${validation.reason}`)

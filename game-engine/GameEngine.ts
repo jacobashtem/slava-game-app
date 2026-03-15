@@ -738,7 +738,7 @@ export class GameEngine {
         addLog(newState, `Chowaniec przejmuje atak na ${originalTarget?.cardData.name ?? 'sojusznika'} — staje w obronie!`, 'effect')
       }
       try {
-        const { newState: afterAtk, log: atkLog, combatResult } = performAttack(newState, attackerId, actualTargetId, { skipChowaniecCheck: true, forcedByEffect: choice === 'yes' })
+        const { newState: afterAtk, log: atkLog, combatResult } = performAttack(newState, attackerId, actualTargetId, { skipChowaniecCheck: true, forcedByEffect: choice === 'yes', skipRangeCheck: choice === 'yes' })
         if (combatResult) this.lastCombatResult = combatResult
         this.applyStateAndLog(afterAtk, atkLog)
       } catch (e: any) {

@@ -114,7 +114,7 @@ export function canAttack(
   state: GameState,
   attacker: CardInstance,
   target: CardInstance,
-  options?: { forcedByEffect?: boolean }
+  options?: { forcedByEffect?: boolean; skipRangeCheck?: boolean }
 ): { valid: boolean; reason?: string; softFail?: boolean } {
   const forced = !!options?.forcedByEffect
 
@@ -177,6 +177,9 @@ export function canAttack(
   }
 
   const attackType = ((attacker.cardData as any).attackType as AttackType) ?? AttackType.MELEE
+
+  // Chowaniec intercept / efekty pomijające zasięg
+  if (options?.skipRangeCheck) return { valid: true }
 
   // Zasięg linii — zachowany nawet przy wymuszonym ataku (hipnoza respektuje zasięg)
   // Przy wymuszonym ataku: atakujący i cel są na tej samej stronie → symuluj zasięg jak gdyby byli naprzeciwko

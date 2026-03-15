@@ -575,7 +575,7 @@ export function performAttack(
   state: GameState,
   attackerInstanceId: string,
   defenderInstanceId: string,
-  options?: { skipChowaniecCheck?: boolean; skipBrzeginaCheck?: boolean; forceBrzeginaSkip?: boolean; forcedByEffect?: boolean }
+  options?: { skipChowaniecCheck?: boolean; skipBrzeginaCheck?: boolean; forceBrzeginaSkip?: boolean; forcedByEffect?: boolean; skipRangeCheck?: boolean }
 ): { newState: GameState; log: LogEntry[]; combatResult?: CombatResult } {
   if (state.currentPhase !== GamePhase.COMBAT && !options?.forcedByEffect) {
     throw new Error(`[TurnManager] Nie jesteś w fazie COMBAT (jesteś w ${state.currentPhase}).`)
@@ -620,7 +620,7 @@ export function performAttack(
   const defenderCard = findCardAnywhere(state, defenderInstanceId)
   const defenderLineBefore = defenderCard?.line ?? null
 
-  const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId, { forceBrzeginaSkip: options?.forceBrzeginaSkip, forcedByEffect: options?.forcedByEffect })
+  const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId, { forceBrzeginaSkip: options?.forceBrzeginaSkip, forcedByEffect: options?.forcedByEffect, skipRangeCheck: options?.skipRangeCheck })
 
   // Brzegina paused combat — pendingInteraction already set, return early
   if (result.brzeginaPaused) {
