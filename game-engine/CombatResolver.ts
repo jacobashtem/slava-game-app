@@ -966,10 +966,13 @@ function shouldCounterattack(
     return { canCounter: false, reason: `${defender.cardData.name}: Sparaliżowany — nie może kontratakować!` }
   }
 
-  // Dobroochoczy: dopóki jest na polu, ŻADNA istota nie kontratakuje
+  // Dobroochoczy: dopóki jest na polu, ŻADNA istota nie kontratakuje (chyba że sparaliżowany/uciszony)
   const allCreatures = getAllCreaturesForPlayer(state, 'player1').concat(getAllCreaturesForPlayer(state, 'player2'))
   const dobroochoczyOnField = allCreatures.some(c =>
-    (c.cardData as any).effectId === 'dobroochoczy_no_counter' && !c.isSilenced
+    (c.cardData as any).effectId === 'dobroochoczy_no_counter' &&
+    !c.isSilenced &&
+    !c.metadata?.dziewiatkoParalyze &&
+    (c.paralyzeRoundsLeft === null || c.paralyzeRoundsLeft === 0)
   )
   if (dobroochoczyOnField) return { canCounter: false, reason: `Dobroochoczy: Aura Pokoju — nikt nie kontratakuje!` }
 
@@ -1163,6 +1166,10 @@ function triggerEffect(
   value?: number
 ): { newState: GameState; log: LogEntry[] } {
   if (card.isSilenced) return { newState: state, log: [] }
+  // Paraliż Dziewiątka blokuje WSZYSTKIE triggery (premie, aury, pożegnanie, reakcje)
+  if (card.metadata?.dziewiatkoParalyze) {
+    return { newState: state, log: [] }
+  }
 
   const effectDef = getEffect(card.cardData.effectId)
   if (!effectDef) return { newState: state, log: [] }

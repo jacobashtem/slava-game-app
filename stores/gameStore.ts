@@ -477,6 +477,8 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function setupArenaMode(freshState: GameState, focusedName = '') {
+    useUIStore().resetAll()
+    engine.lastCombatResult = null
     isArenaMode.value = true
     arenaFocusedName.value = focusedName
     state.value = engine.setupArena(freshState)
@@ -672,10 +674,28 @@ export const useGameStore = defineStore('game', () => {
       if (wasHypnosis) ui.clearHypnosis()
       const wasBrzegina = state.value?.pendingInteraction?.type === 'brzegina_shield'
       const brzeginaTargetId = state.value?.pendingInteraction?.targetInstanceId
+      const wasChowaniec = state.value?.pendingInteraction?.type === 'chowaniec_intercept'
+      const wasDziewiatko = state.value?.pendingInteraction?.type === 'dziewiatko_poison'
+      const dziewiatkoTargetId = state.value?.pendingInteraction?.targetInstanceId
       const newState = engine.resolvePendingInteraction(choice)
 
-      // Wymuszony atak (hipnoza) — emituj VFX przed aktualizacją stanu
+      // Chowaniec — combat VFX przed state update (jak normalny atak)
       const combatResult = engine.lastCombatResult
+      if (wasChowaniec && combatResult) {
+        // Ukryj modal natychmiast
+        if (state.value) {
+          state.value = { ...state.value, pendingInteraction: undefined }
+        }
+        const vfx = useVFXOrchestrator()
+        if (state.value) {
+          revealCombatants(state.value, combatResult)
+          state.value = { ...state.value }
+        }
+        emitCombatVFX(vfx, combatResult, state)
+        engine.lastCombatResult = null
+        const vfxMs = getCombatVFXDuration(combatResult)
+        if (vfxMs > 0) await delay(vfxMs)
+      }
       if (wasHypnosis && combatResult) {
         const vfx = useVFXOrchestrator()
         if (state.value) {
@@ -692,12 +712,27 @@ export const useGameStore = defineStore('game', () => {
       if (wasBrzegina && choice === 'yes' && brzeginaTargetId) {
         ui.flashBlock(brzeginaTargetId)
       }
+      // Dziewiątko: flash trucizna/paraliż na celu
+      if (wasDziewiatko && dziewiatkoTargetId) {
+        if (choice === 'trucizna') {
+          ui.flashPoison(dziewiatkoTargetId)
+        } else {
+          ui.flashParalyze(dziewiatkoTargetId)
+        }
+      }
       state.value = newState
       checkHypnosisMode(newState)
       // Animacje śmierci jeśli ktoś zginął (np. sojusznik trafiony przez Alkonosta)
       const died1 = newState.players.player1.graveyard.length > prevGrave1
       const died2 = newState.players.player2.graveyard.length > prevGrave2
       if (died1 || died2) await delay(600)
+
+      // Po Chowańcu w arenie: AI loop już zakończył for-loop, musimy dokończyć turę AI
+      if (wasChowaniec && isArenaMode.value && state.value && !winner.value && !state.value.pendingInteraction) {
+        try { state.value = engine.aiEndTurn() } catch { try { state.value = engine.forcePlayerTurn() } catch {} }
+        return
+      }
+
       // Jeśli nadal tura AI i brak nowej interakcji — wznów turę AI
       if (state.value && state.value.players[state.value.currentTurn].isAI && !winner.value && !state.value.pendingInteraction) {
         runAITurn()
@@ -792,10 +827,53 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  function activateCreatureEffect(cardInstanceId: string, targetInstanceId?: string) {
+  async function activateCreatureEffect(cardInstanceId: string, targetInstanceId?: string) {
     if (!isPlayerTurn.value) return
     if (mpSend) { mpSend({ type: 'activate_effect', cardInstanceId, targetInstanceId }); return }
     try {
+      // Snapshot karty PRZED efektem (do VFX pozycji)
+      const sourceCard = state.value ? findCardOnField(mySide.value, cardInstanceId) : null
+      const isDziewiatko = sourceCard && (sourceCard.cardData as any).effectId === 'dziewiatko_deathmark' && targetInstanceId
+
+      // Dziewiątko: emituj bow attack VFX PRZED state update
+      if (isDziewiatko && targetInstanceId && state.value) {
+        const vfx = useVFXOrchestrator()
+        const sourceEl = document.querySelector(`[data-instance-id="${cardInstanceId}"]`)
+        const targetEl = document.querySelector(`[data-instance-id="${targetInstanceId}"]`)
+        if (sourceEl && targetEl) {
+          const sRect = sourceEl.getBoundingClientRect()
+          const tRect = targetEl.getBoundingClientRect()
+          const dmg = sourceCard!.currentStats.attack
+
+          // Emit bow attack (dystansowy)
+          vfx.emit({
+            type: 'attack',
+            targetId: targetInstanceId,
+            attackType: 'ranged',
+            meta: {
+              source: { x: sRect.left + sRect.width / 2, y: sRect.top + sRect.height / 2 },
+              target: { x: tRect.left + tRect.width / 2, y: tRect.top + tRect.height / 2 },
+              damage: dmg,
+            },
+          })
+
+          // Damage number na celu
+          setTimeout(() => {
+            vfx.emit({
+              type: 'damage-number',
+              targetId: targetInstanceId,
+              value: dmg,
+              color: '#ef4444',
+              meta: { pos: { x: tRect.left + tRect.width / 2, y: tRect.top + tRect.height / 2 } },
+            })
+            useUIStore().shakeCard(targetInstanceId)
+          }, 400)
+
+          // Poczekaj na VFX
+          await delay(1200)
+        }
+      }
+
       const newState = engine.playerActivateEffect(cardInstanceId, targetInstanceId)
 
       // Heal VFX: efekt zostawia metadata.lastHealTargetId + lastHealAmount
@@ -822,7 +900,6 @@ export const useGameStore = defineStore('game', () => {
             value: healAmount,
             meta: { rect },
           })
-          // Floating heal number (+X zielony)
           setTimeout(() => {
             vfx.emit({
               type: 'damage-number',
@@ -907,7 +984,48 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  function endTurn() {
+  /** Odpal VFX trucizny na kartach danej strony — poison particles → damage number → death */
+  async function playPoisonVFX(side: 'player1' | 'player2') {
+    if (!state.value) return
+    const poisoned: Array<{ instanceId: string; pos: { x: number; y: number; w: number; h: number }; prevDef: number; name: string }> = []
+    for (const creatures of Object.values(state.value.players[side].field.lines)) {
+      for (const c of creatures as CardInstance[]) {
+        if (c.metadata?.dziewiatkoPoison && c.currentStats.defense > 0) {
+          const el = document.querySelector(`[data-instance-id="${c.instanceId}"]`)
+          if (el) {
+            const r = el.getBoundingClientRect()
+            poisoned.push({ instanceId: c.instanceId, pos: { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height }, prevDef: c.currentStats.defense, name: c.cardData.name })
+          }
+        }
+      }
+    }
+    if (poisoned.length === 0) return
+
+    const vfx = useVFXOrchestrator()
+    const ui = useUIStore()
+
+    // Poison + damage + shake — natychmiast
+    for (const p of poisoned) {
+      vfx.emit({ type: 'poison', targetId: p.instanceId, meta: { rect: { cx: p.pos.x, cy: p.pos.y, w: p.pos.w, h: p.pos.h } } })
+      vfx.emit({ type: 'damage-number', targetId: p.instanceId, value: 3, color: '#a3e635', meta: { pos: p.pos } })
+      ui.shakeCard(p.instanceId)
+    }
+
+    // Death — krótki delay żeby gracz zobaczył -3, potem death bridge
+    const deaths = poisoned.filter(p => p.prevDef - 3 <= 0)
+    if (deaths.length > 0) {
+      await delay(400)
+      const death = useDeathVFX()
+      for (const d of deaths) {
+        if (death.ready) death.trigger(d.instanceId)
+      }
+      await delay(700)
+    } else {
+      await delay(300)
+    }
+  }
+
+  async function endTurn() {
     if (!isPlayerTurn.value) return
     if (mpSend) { mpSend({ type: 'end_turn' }); return }
     try {
@@ -920,7 +1038,11 @@ export const useGameStore = defineStore('game', () => {
         playerTurnSummary.value = summary
       }
 
+      // VFX trucizny na kartach gracza PRZED endTurn (rozliczane na koniec tury gracza)
+      await playPoisonVFX('player1')
+
       state.value = engine.playerEndTurn()
+
       if (state.value?.players[state.value.currentTurn].isAI && !winner.value) {
         runAITurn()
       }
@@ -967,10 +1089,12 @@ export const useGameStore = defineStore('game', () => {
                 revealCombatants(state.value, combatResult)
                 state.value = { ...state.value }
               }
-              emitCombatVFX(vfx, combatResult, state)
-              engine.lastCombatResult = null
-              const vfxMs = getCombatVFXDuration(combatResult)
-              if (vfxMs > 0) await delay(vfxMs)
+              if (combatResult) {
+                emitCombatVFX(vfx, combatResult, state)
+                engine.lastCombatResult = null
+                const vfxMs = getCombatVFXDuration(combatResult)
+                if (vfxMs > 0) await delay(vfxMs)
+              }
               state.value = newState
             } catch (e) {
               if (import.meta.dev) console.warn('[Arena AI] attack error:', e)
@@ -979,6 +1103,7 @@ export const useGameStore = defineStore('game', () => {
         }
         // Jeśli jest pendingInteraction dla gracza (np. Brzegina) — nie kończ tury
         if (!state.value?.pendingInteraction || state.value.pendingInteraction.respondingPlayer !== 'player1') {
+          await playPoisonVFX('player2')
           try { state.value = engine.aiEndTurn() } catch { try { state.value = engine.forcePlayerTurn() } catch {} }
         }
       } catch (e) {
@@ -1094,6 +1219,7 @@ export const useGameStore = defineStore('game', () => {
             }
             break
           case 'end_turn':
+            await playPoisonVFX('player2')
             state.value = engine.aiEndTurn()
             break
         }
@@ -1338,6 +1464,10 @@ export const useGameStore = defineStore('game', () => {
     { pattern: /Wskrze(sza|szony|szenie)/i, text: 'Wskrzeszenie!', sub: (msg) => msg, type: 'effect', duration: 2000 },
     { pattern: /Paraliż.*całe pole|masowy paraliż/i, text: 'Paraliż!', sub: (msg) => msg, type: 'effect', duration: 1800 },
     { pattern: /zabija najsłabsz/i, text: 'Egzekucja!', sub: (msg) => msg, type: 'death', duration: 1800 },
+    { pattern: /Chmurnik odebrał/i, text: 'Chmurnik odebrał wrogom zdolność latania!', type: 'effect', duration: 2800 },
+    { pattern: /Chowaniec.*przejmuje atak|staje w obronie/i, text: 'Chowaniec przejmuje walkę na siebie!', type: 'effect', duration: 2500 },
+    { pattern: /został zatruty/i, text: 'Trucizna!', sub: (msg) => msg, type: 'effect', duration: 2500 },
+    { pattern: /sparaliżowany na.*tury.*Pożegnanie/i, text: 'Paraliż!', sub: (msg) => msg, type: 'effect', duration: 2500 },
   ]
 
   // Watch turn change → show info boxes about pending favor / claimable holiday

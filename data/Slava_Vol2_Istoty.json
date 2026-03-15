@@ -224,7 +224,7 @@
         "abilities": [
             {
                 "trigger": "AURA",
-                "text": "Wrogowie w zasięgu muszą {COMBAT}Błotnika."
+                "text": "Wrogowie w zasięgu muszą {COMBAT}        Błotnika."
             }
         ],
         "effectDescription": "Każda istota przeciwnika, która w zasięgu swojego ataku ma błotnika, nie może atakować nikogo innego.",
@@ -245,15 +245,15 @@
             "attackTypeString": "Żywioł",
             "isFlying": true
         },
-        "effect": "Uziemia wszystkie wrogie latające istoty.",
+        "effect": "Uziemia wszystkie wrogie latające istoty (raz na turę).",
         "lore": "Powietrzny duch, dpowiadający za pogodę. Przypomina potężnie zbudowanego mężczyzne. Całymi dniami przesuwa chmury, zsyła grad i ulewy. Jego charakter jest nieprzewidywalny.",
         "abilities": [
             {
-                "trigger": "AURA",
+                "trigger": "AKCJA",
                 "text": "Wszyscy wrogowie tracą {FLY}."
             }
         ],
-        "effectDescription": "Uziemia wszystkie wrogie latające istoty.",
+        "effectDescription": "Uziemia wszystkie wrogie latające istoty (raz na turę).",
         "effectId": "chmurnik_ground_flying"
     },
     {
@@ -271,16 +271,15 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Może przyjąć na siebie coś wymierzony w sojusznika.",
+        "effect": "Gdy sojusznik jest atakowany, Chowaniec może przyjąć walkę na siebie.",
         "lore": "Pomniejszy demon, który w zamian za schronienie za piecem i skromny pokarm opiekuje się domostwem, znosi do niego różne drobiazgi i pomaga gospodarzowi w niektórych pracach.",
         "abilities": [
             {
-                "trigger": "REACTION",
-                "reactionTrigger": "ON_ALLY_ATTACKED",
-                "text": "Gdy sojusznik atakowany: Może przyjąć {ATK} na siebie."
+                "trigger": "CZUJNOŚĆ",
+                "text": "Może przyjąć {COMBAT} wymierzony w sojusznika."
             }
         ],
-        "effectDescription": "Może przyjąć na siebie coś wymierzony w sojusznika.",
+        "effectDescription": "Gdy sojusznik jest atakowany, Chowaniec może przyjąć walkę na siebie.",
         "effectId": "chowaniec_intercept"
     },
     {
@@ -324,16 +323,15 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Kiedy zrani wrogą istotę i pozostanie jej 3 lub mniej  {stats.defense}, rywal musi zapłacić 1 <ZŁ> , w przeciwnym wypadku ta istota zginie.",
-        "lore": "Niepozorny owad żyjący pod ziemią, którego ugryzienie powoduje groźną chorobę. Nawet jeśli ofiarą jest rosly chłop, bez pomocy Guślarki czy Znachora, w kilka dni padnie trupem.",
+        "effect": "Żądli wroga za swój atak i ginie. Cel zostaje zatruty lub sparaliżowany.",
+        "lore": "Niepozorny owad żyjący pod ziemią, którego ugryzienie powoduje groźną chorobę. Nawet jeśli ofiarą jest rosły chłop, bez pomocy Guślarki czy Znachora, w kilka dni padnie trupem.",
         "abilities": [
             {
-                "trigger": "ON_DAMAGE_DEALT",
-                "reactionTrigger": "ON_DAMAGE_DEALT",
-                "text": "Po zadaniu {DMG}: Jeśli cel ma ≤3 {DEF} — rywal płaci 1 {GOLD} albo cel ginie."
+                "trigger": "AKCJA",
+                "text": "Żądli wroga za {ATK} i ginie. Wybierz: {POISON} lub Paraliż."
             }
         ],
-        "effectDescription": "Kiedy zrani wrogą istotę i pozostanie jej 3 lub mniej  {stats.defense}, rywal musi zapłacić 1 <ZŁ> , w przeciwnym wypadku ta istota zginie.",
+        "effectDescription": "Żądli wroga za swój atak i ginie. Cel zostaje zatruty lub sparaliżowany.",
         "effectId": "dziewiatko_deathmark"
     },
     {

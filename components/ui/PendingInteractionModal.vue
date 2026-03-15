@@ -124,7 +124,7 @@ const title = computed(() => {
   const t = interaction.value?.type
   if (t === 'auction_bid') return 'Licytacja — Łaska Boga'
   if (t === 'alkonost_target') return 'Hipnoza Alkonosta'
-  if (t === 'chowaniec_intercept') return 'Chowaniec — Przejąć atak?'
+  if (t === 'chowaniec_intercept') return 'Chowaniec — Czujność'
   if (t === 'kresnik_buff') return 'Kresnik — Wybierz premię'
   if (t === 'baba_domain') return 'Baba — Wybierz domenę'
   if (t === 'cmentarna_baba_resurrect') return 'Cmentarna Baba — Wskrzeszenie'
@@ -135,6 +135,7 @@ const title = computed(() => {
   if (t === 'on_play_target') return `${(sourceCard.value?.cardData as any)?.name ?? 'Karta'} — Wybierz cel`
   if (t === 'brzegina_shield') return 'Brzegina — Czujność'
   if (t === 'kosciej_resurrect') return 'Kościej — Wskrzeszenie'
+  if (t === 'dziewiatko_poison') return 'Dziewiątko — Trucizna'
   return 'Wybierz'
 })
 
@@ -150,7 +151,7 @@ const description = computed(() => {
   if (t === 'alkonost_target') {
     return `Hipnoza! ${(atk?.cardData as any)?.name ?? 'Wroga istota'} jest zmuszona zaatakować jednego ze swoich sojuszników. Wybierz cel.`
   }
-  if (t === 'chowaniec_intercept') return 'Chowaniec może przejąć atak na sojusznika. Czy interweniować?'
+  if (t === 'chowaniec_intercept') return 'Przejąć atak wymierzony w sojusznika?'
   if (t === 'kresnik_buff') return 'Wybierz jedną premię dla Kresnika (trwałą na całą grę).'
   if (t === 'baba_domain') return 'Wybierz domenę chronioną — Baba zyska +4 ATK vs wszystkich POZOSTAŁYCH.'
   if (t === 'cmentarna_baba_resurrect') return 'Wybierz Nieumarłego z cmentarza do wskrzeszenia w Linii 1.'
@@ -185,6 +186,7 @@ const description = computed(() => {
     return `Brzegina może ochronić ${targetName} przed obrażeniami. Koszt: ${cost === 0 ? 'GRATIS (pierwsze użycie)' : `${cost} PS`}.`
   }
   if (t === 'kosciej_resurrect') return 'Kościej zginął od Wręcz — jego serce wciąż bije! Wydaj 1 PS, by wskrzesić go na L1.'
+  if (t === 'dziewiatko_poison') return 'Dziewiątko ukąsiło wroga! Wybierz efekt trucizny.'
   return 'Wybierz opcję.'
 })
 
@@ -198,10 +200,14 @@ function pickTarget(choice: string) {
     <div v-if="show" class="pi-overlay">
       <div class="pi-box" :class="{ 'pi-box-wide': interaction?.type === 'smocze_jajo_hatch' }">
 
-        <!-- Header -->
+        <!-- Header — Slavic ornamental -->
         <div class="pi-header">
-          <Icon icon="game-icons:magic-swirl" class="pi-header-icon" />
-          <span class="pi-title">{{ title }}</span>
+          <div class="pi-ornament-line" />
+          <div class="pi-title-row">
+            <Icon icon="game-icons:magic-swirl" class="pi-header-icon" />
+            <span class="pi-title">{{ title }}</span>
+          </div>
+          <div class="pi-ornament-line" />
         </div>
 
         <!-- Kontekst Alkonost: kto atakuje → kogo wybieramy -->
@@ -280,11 +286,20 @@ function pickTarget(choice: string) {
           v-if="['chowaniec_intercept', 'strela_intercept'].includes(interaction?.type ?? '')"
           class="pi-yn"
         >
-          <button class="pi-yn-yes" @click="pickTarget('yes')">
-            <Icon icon="game-icons:check-mark" /> Tak, przejmij
+          <button class="pi-yn-yes" @click="pickTarget('yes')">Tak</button>
+          <button class="pi-yn-no" @click="pickTarget('no')">Nie</button>
+        </div>
+
+        <!-- Dziewiątko: Trucizna / Paraliż -->
+        <div
+          v-if="interaction?.type === 'dziewiatko_poison'"
+          class="pi-yn"
+        >
+          <button class="pi-yn-yes" @click="pickTarget('trucizna')" style="background: rgba(132, 204, 22, 0.15); border-color: rgba(132, 204, 22, 0.5); color: #a3e635;">
+            <Icon icon="mdi:bottle-tonic" /> Trucizna (-3 DEF/turę)
           </button>
-          <button class="pi-yn-no" @click="pickTarget('no')">
-            <Icon icon="game-icons:cancel" /> Nie, pomiń
+          <button class="pi-yn-no" @click="pickTarget('paraliz')" style="background: rgba(148, 163, 184, 0.15); border-color: rgba(148, 163, 184, 0.5); color: #94a3b8;">
+            <Icon icon="game-icons:frozen-body" /> Paraliż (3 tury)
           </button>
         </div>
 
@@ -423,10 +438,14 @@ function pickTarget(choice: string) {
 </template>
 
 <style scoped>
+/* ═══════════════════════════════════════════════════════════════
+   SLAVIC MODAL — ciemne drewno, złoto, ornamentyka runowa
+   ═══════════════════════════════════════════════════════════════ */
+
 .pi-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
+  background: radial-gradient(ellipse at center, rgba(10, 6, 2, 0.82) 0%, rgba(0, 0, 0, 0.92) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -434,43 +453,77 @@ function pickTarget(choice: string) {
 }
 
 .pi-box {
-  background: #0f172a;
-  border: 1.5px solid #7c3aed;
-  border-radius: 14px;
-  padding: 28px 32px;
+  position: relative;
+  background:
+    linear-gradient(168deg, rgba(14, 12, 18, 0.97) 0%, rgba(8, 6, 12, 0.98) 100%);
+  border: 1.5px solid rgba(200, 168, 78, 0.35);
+  border-radius: 4px;
+  padding: 24px 28px;
   min-width: 340px;
   max-width: 680px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  box-shadow: 0 0 40px rgba(124, 58, 237, 0.3), 0 20px 40px rgba(0,0,0,0.6);
+  gap: 16px;
+  box-shadow:
+    0 0 50px rgba(200, 168, 78, 0.08),
+    0 0 100px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(200, 168, 78, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
+
+/* Corner ornaments */
+.pi-box::before,
+.pi-box::after {
+  content: '◆';
+  position: absolute;
+  color: rgba(200, 168, 78, 0.4);
+  font-size: 8px;
+  line-height: 1;
+}
+.pi-box::before { top: 6px; left: 8px; }
+.pi-box::after { top: 6px; right: 8px; }
 
 .pi-box-wide {
   max-width: 900px;
   width: 90vw;
 }
 
+/* ===== HEADER — ornamental ===== */
 .pi-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+}
+
+.pi-ornament-line {
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(200, 168, 78, 0.5) 30%, rgba(200, 168, 78, 0.5) 70%, transparent 100%);
+}
+
+.pi-title-row {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
 .pi-header-icon {
-  font-size: 22px;
-  color: #a78bfa;
+  font-size: 24px;
+  color: #c8a84e;
+  filter: drop-shadow(0 0 4px rgba(200, 168, 78, 0.3));
 }
 
 .pi-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: #c4b5fd;
-  letter-spacing: 0.02em;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 24px;
+  font-weight: 500;
+  color: #e8d5a3;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 12px rgba(200, 168, 78, 0.2);
 }
 
-/* Context row */
+/* ===== CONTEXT ROW (Alkonost) ===== */
 .pi-context {
   display: flex;
   align-items: center;
@@ -487,16 +540,17 @@ function pickTarget(choice: string) {
 
 .pi-ctx-label {
   font-size: 9px;
-  color: #64748b;
+  color: rgba(200, 168, 78, 0.5);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  font-weight: 600;
 }
 
 .pi-mini-card {
-  border: 2px solid #475569;
-  border-radius: 8px;
+  border: 1.5px solid rgba(200, 168, 78, 0.2);
+  border-radius: 4px;
   padding: 8px 14px;
-  background: #1e293b;
+  background: rgba(12, 10, 18, 0.8);
   min-width: 88px;
   text-align: center;
   display: flex;
@@ -506,40 +560,44 @@ function pickTarget(choice: string) {
 }
 
 .pi-mini-unknown {
-  border-color: #7c3aed;
-  opacity: 0.55;
+  border-color: rgba(200, 168, 78, 0.15);
+  opacity: 0.5;
 }
 
 .pi-unknown-icon {
   font-size: 18px;
-  color: #7c3aed;
+  color: rgba(200, 168, 78, 0.4);
 }
 
 .pi-mini-name {
+  font-family: var(--font-display, Georgia, serif);
   font-size: 12px;
-  font-weight: 600;
-  color: #e2e8f0;
+  font-weight: 500;
+  color: #d4c4a0;
 }
 
 .pi-mini-stats {
   font-size: 11px;
-  color: #94a3b8;
+  color: rgba(200, 168, 78, 0.5);
 }
 
 .pi-arrow {
-  font-size: 28px;
-  color: #f87171;
+  font-size: 24px;
+  color: #c8a84e;
+  opacity: 0.6;
 }
 
+/* ===== DESCRIPTION ===== */
 .pi-desc {
-  font-size: 13px;
-  color: #94a3b8;
+  font-size: 16px;
+  color: #a09480;
   margin: 0;
   text-align: center;
-  line-height: 1.6;
+  line-height: 1.7;
+  font-style: italic;
 }
 
-/* Target card section */
+/* ===== TARGET CARD SELECTION ===== */
 .pi-targets-wrap {
   display: flex;
   flex-direction: column;
@@ -549,17 +607,17 @@ function pickTarget(choice: string) {
 
 .pi-search {
   width: 100%;
-  padding: 7px 12px;
-  border-radius: 6px;
-  border: 1px solid #334155;
-  background: #1e293b;
-  color: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(200, 168, 78, 0.2);
+  background: rgba(10, 8, 16, 0.8);
+  color: #d4c4a0;
   font-size: 12px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.2s;
 }
-.pi-search::placeholder { color: #475569; }
-.pi-search:focus { border-color: #7c3aed; }
+.pi-search::placeholder { color: rgba(200, 168, 78, 0.3); }
+.pi-search:focus { border-color: rgba(200, 168, 78, 0.5); }
 
 .pi-targets {
   display: flex;
@@ -572,43 +630,45 @@ function pickTarget(choice: string) {
 }
 
 .pi-target-btn {
-  background: #1e293b;
-  border: 2px solid var(--domain-color, #475569);
-  border-radius: 10px;
+  background: rgba(12, 10, 18, 0.9);
+  border: 1.5px solid color-mix(in srgb, var(--domain-color, #c8a84e) 40%, rgba(200, 168, 78, 0.2));
+  border-radius: 4px;
   padding: 10px 16px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 90px;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .pi-target-btn:hover {
-  background: color-mix(in srgb, var(--domain-color) 15%, #1e293b);
+  background: rgba(200, 168, 78, 0.08);
+  border-color: rgba(200, 168, 78, 0.6);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 20px rgba(200, 168, 78, 0.1), 0 8px 16px rgba(0,0,0,0.4);
 }
 
 .pi-t-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #e2e8f0;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 15px;
+  font-weight: 500;
+  color: #d4c4a0;
 }
 
 .pi-t-stats {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 13px;
+  color: rgba(200, 168, 78, 0.5);
 }
 
 .pi-empty {
-  color: #475569;
+  color: rgba(200, 168, 78, 0.3);
   font-size: 13px;
   font-style: italic;
 }
 
-/* String choice buttons */
+/* ===== STRING CHOICES ===== */
 .pi-choices {
   display: flex;
   flex-wrap: wrap;
@@ -617,23 +677,25 @@ function pickTarget(choice: string) {
 }
 
 .pi-choice-btn {
-  background: #1e293b;
-  border: 2px solid #7c3aed;
-  border-radius: 8px;
-  padding: 10px 22px;
-  color: #c4b5fd;
-  font-size: 14px;
-  font-weight: 600;
+  background: rgba(200, 168, 78, 0.06);
+  border: 1.5px solid rgba(200, 168, 78, 0.3);
+  border-radius: 4px;
+  padding: 14px 30px;
+  color: #e8d5a3;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 18px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s, border-color 0.2s;
 }
 
 .pi-choice-btn:hover {
-  background: #2d1f5a;
+  background: rgba(200, 168, 78, 0.14);
+  border-color: rgba(200, 168, 78, 0.6);
   transform: translateY(-2px);
 }
 
-/* Y / N */
+/* ===== YES / NO BUTTONS ===== */
 .pi-yn {
   display: flex;
   gap: 12px;
@@ -644,30 +706,51 @@ function pickTarget(choice: string) {
 .pi-yn-no {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 28px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
+  gap: 8px;
+  padding: 14px 36px;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 20px;
+  font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.2s;
+  letter-spacing: 0.03em;
 }
 
 .pi-yn-yes {
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: #fff;
+  background: rgba(34, 120, 60, 0.35);
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #86efac;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.08);
 }
 
 .pi-yn-no {
-  background: linear-gradient(135deg, #b91c1c, #ef4444);
-  color: #fff;
+  background: rgba(120, 30, 30, 0.35);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.08);
 }
 
-.pi-yn-yes:hover,
-.pi-yn-no:hover {
-  opacity: 0.85;
+.pi-yn-yes:hover {
+  background: rgba(34, 120, 60, 0.5);
+  border-color: rgba(74, 222, 128, 0.6);
   transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.15);
+}
+
+.pi-yn-no:hover {
+  background: rgba(120, 30, 30, 0.5);
+  border-color: rgba(248, 113, 113, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.15);
+}
+
+.pi-yn-yes:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* ===== AUCTION ===== */
@@ -682,16 +765,16 @@ function pickTarget(choice: string) {
   align-items: center;
   gap: 14px;
   padding: 12px;
-  border-radius: 10px;
-  background: rgba(200, 168, 78, 0.06);
+  border-radius: 4px;
+  background: rgba(200, 168, 78, 0.04);
   border: 1px solid rgba(200, 168, 78, 0.15);
 }
 
 .pi-auction-portrait {
   width: 56px;
   height: 72px;
-  border-radius: 6px;
-  border: 1px solid rgba(200, 168, 78, 0.3);
+  border-radius: 4px;
+  border: 1px solid rgba(200, 168, 78, 0.25);
   object-fit: cover;
 }
 
@@ -702,15 +785,16 @@ function pickTarget(choice: string) {
 }
 
 .pi-auction-god-name {
-  font-family: Georgia, serif;
+  font-family: var(--font-display, Georgia, serif);
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 500;
   color: #c8a84e;
+  letter-spacing: 0.04em;
 }
 
 .pi-auction-power-desc {
   font-size: 10px;
-  color: rgba(148, 163, 184, 0.7);
+  color: #a09480;
   font-style: italic;
   line-height: 1.3;
   margin-top: 2px;
@@ -720,28 +804,29 @@ function pickTarget(choice: string) {
   display: flex;
   justify-content: space-between;
   padding: 8px 12px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  background: rgba(200, 168, 78, 0.03);
+  border: 1px solid rgba(200, 168, 78, 0.08);
 }
 
 .pi-auction-label {
   font-size: 11px;
-  color: #64748b;
+  color: rgba(200, 168, 78, 0.5);
   font-weight: 600;
 }
 
 .pi-auction-amount {
-  font-family: Georgia, serif;
+  font-family: var(--font-display, Georgia, serif);
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 700;
   color: #fca5a5;
   margin-left: 6px;
 }
 
 .pi-auction-glory {
-  font-family: Georgia, serif;
+  font-family: var(--font-display, Georgia, serif);
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 700;
   color: #86efac;
   margin-left: 6px;
 }
@@ -760,9 +845,9 @@ function pickTarget(choice: string) {
 .pi-auction-adj {
   width: 26px;
   height: 26px;
-  border-radius: 5px;
+  border-radius: 3px;
   border: 1px solid rgba(200, 168, 78, 0.25);
-  background: rgba(200, 168, 78, 0.08);
+  background: rgba(200, 168, 78, 0.06);
   color: #c8a84e;
   cursor: pointer;
   display: flex;
@@ -775,25 +860,20 @@ function pickTarget(choice: string) {
 }
 
 .pi-auction-bid-val {
-  font-family: Georgia, serif;
+  font-family: var(--font-display, Georgia, serif);
   font-size: 24px;
-  font-weight: 900;
+  font-weight: 700;
   color: #fbbf24;
   min-width: 36px;
   text-align: center;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
 }
 
 .pi-auction-bid-unit {
   font-size: 10px;
   font-weight: 800;
-  color: rgba(200, 168, 78, 0.5);
+  color: rgba(200, 168, 78, 0.45);
   letter-spacing: 0.08em;
-}
-
-.pi-yn-yes:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-  transform: none !important;
 }
 
 /* ===== DRAGON HATCH ===== */
@@ -814,26 +894,25 @@ function pickTarget(choice: string) {
 
 .pi-dragon-tile {
   position: relative;
-  border: 1.5px solid rgba(251, 191, 36, 0.12);
-  border-radius: 12px;
+  border: 1.5px solid rgba(200, 168, 78, 0.12);
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   text-align: left;
   overflow: hidden;
-  background: #0a0406;
+  background: rgba(10, 8, 16, 0.95);
   transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
 }
 
 .pi-dragon-tile:hover {
-  border-color: rgba(251, 191, 36, 0.6);
+  border-color: rgba(200, 168, 78, 0.6);
   transform: translateY(-2px) scale(1.015);
   box-shadow:
-    0 0 20px rgba(251, 191, 36, 0.12),
+    0 0 24px rgba(200, 168, 78, 0.12),
     0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* Art section — portrait with vignette */
 .pi-dragon-art {
   position: relative;
   height: 90px;
@@ -855,12 +934,11 @@ function pickTarget(choice: string) {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse at center, transparent 30%, rgba(10, 4, 6, 0.7) 100%),
-    linear-gradient(to bottom, transparent 40%, #0a0406 100%);
+    radial-gradient(ellipse at center, transparent 30%, rgba(10, 8, 16, 0.7) 100%),
+    linear-gradient(to bottom, transparent 40%, rgba(10, 8, 16, 1) 100%);
   pointer-events: none;
 }
 
-/* Top bar over portrait: domain left, name center, flying right */
 .pi-dragon-top {
   position: absolute;
   top: 0;
@@ -890,7 +968,7 @@ function pickTarget(choice: string) {
   font-weight: 500;
   color: #f0ede8;
   letter-spacing: 0.04em;
-  text-shadow: 0 0 12px rgba(0, 0, 0, 0.95), 0 1px 6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(251, 191, 36, 0.15);
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.95), 0 1px 6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(200, 168, 78, 0.15);
   line-height: 1.05;
   text-align: center;
   white-space: nowrap;
@@ -912,7 +990,6 @@ function pickTarget(choice: string) {
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
 }
 
-/* Stats bar — matches CardTooltip .pv-stat style */
 .pi-dragon-stats-bar {
   display: flex;
   align-items: center;
@@ -927,17 +1004,12 @@ function pickTarget(choice: string) {
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  border-radius: 8px;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.45);
 }
 
-.pi-dragon-stat-atk {
-  border: 1.5px solid rgba(251, 146, 60, 0.2);
-}
-
-.pi-dragon-stat-def {
-  border: 1.5px solid rgba(96, 165, 250, 0.2);
-}
+.pi-dragon-stat-atk { border: 1.5px solid rgba(251, 146, 60, 0.2); }
+.pi-dragon-stat-def { border: 1.5px solid rgba(96, 165, 250, 0.2); }
 
 .pi-dragon-stat-img {
   width: 20px;
@@ -945,17 +1017,9 @@ function pickTarget(choice: string) {
   object-fit: contain;
 }
 
-.pi-dragon-stat-svg {
-  font-size: 18px;
-}
-
-.pi-dragon-stat-atk .pi-dragon-stat-svg {
-  color: #fb923c;
-}
-
-.pi-dragon-shield-icon {
-  color: #60a5fa;
-}
+.pi-dragon-stat-svg { font-size: 18px; }
+.pi-dragon-stat-atk .pi-dragon-stat-svg { color: #fb923c; }
+.pi-dragon-shield-icon { color: #60a5fa; }
 
 .pi-dragon-stat-num {
   font-size: 20px;
@@ -974,13 +1038,12 @@ function pickTarget(choice: string) {
   text-shadow: 0 0 14px rgba(96, 165, 250, 0.3);
 }
 
-/* Ability description with trigger label */
 .pi-dragon-ability {
   display: flex;
   align-items: baseline;
   gap: 5px;
   padding: 4px 10px 8px;
-  background: #0a0406;
+  background: rgba(10, 8, 16, 0.95);
   line-height: 1.35;
 }
 
@@ -1000,19 +1063,24 @@ function pickTarget(choice: string) {
 
 .pi-dragon-desc {
   font-size: 10px;
-  color: rgba(148, 163, 184, 0.7);
+  color: #a09480;
   font-style: italic;
 }
 
-/* Transition */
-.pi-fade-enter-active,
-.pi-fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
+/* ===== TRANSITION ===== */
+.pi-fade-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
-.pi-fade-enter-from,
+.pi-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.pi-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.94) translateY(8px);
+}
 .pi-fade-leave-to {
   opacity: 0;
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 /* ====== MOBILE ====== */
@@ -1021,6 +1089,9 @@ function pickTarget(choice: string) {
     max-width: 92vw;
     max-height: 80vh;
     overflow-y: auto;
+    padding: 18px 16px;
   }
+  .pi-title { font-size: 15px; }
+  .pi-yn-yes, .pi-yn-no { padding: 8px 18px; font-size: 13px; }
 }
 </style>

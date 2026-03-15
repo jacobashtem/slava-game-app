@@ -57,6 +57,9 @@ export const useUIStore = defineStore('ui', () => {
   const blockCardId = ref<string | null>(null)
   // Card hit-shake (damage received visual feedback)
   const shakeCardId = ref<string | null>(null)
+  // Trucizna/paraliż flash overlay
+  const poisonFlashCardId = ref<string | null>(null)
+  const paralyzeFlashCardId = ref<string | null>(null)
   // Hipnoza Alkonosta — podświetlenie celów na polu
   const hypnosisTargets = ref<Set<string>>(new Set())
   const hypnosisAttackerId = ref<string | null>(null)
@@ -181,6 +184,8 @@ export const useUIStore = defineStore('ui', () => {
     counterAttackCardId.value = null
     blockCardId.value = null
     shakeCardId.value = null
+    poisonFlashCardId.value = null
+    paralyzeFlashCardId.value = null
     infoBoxes.value = []
     mobileDrawerOpen.value = false
   }
@@ -265,6 +270,20 @@ export const useUIStore = defineStore('ui', () => {
     }, 800))
   }
 
+  function flashPoison(instanceId: string) {
+    poisonFlashCardId.value = instanceId
+    _uiTimeouts.push(setTimeout(() => {
+      if (poisonFlashCardId.value === instanceId) poisonFlashCardId.value = null
+    }, 1000))
+  }
+
+  function flashParalyze(instanceId: string) {
+    paralyzeFlashCardId.value = instanceId
+    _uiTimeouts.push(setTimeout(() => {
+      if (paralyzeFlashCardId.value === instanceId) paralyzeFlashCardId.value = null
+    }, 1000))
+  }
+
   // Banner queue — full-screen banners (like TurnBanner) for important events
   type BannerType = 'player' | 'ai' | 'season' | 'plunder' | 'timeout' | 'effect' | 'steal' | 'death'
   const pendingBanners = ref<{ text: string; type: BannerType; duration: number; sub?: string }[]>([])
@@ -345,6 +364,10 @@ export const useUIStore = defineStore('ui', () => {
     flashCounterAttack,
     flashBlock,
     shakeCard,
+    poisonFlashCardId,
+    paralyzeFlashCardId,
+    flashPoison,
+    flashParalyze,
     hypnosisTargets,
     hypnosisAttackerId,
     hypnosisSourceId,

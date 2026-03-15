@@ -50,6 +50,16 @@ const triggerLabels: Record<string, string> = {
   ON_DAMAGE_RECEIVED: 'ODWET',
   ON_ACTIVATE: 'AKCJA',
   ON_ALLY_ATTACKED: 'CZUJNOŚĆ',
+  // Display labels z JSON (abilities[].trigger mogą być już po polsku)
+  'WEJŚCIE': 'WEJŚCIE',
+  'AKCJA': 'AKCJA',
+  'AURA': 'AURA',
+  'ODWET': 'ODWET',
+  'NATARCIE': 'NATARCIE',
+  'ZRANIENIE': 'ZRANIENIE',
+  'ZABÓJSTWO': 'ZABÓJSTWO',
+  'POŻEGNANIE': 'POŻEGNANIE',
+  'CZUJNOŚĆ': 'CZUJNOŚĆ',
 }
 
 // Tag colors for trigger labels and [TAG] badges
@@ -65,37 +75,12 @@ const tagColors: Record<string, string> = {
   'CZUJNOŚĆ': '#eab308',
 }
 
-// Passive aura icons — shown directly on the creature card
-const passiveAuraIcons: Record<string, { icon: string; label: string }> = {
-  'matoha_anti_magic':       { icon: '🚫', label: 'Anty-Magia' },
-  'chmurnik_ground_flying':  { icon: '⬇', label: 'Uziemienie' },
-  'guslarka_bonus_vs_demon': { icon: '✝', label: 'vs Demony' },
-  'zerca_welesa_demon_buff': { icon: '🔥', label: 'Demoniczny' },
-  'polewik_buff_neighbors':  { icon: '🌾', label: 'Wsparcie' },
-  'szeptunka_damage_reduction': { icon: '🤫', label: 'Szept' },
-  'chlop_extra_attack':      { icon: '⚔', label: '+1 Atak' },
-  'tesknica_block_enhance':  { icon: '🔒', label: 'Blokada' },
-  'bieda_spy_block_draw':    { icon: '💀', label: 'Bieda' },
-  'licho_block_draw':        { icon: '👁', label: 'Licho' },
-  'bzionek_spell_intercept': { icon: '🛡', label: 'Anty-Czar' },
-  'czarownica_redirect_spell': { icon: '🔄', label: 'Odwrót' },
-  'alkonost_redirect_counterattack': { icon: '👁', label: 'Hipnoza' },
-  'lapiduch_demon_hunter':   { icon: '⚔', label: 'Łowca' },
-  'zupan_no_field_limit':    { icon: '👑', label: 'Bez limitu' },
-}
-
 function getTriggerColor(trigger: string): string {
   const label = triggerLabels[trigger] ?? trigger
   return tagColors[label] ?? '#a5b4fc'
 }
 
 const abilities = computed(() => (cardData.value.abilities ?? []) as Array<{trigger: string; text: string}>)
-
-// Passive aura badge for this creature
-const auraBadge = computed(() => {
-  if (!props.card || props.card.isSilenced) return null
-  return passiveAuraIcons[cardData.value.effectId] ?? null
-})
 
 // Spy badge — cards played on enemy field
 const spyEffectIds = new Set([
@@ -171,46 +156,6 @@ const auraRingClass = computed(() => {
 })
 
 // VFX (conversion, status flash, zombify) removed — will be handled by VFXOrchestrator (P3)
-
-// ===== PASYWNE AURY — badge z opisem =====
-const passiveAuraMap: Record<string, { icon: string; label: string; desc: string }> = {
-  'matoha_anti_magic':       { icon: '🚫', label: 'Anty-Magia',   desc: 'Blokuje ataki typu Magia na wszystkich sojuszników.' },
-  'chmurnik_ground_flying':  { icon: '⬇',  label: 'Uziemienie',   desc: 'Wrogie latające istoty tracą latanie.' },
-  'dobroochoczy_no_counter': { icon: '🕊',  label: 'Pokojowy',     desc: 'Nigdy nie kontratakuje.' },
-  'cmuch_no_counter_received':{ icon: '💨', label: 'Nieuchwytny',  desc: 'Nie otrzymuje kontrataku po ataku.' },
-  'guslarka_bonus_vs_demon': { icon: '✝',  label: 'vs Demony',    desc: 'Sojusznicy zyskują +2 ATK vs demony (Weles).' },
-  'zerca_welesa_demon_buff': { icon: '🔥', label: 'Demoniczny',   desc: 'Sojusznicze demony zyskują +1 ATK.' },
-  'polewik_buff_neighbors':  { icon: '🌾', label: 'Wsparcie',     desc: 'Żywi sąsiedzi w L1 zyskują +1 ATK.' },
-  'szeptunka_damage_reduction':{ icon: '🤫',label: 'Szept',       desc: 'Sojusznicy otrzymują -1 obrażeń.' },
-  'utopiec_half_damage':     { icon: '🌊', label: '½ Obrażeń',   desc: 'Otrzymuje połowę obrażeń.' },
-  'chlop_extra_attack':      { icon: '⚔',  label: '+1 Atak',     desc: 'Daje sojusznikom +1 dodatkowy atak na turę.' },
-  'kikimora_free_attack':    { icon: '👻', label: 'Darmowy',      desc: 'Jej atak nie zajmuje slotu atakowego.' },
-  'lesnica_double_attack':   { icon: '⚡', label: '2× Atak',     desc: 'Może atakować dwa razy na turę.' },
-  'zupan_no_field_limit':    { icon: '👑', label: 'Bez limitu',   desc: 'Znosi limit 5 istot na polu.' },
-  'tesknica_block_enhance':  { icon: '🔒', label: 'Blokada',      desc: 'Blokuje ulepszanie kart przygody wroga.' },
-  'bieda_spy_block_draw':    { icon: '💀', label: 'Bieda',        desc: 'Właściciel nie może dobierać kart.' },
-  'licho_block_draw':        { icon: '👁',  label: 'Licho',       desc: 'Wróg nie może dobierać kart.' },
-  'bzionek_spell_intercept': { icon: '🛡',  label: 'Anty-Czar',   desc: 'Przechwytuje zaklęcia celujące w sojuszników.' },
-  'czarownica_redirect_spell':{ icon: '🔄',label: 'Odwrót',       desc: 'Przekierowuje zaklęcia wroga na jego istoty.' },
-  'julki_adventure_immunity':{ icon: '✨', label: 'Odporność',    desc: 'Odporna na karty przygody.' },
-  'mavka_line_shield':       { icon: '🌿', label: 'Osłona',       desc: 'Chroni sojuszników w tej samej linii.' },
-  'znachor_absorb':          { icon: '💚', label: 'Absorpcja',    desc: 'Redukuje obrażenia zadawane sojusznikom.' },
-  'lapiduch_demon_hunter':   { icon: '⚔',  label: 'Łowca',       desc: 'Atakuje tylko demony. Blokuje wystawianie demonów.' },
-  'wilkolak_melee_immune':   { icon: '🐺', label: 'Odporny',      desc: 'Odporny na Wręcz poniżej 7 ATK.' },
-  'stukacz_strong_immune':   { icon: '🪨', label: 'Twardy',       desc: 'Silniejsi wrogowie nie mogą atakować.' },
-  'dydko_strong_immune':     { icon: '🪨', label: 'Zwinny',       desc: 'Równi i silniejsi wrogowie nie mogą atakować.' },
-  'buka_force_defense':      { icon: '😱', label: 'Strach',       desc: 'Słabsi wrogowie nie mogą atakować Buki.' },
-  'rybi_krol_pierce_immunity':{ icon: '🔱',label: 'Przebicie',    desc: 'Ignoruje odporności celów.' },
-  'krol_wezow_always_counter':{ icon: '🐍',label: 'Kontra',       desc: 'Kontratakuje zawsze, nawet w ataku.' },
-  'alkonost_redirect_counterattack':{ icon: '👁',label: 'Hipnoza', desc: 'Zaatakowana istota zostaje zahipnotyzowana i atakuje sojusznika.' },
-  'grad_magic_element_only': { icon: '❄',  label: 'Grad',         desc: 'Tylko Magia/Żywioł mogą go zaatakować.' },
-}
-
-const passiveAura = computed(() => {
-  if (props.inHand) return null
-  const effectId = (props.card.cardData as any).effectId
-  return passiveAuraMap[effectId] ?? null
-})
 
 // ===== LICZNIKI NA KARTACH =====
 const game = useGameStore()
@@ -292,6 +237,8 @@ const isThreatened = computed(() => {
 const isCounterFlash = computed(() => ui.counterAttackCardId === props.card.instanceId)
 const isBlockFlash = computed(() => ui.blockCardId === props.card.instanceId)
 const isShaking = computed(() => ui.shakeCardId === props.card.instanceId)
+const isPoisonFlash = computed(() => ui.poisonFlashCardId === props.card.instanceId)
+const isParalyzeFlash = computed(() => ui.paralyzeFlashCardId === props.card.instanceId)
 
 // ===== AKTYWNE EFEKTY (widoczne na karcie) =====
 // Mapa czytelnych nazw efektów aktywnych
@@ -403,6 +350,7 @@ const cardClass = computed(() => [
     'is-silenced':          props.card.isSilenced,
     'cannot-attack':        props.card.cannotAttack,
     'is-hit-shaking':       isShaking.value,
+    'is-taunt':             isTaunt.value,
   }
 ])
 
@@ -460,6 +408,17 @@ function onClick() {
       </div>
     </div>
 
+    <!-- Status (trucizna/paraliż) — lewa krawędź, kolumna badge'ów z licznikiem -->
+    <div v-if="card.metadata?.dziewiatkoPoison || card.metadata?.dziewiatkoParalyze" class="status-stack">
+      <div v-if="card.metadata?.dziewiatkoPoison" class="keyword-badge keyword-poison" v-tip="'Trucizna: -3 🛡 co turę (trwała)'">
+        <Icon icon="mdi:bottle-tonic" class="keyword-icon" />
+      </div>
+      <div v-if="card.metadata?.dziewiatkoParalyze" class="keyword-badge keyword-paralyze-badge" v-tip="`Paraliż: ${card.paralyzeRoundsLeft} tur — premie i Pożegnanie zablokowane`">
+        <Icon icon="game-icons:frozen-body" class="keyword-icon" />
+        <span class="keyword-counter keyword-counter-paralyze">{{ card.paralyzeRoundsLeft }}</span>
+      </div>
+    </div>
+
     <!-- Grafika stworzenia (fallback: Tugaryn) -->
     <img
       :src="creatureImgs[cardData.id] ?? creatureImgs[117]"
@@ -473,12 +432,11 @@ function onClick() {
         <Icon v-if="card.isSilenced"   icon="game-icons:silenced"       class="badge-icon badge-silenced" v-tip="'Uciszony'" />
         <Icon v-if="card.isImmune"     icon="game-icons:shield-reflect" class="badge-icon badge-immune"   v-tip="'Odporny'" />
         <Icon v-if="card.cannotAttack" icon="game-icons:chains"         class="badge-icon badge-disarmed" v-tip="'Nie może atakować'" />
-        <span v-if="card.poisonRoundsLeft" class="badge-poison">☠ {{ card.poisonRoundsLeft }}</span>
-        <span v-if="card.paralyzeRoundsLeft !== null && card.paralyzeRoundsLeft !== 0" class="badge-paralyze" v-tip="card.paralyzeRoundsLeft === -1 ? 'Paraliż permanentny' : `Paraliż: ${card.paralyzeRoundsLeft} rund`">
+        <span v-if="card.poisonRoundsLeft && !card.metadata?.dziewiatkoPoison" class="badge-poison">☠ {{ card.poisonRoundsLeft }}</span>
+        <span v-if="card.paralyzeRoundsLeft !== null && card.paralyzeRoundsLeft !== 0 && !card.metadata?.dziewiatkoParalyze" class="badge-paralyze" v-tip="card.paralyzeRoundsLeft === -1 ? 'Paraliż permanentny' : `Paraliż: ${card.paralyzeRoundsLeft} rund`">
           ⚡ {{ card.paralyzeRoundsLeft === -1 ? '∞' : card.paralyzeRoundsLeft }}
         </span>
         <!-- TIER 4 badges -->
-        <span v-if="isTaunt"            class="badge-tag badge-taunt"       v-tip="'Prowokacja — wróg musi atakować Błotnika'">🎯</span>
         <span v-if="isPrzyjaznGuard"    class="badge-tag badge-friend-g"    v-tip="'Chroni sojusznika (Przyjaźń)'">🛡</span>
         <span v-if="isPrzyjaznProtected" class="badge-tag badge-friend-p"   v-tip="'Chroniony przez sojusznika (Przyjaźń)'">💛</span>
         <span v-if="isLycan"            class="badge-tag badge-lycan"       v-tip="'Likantropia — wchłania ofiary'">🐺</span>
@@ -540,7 +498,6 @@ function onClick() {
         :class="['position-badge', isDefense ? 'pos-defense' : 'pos-attack', { 'pos-clickable': canTogglePosition }]"
         @click.stop="canTogglePosition ? emit('change-position', card) : undefined"
       >
-        <Icon icon="boxicons:rectangle-vertical-filled" :class="['pos-icon', { 'pos-icon-rotated': !isDefense }]" />
         {{ isDefense ? 'OBR' : 'ATK' }}
       </div>
 
@@ -638,6 +595,18 @@ function onClick() {
     <div v-if="isBlockFlash" class="state-overlay block-flash-overlay">
       <span class="state-overlay-icon">✋</span>
       <span class="state-overlay-label">ODPORNY</span>
+    </div>
+
+    <!-- Trucizna flash overlay -->
+    <div v-if="isPoisonFlash" class="state-overlay poison-flash-overlay">
+      <Icon icon="mdi:bottle-tonic" class="state-overlay-icon-svg" />
+      <span class="state-overlay-label">ZATRUTA</span>
+    </div>
+
+    <!-- Paraliż flash overlay -->
+    <div v-if="isParalyzeFlash" class="state-overlay paralyze-flash-overlay">
+      <Icon icon="game-icons:frozen-body" class="state-overlay-icon-svg" />
+      <span class="state-overlay-label">SPARALIŻOWANA</span>
     </div>
 
     <!-- Hipnoza: zahipnotyzowana istota wroga (faza 2 — wybierz cel ataku) -->
@@ -840,6 +809,48 @@ function onClick() {
   z-index: 3;
   pointer-events: auto;
 }
+
+/* Status badges — left side column (trucizna/paraliż) */
+.status-stack {
+  position: absolute;
+  top: 30px;
+  left: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  z-index: 3;
+  pointer-events: auto;
+}
+.keyword-poison {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1.5px solid rgba(132, 204, 22, 0.6);
+}
+.keyword-poison .keyword-icon { color: #a3e635; }
+.keyword-paralyze-badge {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1.5px solid rgba(148, 163, 184, 0.6);
+}
+.keyword-paralyze-badge .keyword-icon { color: #94a3b8; }
+
+/* Licznik pod ikoną statusu (paraliż countdown) */
+.keyword-counter {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 4px;
+  min-width: 14px;
+  text-align: center;
+}
+.keyword-counter-paralyze {
+  color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
 .keyword-badge {
   width: 28px;
   height: 28px;
@@ -941,8 +952,6 @@ function onClick() {
 }
 .pos-attack  { color: rgba(252,165,165,0.7); background: rgba(252,165,165,0.08); border: 1px solid rgba(252,165,165,0.15); }
 .pos-defense { color: rgba(147,197,253,0.7); background: rgba(147,197,253,0.08); border: 1px solid rgba(147,197,253,0.15); }
-.pos-icon    { font-size: 8px; transition: transform 0.2s ease; }
-.pos-icon-rotated { transform: rotate(90deg); }
 
 /* ===== ABILITIES LIST ===== */
 .card-abilities {
@@ -991,15 +1000,32 @@ function onClick() {
   margin: -1px 0;
 }
 
-/* Aura badge — small indicator on creature cards with passive effects */
-.aura-badge {
-  position: absolute;
-  bottom: 28px;
-  left: 3px;
-  font-size: 12px;
-  line-height: 1;
-  z-index: 3;
-  cursor: help;
+/* ===== TAUNT (Świetlik/Błotnik) — intense red glow forcing attacks ===== */
+.is-taunt {
+  border-color: #ef4444 !important;
+  box-shadow:
+    0 0 8px 2px rgba(239, 68, 68, 0.6),
+    0 0 20px 6px rgba(239, 68, 68, 0.35),
+    0 0 40px 12px rgba(220, 38, 38, 0.2),
+    inset 0 0 12px 2px rgba(239, 68, 68, 0.15);
+  animation: taunt-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes taunt-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 8px 2px rgba(239, 68, 68, 0.6),
+      0 0 20px 6px rgba(239, 68, 68, 0.35),
+      0 0 40px 12px rgba(220, 38, 38, 0.2),
+      inset 0 0 12px 2px rgba(239, 68, 68, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 12px 4px rgba(239, 68, 68, 0.8),
+      0 0 30px 10px rgba(239, 68, 68, 0.5),
+      0 0 55px 18px rgba(220, 38, 38, 0.3),
+      inset 0 0 18px 4px rgba(239, 68, 68, 0.25);
+  }
 }
 
 /* Spy badge — card played on enemy field */
@@ -1274,6 +1300,34 @@ function onClick() {
 }
 
 /* Hipnoza: fioletowy overlay z ikoną oka */
+/* Trucizna flash — zielony overlay */
+.poison-flash-overlay {
+  background: rgba(20, 83, 10, 0.75);
+  box-shadow: inset 0 0 25px rgba(132, 204, 22, 0.6), 0 0 15px rgba(132, 204, 22, 0.3);
+  animation: combat-flash-in 0.3s ease-out;
+}
+.poison-flash-overlay .state-overlay-icon-svg { font-size: 28px; color: #a3e635; filter: drop-shadow(0 0 6px rgba(163, 230, 53, 0.9)); }
+.poison-flash-overlay .state-overlay-label {
+  color: #d9f99d;
+  background: rgba(22, 101, 52, 0.9);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+
+/* Paraliż flash — szary overlay */
+.paralyze-flash-overlay {
+  background: rgba(30, 41, 59, 0.8);
+  box-shadow: inset 0 0 25px rgba(148, 163, 184, 0.4), 0 0 15px rgba(148, 163, 184, 0.2);
+  animation: combat-flash-in 0.3s ease-out;
+}
+.paralyze-flash-overlay .state-overlay-icon-svg { font-size: 28px; color: #94a3b8; filter: drop-shadow(0 0 6px rgba(148, 163, 184, 0.8)); }
+.paralyze-flash-overlay .state-overlay-label {
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.9);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+
 .hypnosis-overlay {
   background: rgba(80, 20, 140, 0.7);
   box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.6), 0 0 12px rgba(168, 85, 247, 0.4);
@@ -1437,6 +1491,7 @@ function onClick() {
   .keyword-svg { width: 14px; height: 14px; }
   .keyword-dragon .keyword-svg { width: 12px; height: 12px; }
   .keyword-stack { gap: 2px; top: 2px; right: 2px; }
+  .status-stack { gap: 2px; top: 2px; left: 2px; }
   .card-domain-badge { width: 20px; height: 20px; }
   .card-domain-img { width: 15px; height: 15px; }
   .card-badges { gap: 1px; }
@@ -1487,7 +1542,6 @@ function onClick() {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
   }
-  .pos-icon { font-size: 10px; }
 
   /* Stats footer — compact for smaller cards */
   .card-footer {
@@ -1540,12 +1594,6 @@ function onClick() {
     background: linear-gradient(transparent 0%, rgba(5,3,8,0.5) 40%, rgba(5,3,8,0.9) 100%);
   }
 
-  .aura-badge {
-    transform: scale(0.55);
-    transform-origin: bottom left;
-    bottom: 24px;
-    left: 1px;
-  }
   .spy-badge {
     transform: scale(0.55);
     transform-origin: top left;

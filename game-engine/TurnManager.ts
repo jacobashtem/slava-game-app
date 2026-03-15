@@ -5,7 +5,7 @@
 import type { GameState, CardInstance, LogEntry, ActiveEventCard, CombatResult } from './types'
 import { GamePhase, EffectTrigger, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
-import { cloneGameState, addLog, getAllCreaturesOnField } from './GameStateUtils'
+import { cloneGameState, addLog, getAllCreaturesOnField, moveToGraveyard } from './GameStateUtils'
 import { drawCard, drawCards } from './DeckBuilder'
 import { placeCreatureOnField, canPlayCreature, canPlaceInLine, getFirstAvailableSlot } from './LineManager'
 import { resolveAttack } from './CombatResolver'
@@ -598,7 +598,6 @@ export function performAttack(
       const chowaniec = getAllCreaturesOnField(state, defOwner).find(c =>
         (c.cardData as any).effectId === 'chowaniec_intercept' &&
         c.instanceId !== defenderInstanceId &&
-        c.position === CardPosition.DEFENSE &&
         !c.isSilenced &&
         c.currentStats.defense > 0
       )
@@ -818,7 +817,9 @@ function processTurnStartEffects(state: GameState, log: LogEntry[]): GameState {
           if (card.paralyzeRoundsLeft <= 0) {
             card.paralyzeRoundsLeft = null
             card.cannotAttack = false
-            log.push(addLog(newState, `${card.cardData.name}: Paraliż mija!`, 'effect'))
+            card.isGrounded = false
+            delete card.metadata.dziewiatkoParalyze
+            log.push(addLog(newState, `${card.cardData.name}: Paraliż mija! Premie i lot przywrócone.`, 'effect'))
           }
         }
       }
@@ -907,6 +908,26 @@ function processTurnEndEffects(state: GameState, log: LogEntry[]): GameState {
       } catch {}
     }
   }
+
+  // Trucizna Dziewiątka: -3 DEF na koniec tury WŁAŚCICIELA zatrutej karty
+  // Szukaj zatrutych kart aktualnego gracza (tego kto kończy turę)
+  const poisonDead: CardInstance[] = []
+  for (const card of creatures) {
+    if (card.metadata.dziewiatkoPoison && card.currentStats.defense > 0) {
+      const prevDef = card.currentStats.defense
+      card.currentStats.defense -= 3
+      if (card.currentStats.defense <= 0) card.currentStats.defense = 0
+      log.push(addLog(newState, `Trucizna: ${card.cardData.name} traci 3 DEF (${prevDef} → ${Math.max(0, card.currentStats.defense)}).`, 'effect'))
+      if (card.currentStats.defense <= 0) {
+        log.push(addLog(newState, `${card.cardData.name} pada od trucizny Dziewiątka!`, 'death'))
+        poisonDead.push(card)
+      }
+    }
+  }
+  for (const dead of poisonDead) {
+    moveToGraveyard(newState, dead)
+  }
+
   return newState
 }
 

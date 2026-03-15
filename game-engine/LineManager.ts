@@ -354,8 +354,8 @@ function findTauntTarget(state: GameState, attacker: CardInstance): CardInstance
   const enemies = getAllCreaturesOnField(state, defenderSide)
 
   for (const enemy of enemies) {
+    if (enemy.isSilenced || enemy.metadata?.dziewiatkoParalyze) continue
     if (enemy.cardData.name === 'Błotnik' || enemy.activeEffects.some(e => e.effectId === 'blotnik_taunt')) {
-      // Sprawdź czy Błotnik jest w zasięgu ataku
       const canTargetBłotnik = canAttackIgnoringTaunt(state, attacker, enemy)
       if (canTargetBłotnik) return enemy
     }

@@ -89,7 +89,9 @@
       "Bash(./node_modules/.bin/vue-tsc --noEmit 2>&1 | head -30)",
       "Bash(node_modules/.bin/nuxi typecheck:*)",
       "Bash(git revert:*)",
-      "Bash(git -C /c/jacobash/slava-game-app status --short | grep -i \"dobrooch\\\\|11\\\\.\\\\|nowe\")"
+      "Bash(git -C /c/jacobash/slava-game-app status --short | grep -i \"dobrooch\\\\|11\\\\.\\\\|nowe\")",
+      "Bash(wait bjsr9yw6l:*)",
+      "Read(//c/Users/Lenovo/AppData/Local/Temp/claude/C--jacobash-slava-game-app/c15c9ebd-3dbe-4e98-9ce0-251980e9e4bc/tasks/**)"
     ]
   }
 }

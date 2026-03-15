@@ -264,12 +264,12 @@ function getValidTargets(attacker: CardInstance): string[] {
 
 function getAllTargets(): string[] {
   if (!game.state) return []
+  const attacker = getAllCreaturesOnField(game.state, game.mySide).find(c => c.instanceId === ui.attackingCardId)
+  if (!attacker) return []
   const oppSide = game.mySide === 'player1' ? 'player2' : 'player1'
   return getAllCreaturesOnField(game.state, oppSide)
     .filter(e => {
-      const check = canAttack(game.state!,
-        getAllCreaturesOnField(game.state!, game.mySide).find(c => c.instanceId === ui.attackingCardId)!,
-        e)
+      const check = canAttack(game.state!, attacker, e)
       return check.valid || check.softFail
     })
     .map(e => e.instanceId)

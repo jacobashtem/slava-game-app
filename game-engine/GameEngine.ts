@@ -7,7 +7,7 @@
 import type { GameState, LogEntry, CardInstance, CombatResult } from './types'
 import { GamePhase, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
-import { createInitialGameState, cloneGameState, addLog } from './GameStateUtils'
+import { createInitialGameState, cloneGameState, addLog, moveToGraveyard } from './GameStateUtils'
 import { CardFactory } from './CardFactory'
 import { buildRandomDeck, drawCards, GOLD_EDITION_DECK_CONFIG } from './DeckBuilder'
 import { checkWinCondition, getAllCreaturesOnField, canAttack } from './LineManager'
@@ -247,6 +247,8 @@ export class GameEngine {
     this.notifyStateChange()
     return cloneGameState(this.state)
   }
+
+
 
   // ===== AKCJE GRACZA (single-player wrappers → side* methods) =====
 
@@ -672,8 +674,45 @@ export class GameEngine {
       const originalTargetId = interaction.targetInstanceId!
       const chowaniecId = interaction.sourceInstanceId
       const actualTargetId = choice === 'yes' ? chowaniecId : originalTargetId
-      const { newState: afterAtk, log: atkLog } = performAttack(newState, attackerId, actualTargetId, { skipChowaniecCheck: true })
-      this.applyStateAndLog(afterAtk, atkLog)
+
+      if (choice === 'yes') {
+        const originalTarget = this.findCardInState(newState, originalTargetId)
+        addLog(newState, `Chowaniec przejmuje atak na ${originalTarget?.cardData.name ?? 'sojusznika'} — staje w obronie!`, 'effect')
+      }
+      try {
+        const { newState: afterAtk, log: atkLog, combatResult } = performAttack(newState, attackerId, actualTargetId, { skipChowaniecCheck: true, forcedByEffect: choice === 'yes' })
+        if (combatResult) this.lastCombatResult = combatResult
+        this.applyStateAndLog(afterAtk, atkLog)
+      } catch (e: any) {
+        console.warn('[Chowaniec] performAttack failed:', e?.message ?? e)
+        this.applyStateAndLog(newState, [])
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Dziewiątko: wybór trucizny (śmierć) lub paraliżu na celu
+    if (interaction.type === 'dziewiatko_poison') {
+      const targetCard = this.findCardInState(newState, interaction.targetInstanceId!)
+      if (targetCard && targetCard.currentStats.defense > 0) {
+        if (choice === 'trucizna') {
+          targetCard.metadata.dziewiatkoPoison = true
+          addLog(newState, `${targetCard.cardData.name} został zatruty! Traci 3 DEF co turę.`, 'effect')
+        } else {
+          targetCard.paralyzeRoundsLeft = 3
+          targetCard.cannotAttack = true
+          targetCard.metadata.dziewiatkoParalyze = true
+          // Uziemienie — latające istoty tracą lot podczas paraliżu
+          if ((targetCard.cardData as any).isFlying) targetCard.isGrounded = true
+          addLog(newState, `${targetCard.cardData.name} sparaliżowany na 3 tury! Premie, atak i Pożegnanie zablokowane.`, 'effect')
+        }
+      }
+      // Rozlicz śmierć Dziewiątka
+      const sourceCard = this.findCardInState(newState, interaction.sourceInstanceId)
+      if (sourceCard && sourceCard.currentStats.defense <= 0) {
+        moveToGraveyard(newState, sourceCard)
+      }
+      this.applyStateAndLog(newState, [])
       this.checkWinAndNotify()
       return cloneGameState(this.state)
     }

@@ -176,7 +176,7 @@
       "attackTypeString": "Wręcz",
       "isFlying": false
     },
-    "effect": "Może przyjąć na siebie coś wymierzony w sojusznika.",
+    "effect": "Może przyjąć na siebie {COMBAT} wymierzony w sojusznika.",
     "lore": "Pomniejszy demon, który w zamian za schronienie za piecem i skromny pokarm opiekuje się domostwem, znosi do niego różne drobiazgi i pomaga gospodarzowi w niektórych pracach."
   },
   {

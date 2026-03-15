@@ -351,41 +351,54 @@ registerEffect({
   },
 })
 
-// ✅ CHMURNIK — Uziemia wrogie latające istoty
+// ✅ CHMURNIK — Uziemia wrogie latające istoty (AKCJA: raz na turę, gratis)
 registerEffect({
   id: 'chmurnik_ground_flying',
   name: 'Uziemienie Chmurnika',
-  description: '[AURA] Tak długo jak Chmurnik jest w polu, wszystkie wrogie latające istoty tracą cechę latania.',
-  trigger: EffectTrigger.PASSIVE,
-  priority: EffectPriority.PASSIVE,
+  description: '[AKCJA] Uziemia wszystkie wrogie latające istoty (raz na turę, gratis).',
+  trigger: [EffectTrigger.ON_ACTIVATE],
+  priority: EffectPriority.REACTION,
+  activatable: true,
+  activationCost: 0,
+  activationCooldown: 'per_turn',
+  canActivate: (ctx) => {
+    // Blokuj gdy nie ma latających wrogów do uziemienia
+    const opponent = ctx.state.players[ctx.source.owner === 'player1' ? 'player2' : 'player1']
+    let hasFlyingEnemy = false
+    forEachCreatureOnField(opponent, (card) => {
+      if ((card.cardData as any).isFlying && !card.isGrounded) hasFlyingEnemy = true
+    })
+    return hasFlyingEnemy
+  },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
-    const opponent = newState.players[ctx.source.owner === 'player1' ? 'player2' : 'player1']
+    const source = findCardInState(newState, ctx.source.instanceId)
+    if (!source) return effectResult(newState)
+    const opponent = newState.players[source.owner === 'player1' ? 'player2' : 'player1']
 
-    // Ground all enemy flying creatures
-    const logs: any[] = []
+    const grounded: string[] = []
     forEachCreatureOnField(opponent, (card) => {
       if ((card.cardData as any).isFlying && !card.isGrounded) {
         card.isGrounded = true
-        logs.push(addLog(newState, `Chmurnik: ${card.cardData.name} traci latanie (uziemiony)!`, 'effect'))
+        grounded.push(card.cardData.name)
       }
     })
-    return effectResult(newState, logs)
+    if (grounded.length === 0) return effectResult(newState)
+    const log = addLog(newState, `Chmurnik odebrał wrogom zdolność latania!`, 'effect')
+    return effectResult(newState, [log])
   },
 })
 
-// ✅ CHOWANIEC — Darmowa, opcjonalna intercepcja ataku na sojusznika
-// Gracz klika Chowańca gdy wróg deklaruje atak na inną jednostkę → Chowaniec przejmuje atak
-// CombatResolver sprawdza flagę przed wykonaniem ataku
+// ✅ CHOWANIEC — Czujność: intercepcja ataku na sojusznika (gracz decyduje modalem)
+// TurnManager.performAttack() wykrywa Chowańca → pendingInteraction → GameEngine.resolvePendingInteraction()
 registerEffect({
   id: 'chowaniec_intercept',
   name: 'Poświęcenie Chowańca',
-  description: '[AURA] Darmowe i opcjonalne: może przyjąć na siebie atak wymierzony w dowolnego sojusznika.',
+  description: '[CZUJNOŚĆ] Gdy sojusznik jest atakowany, Chowaniec może przyjąć walkę na siebie.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {
-    // Intercepcja: gracz aktywuje przez UI → ustawia flagę interceptTarget w metadanych Chowańca
-    // CombatResolver sprawdza: jeśli target.metadata.interceptedBy = chowaniecId → przekieruj atak
+    // Intercepcja obsługiwana przez TurnManager.performAttack() + pendingInteraction
     return effectResult(cloneGameState(ctx.state))
   },
 })
@@ -400,34 +413,51 @@ registerEffect({
   execute: (ctx) => effectResult(cloneGameState(ctx.state), [], false, false),
 })
 
-// ✅ DZIEWIĄTKO — Zraniona istota z ≤3 DEF: zapłać PS lub zginie
+// ✅ DZIEWIĄTKO — AKCJA kamikaze: wybierz wroga → atak dystansowy → trucizna/paraliż → Dziewiątko ginie
 registerEffect({
   id: 'dziewiatko_deathmark',
   name: 'Ukąszenie Dziewiątka',
-  description: '[CZUJNOŚĆ] Gdy zrani istotę i pozostanie jej 3 lub mniej obrony, rywal musi zapłacić 1 PS — inaczej ta istota zginie.',
-  trigger: EffectTrigger.ON_ATTACK,
+  description: '[AKCJA] Kamikaze: Wybierz wroga, zaatakuj dystansowo za swój ATK, ginie — wybierz Truciznę (-3 DEF/turę) lub Paraliż (3 tury).',
+  trigger: [EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.REACTION,
+  activatable: true,
+  activationCost: 0,
+  activationCooldown: 'once',
+  activationRequiresTarget: true,
+  activationTargetFilter: (target, source) => target.owner !== source.owner && target.currentStats.defense > 0,
   execute: (ctx) => {
-    const { state, target } = ctx
+    const { state, source, target } = ctx
     if (!target) return effectResult(cloneGameState(state))
 
     const newState = cloneGameState(state)
+    const sourceInState = findCardInState(newState, source.instanceId)
     const targetInState = findCardInState(newState, target.instanceId)
+    if (!sourceInState || !targetInState) return effectResult(newState)
 
-    if (targetInState && targetInState.currentStats.defense <= 3 && targetInState.currentStats.defense > 0) {
-      const opponent = newState.players[targetInState.owner]
-      if (opponent.glory >= 1) {
-        // AI/gracz może zapłacić — oznaczamy że musi zdecydować
-        targetInState.metadata.dziewiatkoDeathMark = true
-        const log = addLog(state, `${ctx.source.cardData.name}: "${target.cardData.name}" ma śmiertelną ranę! Rywal musi zapłacić 1 PS.`, 'effect')
-        return effectResult(newState, [log])
-      } else {
-        // Brak PS — karta ginie
-        const log = addLog(state, `${ctx.source.cardData.name}: "${target.cardData.name}" ginie — rywal nie ma PS!`, 'death')
-        return effectResult(newState, [log])
+    const dmg = sourceInState.currentStats.attack
+    const logs: LogEntry[] = []
+
+    // Zadaj obrażenia celowi (atak dystansowy)
+    targetInState.currentStats.defense -= dmg
+    logs.push(addLog(newState, `Dziewiątko żądli ${target.cardData.name} za ${dmg} obrażeń! (DEF: ${targetInState.currentStats.defense + dmg} → ${targetInState.currentStats.defense})`, 'damage'))
+
+    // Dziewiątko ginie (kamikaze)
+    sourceInState.currentStats.defense = 0
+    logs.push(addLog(newState, `Dziewiątko poświęca się — śmiertelne żądło!`, 'death'))
+
+    // Jeśli cel przeżył — gracz wybiera truciznę
+    if (targetInState.currentStats.defense > 0) {
+      newState.pendingInteraction = {
+        type: 'dziewiatko_poison',
+        sourceInstanceId: source.instanceId,
+        respondingPlayer: source.owner,
+        targetInstanceId: target.instanceId,
+        availableChoices: ['trucizna', 'paraliz'],
       }
+      logs.push(addLog(newState, `Wybierz efekt trucizny na ${target.cardData.name}!`, 'effect'))
     }
-    return effectResult(newState)
+
+    return effectResult(newState, logs)
   },
 })
 
