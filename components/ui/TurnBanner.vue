@@ -9,7 +9,7 @@ const ui = useUIStore()
 const showBanner = ref(false)
 const bannerText = ref('')
 const bannerSubText = ref('')
-const bannerType = ref<'player' | 'ai' | 'season' | 'plunder' | 'timeout'>('player')
+const bannerType = ref<'player' | 'ai' | 'season' | 'plunder' | 'timeout' | 'effect' | 'steal' | 'death'>('player')
 let bannerTimer: ReturnType<typeof setTimeout> | null = null
 const bannerQueue: Array<{ text: string; type: typeof bannerType.value; duration: number; sub?: string }> = []
 let _processingQueue = false
@@ -43,6 +43,14 @@ function processQueue() {
 onUnmounted(() => {
   if (bannerTimer) clearTimeout(bannerTimer)
   bannerQueue.length = 0
+})
+
+// Consume banners queued by uiStore (from gameStore or other sources)
+watch(() => ui.pendingBanners.length, () => {
+  while (ui.pendingBanners.length > 0) {
+    const b = ui.pendingBanners.shift()!
+    queueBanner(b.text, b.type as typeof bannerType.value, b.duration, b.sub)
+  }
 })
 
 const seasonNames: Record<string, string> = {
@@ -166,6 +174,30 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
   background: rgba(239, 68, 68, 0.2);
   border: 2px solid rgba(239, 68, 68, 0.5);
   box-shadow: 0 0 60px rgba(239, 68, 68, 0.35);
+  text-align: center;
+}
+
+.banner-effect {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.18);
+  border: 2px solid rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 50px rgba(139, 92, 246, 0.25);
+  text-align: center;
+}
+
+.banner-steal {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.18);
+  border: 2px solid rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 50px rgba(251, 191, 36, 0.25);
+  text-align: center;
+}
+
+.banner-death {
+  color: #94a3b8;
+  background: rgba(100, 116, 139, 0.2);
+  border: 2px solid rgba(100, 116, 139, 0.4);
+  box-shadow: 0 0 50px rgba(100, 116, 139, 0.2);
   text-align: center;
 }
 

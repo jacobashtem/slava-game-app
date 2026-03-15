@@ -513,7 +513,7 @@ defineExpose({ play, gpuReady, gpuError })
 }
 .elemental-three-canvas,
 .elemental-spark-canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; background: transparent;
 }
 .elemental-three-canvas { z-index: 10; }
 .elemental-spark-canvas { z-index: 12; }

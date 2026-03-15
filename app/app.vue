@@ -27,8 +27,8 @@
   --bg-board: #04030a;
 
   --perun: #d4a843;
-  --zyvi: #4a9e4a;
-  --undead: #8b5fc7;
+  --zyvi: #3b82f6;
+  --undead: #4a9e4a;
   --weles: #c44040;
 
   --attack-color: #fb923c;

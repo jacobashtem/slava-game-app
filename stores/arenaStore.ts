@@ -51,6 +51,8 @@ interface ScenarioConfig {
   playerGraveyard?: string[]
   /** Rany sojuszników: effectId → ile obrażeń zadać (DEF -= wartość) */
   woundAllies?: Record<string, number>
+  /** Testowana karta startuje na polu (L1) zamiast w ręce */
+  startOnField?: boolean
 }
 
 const SCENARIO_MAP: Record<string, ScenarioConfig> = {
@@ -59,7 +61,7 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     hint: 'Aitwar przy wejściu kradnie kartę z ręki AI. ⚡ = ponowna kradzież za 1 PS (raz na grę). AI ma pełną rękę.',
   },
   'alkonost_redirect_counterattack': {
-    hint: 'Alkonost ⚡ Hipnoza: zahipnotyzuj wroga i każ mu bić sojusznika. L1=Wręcz+Żywioł, L2=Dystans, L3=Magia. Bugaj (0 ATK) = edge case.',
+    hint: 'Alkonost 👁 Hipnoza: gdy Alkonost zaatakuje wroga, cel zostaje zahipnotyzowany i bije sojusznika. L1=Wręcz+Żywioł, L2=Dystans, L3=Magia.',
     allyL1: ['dobroochoczy_no_counter'],
     aiL1: ['gryf_double_dmg_on_play_turn', 'leszy_post_attack_defend', 'bugaj_def_to_atk'],
     aiL2: ['chaly_attack_locations', 'guslarka_bonus_vs_demon'],
@@ -77,11 +79,19 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     },
   },
   'biali_ludzie_wound_disarm': {
-    hint: 'Biali Ludzie: atak rani i rozbrajia cel (nie może atakować przez rundę). Zaatakuj wroga.',
+    hint: 'Biali Ludzie: zraniona istota traci zdolność ataku na 2 rundy. Efekt odpala się PO zadaniu obrażeń.',
+  },
+  'dobroochoczy_no_counter': {
+    hint: 'Dobroochoczy: Aura Pokoju — dopóki jest na polu, ŻADNA istota nie kontratakuje. Masz drugiego w ręce. Zabij pierwszego by sprawdzić, czy kontrataki wrócą.',
+    startOnField: true,
+    allyL1: ['gryf_double_dmg_on_play_turn', 'leszy_post_attack_defend'],
+    aiL1: ['bugaj_def_to_atk', 'blotnik_taunt'],
+    handExtras: ['dobroochoczy_no_counter', 'rusalka_mirror_attack', 'kania_chain_kill'],
   },
   'brzegina_shield_for_gold': {
-    hint: 'Brzegina: gdy sojusznik traci HP, możesz zapłacić 1 PS by zablokować obrażenia.',
-    allyL1: ['dobroochoczy_no_counter', 'blotnik_taunt'],
+    hint: 'Brzegina: wystaw ją + sojusznika, daj PAS. AI zaatakuje — powinieneś dostać pytanie o anulowanie ataku. Pierwsze użycie gratis, kolejne za 1 PS.',
+    allyL1: ['bugaj_def_to_atk', 'dobroochoczy_no_counter'],
+    aiL1: ['gryf_double_dmg_on_play_turn', 'leszy_post_attack_defend'],
   },
   'bugaj_def_to_atk': {
     hint: 'Bugaj: gdy otrzyma obrażenia, traci DEF ale zyskuje tyle samo ATK. Postaw go jako cel.',
@@ -100,10 +110,6 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
   'chowaniec_intercept': {
     hint: 'Chowaniec: gdy wróg atakuje sojusznika, Chowaniec może zastąpić go jako cel (darmowo).',
     allyL1: ['chowaniec_intercept', 'dobroochoczy_no_counter'],
-  },
-  'dobroochoczy_no_counter': {
-    hint: 'Dobroochoczy: nigdy nie kontratakuje. Zaatakuj nim wroga — zero odpowiedzi.',
-    allyL1: ['dobroochoczy_no_counter'],
   },
   'dziewiatko_deathmark': {
     hint: 'Dziewiątko: gdy cel osiągnie DEF ≤ 3 po ataku, przeciwnik musi zapłacić 1 PS lub karta ginie. Wróg L1 ma 2 HP.',
@@ -551,19 +557,26 @@ export const useArenaStore = defineStore('arena', () => {
 
     const allCreatures = _factory.getAllCreatures()
 
-    // ===== Testowana karta w ręce gracza =====
+    // ===== Testowana karta: na polu (startOnField) lub w ręce =====
     const selectedInstance = entry.cardType === 'creature'
       ? createCreatureInstance(entry.data as CreatureCardData, 'player1')
       : createAdventureInstance(entry.data as AdventureCardData, 'player1')
     selectedInstance.isRevealed = true
-    freshState.players.player1.hand.push(selectedInstance)
+    if (scenario?.startOnField && entry.cardType === 'creature') {
+      selectedInstance.line = BattleLine.FRONT
+      selectedInstance.roundEnteredPlay = freshState.roundNumber
+      selectedInstance.metadata.slotPosition = 0
+      freshState.players.player1.field.lines[BattleLine.FRONT].push(selectedInstance)
+    } else {
+      freshState.players.player1.hand.push(selectedInstance)
+    }
 
     // ===== Extra karty w ręce gracza =====
     const allAdventures = _factory.getAllAdventures()
     const defaultHandExtras = ['blotnik_taunt', 'rusalka_mirror_attack', 'alkonost_redirect_counterattack']
     const handExtras = scenario?.handExtras ?? defaultHandExtras
     for (const hId of handExtras) {
-      if (hId === entry.effectId) continue
+      if (hId === entry.effectId && !scenario?.startOnField) continue
       // Szukaj w istotach i przygodach
       const hCreature = allCreatures.find(c => c.effectId === hId)
       if (hCreature) {

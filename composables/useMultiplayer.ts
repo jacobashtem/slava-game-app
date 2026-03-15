@@ -3,7 +3,7 @@
  * Connects to Nitro WS at /api/ws.
  */
 
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, getCurrentInstance } from 'vue'
 import type { GameState, PlayerSide } from '../game-engine/types'
 import type { ServerMessage, ClientMessage, RoomSettings } from '../server/utils/RoomManager'
 
@@ -267,12 +267,14 @@ export function useMultiplayer() {
   }
 
   // Cleanup on component unmount (don't disconnect — other components may use it)
-  onUnmounted(() => {
-    for (const cb of _componentListeners) {
-      listeners.delete(cb)
-    }
-    _componentListeners.clear()
-  })
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      for (const cb of _componentListeners) {
+        listeners.delete(cb)
+      }
+      _componentListeners.clear()
+    })
+  }
 
   return {
     // State

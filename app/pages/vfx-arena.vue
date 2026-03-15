@@ -254,7 +254,7 @@ function preset(srcSide: Side, srcLine: Line, tgtSide: Side, tgtLine: Line, type
           <Icon icon="game-icons:return-arrow" />
         </NuxtLink>
         <div class="va-title">
-          <Icon icon="game-icons:crossed-swords" class="va-title-icon" />
+          <Icon icon="game-icons:battle-axe" class="va-title-icon" />
           <span>VFX Arena</span>
         </div>
       </div>

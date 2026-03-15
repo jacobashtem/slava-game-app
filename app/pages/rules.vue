@@ -167,7 +167,7 @@ function toggle(id: string) {
 
       <!-- ATTACK TYPES -->
       <section id="attacks" class="rule-section">
-        <h2><Icon icon="game-icons:crossed-swords" /> Typy ataku</h2>
+        <h2><Icon icon="game-icons:battle-axe" /> Typy ataku</h2>
         <p>Każda istota ma jeden z czterech typów ataku, który określa jej zasięg:</p>
 
         <div class="atk-grid">

@@ -198,8 +198,8 @@ function onCardClick(card: CardInstance) {
       }
       const isKikimora = (card.cardData as any).effectId === 'kikimora_free_attack'
       if (!isKikimora && !((card.metadata.freeAttacksLeft as number) > 0)) {
-        const p1Creatures = game.state ? getAllCreaturesOnField(game.state, 'player1') : []
-        const normalAttacksUsed = p1Creatures
+        const myCreatures = game.state ? getAllCreaturesOnField(game.state, game.mySide) : []
+        const normalAttacksUsed = myCreatures
           .filter(c => (c.cardData as any).effectId !== 'kikimora_free_attack')
           .filter(c => {
             if ((c.cardData as any).effectId === 'lesnica_double_attack') {
@@ -207,7 +207,7 @@ function onCardClick(card: CardInstance) {
             }
             return c.hasAttackedThisTurn
           }).length
-        const hasChlop = p1Creatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
+        const hasChlop = myCreatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
         const maxAttacks = hasChlop ? 2 : 1
         if (normalAttacksUsed >= maxAttacks) {
           ui.showPlayLimitToast(`Możesz wykonać tylko ${maxAttacks} atak${maxAttacks > 1 ? 'i' : ''} na turę.`)
@@ -256,17 +256,19 @@ function onActivateEffect(card: CardInstance) {
 
 function getValidTargets(attacker: CardInstance): string[] {
   if (!game.state) return []
-  return getAllCreaturesOnField(game.state, 'player2')
+  const oppSide = game.mySide === 'player1' ? 'player2' : 'player1'
+  return getAllCreaturesOnField(game.state, oppSide)
     .filter(e => canAttack(game.state!, attacker, e).valid)
     .map(e => e.instanceId)
 }
 
 function getAllTargets(): string[] {
   if (!game.state) return []
-  return getAllCreaturesOnField(game.state, 'player2')
+  const oppSide = game.mySide === 'player1' ? 'player2' : 'player1'
+  return getAllCreaturesOnField(game.state, oppSide)
     .filter(e => {
       const check = canAttack(game.state!,
-        getAllCreaturesOnField(game.state!, 'player1').find(c => c.instanceId === ui.attackingCardId)!,
+        getAllCreaturesOnField(game.state!, game.mySide).find(c => c.instanceId === ui.attackingCardId)!,
         e)
       return check.valid || check.softFail
     })
@@ -550,6 +552,7 @@ function onLineDrop(e: DragEvent) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   flex: 1;
   width: 100%;
@@ -558,8 +561,8 @@ function onLineDrop(e: DragEvent) {
 
 .card-wrap {
   position: relative;
-  width: 110px;
-  min-height: 154px;
+  width: 130px;
+  min-height: 175px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -570,8 +573,8 @@ function onLineDrop(e: DragEvent) {
 
 /* ===== EMPTY SLOTS — uniform with card-wrap sizing ===== */
 .slot-empty {
-  width: 86px;
-  height: 120px;
+  width: 100px;
+  height: 140px;
   border-radius: 6px;
   border: 1px solid rgba(200, 168, 78, 0.08);
   background:
@@ -681,14 +684,14 @@ function onLineDrop(e: DragEvent) {
   .cards-col::-webkit-scrollbar { display: none; }
 
   .card-wrap {
-    width: 58px;
-    min-height: 78px;
+    width: 66px;
+    min-height: 90px;
     flex-shrink: 0;
   }
 
   .slot-empty {
-    width: 46px;
-    height: 62px;
+    width: 52px;
+    height: 72px;
     border-radius: 3px;
   }
   .slot-rune { font-size: 12px; }

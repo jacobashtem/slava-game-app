@@ -109,16 +109,11 @@ watch(volume, (v) => {
 })
 
 onMounted(() => {
-  // Start with a random track
+  // Prepare a random track but don't autoplay — user clicks ▶ to start
   const startIdx = pickRandomUnplayed()
   currentTrack.value = startIdx
   playedIndices.value.add(startIdx)
   loadTrack(startIdx)
-
-  // Autoplay — Howler handles audio unlock automatically on user gesture
-  setTimeout(() => {
-    currentHowl?.play()
-  }, 300)
 })
 
 onUnmounted(() => {

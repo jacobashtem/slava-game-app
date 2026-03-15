@@ -158,11 +158,13 @@ export function getOpponent(room: Room, peerId: string): RoomPlayer | undefined 
 
 export function startGame(room: Room): GameState {
   const engine = new GameEngine()
+  engine.startGame(room.gameMode)
 
-  // Mark both players as human
-  const state = engine.startGame(room.gameMode)
-  state.players.player1.isAI = false
-  state.players.player2.isAI = false
+  // Mark both players as human on the engine's internal state
+  const s = engine.getState()
+  s.players.player1.isAI = false
+  s.players.player2.isAI = false
+  engine.loadState(s)
 
   room.engine = engine
   room.status = 'playing'
@@ -210,49 +212,33 @@ export function executeAction(
 
     switch (message.type) {
       case 'play_creature':
-        newState = side === 'player1'
-          ? engine.playerPlayCreature(message.cardInstanceId, message.targetLine, message.slotIndex)
-          : engine.aiPlayCreature(message.cardInstanceId, message.targetLine)
+        newState = engine.sidePlayCreature(side, message.cardInstanceId, message.targetLine, message.slotIndex)
         break
       case 'play_adventure':
-        newState = side === 'player1'
-          ? engine.playerPlayAdventure(message.cardInstanceId, message.targetInstanceId, message.useEnhanced)
-          : engine.aiPlayAdventure(message.cardInstanceId, message.targetInstanceId, message.useEnhanced)
+        newState = engine.sidePlayAdventure(side, message.cardInstanceId, message.targetInstanceId, message.useEnhanced)
         break
       case 'attack':
-        newState = side === 'player1'
-          ? engine.playerAttack(message.attackerInstanceId, message.defenderInstanceId)
-          : engine.aiAttack(message.attackerInstanceId, message.defenderInstanceId)
+        newState = engine.sideAttack(side, message.attackerInstanceId, message.defenderInstanceId)
         break
       case 'change_position': {
         const pos = message.newPosition === 'attack' ? CardPosition.ATTACK : CardPosition.DEFENSE
-        newState = side === 'player1'
-          ? engine.playerChangePosition(message.cardInstanceId, pos)
-          : engine.aiChangePosition(message.cardInstanceId, pos)
+        newState = engine.sideChangePosition(side, message.cardInstanceId, pos)
         break
       }
       case 'move_creature_line':
-        newState = side === 'player1'
-          ? engine.playerMoveCreatureLine(message.cardInstanceId, message.targetLine, message.slotIndex)
-          : engine.playerMoveCreatureLine(message.cardInstanceId, message.targetLine, message.slotIndex)
+        newState = engine.sideMoveCreatureLine(side, message.cardInstanceId, message.targetLine, message.slotIndex)
         break
       case 'activate_effect':
-        newState = side === 'player1'
-          ? engine.playerActivateEffect(message.cardInstanceId, message.targetInstanceId)
-          : engine.aiActivateEffect(message.cardInstanceId, message.targetInstanceId)
+        newState = engine.sideActivateEffect(side, message.cardInstanceId, message.targetInstanceId)
         break
       case 'draw_card':
-        newState = engine.playerDrawCard()
+        newState = engine.sideDrawCard(side)
         break
       case 'advance_phase':
-        newState = side === 'player1'
-          ? engine.playerAdvancePhase()
-          : engine.aiAdvanceToCombat()
+        newState = engine.sideAdvancePhase(side)
         break
       case 'end_turn':
-        newState = side === 'player1'
-          ? engine.playerEndTurn()
-          : engine.aiEndTurn()
+        newState = engine.sideEndTurn(side)
         break
       case 'confirm_on_play':
         newState = engine.confirmOnPlay()
@@ -269,22 +255,16 @@ export function executeAction(
         break
       // Slava actions
       case 'invoke_god':
-        newState = side === 'player1'
-          ? engine.playerInvokeGod(message.godId, message.bid)
-          : engine.aiInvokeGod(message.godId, message.bid)
+        newState = engine.sideInvokeGod(side, message.godId, message.bid)
         break
       case 'activate_favor':
-        newState = side === 'player1'
-          ? engine.playerActivateFavor(message.targetInstanceId)
-          : engine.aiActivateFavor(message.targetInstanceId)
+        newState = engine.sideActivateFavor(side, message.targetInstanceId)
         break
       case 'claim_holiday':
-        newState = engine.playerClaimHoliday()
+        newState = engine.sideClaimHoliday(side)
         break
       case 'plunder':
-        newState = side === 'player1'
-          ? engine.playerPlunder()
-          : engine.aiPlunder()
+        newState = engine.sidePlunder(side)
         break
       default:
         return { error: `Nieznana akcja: ${(message as any).type}` }

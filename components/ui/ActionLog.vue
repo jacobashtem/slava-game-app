@@ -25,7 +25,7 @@ watch(entries, () => {
 })
 
 const typeConfig: Record<string, { icon: string; color: string }> = {
-  attack:  { icon: 'game-icons:crossed-swords', color: '#fb923c' },
+  attack:  { icon: 'game-icons:battle-axe', color: '#fb923c' },
   combat:  { icon: 'game-icons:sword-clash',    color: '#fb923c' },
   death:   { icon: 'game-icons:skull-crossed-bones', color: '#ef4444' },
   play:    { icon: 'game-icons:card-play',       color: '#4ade80' },

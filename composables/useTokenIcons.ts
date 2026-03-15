@@ -5,14 +5,13 @@
  * {ATK} resolves to the card's own attack type icon (context-sensitive).
  */
 
-import domainImg1 from '~/assets/cards/domain-1.png'
-import domainImg2 from '~/assets/cards/domain-2.png'
-import domainImg3 from '~/assets/cards/domain-3.png'
-import domainImg4 from '~/assets/cards/domain-4.png'
-import attackTypeImg1 from '~/assets/cards/attackType1.png'
-import attackTypeImg2 from '~/assets/cards/attackType2.png'
-import attackTypeImg3 from '~/assets/cards/attackType3.png'
-import flyingImg from '~/assets/cards/isFlying.png'
+import domainImg1 from '~/assets/cards/domain-1.svg'
+import domainImg2 from '~/assets/cards/domain-2.svg'
+import domainImg3 from '~/assets/cards/domain-3.svg'
+import domainImg4 from '~/assets/cards/domain-4.svg'
+import attackTypeImg1 from '~/assets/cards/attackType1.svg'
+import attackTypeImg2 from '~/assets/cards/attackType2.svg'
+import attackTypeImg3 from '~/assets/cards/attackType3.svg'
 
 export interface TokenSegment {
   type: 'text' | 'icon'
@@ -33,14 +32,15 @@ const attackTypeImgMap: Record<number, string> = {
 // Token → icon mapping (ATK handled separately based on card context)
 const tokenMap: Record<string, { img?: string; iconify?: string; color: string; label: string }> = {
   DEF:       { iconify: 'game-icons:shield', color: '#3b82f6', label: 'Obrona' },
-  DMG:       { img: attackTypeImg1, color: '#ef4444', label: 'Obrażenia' },
-  FLY:       { img: flyingImg, color: '#a78bfa', label: 'Lot' },
+  DMG:       { iconify: 'game-icons:battle-axe', color: '#ef4444', label: 'Obrażenia' },
+  FLY:       { iconify: 'game-icons:liberty-wing', color: '#ffffff', label: 'Lot' },
   GOLD:      { iconify: 'game-icons:two-coins', color: '#eab308', label: 'Punkty Sławy' },
   POISON:    { iconify: 'game-icons:poison-bottle', color: '#22c55e', label: 'Trucizna' },
   SILENCE:   { iconify: 'game-icons:silenced', color: '#6b7280', label: 'Uciszenie' },
-  MELEE:     { img: attackTypeImg1, color: '#ef4444', label: 'Wręcz' },
-  ELEMENTAL: { img: attackTypeImg2, color: '#f97316', label: 'Żywioł' },
-  MAGIC:     { img: attackTypeImg3, color: '#a855f7', label: 'Magia' },
+  COMBAT:    { iconify: 'game-icons:sword-clash', color: '#fbbf24', label: 'Atak' },
+  MELEE:     { iconify: 'game-icons:battle-axe', color: '#ef4444', label: 'Wręcz' },
+  ELEMENTAL: { img: attackTypeImg1, color: '#f97316', label: 'Żywioł' },
+  MAGIC:     { img: attackTypeImg2, color: '#fb923c', label: 'Magia' },
   RANGED:    { iconify: 'game-icons:bow-arrow', color: '#22d3ee', label: 'Dystans' },
   DEMON:     { img: domainImg4, color: '#a855f7', label: 'Demony' },
   UNDEAD:    { img: domainImg3, color: '#6b7280', label: 'Nieumarli' },

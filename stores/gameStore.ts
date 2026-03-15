@@ -401,7 +401,7 @@ export const useGameStore = defineStore('game', () => {
   const winner = computed(() => state.value?.winner ?? null)
   const actionLog = computed(() => state.value?.actionLog ?? [])
   const roundNumber = computed(() => state.value?.roundNumber ?? 1)
-  const ROUNDS_PER_SEASON = 2  // season changes every 2 rounds (cycles: spring→summer→autumn→winter→spring...)
+  const ROUNDS_PER_SEASON = 12  // season changes every 12 rounds (jak w Sława)
   const season = computed<'spring' | 'summer' | 'autumn' | 'winter'>(() => {
     // Sława: sezon z slavaData
     if (state.value?.gameMode === 'slava' && state.value.slavaData) {
@@ -641,8 +641,8 @@ export const useGameStore = defineStore('game', () => {
       setTimeout(() => {
         safeUpdateState(newState)
 
-        // Auto-resolve AI interaction
-        if (newState.pendingInteraction?.respondingPlayer === 'player2') {
+        // Auto-resolve AI interaction (single-player only)
+        if (!isMultiplayerMode.value && newState.pendingInteraction?.respondingPlayer === opponentSide.value) {
           autoResolveAIInteraction()
         }
 
@@ -670,6 +670,8 @@ export const useGameStore = defineStore('game', () => {
       const prevGrave2 = state.value?.players.player2.graveyard.length ?? 0
       const wasHypnosis = ui.mode === 'hypnosis' && ui.hypnosisPhase === 2
       if (wasHypnosis) ui.clearHypnosis()
+      const wasBrzegina = state.value?.pendingInteraction?.type === 'brzegina_shield'
+      const brzeginaTargetId = state.value?.pendingInteraction?.targetInstanceId
       const newState = engine.resolvePendingInteraction(choice)
 
       // Wymuszony atak (hipnoza) — emituj VFX przed aktualizacją stanu
@@ -686,6 +688,10 @@ export const useGameStore = defineStore('game', () => {
         await delay(vfxMs)
       }
 
+      // Brzegina: flash ODPORNY na osłoniętej karcie
+      if (wasBrzegina && choice === 'yes' && brzeginaTargetId) {
+        ui.flashBlock(brzeginaTargetId)
+      }
       state.value = newState
       checkHypnosisMode(newState)
       // Animacje śmierci jeśli ktoś zginął (np. sojusznik trafiony przez Alkonosta)
@@ -697,7 +703,7 @@ export const useGameStore = defineStore('game', () => {
         runAITurn()
       }
       // Auto-end turn po interakcji bojowej (Brzegina/Kościej) — gracz w fazie COMBAT
-      else if (state.value && state.value.currentTurn === 'player1' && state.value.currentPhase === GamePhase.COMBAT && !state.value.pendingInteraction && !winner.value) {
+      else if (state.value && state.value.currentTurn === mySide.value && state.value.currentPhase === GamePhase.COMBAT && !state.value.pendingInteraction && !winner.value) {
         await delay(400)
         endTurn()
       }
@@ -719,7 +725,7 @@ export const useGameStore = defineStore('game', () => {
 
   function requestActivateEffect(cardInstanceId: string) {
     if (!isPlayerTurn.value) return
-    const card = findCardOnField('player1', cardInstanceId)
+    const card = findCardOnField(mySide.value, cardInstanceId)
     if (!card) return
 
     // Darmowa aktywacja oczekująca (ON_PLAY pominięty) — wykonaj bez opłaty
@@ -755,14 +761,8 @@ export const useGameStore = defineStore('game', () => {
         return
       }
 
-      // Alkonost — hipnoza na planszy (faza 1: wybierz wroga)
-      const effectId = (card.cardData as any).effectId
-      if (effectId === 'alkonost_redirect_counterattack') {
-        ui.enterHypnosisPhase1(cardInstanceId, allTargets)
-        return
-      }
-
       // Jeśli jest koszt, najpierw potwierdź koszt
+      const effectId = (card.cardData as any).effectId
       if (cost > 0) {
         ui.pendingActivation = {
           cardInstanceId,
@@ -940,10 +940,51 @@ export const useGameStore = defineStore('game', () => {
     aiTurnSummary.value = []
     const vfx = useVFXOrchestrator()
 
-    // Arena mode: AI instantly ends its turn (just draw phase, no actions)
+    // Arena mode: AI skips card play but still attacks, then ends turn
     if (isArenaMode.value) {
-      await delay(200)
-      try { state.value = engine.aiEndTurn() } catch { try { state.value = engine.forcePlayerTurn() } catch {} }
+      await delay(400)
+      try {
+        // Przejdź do combat i pozwól AI atakować
+        if (engine.getCurrentPhase() === GamePhase.PLAY) {
+          state.value = engine.aiAdvanceToCombat()
+        }
+        if (engine.getCurrentPhase() === GamePhase.COMBAT) {
+          const aiDecisions = aiPlayer.planTurn(engine.getState())
+          for (const d of aiDecisions) {
+            if (d.type === 'change_position' && d.cardInstanceId) {
+              try { state.value = engine.aiChangePosition(d.cardInstanceId, CardPosition.ATTACK) } catch {}
+              continue
+            }
+            if (d.type !== 'attack') continue
+            if (!d.cardInstanceId || !d.targetInstanceId) continue
+            if (!state.value || winner.value) break
+            if (state.value.pendingInteraction?.respondingPlayer === 'player1') break
+            await delay(600)
+            try {
+              const newState = engine.aiAttack(d.cardInstanceId, d.targetInstanceId)
+              const combatResult = engine.lastCombatResult
+              if (state.value && combatResult) {
+                revealCombatants(state.value, combatResult)
+                state.value = { ...state.value }
+              }
+              emitCombatVFX(vfx, combatResult, state)
+              engine.lastCombatResult = null
+              const vfxMs = getCombatVFXDuration(combatResult)
+              if (vfxMs > 0) await delay(vfxMs)
+              state.value = newState
+            } catch (e) {
+              if (import.meta.dev) console.warn('[Arena AI] attack error:', e)
+            }
+          }
+        }
+        // Jeśli jest pendingInteraction dla gracza (np. Brzegina) — nie kończ tury
+        if (!state.value?.pendingInteraction || state.value.pendingInteraction.respondingPlayer !== 'player1') {
+          try { state.value = engine.aiEndTurn() } catch { try { state.value = engine.forcePlayerTurn() } catch {} }
+        }
+      } catch (e) {
+        if (import.meta.dev) console.warn('[Arena AI] error:', e)
+        try { state.value = engine.aiEndTurn() } catch { try { state.value = engine.forcePlayerTurn() } catch {} }
+      }
       isAIThinking.value = false
       return
     }
@@ -1090,7 +1131,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // Force end if still AI's turn
-    if (state.value && state.value.currentTurn !== 'player1' && !winner.value) {
+    if (state.value && state.value.currentTurn !== mySide.value && !winner.value) {
       try { state.value = engine.aiEndTurn() } catch {
         try { state.value = engine.forcePlayerTurn() } catch {}
       }
@@ -1119,7 +1160,7 @@ export const useGameStore = defineStore('game', () => {
   function autoResolveAIInteraction(): boolean {
     const interaction = state.value?.pendingInteraction
     if (!interaction) return false
-    if (interaction.respondingPlayer === 'player1') return false
+    if (interaction.respondingPlayer === mySide.value) return false
 
     let choice: string | undefined
     if (interaction.availableTargetIds?.length) {
@@ -1144,13 +1185,13 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function getHand(): CardInstance[] {
-    return state.value?.players.player1.hand ?? []
+    return state.value?.players[mySide.value].hand ?? []
   }
 
   function canPlayerAttack(attackerId: string, defenderId: string): boolean {
     if (!state.value) return false
-    const attacker = findCardOnField('player1', attackerId)
-    const defender = findCardOnField('player2', defenderId)
+    const attacker = findCardOnField(mySide.value, attackerId)
+    const defender = findCardOnField(opponentSide.value, defenderId)
     if (!attacker || !defender) return false
     try {
       return canAttack(state.value, attacker, defender).valid
@@ -1226,7 +1267,7 @@ export const useGameStore = defineStore('game', () => {
   function checkHypnosisMode(gs: GameState) {
     const ui = useUIStore()
     const pi = gs.pendingInteraction
-    if (pi?.type === 'alkonost_target' && pi.respondingPlayer === 'player1') {
+    if (pi?.type === 'alkonost_target' && pi.respondingPlayer === mySide.value) {
       ui.enterHypnosisPhase2(pi.attackerInstanceId!, pi.availableTargetIds ?? [])
     } else if (ui.mode === 'hypnosis' && ui.hypnosisPhase === 2) {
       ui.clearHypnosis()
@@ -1238,12 +1279,12 @@ export const useGameStore = defineStore('game', () => {
    * Replikuje logikę z BattleLine.vue + canAttack z LineManager.
    */
   function hasRemainingAttacks(gs: GameState): boolean {
-    const p1Creatures = getAllCreaturesOnField(gs, 'player1')
-    const p2Creatures = getAllCreaturesOnField(gs, 'player2')
-    if (p2Creatures.length === 0) return false
+    const myCreatures = getAllCreaturesOnField(gs, mySide.value)
+    const enemyCreatures = getAllCreaturesOnField(gs, opponentSide.value)
+    if (enemyCreatures.length === 0) return false
 
     // Policz normalnych ataków zużytych (bez Kikimory)
-    const normalAttacksUsed = p1Creatures
+    const normalAttacksUsed = myCreatures
       .filter(c => (c.cardData as any).effectId !== 'kikimora_free_attack')
       .filter(c => {
         if ((c.cardData as any).effectId === 'lesnica_double_attack') {
@@ -1251,10 +1292,10 @@ export const useGameStore = defineStore('game', () => {
         }
         return c.hasAttackedThisTurn
       }).length
-    const hasChlop = p1Creatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
+    const hasChlop = myCreatures.some(c => (c.cardData as any).effectId === 'chlop_extra_attack')
     const maxAttacks = hasChlop ? 2 : 1
 
-    for (const card of p1Creatures) {
+    for (const card of myCreatures) {
       if (card.position !== CardPosition.ATTACK) continue
       if (card.cannotAttack) continue
 
@@ -1268,7 +1309,7 @@ export const useGameStore = defineStore('game', () => {
       if (!isKikimora && !((card.metadata.freeAttacksLeft as number) > 0) && normalAttacksUsed >= maxAttacks) continue
 
       // Czy ta karta ma przynajmniej 1 prawidłowy cel?
-      const hasTarget = p2Creatures.some(e => {
+      const hasTarget = enemyCreatures.some(e => {
         try { return canAttack(gs, card, e).valid } catch { return false }
       })
       if (hasTarget) return true
@@ -1282,22 +1323,26 @@ export const useGameStore = defineStore('game', () => {
     { pattern: /Wykluwa się/i, icon: '🐉', type: 'effect' },
     { pattern: /Bałwan odchodzi.*łask/i, icon: '⛩', type: 'effect', delay: 800, override: 'Bogowie okazali swą łaskę. Dobierasz 3 karty!' },
     { pattern: /Likantropia.*absorb|wchłania/i, icon: '🐺', type: 'effect' },
-    { pattern: /Wskrze(sza|szony|szenie)/i, icon: '💀', type: 'effect' },
     { pattern: /Przejmuje zdolnoś/i, icon: '🧙', type: 'effect' },
     { pattern: /trwale unieruchomion/i, icon: '⚡', type: 'warning' },
-    { pattern: /ŁUPIENIE|ukradł kartę/i, icon: '💰', type: 'warning' },
-    { pattern: /Nowy sezon:/i, icon: '🌿', type: 'info' },
     { pattern: /przechwytuje zaklęcie|Przekierowuje zaklęcie/i, icon: '🛡', type: 'effect' },
-    { pattern: /Paraliż.*całe pole|masowy paraliż/i, icon: '⚡', type: 'warning' },
-    { pattern: /zabija najsłabsz/i, icon: '☠', type: 'warning' },
     { pattern: /przeskakuje do|Teleportacja/i, icon: '✨', type: 'effect' },
     { pattern: /Sobowtór.*kopiuje/i, icon: '👤', type: 'effect' },
     { pattern: /Strela.*przechwyc/i, icon: '⚡', type: 'effect' },
   ]
 
+  // Banner patterns — important events shown as full-screen banners
+  const bannerPatterns: { pattern: RegExp; text?: string; sub?: (msg: string) => string; type: 'effect' | 'steal' | 'death' | 'season'; duration?: number; delay?: number }[] = [
+    { pattern: /ukradł kartę/i, text: 'Kradzież!', sub: (msg) => msg, type: 'steal', duration: 2000 },
+    { pattern: /ŁUPIENIE/i, text: 'Łupienie!', sub: (msg) => msg, type: 'steal', duration: 2000 },
+    { pattern: /Wskrze(sza|szony|szenie)/i, text: 'Wskrzeszenie!', sub: (msg) => msg, type: 'effect', duration: 2000 },
+    { pattern: /Paraliż.*całe pole|masowy paraliż/i, text: 'Paraliż!', sub: (msg) => msg, type: 'effect', duration: 1800 },
+    { pattern: /zabija najsłabsz/i, text: 'Egzekucja!', sub: (msg) => msg, type: 'death', duration: 1800 },
+  ]
+
   // Watch turn change → show info boxes about pending favor / claimable holiday
   watch(() => state.value?.currentTurn, (turn, prevTurn) => {
-    if (turn !== 'player1' || prevTurn === undefined) return
+    if (turn !== mySide.value || prevTurn === undefined) return
     const s = state.value
     if (!s || s.gameMode !== 'slava' || !s.slavaData) return
     const ui = useUIStore()
@@ -1305,7 +1350,7 @@ export const useGameStore = defineStore('game', () => {
     // Pending favor notification
     const favor = s.slavaData.pendingFavor
     if (favor) {
-      if (favor.winnerSide === 'player1') {
+      if (favor.winnerSide === mySide.value) {
         if (favor.wonOnRound < s.roundNumber) {
           ui.showInfoBox(`Łaska ${favor.godName} gotowa! Otwórz Panteon i Złóż Ofiarę.`, '⛩', 'info')
         } else {
@@ -1348,6 +1393,21 @@ export const useGameStore = defineStore('game', () => {
             setTimeout(() => ui.showInfoBox(msg, p.icon, p.type), p.delay)
           } else {
             ui.showInfoBox(msg, p.icon, p.type)
+          }
+          break
+        }
+      }
+
+      // Banner patterns — big centered announcements
+      for (const bp of bannerPatterns) {
+        if (bp.pattern.test(entry.message)) {
+          const text = bp.text ?? entry.message
+          const sub = bp.sub ? bp.sub(entry.message) : ''
+          const show = () => ui.showBanner(text, bp.type, bp.duration ?? 1800, sub)
+          if (bp.delay) {
+            setTimeout(show, bp.delay)
+          } else {
+            show()
           }
           break
         }

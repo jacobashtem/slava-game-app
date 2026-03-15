@@ -11,7 +11,8 @@ const ui = useUIStore()
 
 const hasEnemiesOnField = computed(() => {
   if (!game.state) return false
-  return getAllCreaturesOnField(game.state, 'player2').length > 0
+  const oppSide = game.mySide === 'player1' ? 'player2' : 'player1'
+  return getAllCreaturesOnField(game.state, oppSide).length > 0
 })
 
 const skipCombat = computed(() =>
@@ -53,7 +54,7 @@ function handlePhase() {
 const btnConfig = computed(() => {
   switch (game.currentPhase) {
     case GamePhase.START:  return { label: 'DOBIERZ',  icon: 'game-icons:card-draw', type: 'next' }
-    case GamePhase.DRAW:   return { label: 'DO BOJU',  icon: 'game-icons:crossed-swords', type: 'next' }
+    case GamePhase.DRAW:   return { label: 'DO BOJU',  icon: 'game-icons:battle-axe', type: 'next' }
     case GamePhase.PLAY:
       if (canPlunder.value) return { label: plunderLabel.value,  icon: 'game-icons:treasure-map', type: 'plunder' }
       return skipCombat.value

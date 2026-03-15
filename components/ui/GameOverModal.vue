@@ -176,7 +176,7 @@ function restart() {
             <span class="stat-val">{{ stats.round }} · {{ seasonLabel[stats.season] ?? stats.season }}</span>
           </div>
           <div class="stat-row">
-            <span class="stat-label"><Icon icon="game-icons:crossed-swords" class="stat-icon stat-kill" /> Zabici</span>
+            <span class="stat-label"><Icon icon="game-icons:battle-axe" class="stat-icon stat-kill" /> Zabici</span>
             <span class="stat-val stat-kills">{{ stats.playerKills }}</span>
           </div>
           <div class="stat-row">

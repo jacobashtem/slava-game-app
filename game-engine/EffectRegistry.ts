@@ -155,48 +155,40 @@ registerEffect({
 registerEffect({
   id: 'alkonost_redirect_counterattack',
   name: 'Hipnoza Alkonosty',
-  description: '[AKCJA] Hipnotyzuje wrogą istotę, zmuszając ją do zaatakowania sojusznika.',
-  trigger: [EffectTrigger.ON_ACTIVATE],
-  priority: EffectPriority.MODIFIER,
-  activatable: true,
-  activationCost: 0,
-  activationCooldown: 'per_turn',
-  activationRequiresTarget: true,
-  activationTargetFilter: (card, source, _state) => {
-    // Cel: wroga istota (nie własna)
-    return card.owner !== source.owner && card.currentStats.defense > 0
-  },
+  description: '[NATARCIE] Zaatakowana istota zostaje zahipnotyzowana i atakuje swojego sojusznika.',
+  trigger: EffectTrigger.ON_ATTACK,
+  priority: EffectPriority.REACTION,
   execute: (ctx) => {
     const { state, source, target } = ctx
     if (source.isSilenced) return effectResult(cloneGameState(state))
-    // target = wybrana wroga istota (zhipnotyzowana)
+    // target = zaatakowana wroga istota (zhipnotyzowana)
     if (!target) return effectResult(cloneGameState(state))
 
     const newState = cloneGameState(state)
-    const enemySide = target.owner as PlayerSide
+    const targetSide = target.owner as PlayerSide
 
-    // Zbierz sojuszników zhipnotyzowanej istoty w zasięgu ataku (bez niej samej)
-    const enemyAllies = getAllCreaturesOnField(newState, enemySide)
+    // Zbierz sojuszników zahipnotyzowanej istoty w zasięgu ataku (bez niej samej)
+    const targetAllies = getAllCreaturesOnField(newState, targetSide)
       .filter(c => c.instanceId !== target.instanceId && c.currentStats.defense > 0)
       .filter(c => {
         const check = canAttack(newState, target, c, { forcedByEffect: true })
-        return check.valid || check.softFail // softFail = Odporny (atak dojdzie, ale z efektem blokady)
+        return check.valid || check.softFail
       })
 
-    if (enemyAllies.length === 0) {
+    if (targetAllies.length === 0) {
       const log = addLog(newState, `Alkonost: Hipnoza na ${target.cardData.name}, ale brak sojuszników do zaatakowania.`, 'effect')
       return effectResult(newState, [log])
     }
 
     const alkonostOwner = source.owner as PlayerSide
 
-    // Krok 2: gracz Alkonosta wybiera cel ataku spośród sojuszników wroga
+    // Gracz Alkonosta wybiera cel ataku spośród sojuszników atakującego
     newState.pendingInteraction = {
       type: 'alkonost_target',
       sourceInstanceId: source.instanceId,
       respondingPlayer: alkonostOwner,
       attackerInstanceId: target.instanceId,
-      availableTargetIds: enemyAllies.map(a => a.instanceId),
+      availableTargetIds: targetAllies.map(a => a.instanceId),
     }
 
     const log = addLog(newState,
@@ -274,19 +266,20 @@ registerEffect({
 registerEffect({
   id: 'biali_ludzie_wound_disarm',
   name: 'Zaraza Białych Ludzi',
-  description: '[CZUJNOŚĆ] Każda istota zraniona przez Białych Ludzi traci zdolność ataku.',
-  trigger: EffectTrigger.ON_ATTACK,
+  description: '[ZRANIENIE] Zraniona istota traci zdolność ataku na 2 rundy.',
+  trigger: EffectTrigger.ON_DAMAGE_DEALT,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
-    const { state, target } = ctx
-    if (!target) return effectResult(cloneGameState(state))
+    const { state, source, target, value } = ctx
+    if (source.isSilenced) return effectResult(cloneGameState(state))
+    if (!target || !value || value <= 0) return effectResult(cloneGameState(state))
 
     const newState = cloneGameState(state)
     const targetInState = findCardInState(newState, target.instanceId)
     if (targetInState && !targetInState.isImmune) {
       targetInState.cannotAttack = true
       targetInState.paralyzeRoundsLeft = 2
-      const log = addLog(state, `${ctx.source.cardData.name} paraliżuje "${target.cardData.name}" na 2 rundy!`, 'effect')
+      const log = addLog(newState, `${source.cardData.name}: Zaraza! ${target.cardData.name} traci zdolność ataku na 2 rundy.`, 'effect')
       return effectResult(newState, [log])
     }
     return effectResult(newState)
@@ -297,7 +290,7 @@ registerEffect({
 registerEffect({
   id: 'brzegina_shield_for_gold',
   name: 'Tarcza Brzeginy',
-  description: '[ODWET] Za każdy wydany PS jedna sojusznicza istota nie otrzymuje obrażeń podczas ataku. Pierwsze użycie darmowe.',
+  description: '[CZUJNOŚĆ] Gdy sojusznik jest atakowany, Brzegina może anulować atak. Kolejne użycia kosztują 1 PS.',
   trigger: EffectTrigger.ON_DAMAGE_RECEIVED,
   priority: EffectPriority.PREVENTION,
   canActivate: (ctx) => {
@@ -397,11 +390,11 @@ registerEffect({
   },
 })
 
-// ✅ DOBROOCHOCZY — Nie kontratakuje
+// ✅ DOBROOCHOCZY — Globalny pacyfizm: żadna istota nie kontratakuje
 registerEffect({
   id: 'dobroochoczy_no_counter',
-  name: 'Dobra Wola',
-  description: '[AURA] Nie kontratakuje nigdy — nawet w pozycji obrony.',
+  name: 'Aura Pokoju',
+  description: '[AURA] Dopóki Dobroochoczy jest w polu, żadna istota nie kontratakuje.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state), [], false, false),

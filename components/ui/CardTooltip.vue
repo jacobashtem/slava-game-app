@@ -7,20 +7,22 @@ import type { CardInstance } from '../../game-engine/types'
 import { BattleLine, AttackType, Domain } from '../../game-engine/constants'
 import { parseTokens } from '../../composables/useTokenIcons'
 
-import domainImg1 from '~/assets/cards/domain-1.png'
-import domainImg2 from '~/assets/cards/domain-2.png'
-import domainImg3 from '~/assets/cards/domain-3.png'
-import domainImg4 from '~/assets/cards/domain-4.png'
-import attackTypeImg1 from '~/assets/cards/attackType1.png'
-import attackTypeImg2 from '~/assets/cards/attackType2.png'
-import attackTypeImg3 from '~/assets/cards/attackType3.png'
-import flyingImg from '~/assets/cards/isFlying.png'
+import domainImg1 from '~/assets/cards/domain-1.svg'
+import domainImg2 from '~/assets/cards/domain-2.svg'
+import domainImg3 from '~/assets/cards/domain-3.svg'
+import domainImg4 from '~/assets/cards/domain-4.svg'
+import attackTypeImg1 from '~/assets/cards/attackType1.svg'
+import attackTypeImg2 from '~/assets/cards/attackType2.svg'
+import attackTypeImg2Alt from '~/assets/cards/attackType2-alt.svg'
+import attackTypeImg3 from '~/assets/cards/attackType3.svg'
 import lokacjaImg from '~/assets/cards/lokacja.png'
 import artefaktImg from '~/assets/cards/artefakt.png'
 import defaultAdvImg from '~/assets/cards/creature/117.webp'
 
 const domainImgs: Record<number, string> = { 1: domainImg1, 2: domainImg2, 3: domainImg3, 4: domainImg4 }
-const attackTypeImgs: Record<number, string> = { 1: attackTypeImg1, 2: attackTypeImg2, 3: attackTypeImg3 }
+const attackTypeImgs: Record<number, string> = {}
+// Per-card attack icon overrides (for A/B testing)
+const attackTypeOverrides: Record<number, string> = {}
 const adventureTypeImgs: Record<number, string> = { 1: artefaktImg, 2: lokacjaImg }
 
 const _creatureImgModules = import.meta.glob('../../assets/cards/creature/*.webp', { eager: true, import: 'default' }) as Record<string, string>
@@ -100,19 +102,19 @@ const isCreature = computed(() => data.value?.cardType === 'creature')
 const attackTypeInfo = computed(() => {
   const t = data.value?.attackType as AttackType
   return {
-    [AttackType.MELEE]:     { label: 'Wręcz',   icon: 'game-icons:crossed-swords', color: '#fca5a5' },
-    [AttackType.ELEMENTAL]: { label: 'Żywioł',  icon: 'game-icons:fire-dash',      color: '#fb923c' },
-    [AttackType.MAGIC]:     { label: 'Magia',   icon: 'game-icons:magic-swirl',    color: '#c084fc' },
-    [AttackType.RANGED]:    { label: 'Dystans', icon: 'game-icons:arrow-flights',  color: '#67e8f9' },
-  }[t] ?? { label: 'Wręcz', icon: 'game-icons:crossed-swords', color: '#fca5a5' }
+    [AttackType.MELEE]:     { label: 'Wręcz',   icon: 'game-icons:battle-axe',    color: '#fb923c' },
+    [AttackType.ELEMENTAL]: { label: 'Żywioł',  icon: 'bi:fire',                   color: '#fb923c' },
+    [AttackType.MAGIC]:     { label: 'Magia',   icon: 'fa6-solid:wand-sparkles',  color: '#fb923c' },
+    [AttackType.RANGED]:    { label: 'Dystans', icon: 'boxicons:bow-filled',       color: '#fb923c' },
+  }[t] ?? { label: 'Wręcz', icon: 'game-icons:battle-axe', color: '#fb923c' }
 })
 
 const domainInfo = computed(() => {
   const d = data.value?.domain as Domain
   return {
     [Domain.PERUN]:  { name: 'Perun',     color: '#d4a843' },
-    [Domain.ZYVI]:   { name: 'Żywi',      color: '#4a9e4a' },
-    [Domain.UNDEAD]: { name: 'Nieumarli', color: '#8b5fc7' },
+    [Domain.ZYVI]:   { name: 'Żywi',      color: '#3b82f6' },
+    [Domain.UNDEAD]: { name: 'Nieumarli', color: '#4a9e4a' },
     [Domain.WELES]:  { name: 'Weles',     color: '#c44040' },
   }[d] ?? { name: '', color: '#64748b' }
 })
@@ -189,18 +191,18 @@ const ttTriggerLabels: Record<string, string> = {
   ON_DEATH: 'POŻEGNANIE', ON_KILL: 'ZABÓJSTWO', ON_TURN_START: 'AURA',
   ON_TURN_END: 'AURA', ON_ANY_DEATH: 'CZUJNOŚĆ', ON_ATTACK: 'NATARCIE',
   ON_ENEMY_PLAY: 'CZUJNOŚĆ', ENEMY_ACTION: 'CZUJNOŚĆ', PASSIVE: 'AURA',
-  ON_DAMAGE_DEALT: 'NATARCIE', ON_DAMAGE_RECEIVED: 'ODWET', ON_ACTIVATE: 'AKCJA',
+  ON_DAMAGE_DEALT: 'ZRANIENIE', ON_DAMAGE_RECEIVED: 'ODWET', ON_ACTIVATE: 'AKCJA',
   ON_ALLY_ATTACKED: 'CZUJNOŚĆ',
 }
 const ttTriggerColors: Record<string, string> = {
   'WEJŚCIE': '#22c55e', 'AKCJA': '#a855f7', 'AURA': '#3b82f6', 'ODWET': '#f97316',
-  'NATARCIE': '#ef4444', 'ZABÓJSTWO': '#ef4444', 'POŻEGNANIE': '#6b7280', 'CZUJNOŚĆ': '#eab308',
+  'NATARCIE': '#ef4444', 'ZRANIENIE': '#dc2626', 'ZABÓJSTWO': '#ef4444', 'POŻEGNANIE': '#6b7280', 'CZUJNOŚĆ': '#eab308',
 }
 
 const tagColors = ttTriggerColors
 function parseTaggedDescription(desc: string): Array<{ type: 'tag' | 'text'; value: string; color?: string }> {
   const parts: Array<{ type: 'tag' | 'text'; value: string; color?: string }> = []
-  const regex = /\[(WEJŚCIE|AKCJA|AURA|ODWET|NATARCIE|ZABÓJSTWO|POŻEGNANIE|CZUJNOŚĆ)\]/g
+  const regex = /\[(WEJŚCIE|AKCJA|AURA|ODWET|NATARCIE|ZRANIENIE|ZABÓJSTWO|POŻEGNANIE|CZUJNOŚĆ)\]/g
   let lastIndex = 0
   let match: RegExpExecArray | null
   while ((match = regex.exec(desc)) !== null) {
@@ -271,12 +273,15 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 
           <!-- Attribute badges (bottom-left of art) -->
           <div class="pv-attr-badges">
-            <div class="pv-attr-badge" :style="{ borderColor: attackTypeInfo.color + '30' }" v-tip="attackTypeInfo.label">
-              <img v-if="attackTypeImgs[data.attackType]" :src="attackTypeImgs[data.attackType]" class="pv-attr-icon" />
+            <div class="pv-attr-badge" :style="{ borderColor: attackTypeInfo.color + '80' }" v-tip="attackTypeInfo.label">
+              <img v-if="attackTypeOverrides[data.id] || attackTypeImgs[data.attackType]" :src="attackTypeOverrides[data.id] ?? attackTypeImgs[data.attackType]" class="pv-attr-icon" />
               <Icon v-else :icon="attackTypeInfo.icon" class="pv-attr-icon-svg" :style="{ color: attackTypeInfo.color }" />
             </div>
-            <div v-if="data.isFlying && !card.isGrounded" class="pv-attr-badge" style="border-color: rgba(56,189,248,0.2)" v-tip="'Latający'">
-              <img :src="flyingImg" class="pv-attr-icon" />
+            <div v-if="data.isFlying && !card.isGrounded" class="pv-attr-badge pv-badge-flying" v-tip="'Latający'">
+              <Icon icon="game-icons:liberty-wing" class="pv-attr-icon-svg" style="color: #ffffff" />
+            </div>
+            <div v-if="data.tags?.includes('dragon')" class="pv-attr-badge pv-badge-dragon" v-tip="'Smok'">
+              <svg viewBox="0 0 4335 4335" class="pv-attr-icon-svg" style="width:20px;height:20px"><path d="m577 1824c22-37 60-92 98-110 60-29 105 42 114 86-117-21-120-9-212 24zm2953 2391h-2467c427-580 1127-908 1545-1427l57-77c62-83 108-198 71-309-32-98-70-99-110-158l87-64c646-835-92-6-129 21-205 148-252 56-464 8-131-30-274 14-367 59l-150 79c-46 28-92 57-135 88-87 64-164 139-258 193-77 44-183 55-278 62-105 8-191 35-287-3-35-14-114-66-131-92 80 0 186-14 246-33 190-59 362-195 502-334l113-98c92-72 185-142 290-195 18-9 30-16 48-24s29-11 47-20l186-87c-26-39-112-88-162-95-151-22-428 89-566 181-101 68-187 180-281 226-39 19-146 56-174 77-70 52-32 125-32 196-61-14-134-92-139-156-12 6-126 18-147 21-152 21-45 116-81 152-12 12 0 5-11 0-30-13-53-55-60-86-8-36 1-32-20-58-259-71-90-472-76-491 39-52 114-101 177-67 15 8 42 29 57 32 83 18 137-37 184-81 107-100 145-21 191-31 48-10 166-104 210-147 24-23 110-116 126-142l185-261c68-86 25-38 41-126 59-319 421-380 762-241 56-5 69 0 101-32 116-114 250-205 396-278 95-48 303-141 399-141-6 5-11 9-19 15-7 5-10 6-18 10-88 44-169 106-247 165l-66 57c-11 11-21 20-31 31l-78 95c-13 15-39 54-43 74 27 2 50 4 84 6 81 4 63 35 119-32 54-64 149-134 220-176 85-50 172-95 262-134 20-8 39-13 58-21 73-29 168-60 245-67-13 19-18 17-39 28-127 64-246 149-347 249l-62 67c-12 14-20 20-32 35-24 31-74 74-84 111 15 7 56 17 74 21 90 23 194 59 277 96 20 9 42 15 63 26 169 82 350 166 474 312 21 25 46 45 54 80-97-51-120-106-268-106 15 28 34 45 54 69 497 584 673 1595 403 2267-68 169-62 79-61-22 0-84-39-279-112-295 0 84-22 190-42 270-22 86-44 159-74 233-70 174-166 338-262 499zm-2058-2802c18-18 34-28 50-45 73-248 185-275 395-143-16 46-362 182-445 188z" fill="#e07060"/></svg>
             </div>
           </div>
         </div>
@@ -327,6 +332,10 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
                     <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
                     <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
                   </template>
+                  <span v-if="ab.cost" class="pv-ability-cost">({{ ab.cost }} PS)</span>
+                  <span v-if="ab.limit === 'ONCE_PER_GAME'" class="pv-ability-limit">raz w grze</span>
+                  <span v-else-if="ab.limit === 'ONCE_PER_TURN'" class="pv-ability-limit">raz na turę</span>
+                  <span v-else-if="ab.limit === 'ONCE_PER_ROUND'" class="pv-ability-limit">raz na rundę</span>
                 </span>
               </div>
             </div>
@@ -369,7 +378,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
           <!-- STATS BAR -->
           <div v-if="isCreature" class="pv-stats-bar">
             <div class="pv-stat pv-stat-atk">
-              <img v-if="attackTypeImgs[data.attackType]" :src="attackTypeImgs[data.attackType]" class="pv-stat-img" />
+              <img v-if="attackTypeOverrides[data.id] || attackTypeImgs[data.attackType]" :src="attackTypeOverrides[data.id] ?? attackTypeImgs[data.attackType]" class="pv-stat-img" />
               <Icon v-else :icon="attackTypeInfo.icon" class="pv-stat-icon" :style="{ color: '#fb923c' }" />
               <span class="pv-stat-num" :class="{ 'pv-damaged': atkDamaged, 'pv-buffed': atkBuffed }">{{ card.currentStats.attack }}</span>
               <span v-if="atkDelta !== 0" class="pv-stat-delta" :class="{ 'pv-delta-up': atkDelta > 0, 'pv-delta-down': atkDelta < 0 }">{{ atkDelta > 0 ? '+' : '' }}{{ atkDelta }}</span>
@@ -536,8 +545,8 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   border: 1px solid color-mix(in srgb, var(--dc) 30%, transparent);
 }
 .pv-domain-img {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 .pv-domain-label {
@@ -579,19 +588,27 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 .pv-attr-badge {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  justify-content: center;
+  padding: 5px;
   border-radius: 6px;
   background: rgba(0,0,0,0.8);
-  border: 1px solid;
+  border: 1.5px solid;
 }
 .pv-attr-icon {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
 }
 .pv-attr-icon-svg {
-  font-size: 16px;
+  font-size: 20px;
+}
+.pv-badge-flying {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+.pv-badge-dragon {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(231, 76, 60, 0.5);
 }
 .pv-attr-label {
   font-size: 8px;
@@ -687,6 +704,18 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   color: rgba(235,225,215,0.9);
   font-family: Georgia, 'Times New Roman', serif;
   line-height: 1.55;
+}
+.pv-ability-cost {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-left: 4px;
+}
+.pv-ability-limit {
+  font-size: 9px;
+  font-style: italic;
+  color: rgba(148,163,184,0.7);
+  margin-left: 3px;
 }
 
 /* Token inline icons in tooltip */

@@ -138,6 +138,62 @@ export function resolveAttack(
   // Sława: track damage dealt for holiday conditions
   trackDamageDealt(newState, currentAttacker.owner as PlayerSide, damageToDefender)
 
+  // 5b. BRZEGINA — check RIGHT AFTER damage dealt, BEFORE any triggers
+  // Brzegina "cancels" the attack: damage is healed, no ON_DAMAGE triggers, no counterattack
+  if (damageToDefender > 0 && !options?.forceBrzeginaSkip && currentDefender.currentStats.defense > 0) {
+    const defOwner = currentDefender.owner as PlayerSide
+    if (!newState.players[defOwner].isAI) {
+      const brzegina = getAllCreaturesForPlayer(newState, defOwner).find(c =>
+        (c.cardData as any).effectId === 'brzegina_shield_for_gold' &&
+        c.instanceId !== defenderInstanceId &&
+        !c.isSilenced &&
+        c.currentStats.defense > 0
+      )
+      if (brzegina) {
+        const brzeginaEffect = getEffect('brzegina_shield_for_gold')
+        if (brzeginaEffect?.canActivate?.({ state: newState, source: brzegina, target: currentDefender, trigger: EffectTrigger.ON_DAMAGE_RECEIVED })) {
+          const firstUseFree = !(brzegina.metadata.brzeginaUsedFree as boolean)
+          newState.pendingInteraction = {
+            type: 'brzegina_shield',
+            sourceInstanceId: brzegina.instanceId,
+            respondingPlayer: defOwner,
+            targetInstanceId: defenderInstanceId,
+            metadata: {
+              cost: firstUseFree ? 0 : 1,
+              damageToHeal: damageToDefender,
+              attackerInstanceId,
+              defenderDefBeforeHit,
+            },
+          }
+          addLog(newState, `${brzegina.cardData.name}: Może cofnąć obrażenia na ${currentDefender.cardData.name}!`, 'effect')
+
+          // Mark attacker as having attacked
+          currentAttacker.hasAttackedThisTurn = true
+          if ((currentAttacker.cardData as any).effectId === 'lesnica_double_attack') {
+            currentAttacker.metadata.attacksThisTurn = ((currentAttacker.metadata.attacksThisTurn as number) ?? 0) + 1
+          }
+
+          return {
+            newState,
+            result: {
+              attacker: currentAttacker,
+              defender: currentDefender,
+              damageToDefender,
+              damageToAttacker: 0,
+              defenderDied: false,
+              attackerDied: false,
+              counterattackOccurred: false,
+              brzeginaPaused: true,
+              defenderDefBeforeHit,
+              effectsTriggered,
+              log,
+            },
+          }
+        }
+      }
+    }
+  }
+
   // 6. Trigger: ON_DAMAGE_RECEIVED na obrońcy (np. Bugaj) + ON_DAMAGE_DEALT na atakującym
   const onDamageRecResult = triggerEffect(newState, currentDefender, EffectTrigger.ON_DAMAGE_RECEIVED, currentAttacker, damageToDefender)
   newState = onDamageRecResult.newState
@@ -638,6 +694,207 @@ export function resolveAttack(
 }
 
 // ===================================================================
+// WZNOWIENIE KONTRATAKU PO BRZEGINIE
+// ===================================================================
+
+/**
+ * Wznawia walkę po odrzuceniu tarczy Brzeginy.
+ * Wykonuje: ON_DAMAGE triggers + ON_ALLY_ATTACKED + kontratak + death checks.
+ */
+export function resumeCombatCounterattack(
+  state: GameState,
+  attackerInstanceId: string,
+  defenderInstanceId: string,
+  damageToDefender: number,
+  defenderDefBeforeHit: number
+): { newState: GameState; result: CombatResult } {
+  let newState = cloneGameState(state)
+  const log: LogEntry[] = []
+  const effectsTriggered: string[] = []
+
+  let currentAttacker = findCardOnField(newState, attackerInstanceId)
+  let currentDefender = findCardOnField(newState, defenderInstanceId)
+
+  if (!currentAttacker || !currentDefender) {
+    return {
+      newState,
+      result: {
+        attacker: currentAttacker ?? { instanceId: attackerInstanceId } as any,
+        defender: currentDefender ?? { instanceId: defenderInstanceId } as any,
+        damageToDefender, damageToAttacker: 0,
+        defenderDied: !currentDefender, attackerDied: !currentAttacker,
+        counterattackOccurred: false, effectsTriggered, log,
+      },
+    }
+  }
+
+  // ON_DAMAGE triggers — skipped during Brzegina pause, now resumed
+  if (damageToDefender > 0) {
+    const onDamageRecResult = triggerEffect(newState, currentDefender, EffectTrigger.ON_DAMAGE_RECEIVED, currentAttacker, damageToDefender)
+    newState = onDamageRecResult.newState
+    log.push(...onDamageRecResult.log)
+
+    const onDamageDealtResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_DAMAGE_DEALT, currentDefender, damageToDefender)
+    newState = onDamageDealtResult.newState
+    log.push(...onDamageDealtResult.log)
+
+    currentAttacker = findCardOnField(newState, attackerInstanceId)
+    currentDefender = findCardOnField(newState, defenderInstanceId)
+  }
+
+  // ON_ALLY_ATTACKED triggers
+  if (currentDefender && currentAttacker) {
+    const defenderSideAllies = getAllCreaturesForPlayer(newState, currentDefender.owner)
+      .filter(c => c.instanceId !== defenderInstanceId && !c.isSilenced)
+    for (const ally of defenderSideAllies) {
+      const allyResult = triggerEffect(newState, ally, EffectTrigger.ON_ALLY_ATTACKED, currentAttacker, damageToDefender)
+      newState = allyResult.newState
+      log.push(...allyResult.log)
+    }
+    currentAttacker = findCardOnField(newState, attackerInstanceId)
+    currentDefender = findCardOnField(newState, defenderInstanceId)
+  }
+
+  if (!currentAttacker || !currentDefender) {
+    return {
+      newState,
+      result: {
+        attacker: currentAttacker ?? { instanceId: attackerInstanceId } as any,
+        defender: currentDefender ?? { instanceId: defenderInstanceId } as any,
+        damageToDefender, damageToAttacker: 0,
+        defenderDied: !currentDefender, attackerDied: !currentAttacker,
+        counterattackOccurred: false, effectsTriggered, log,
+      },
+    }
+  }
+
+  // Kontratak
+  let damageToAttacker = 0
+  let counterattackOccurred = false
+
+  const counterCheck = shouldCounterattack(newState, currentAttacker, currentDefender)
+  if (counterCheck.reason) {
+    log.push(addLog(newState, counterCheck.reason, 'effect'))
+  }
+  if (counterCheck.canCounter) {
+    damageToAttacker = Math.max(0, defenderDefBeforeHit)
+
+    if (currentAttacker.metadata.noCounterattack) {
+      damageToAttacker = 0
+      const ncSource = currentAttacker.metadata.toporPerunaUsed ? 'Topór Peruna'
+        : currentAttacker.metadata.mlotSwarogaEnhanced ? 'Młot Swaroga+'
+        : currentAttacker.metadata.mlotSwarogaActive ? 'Młot Swaroga'
+        : 'efekt'
+      log.push(addLog(newState, `${currentDefender.cardData.name} nie może kontratakować — ${currentAttacker.cardData.name} ma efekt "${ncSource}".`, 'effect'))
+    } else if (damageToAttacker > 0) {
+      currentAttacker.currentStats.defense -= damageToAttacker
+      counterattackOccurred = true
+      log.push(addLog(newState,
+        `${currentDefender.cardData.name} kontratakuje ${currentAttacker.cardData.name} za ${damageToAttacker}. (DEF: ${currentAttacker.currentStats.defense + damageToAttacker} → ${currentAttacker.currentStats.defense})`,
+        'damage',
+        [defenderInstanceId, attackerInstanceId]
+      ))
+
+      const counterDmgResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_DAMAGE_RECEIVED, currentDefender, damageToAttacker)
+      const counterDealtResult = triggerEffect(counterDmgResult.newState, currentDefender, EffectTrigger.ON_DAMAGE_DEALT, currentAttacker, damageToAttacker)
+      counterDmgResult.newState = counterDealtResult.newState
+      counterDmgResult.log.push(...counterDealtResult.log)
+      newState = counterDmgResult.newState
+      log.push(...counterDmgResult.log)
+    }
+  }
+
+  currentAttacker = findCardOnField(newState, attackerInstanceId)
+  currentDefender = findCardOnField(newState, defenderInstanceId)
+
+  // Death checks — defender
+  let defenderDied = false
+  if (currentDefender && currentDefender.currentStats.defense <= 0) {
+    defenderDied = true
+    log.push(addLog(newState, `${currentAttacker?.cardData.name ?? 'Atakujący'} zabija ${currentDefender.cardData.name}!`, 'death', [defenderInstanceId]))
+    currentDefender.metadata.killedBy = attackerInstanceId
+    const deathResult = triggerEffect(newState, currentDefender, EffectTrigger.ON_DEATH)
+    newState = deathResult.newState
+    log.push(...deathResult.log)
+
+    if (currentAttacker) {
+      currentAttacker = findCardOnField(newState, attackerInstanceId)
+      if (currentAttacker) {
+        const killResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_KILL, currentDefender)
+        newState = killResult.newState
+        log.push(...killResult.log)
+      }
+    }
+
+    // ON_ANY_DEATH watchers
+    const allWatchers = getAllCreaturesForPlayer(newState, 'player1').concat(getAllCreaturesForPlayer(newState, 'player2'))
+    for (const watcher of allWatchers) {
+      if (watcher.instanceId === defenderInstanceId) continue
+      const watchResult = triggerEffect(newState, watcher, EffectTrigger.ON_ANY_DEATH, currentDefender)
+      newState = watchResult.newState
+      log.push(...watchResult.log)
+    }
+
+    const defenderRemoved = removeFromField(newState, defenderInstanceId)
+    if (defenderRemoved) {
+      defenderRemoved.line = null
+      newState.players[defenderRemoved.owner].graveyard.push(defenderRemoved)
+      const killerSide = (currentAttacker?.owner ?? attackerInstanceId) as PlayerSide
+      newState.players[killerSide]?.trophies?.push(defenderRemoved)
+      trackKill(newState, killerSide, defenderRemoved)
+    }
+  }
+
+  // Death checks — attacker (from counterattack)
+  let attackerDied = false
+  currentAttacker = findCardOnField(newState, attackerInstanceId)
+  if (currentAttacker && currentAttacker.currentStats.defense <= 0) {
+    attackerDied = true
+    log.push(addLog(newState, `${currentDefender?.cardData.name ?? 'Obrońca'} kontratakuje i zabija ${currentAttacker.cardData.name}!`, 'death', [attackerInstanceId]))
+    currentAttacker.metadata.killedBy = defenderInstanceId
+    const atkDeathResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_DEATH)
+    newState = atkDeathResult.newState
+    log.push(...atkDeathResult.log)
+
+    const allWatchers = getAllCreaturesForPlayer(newState, 'player1').concat(getAllCreaturesForPlayer(newState, 'player2'))
+    for (const watcher of allWatchers) {
+      if (watcher.instanceId === attackerInstanceId) continue
+      const watchResult = triggerEffect(newState, watcher, EffectTrigger.ON_ANY_DEATH, currentAttacker)
+      newState = watchResult.newState
+      log.push(...watchResult.log)
+    }
+
+    const atkRemoved = removeFromField(newState, attackerInstanceId)
+    if (atkRemoved) {
+      atkRemoved.line = null
+      newState.players[atkRemoved.owner].graveyard.push(atkRemoved)
+    }
+  }
+
+  // Poison + cleanup
+  newState = processPoison(newState, log)
+  updateTurnsInPlay(newState)
+
+  const finalAttacker = findCardOnField(newState, attackerInstanceId) ?? currentAttacker ?? { instanceId: attackerInstanceId } as any
+  const finalDefender = findCardOnField(newState, defenderInstanceId) ?? currentDefender ?? { instanceId: defenderInstanceId } as any
+
+  return {
+    newState,
+    result: {
+      attacker: finalAttacker,
+      defender: finalDefender,
+      damageToDefender,
+      damageToAttacker,
+      defenderDied,
+      attackerDied,
+      counterattackOccurred,
+      effectsTriggered,
+      log,
+    },
+  }
+}
+
+// ===================================================================
 // POMOCNICZE
 // ===================================================================
 
@@ -709,9 +966,15 @@ function shouldCounterattack(
     return { canCounter: false, reason: `${defender.cardData.name}: Sparaliżowany — nie może kontratakować!` }
   }
 
-  // Dobroochoczy: nigdy nie kontratakuje
-  if (defender.cardData.name === 'Dobroochoczy') return { canCounter: false, reason: `${defender.cardData.name}: Dobroochoczy nigdy nie kontratakuje.` }
-  if (defender.activeEffects.some(e => e.effectId === 'dobroochoczy_no_counter')) return { canCounter: false, reason: `${defender.cardData.name}: Dobroochoczy nigdy nie kontratakuje.` }
+  // Dobroochoczy: dopóki jest na polu, ŻADNA istota nie kontratakuje
+  const allCreatures = getAllCreaturesForPlayer(state, 'player1').concat(getAllCreaturesForPlayer(state, 'player2'))
+  const dobroochoczyOnField = allCreatures.some(c =>
+    (c.cardData as any).effectId === 'dobroochoczy_no_counter' && !c.isSilenced
+  )
+  if (dobroochoczyOnField) return { canCounter: false, reason: `Dobroochoczy: Aura Pokoju — nikt nie kontratakuje!` }
+
+  // Kresnik buff: indywidualny brak kontrataku
+  if (defender.activeEffects.some(e => e.effectId === 'dobroochoczy_no_counter')) return { canCounter: false }
 
   // Smocze Jajo / Bałwan: nie kontratakuje
   if ((defender.cardData as any).effectId === 'smocze_jajo_hatch') return { canCounter: false }
@@ -799,24 +1062,6 @@ function checkDamagePrevention(
     const log = addLog(state, `${defender.cardData.name}: Niezniszczalny! Obrażenia zablokowane — Wąpierz jest odporny na wszelkie obrażenia, dopóki sam atakuje regularnie.`, 'effect')
     return { prevented: true, newState: cloneGameState(state), log: [log] }
   }
-
-  // Brzegina: może zablokować obrażenia dla sojusznika (pomiń jeśli gracz odmówił)
-  if (forceBrzeginaSkip) {
-    // Gracz odmówił użycia tarczy Brzeginy — pomiń
-  } else {
-  const brzeginaOnField = getAllCreaturesForPlayer(state, defender.owner)
-    .find(c => (c.cardData as any).effectId === 'brzegina_shield_for_gold')
-
-  if (brzeginaOnField) {
-    const effect = getEffect('brzegina_shield_for_gold')
-    if (effect?.canActivate?.({ state, source: brzeginaOnField, target: defender, trigger: EffectTrigger.ON_DAMAGE_RECEIVED })) {
-      const result = effect.execute({ state, source: brzeginaOnField, target: defender, trigger: EffectTrigger.ON_DAMAGE_RECEIVED, value: damage })
-      if (result.prevented) {
-        return { prevented: true, newState: result.newState, log: result.log }
-      }
-    }
-  }
-  } // koniec else (forceBrzeginaSkip)
 
   // Utopiec (#85): połowa obrażeń
   if ((defender.cardData as any).effectId === 'utopiec_half_damage') {

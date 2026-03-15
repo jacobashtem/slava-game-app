@@ -21,11 +21,11 @@ const cards = computed(() => {
 })
 
 const title = computed(() =>
-  ui.graveyardViewerSide === 'player1' ? 'Twój cmentarz' : 'Cmentarz przeciwnika'
+  ui.graveyardViewerSide === game.mySide ? 'Twój cmentarz' : 'Cmentarz przeciwnika'
 )
 
 function domainColor(card: any): string {
-  const colors: Record<number, string> = { 1: '#d4a843', 2: '#4a9e4a', 3: '#8b5fc7', 4: '#c44040' }
+  const colors: Record<number, string> = { 1: '#d4a843', 2: '#3b82f6', 3: '#4a9e4a', 4: '#c44040' }
   return colors[card.cardData?.domain] ?? '#475569'
 }
 
@@ -85,7 +85,7 @@ function cardImg(card: any): string | null {
                   <span class="card-name">{{ card.cardData.name }}</span>
                   <div v-if="card.cardData.cardType === 'creature'" class="card-stats">
                     <span class="stat-atk">
-                      <Icon icon="game-icons:crossed-swords" class="stat-icon" />
+                      <Icon icon="game-icons:battle-axe" class="stat-icon" />
                       {{ (card as any).currentStats?.attack ?? '?' }}
                     </span>
                     <span class="stat-def">

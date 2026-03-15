@@ -617,51 +617,16 @@ export function performAttack(
     }
   }
 
-  // Brzegina: pytanie gracza czy użyć tarczy za PS (AI auto-używa)
-  if (!options?.skipBrzeginaCheck && !options?.forceBrzeginaSkip) {
-    const defCard = (() => {
-      for (const side of ['player1', 'player2'] as const) {
-        for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
-          const found = state.players[side].field.lines[line].find(c => c.instanceId === defenderInstanceId)
-          if (found) return found
-        }
-      }
-      return null
-    })()
-
-    if (defCard && !state.players[defCard.owner as 'player1' | 'player2'].isAI) {
-      const defOwner = defCard.owner as 'player1' | 'player2'
-      const brzegina = getAllCreaturesOnField(state, defOwner).find(c =>
-        (c.cardData as any).effectId === 'brzegina_shield_for_gold' &&
-        !c.isSilenced &&
-        c.currentStats.defense > 0
-      )
-      if (brzegina) {
-        const effect = getEffect('brzegina_shield_for_gold')
-        if (effect?.canActivate?.({ state, source: brzegina, target: defCard, trigger: EffectTrigger.ON_DAMAGE_RECEIVED })) {
-          const firstUseFree = !(brzegina.metadata.brzeginaUsedFree as boolean)
-          const pendingState = cloneGameState(state)
-          pendingState.pendingInteraction = {
-            type: 'brzegina_shield',
-            sourceInstanceId: brzegina.instanceId,
-            respondingPlayer: defOwner,
-            attackerInstanceId,
-            targetInstanceId: defenderInstanceId,
-            metadata: { cost: firstUseFree ? 0 : 1 },
-          }
-          const costLabel = firstUseFree ? 'GRATIS' : '1 PS'
-          addLog(pendingState, `${brzegina.cardData.name}: Może ochronić ${defCard.cardData.name}! (${costLabel})`, 'effect')
-          return { newState: pendingState, log: [] }
-        }
-      }
-    }
-  }
-
   // Zapamiętaj linię obrońcy przed atakiem (do checkBreakthrough)
   const defenderCard = findCardAnywhere(state, defenderInstanceId)
   const defenderLineBefore = defenderCard?.line ?? null
 
   const { newState, result } = resolveAttack(state, attackerInstanceId, defenderInstanceId, { forceBrzeginaSkip: options?.forceBrzeginaSkip, forcedByEffect: options?.forcedByEffect })
+
+  // Brzegina paused combat — pendingInteraction already set, return early
+  if (result.brzeginaPaused) {
+    return { newState, log: result.log, combatResult: result }
+  }
 
   // Sława: sprawdź przełamanie linii (atak na pustą linię wroga → +1/-1 PS)
   if (result.defenderDied && defenderLineBefore != null) {

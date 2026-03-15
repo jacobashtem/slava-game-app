@@ -28,7 +28,7 @@ const ATK_TYPE_LABELS: Record<number, string> = {
 }
 
 const ATK_TYPE_COLORS: Record<number, string> = {
-  0: '#f87171', 1: '#fbbf24', 2: '#c084fc', 3: '#60a5fa',
+  0: '#fb923c', 1: '#fb923c', 2: '#fb923c', 3: '#fb923c',
 }
 
 // ===== FILTERED LISTS =====
@@ -159,7 +159,7 @@ function getDomainColor(domainId: number): string {
               class="atk-type-badge"
               :style="`color: ${ATK_TYPE_COLORS[card.combat?.attackType ?? 0]}; background: ${ATK_TYPE_COLORS[card.combat?.attackType ?? 0]}18`"
             >{{ ATK_TYPE_LABELS[card.combat?.attackType ?? 0] }}</span>
-            <Icon v-if="card.combat?.isFlying" icon="game-icons:feathered-wing" class="flying-icon" title="Latajacy" />
+            <Icon v-if="card.combat?.isFlying" icon="game-icons:liberty-wing" class="flying-icon" title="Latający" />
           </div>
 
           <div v-if="expandedId === card.id" class="card-details">

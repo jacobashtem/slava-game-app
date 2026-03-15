@@ -12,17 +12,16 @@ for (const [path, url] of Object.entries(_creatureImgModules)) {
 }
 
 // Attack type / domain / flying icons (same as CreatureCard.vue)
-import attackTypeImg1 from '~/assets/cards/attackType1.png'  // Elemental
-import attackTypeImg2 from '~/assets/cards/attackType2.png'  // Magic
-import attackTypeImg3 from '~/assets/cards/attackType3.png'  // Ranged
-import flyingImg from '~/assets/cards/isFlying.png'
-import domainImg1 from '~/assets/cards/domain-1.png'
-import domainImg2 from '~/assets/cards/domain-2.png'
-import domainImg3 from '~/assets/cards/domain-3.png'
-import domainImg4 from '~/assets/cards/domain-4.png'
+import attackTypeImg1 from '~/assets/cards/attackType1.svg'  // Elemental
+import attackTypeImg2 from '~/assets/cards/attackType2.svg'  // Magic
+import attackTypeImg3 from '~/assets/cards/attackType3.svg'  // Ranged
+import domainImg1 from '~/assets/cards/domain-1.svg'
+import domainImg2 from '~/assets/cards/domain-2.svg'
+import domainImg3 from '~/assets/cards/domain-3.svg'
+import domainImg4 from '~/assets/cards/domain-4.svg'
 
-const attackTypeImgs: Record<number, string> = { 1: attackTypeImg1, 2: attackTypeImg2, 3: attackTypeImg3 }
-const attackTypeIcons: Record<number, string> = { 0: 'game-icons:crossed-swords', 1: 'game-icons:fire-dash', 2: 'game-icons:magic-swirl', 3: 'game-icons:arrow-flights' }
+const attackTypeImgs: Record<number, string> = {}
+const attackTypeIcons: Record<number, string> = { 0: 'game-icons:battle-axe', 1: 'bi:fire', 2: 'fa6-solid:wand-sparkles', 3: 'boxicons:bow-filled' }
 const attackTypeNames: Record<number, string> = { 0: 'Wręcz', 1: 'Żywioł', 2: 'Magia', 3: 'Dystans' }
 const domainImgs: Record<number, string> = { 1: domainImg1, 2: domainImg2, 3: domainImg3, 4: domainImg4 }
 
@@ -134,7 +133,7 @@ const title = computed(() => {
   if (t === 'liczyrzepa_type') return 'Liczyrzepa — Typ ataku'
   if (t === 'smocze_jajo_hatch') return 'Smocze Jajo — Wyklucie!'
   if (t === 'on_play_target') return `${(sourceCard.value?.cardData as any)?.name ?? 'Karta'} — Wybierz cel`
-  if (t === 'brzegina_shield') return 'Brzegina — Tarcza ochronna'
+  if (t === 'brzegina_shield') return 'Brzegina — Czujność'
   if (t === 'kosciej_resurrect') return 'Kościej — Wskrzeszenie'
   return 'Wybierz'
 })
@@ -295,7 +294,7 @@ function pickTarget(choice: string) {
           class="pi-yn"
         >
           <button class="pi-yn-yes" @click="pickTarget('yes')">
-            <Icon icon="game-icons:shield" /> {{ (interaction?.metadata?.cost as number) === 0 ? 'Tak, osłoń (gratis)' : `Tak, osłoń (-${interaction?.metadata?.cost} PS)` }}
+            <Icon icon="game-icons:shield" /> {{ (interaction?.metadata?.cost as number) === 0 ? 'Tak, osłoń' : `Tak, osłoń (-${interaction?.metadata?.cost} PS)` }}
           </button>
           <button class="pi-yn-no" @click="pickTarget('no')">
             <Icon icon="game-icons:cancel" /> Nie, przepuść atak
@@ -339,7 +338,7 @@ function pickTarget(choice: string) {
                   </span>
                   <span class="pi-dragon-name">{{ dragon.name }}</span>
                   <span class="pi-dragon-badges-right">
-                    <img v-if="dragon.isFlying" :src="flyingImg" class="pi-dragon-fly-icon" title="Lot" />
+                    <Icon v-if="dragon.isFlying" icon="game-icons:liberty-wing" class="pi-dragon-fly-icon" style="color: #ffffff; font-size: 16px;" title="Lot" />
                   </span>
                 </div>
               </div>
@@ -347,7 +346,7 @@ function pickTarget(choice: string) {
               <div class="pi-dragon-stats-bar">
                 <div class="pi-dragon-stat pi-dragon-stat-atk">
                   <img v-if="attackTypeImgs[dragon.attackType]" :src="attackTypeImgs[dragon.attackType]" class="pi-dragon-stat-img" />
-                  <Icon v-else :icon="attackTypeIcons[dragon.attackType] ?? 'game-icons:crossed-swords'" class="pi-dragon-stat-svg" />
+                  <Icon v-else :icon="attackTypeIcons[dragon.attackType] ?? 'game-icons:battle-axe'" class="pi-dragon-stat-svg" />
                   <span class="pi-dragon-stat-num">{{ dragon.atk }}</span>
                 </div>
                 <div class="pi-dragon-stat pi-dragon-stat-def">

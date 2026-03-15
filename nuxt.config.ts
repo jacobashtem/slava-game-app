@@ -14,6 +14,11 @@ export default defineNuxtConfig({
   components: [
     { path: fileURLToPath(new URL('./components', import.meta.url)), pathPrefix: false },
   ],
+  nitro: {
+    experimental: {
+      websocket: true,
+    },
+  },
   typescript: {
     strict: true,
   },

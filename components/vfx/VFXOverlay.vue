@@ -1541,7 +1541,7 @@ function handleDeath(event: VFXEvent) {
 function handleScreenFlash(event: VFXEvent) {
   if (!overlayEl) { vfx.complete(event.id); return }
   const color = (event.meta?.color as string) ?? '#ffffff'
-  const opacity = (event.meta?.opacity as number) ?? 0.5
+  const opacity = (event.meta?.opacity as number) ?? 0.25
   const flash = document.createElement('div')
   // Start at opacity 0 to avoid first-frame flash, then transition in and out
   flash.style.cssText = `position:fixed;inset:0;z-index:10000;pointer-events:none;background:${color};opacity:0;transition:opacity 0.08s ease-out;`
@@ -1684,6 +1684,7 @@ onUnmounted(() => {
   inset: 0;
   width: 100%;
   height: 100%;
+  background: transparent;
 }
 </style>
 

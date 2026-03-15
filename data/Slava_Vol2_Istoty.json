@@ -14,21 +14,21 @@
             "attackTypeString": "Wręcz",
             "isFlying": true
         },
-        "effect": "Kradnie jedną kartę z rąk przeciwnika. W każdej nowej rundzie akcję można powtórzyć, każdorazowo płacąc 1 <Zł>.",
+        "effect": "Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 PS.",
         "lore": "Skrzydlaty wąż z głową ptaka. Udomowiony przez gospodarza, w zamian za opiekę i schronienie, każdej nocy przynosi mu drobne przedmioty wyszabrowane u sąsiadów.",
         "abilities": [
             {
                 "trigger": "ON_PLAY",
-                "text": "Kradnij 1 kartę z ręki wroga."
+                "text": "Ukradnij 1 kartę z ręki wroga."
             },
             {
                 "trigger": "ACTION",
                 "cost": 1,
                 "limit": "ONCE_PER_GAME",
-                "text": "Kradnij 1 kartę z ręki wroga."
+                "text": "Ukradnij 1 kartę z ręki wroga."
             }
         ],
-        "effectDescription": "Kradnie jedną kartę z rąk przeciwnika. W każdej nowej rundzie akcję można powtórzyć, każdorazowo płacąc 1 <Zł>.",
+        "effectDescription": "Przy wystawieniu kradnie 1 kartę z ręki przeciwnika (gratis). Raz w grze można aktywować ponownie za 1 PS.",
         "effectId": "aitwar_steal_hand",
         "tags": [
             "dragon"
@@ -47,19 +47,17 @@
         "combat": {
             "attackType": 0,
             "attackTypeString": "Wręcz",
-            "isFlying": false
+            "isFlying": true
         },
-        "effect": "Zaatakowana istota, dodatkowo atakuje wybranego przez Alkonosta sojusznika.",
+        "effect": "Zaatakowana przez Alkonosta istota zostaje zahipnotyzowana i atakuje swojego sojusznika.",
         "lore": "<i>\"Jej narodzinom zwykle towarzyszyły potężne sztormy. Mityczny ptak, o kobiecej twarzy. Jej śpiew hipnotyzował, a słuchacze robili wszystko, czego Alkonost by sobie zażyczyła.\"</i>",
         "abilities": [
             {
-                "trigger": "ACTION",
-                "cost": 0,
-                "limit": "ONCE_PER_TURN",
-                "text": "Hipnotyzuje wrogą istotę, zmuszając ją do zaatakowania sojusznika."
+                "trigger": "ON_ATTACK",
+                "text": "Zaatakowana istota zostaje zahipnotyzowana i atakuje sojusznika."
             }
         ],
-        "effectDescription": "[AKCJA] Hipnotyzuje wrogą istotę, zmuszając ją do zaatakowania sojusznika.",
+        "effectDescription": "Zaatakowana przez Alkonosta istota zostaje zahipnotyzowana i atakuje swojego sojusznika.",
         "effectId": "alkonost_redirect_counterattack"
     },
     {
@@ -136,16 +134,15 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Każda istota, którą BIali Ludzie zranią, traci zdolność ataku.",
+        "effect": "Ofiara traci zdolność atakowania.",
         "lore": "Małe demony roznoszące śmiertelne choroby. Czekają, aż ofiara zaśnie by przez nos czy usta, wejść do ludzkich trzewi. Męczony w ten sposób nieszczęśnik, często kończył żywot.",
         "abilities": [
             {
                 "trigger": "ON_DAMAGE_DEALT",
-                "reactionTrigger": "ON_DAMAGE_DEALT",
-                "text": "Po zadaniu {DMG}: Cel traci zdolność atakowania."
+                "text": "Ofiara traci możliwość {COMBAT}."
             }
         ],
-        "effectDescription": "Każda istota, którą BIali Ludzie zranią, traci zdolność ataku.",
+        "effectDescription": "Ofiara traci możliwość {COMBAT}.",
         "effectId": "biali_ludzie_wound_disarm"
     },
     {
@@ -163,18 +160,21 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Za każdy poświęcony <ZŁ> jedna sojusznicza istota nie otrzymuje obrażeń podczas wymierzonego w nią ataku. Pierwsze użycie tej premii jest darmowe.",
+        "effect": "Gdy sojusznik jest atakowany, Brzegina może anulować atak. Kolejne użycia kosztują 1 PS.",
         "lore": "Piękna, dobra i przyjazna ludziom zielonowłosa nimfa, zamieszkująca górskie rzeki i strumienie. Podobno strzeże wspaniałego skarbu, ale każdy kto spotkał Brzeginę, już nie był nim zainteresowany.",
         "abilities": [
             {
-                "trigger": "REACTION",
-                "reactionTrigger": "ON_ALLY_DAMAGED",
+                "trigger": "ON_ALLY_ATTACKED",
+                "limit": "ONCE_PER_GAME",
+                "text": "Anuluj {COMBAT} wymierzony w sojusznika."
+            },
+            {
+                "trigger": "ON_ALLY_ATTACKED",
                 "cost": 1,
-                "firstUseFree": true,
-                "text": "Gdy sojusznik obrywa: Anuluj {DMG}."
+                "text": "Anuluj {COMBAT} wymierzony w sojusznika."
             }
         ],
-        "effectDescription": "Za każdy poświęcony <ZŁ> jedna sojusznicza istota nie otrzymuje obrażeń podczas wymierzonego w nią ataku. Pierwsze użycie tej premii jest darmowe.",
+        "effectDescription": "Anuluj {COMBAT} wymierzony w sojusznika.",
         "effectId": "brzegina_shield_for_gold"
     },
     {
@@ -198,7 +198,7 @@
             {
                 "trigger": "REACTION",
                 "reactionTrigger": "ON_DAMAGE_RECEIVED",
-                "text": "Po otrzymaniu {DMG}: Zyskuje tyle {ATK}, ile stracił {DEF}."
+                "text": "Zyskuje tyle {ATK}, ile stracił {DEF}."
             }
         ],
         "effectDescription": "Zyskuje tyle {stats.attack} ile straci {stats.defense}.",
@@ -298,15 +298,15 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Nie kontratakuje.",
+        "effect": "Dopóki jest w polu, żadna istota nie kontratakuje.",
         "lore": "Olbrzymi opiekun lasu, sprawiedliwie osądzający każdego intruza: pokrzywdzonego ochrania, na złego sprowadza pomstę. By pozostał niezauważony, przybiera postać podobną drzewu.",
         "abilities": [
             {
                 "trigger": "AURA",
-                "text": "Nigdy nie kontratakuje."
+                "text": "Żadna istota nie kontratakuje."
             }
         ],
-        "effectDescription": "Nie kontratakuje.",
+        "effectDescription": "Dopóki jest w polu, żadna istota nie kontratakuje.",
         "effectId": "dobroochoczy_no_counter"
     },
     {

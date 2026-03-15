@@ -893,7 +893,7 @@ const categories = [...new Set(effects.map(e => e.category))]
         </div>
         <div :class="['effect-item', { active: activeEffectId === 'p3-slash-compare' }]" style="--ec: #fbbf24"
           @click="activeEffectId = 'p3-slash-compare'">
-          <Icon icon="game-icons:crossed-swords" class="eff-icon" /><span class="eff-name">Slash: WebGPU vs WebGL</span>
+          <Icon icon="game-icons:battle-axe" class="eff-icon" /><span class="eff-name">Slash: WebGPU vs WebGL</span>
         </div>
         <div :class="['effect-item', { active: activeEffectId === 'p3-sword-slash' }]" style="--ec: #94a3b8"
           @click="activeEffectId = 'p3-sword-slash'; triggerSlash()">

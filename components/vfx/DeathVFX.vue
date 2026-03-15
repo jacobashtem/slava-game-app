@@ -513,6 +513,7 @@ defineExpose({ play, gpuReady, gpuError })
   width: 100%;
   height: 100%;
   pointer-events: none;
+  background: transparent;
 }
 .death-three-canvas { z-index: 10; }
 .death-spark-canvas { z-index: 12; }

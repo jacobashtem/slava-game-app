@@ -37,6 +37,21 @@ import DeathVFX from '../vfx/DeathVFX.vue'
 const game = useGameStore()
 const ui = useUIStore()
 
+// Fullscreen toggle
+const isFullscreen = ref(false)
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {})
+  } else {
+    document.exitFullscreen().catch(() => {})
+  }
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('fullscreenchange', () => {
+    isFullscreen.value = !!document.fullscreenElement
+  })
+}
+
 // Slash Attack VFX (Three.js WebGPU + TSL shader)
 // Registration via watch — <ClientOnly> delays rendering, so ref isn't available in onMounted
 const slashVfxRef = ref<InstanceType<typeof SlashAttackVFX> | null>(null)
@@ -89,8 +104,11 @@ watch(deathVfxRef, (comp) => {
 // 2. Stable positional keys in renderItems (slot-0, slot-1, slot-2)
 // 3. nextTick guards on setTimeout reactive mutations (uiStore)
 
-const player = computed(() => game.state?.players.player1)
-const ai = computed(() => game.state?.players.player2)
+const player = computed(() => game.state?.players[game.mySide])
+const ai = computed(() => {
+  const oppSide = game.mySide === 'player1' ? 'player2' : 'player1'
+  return game.state?.players[oppSide]
+})
 
 // Turn timer display (MM:SS)
 const timerDisplay = computed(() => {
@@ -154,7 +172,7 @@ const sfx = useAudio()
 // Attack/hit/death SFX will be triggered by VFXOrchestrator (P3)
 watch(() => game.winner, (v) => {
   if (!v) return
-  if (v === 'player1') sfx.sfxVictory()
+  if (v === game.mySide) sfx.sfxVictory()
   else sfx.sfxDefeat()
 })
 watch(() => game.currentPhase, () => sfx.sfxPhase())
@@ -162,14 +180,14 @@ watch(() => game.currentPhase, () => sfx.sfxPhase())
 // === UI SFX — card play, draw, gold, adventure, activate, season ===
 // Card play + draw: watch hand size changes
 let prevHandSize = 0
-watch(() => game.state?.players.player1.hand.length ?? 0, (newSize) => {
+watch(() => game.state?.players[game.mySide].hand.length ?? 0, (newSize) => {
   if (prevHandSize > 0 && newSize < prevHandSize) sfx.sfxCardPlay()
   if (prevHandSize > 0 && newSize > prevHandSize) sfx.sfxDraw()
   prevHandSize = newSize
 })
 // PS: watch for glory spent
 let prevGlory = 0
-watch(() => game.state?.players.player1.glory ?? 0, (newGlory) => {
+watch(() => game.state?.players[game.mySide].glory ?? 0, (newGlory) => {
   if (prevGlory > 0 && newGlory !== prevGlory) sfx.sfxGold()
   prevGlory = newGlory
 })
@@ -226,13 +244,16 @@ const onPlayDescription = computed(() => {
   const cardId = game.state?.awaitingOnPlayConfirmation
   if (!cardId || !game.state) return ''
   const allCards = [
-    ...game.state.players.player1.field.lines[BattleLine.FRONT],
-    ...game.state.players.player1.field.lines[BattleLine.RANGED],
-    ...game.state.players.player1.field.lines[BattleLine.SUPPORT],
+    ...game.state.players[game.mySide].field.lines[BattleLine.FRONT],
+    ...game.state.players[game.mySide].field.lines[BattleLine.RANGED],
+    ...game.state.players[game.mySide].field.lines[BattleLine.SUPPORT],
   ]
   const card = allCards.find(c => c.instanceId === cardId)
   if (!card) return ''
-  return `${card.cardData.name}: ${(card.cardData as any).effectDescription ?? ''}`
+  const data = card.cardData as any
+  const onPlayAbility = data.abilities?.find((a: any) => a.trigger === 'ON_PLAY')
+  const desc = onPlayAbility?.text ?? data.effectDescription ?? ''
+  return `${data.name}: ${desc}`
 })
 </script>
 
@@ -275,6 +296,11 @@ const onPlayDescription = computed(() => {
       <MusicPlayer />
       <PhaseControls />
       <button
+        class="fullscreen-btn"
+        @click="toggleFullscreen"
+        v-tip="isFullscreen ? 'Wyłącz pełny ekran' : 'Pełny ekran'"
+      ><Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" /></button>
+      <button
         v-if="!game.winner"
         class="surrender-top-btn"
         @click="ui.confirmingSurrender = true"
@@ -293,7 +319,7 @@ const onPlayDescription = computed(() => {
           :grave-count="ai.graveyard.length"
           :glory="ai.glory"
           :is-a-i="true"
-          @open-graveyard="ui.openGraveyardViewer('player2')"
+          @open-graveyard="ui.openGraveyardViewer(game.mySide === 'player1' ? 'player2' : 'player1')"
         />
         <!-- Events moved to PlayerField between L1-L2 -->
       </div>
@@ -320,7 +346,7 @@ const onPlayDescription = computed(() => {
           :glory="player.glory"
           :is-a-i="false"
           :enhanced-active="ui.isEnhancedMode"
-          @open-graveyard="ui.openGraveyardViewer('player1')"
+          @open-graveyard="ui.openGraveyardViewer(game.mySide)"
           @toggle-enhanced="ui.toggleEnhancedMode()"
         />
         <!-- Events moved to PlayerField between L1-L2 -->
@@ -334,7 +360,7 @@ const onPlayDescription = computed(() => {
       <!-- AI stats (left) -->
       <div class="mhud-side mhud-ai">
         <span class="mhud-label mhud-label-ai">AI</span>
-        <span class="mhud-stat" @click="ui.openGraveyardViewer('player2')">💀{{ ai.graveyard.length }}</span>
+        <span class="mhud-stat" @click="ui.openGraveyardViewer(game.mySide === 'player1' ? 'player2' : 'player1')">💀{{ ai.graveyard.length }}</span>
         <span class="mhud-stat">🃏{{ ai.deck.length }}</span>
         <span class="mhud-stat mhud-glory">⚔{{ ai.glory }}</span>
       </div>
@@ -346,7 +372,7 @@ const onPlayDescription = computed(() => {
       <div class="mhud-side mhud-player">
         <span class="mhud-stat mhud-glory" :class="{ 'mhud-enhanced': ui.isEnhancedMode }" @click="ui.toggleEnhancedMode()">⚔{{ player.glory }}</span>
         <span class="mhud-stat">🃏{{ player.deck.length }}</span>
-        <span class="mhud-stat" @click="ui.openGraveyardViewer('player1')">💀{{ player.graveyard.length }}</span>
+        <span class="mhud-stat" @click="ui.openGraveyardViewer(game.mySide)">💀{{ player.graveyard.length }}</span>
         <span class="mhud-label mhud-label-player">TY</span>
       </div>
     </div>
@@ -362,7 +388,7 @@ const onPlayDescription = computed(() => {
               :grave-count="ai.graveyard.length"
               :glory="ai.glory"
               :is-a-i="true"
-              @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer('player2') }"
+              @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer(game.mySide === 'player1' ? 'player2' : 'player1') }"
             />
             <div class="drawer-divider" />
             <DeckPile
@@ -372,7 +398,7 @@ const onPlayDescription = computed(() => {
               :glory="player.glory"
               :is-a-i="false"
               :enhanced-active="ui.isEnhancedMode"
-              @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer('player1') }"
+              @open-graveyard="() => { ui.mobileDrawerOpen = false; ui.openGraveyardViewer(game.mySide) }"
               @toggle-enhanced="ui.toggleEnhancedMode()"
             />
           </div>
@@ -401,7 +427,7 @@ const onPlayDescription = computed(() => {
     <Transition name="onplay-fade">
       <div v-if="game.state?.awaitingOnPlayConfirmation" class="onplay-confirm">
         <div class="onplay-box">
-          <div class="onplay-title">Efekt przy wystawieniu (GRATIS)</div>
+          <div class="onplay-title">Efekt przy wystawieniu</div>
           <div class="onplay-desc">{{ onPlayDescription }}</div>
           <div class="onplay-btns">
             <button class="onplay-yes" @click="game.confirmOnPlay()">TAK — Aktywuj</button>
@@ -773,6 +799,23 @@ const onPlayDescription = computed(() => {
   text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
 }
 
+.fullscreen-btn {
+  padding: 4px 8px;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+.fullscreen-btn:hover {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
 .surrender-top-btn {
   padding: 4px 10px;
   background: rgba(239, 68, 68, 0.1);

@@ -43,11 +43,11 @@ function adventureColor(ev: ActiveEventCard) {
 }
 
 function ownerLabel(ev: ActiveEventCard): string {
-  return ev.owner === 'player1' ? 'TY' : 'AI'
+  return ev.owner === game.mySide ? 'TY' : 'WRÓG'
 }
 
 function ownerColor(ev: ActiveEventCard): string {
-  return ev.owner === 'player1' ? '#4ade80' : '#f87171'
+  return ev.owner === game.mySide ? '#4ade80' : '#f87171'
 }
 </script>
 

@@ -17,8 +17,8 @@ function createTooltip() {
     z-index: 99999;
     background: #0f172a;
     color: #e2e8f0;
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     line-height: 1.4;
     padding: 6px 10px;
     border-radius: 6px;

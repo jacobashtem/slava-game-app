@@ -691,6 +691,7 @@ defineExpose({ play, ready })
   height: 100%;
   z-index: 10;
   pointer-events: none;
+  background: transparent;
 }
 .bow-spark-canvas {
   position: absolute;
@@ -699,6 +700,7 @@ defineExpose({ play, ready })
   height: 100%;
   z-index: 12;
   pointer-events: none;
+  background: transparent;
 }
 .bow-screen-flash {
   position: absolute;

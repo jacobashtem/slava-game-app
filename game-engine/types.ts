@@ -243,6 +243,8 @@ export interface CombatResult {
   counterattackOccurred: boolean
   softFail?: boolean          // atak chybiony/zablokowany (Odporny) — 0 DMG ale kontratak działa
   softFailReason?: string     // powód blokady (np. "Tur jest odporny na Dystans i Magię")
+  brzeginaPaused?: boolean    // combat paused for Brzegina decision — counterattack pending
+  defenderDefBeforeHit?: number  // DEF obrońcy przed ciosem (do wznowienia kontrataku)
   effectsTriggered: string[]  // lista effectId które odpaliły
   log: LogEntry[]
 }

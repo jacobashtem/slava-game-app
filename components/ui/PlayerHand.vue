@@ -150,7 +150,7 @@ function onPlayAdventure(card: CardInstance, useEnhanced: boolean) {
   // Artefakt (typ 1) — zawsze wymaga celu (własna istota)
   if (adventureType === 1) {
     const hasOwnCreatures = game.state
-      ? getAllCreaturesOnField(game.state, 'player1').length > 0
+      ? getAllCreaturesOnField(game.state, game.mySide).length > 0
       : false
     if (!hasOwnCreatures) {
       ui.showPlayLimitToast('Nie masz istot na polu do wyposażenia!')
@@ -162,14 +162,15 @@ function onPlayAdventure(card: CardInstance, useEnhanced: boolean) {
   }
 
   // Zdarzenie (typ 0) — sprawdź czy wymaga celu
+  const oppSide = game.mySide === 'player1' ? 'player2' : 'player1'
   const targetType = adventureTargetMap[effectId]
   if (targetType) {
     const hasTargets = game.state
       ? (targetType === 'enemy'
-          ? getAllCreaturesOnField(game.state, 'player2').length > 0
+          ? getAllCreaturesOnField(game.state, oppSide).length > 0
           : targetType === 'ally'
-            ? getAllCreaturesOnField(game.state, 'player1').length > 0
-            : (getAllCreaturesOnField(game.state, 'player1').length + getAllCreaturesOnField(game.state, 'player2').length) > 0
+            ? getAllCreaturesOnField(game.state, game.mySide).length > 0
+            : (getAllCreaturesOnField(game.state, game.mySide).length + getAllCreaturesOnField(game.state, oppSide).length) > 0
         )
       : false
     if (!hasTargets) {
@@ -205,7 +206,8 @@ function fanStyle(idx: number, total: number) {
 }
 
 // ===== CARD DRAW ANIMATION — track newly added cards for staggered entrance =====
-const _prevHandIds = ref<Set<string>>(new Set())
+// Initialize with current hand so the starting deal doesn't trigger draw animation
+const _prevHandIds = ref<Set<string>>(new Set(hand.value.map(c => c.instanceId)))
 const drawAnimCards = ref<Set<string>>(new Set())
 const stolenAnimCards = ref<Set<string>>(new Set())
 let _drawAnimTimer: ReturnType<typeof setTimeout> | null = null
@@ -426,8 +428,8 @@ const adventureTypeColor = (card: CardInstance) => {
 /* ===== ADVENTURE CARD (full-art redesign) ===== */
 .adventure-card {
   position: relative;
-  width: 110px;
-  height: 154px;
+  width: 130px;
+  height: 175px;
   border-radius: 6px;
   border: 2px solid color-mix(in srgb, var(--adv-color, #6366f1) 35%, transparent);
   background: #0a0406;
@@ -717,8 +719,8 @@ const adventureTypeColor = (card: CardInstance) => {
 
   .adventure-card,
   .draw-card {
-    width: 62px;
-    height: 86px;
+    width: 64px;
+    height: 88px;
     border-radius: 4px;
   }
   .adv-name {

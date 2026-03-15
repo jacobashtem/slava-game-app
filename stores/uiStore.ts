@@ -265,6 +265,14 @@ export const useUIStore = defineStore('ui', () => {
     }, 800))
   }
 
+  // Banner queue — full-screen banners (like TurnBanner) for important events
+  type BannerType = 'player' | 'ai' | 'season' | 'plunder' | 'timeout' | 'effect' | 'steal' | 'death'
+  const pendingBanners = ref<{ text: string; type: BannerType; duration: number; sub?: string }[]>([])
+
+  function showBanner(text: string, type: BannerType, duration = 1800, sub = '') {
+    pendingBanners.value.push({ text, type, duration, sub })
+  }
+
   function showInfoBox(text: string, icon = '📜', type: 'info' | 'effect' | 'warning' = 'effect') {
     const id = ++_infoId
     infoBoxes.value.push({ id, text, icon, type })
@@ -327,6 +335,8 @@ export const useUIStore = defineStore('ui', () => {
     placingOnEnemyField,
     infoBoxes,
     showInfoBox,
+    pendingBanners,
+    showBanner,
     flashingEventId,
     flashEventCard,
     counterAttackCardId,

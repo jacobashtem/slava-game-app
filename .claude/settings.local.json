@@ -65,7 +65,31 @@
       "WebFetch(domain:discoverthreejs.com)",
       "WebFetch(domain:developer.chrome.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(taskkill //f //im node.exe 2>/dev/null; echo \"done\")"
+      "Bash(taskkill //f //im node.exe 2>/dev/null; echo \"done\")",
+      "Bash(git push:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(ls /c/jacobash/slava-game-app/node_modules/nitro* 2>/dev/null; ls /c/jacobash/slava-game-app/node_modules/nuxt/package.json 2>/dev/null && node -e \"console.log\\(require\\('/c/jacobash/slava-game-app/node_modules/nuxt/package.json'\\).version\\)\")",
+      "Bash(ls /c/jacobash/slava-game-app/node_modules/nitro*/package.json 2>/dev/null && head -3 /c/jacobash/slava-game-app/node_modules/nitro*/package.json)",
+      "Bash(node_modules/.bin/vue-tsc --noEmit 2>&1 | head -40)",
+      "Bash(cd C:/jacobash/slava-game-app && grep -A 35 \"id: 'homen_convert_on_death'\" game-engine/EffectRegistry.ts | head -50)",
+      "Bash(cd C:/jacobash/slava-game-app && grep -A 25 \"id: 'mara_sacrifice_takeover'\" game-engine/EffectRegistry.ts | head -40)",
+      "Bash(cd C:/jacobash/slava-game-app && grep -n '\"name\": \"Czarownica\"' data/Slava_Vol2_Istoty.json)",
+      "Bash(cd C:/jacobash/slava-game-app && grep -n '\"name\": \"Homen\"' data/Slava_Vol2_Istoty.json)",
+      "Bash(cd C:/jacobash/slava-game-app && grep -n '\"name\": \"Mara\"' data/Slava_Vol2_Istoty.json)",
+      "Bash(cd C:/jacobash/slava-game-app && grep -n '\"name\": \"Najemnik\"' data/Slava_Vol2_Istoty.json)",
+      "Bash(cd C:/jacobash/slava-game-app && grep -n '\"name\": \"Zmora\"' data/Slava_Vol2_Istoty.json)",
+      "Bash(./node_modules/.bin/nuxi typecheck:*)",
+      "Bash(python -c \"from PIL import Image; print\\('Pillow OK'\\)\" 2>&1)",
+      "Bash(ffmpeg -i assets/cards/creature/117.png -f null - 2>&1 | grep \"Stream\\\\|Video\")",
+      "Bash(ffmpeg -i assets/cards/creature/117.png 2>&1 | grep \"Video:\")",
+      "Bash(ffmpeg -i assets/cards/creature/117.png 2>&1 | grep -i \"stream\\\\|video\\\\|size\")",
+      "Bash(ffmpeg -i assets/cards/creature/117.png 2>&1)",
+      "Bash(cd assets/cards/creature && rm -f Alkonost.png Gorynych.png Junak-600dpi.png Lamia.png balwan.png barstuk.png belt.png chaly.png krol-wezow.png licho.png 2>&1)",
+      "Bash(grep -n \"watch\\(\" components/vfx/*.vue | head -20)",
+      "Bash(./node_modules/.bin/vue-tsc --noEmit 2>&1 | head -30)",
+      "Bash(node_modules/.bin/nuxi typecheck:*)",
+      "Bash(git revert:*)",
+      "Bash(git -C /c/jacobash/slava-game-app status --short | grep -i \"dobrooch\\\\|11\\\\.\\\\|nowe\")"
     ]
   }
 }

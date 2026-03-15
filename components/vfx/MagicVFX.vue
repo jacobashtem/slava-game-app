@@ -545,7 +545,7 @@ defineExpose({ play, gpuReady, gpuError })
 }
 .magic-three-canvas,
 .magic-spark-canvas {
-  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; background: transparent;
 }
 .magic-three-canvas { z-index: 10; }
 .magic-spark-canvas { z-index: 12; }

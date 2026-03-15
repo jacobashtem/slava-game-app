@@ -189,7 +189,7 @@ const showSettings = ref(false)
             <span class="nt-desc">Testuj karty</span>
           </NuxtLink>
           <NuxtLink to="/vfx-arena" class="nav-tile">
-            <Icon icon="game-icons:crossed-swords" class="nt-icon" />
+            <Icon icon="game-icons:battle-axe" class="nt-icon" />
             <span class="nt-label">VFX Arena</span>
             <span class="nt-desc">Testuj efekty</span>
           </NuxtLink>

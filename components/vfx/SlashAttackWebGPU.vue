@@ -321,7 +321,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
   // SLASH IMPACT
   tl.call(() => {
     if (flashRef.value) {
-      flashRef.value.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.5), rgba(255,200,150,0.3))'
+      flashRef.value.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,200,150,0.15))'
       gsap.fromTo(flashRef.value, { opacity: 1 }, { opacity: 0, duration: 0.15 })
     }
 
@@ -517,6 +517,7 @@ defineExpose({ play, gpuReady, gpuError })
   height: 100%;
   z-index: 10;
   pointer-events: none;
+  background: transparent;
 }
 .slash-spark-canvas {
   position: absolute;
@@ -525,6 +526,7 @@ defineExpose({ play, gpuReady, gpuError })
   height: 100%;
   z-index: 12;
   pointer-events: none;
+  background: transparent;
 }
 .slash-screen-flash {
   position: absolute;
