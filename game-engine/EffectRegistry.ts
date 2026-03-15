@@ -432,12 +432,11 @@ registerEffect({
   },
 })
 
-// ✅ DZIKI MYŚLIWY — Po zabiciu może wrócić do talii NA WIERZCH z zachowanymi efektami/artefaktami
-// AI decyduje: wraca jeśli ma mało HP (DEF <= 2) LUB ma cenne artefakty
+// ✅ DZIKI MYŚLIWY — Po zabiciu wraca do ręki (zachowuje premie i artefakty)
 registerEffect({
   id: 'dziki_mysliwy_return_on_kill',
   name: 'Polowanie Dzikiego Myśliwego',
-  description: '[ZABÓJSTWO] Za każdym razem gdy zabije wrogą istotę, może wrócić do talii (NA WIERZCH) zachowując wszystkie efekty i artefakty.',
+  description: '[ZABÓJSTWO] Po zabiciu wroga wraca do ręki z zachowanymi premiami i artefaktami.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
@@ -445,20 +444,20 @@ registerEffect({
     const sourceInState = findCardInState(newState, ctx.source.instanceId)
     if (!sourceInState) return effectResult(newState)
 
-    // AI heurystyka: wróć jeśli mało HP lub ma artefakty warte zachowania
-    const isAI = newState.players[sourceInState.owner].isAI
-    const lowHP = sourceInState.currentStats.defense <= 2
-    const hasArtifacts = sourceInState.equippedArtifacts.length > 0
-    const shouldReturn = isAI ? (lowHP || hasArtifacts) : false // gracz decyduje interaktywnie
+    const owner = newState.players[sourceInState.owner]
+    const removed = removeCardFromField(newState, sourceInState.instanceId)
+    if (!removed) return effectResult(newState)
 
-    if (shouldReturn || !isAI) {
-      // Oznacz możliwość powrotu — GameEngine pyta gracza lub AI wykonuje automatycznie
-      sourceInState.metadata.canReturnToDeck = true
-      sourceInState.metadata.returnToDeckTop = true // na WIERZCH talii
-    }
+    // Reset combat state, zachowaj premie/artefakty/activeEffects
+    removed.line = null
+    removed.hasAttackedThisTurn = false
+    removed.hasMovedThisTurn = false
+    removed.position = CardPosition.DEFENSE
 
-    const log = addLog(ctx.state,
-      `${ctx.source.cardData.name} może wrócić do talii${shouldReturn ? ' (AI: powraca)' : ''}.`,
+    owner.hand.push(removed)
+
+    const log = addLog(newState,
+      `${ctx.source.cardData.name} wraca do ręki po udanym polowaniu!`,
       'effect'
     )
     return effectResult(newState, [log])

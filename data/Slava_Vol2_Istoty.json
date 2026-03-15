@@ -354,10 +354,10 @@
         "abilities": [
             {
                 "trigger": "ON_KILL",
-                "text": "Wraca do talii (zachowuje premie i artefakty)."
+                "text": "Wraca do ręki (zachowuje premie i artefakty)."
             }
         ],
-        "effectDescription": "Za każdym razem, gdy zabije wrogą istotę, może wrócić do talii (zachowując wszystkie działające na niego efekty i artefakty).",
+        "effectDescription": "[ZABÓJSTWO] Po zabiciu wroga wraca do ręki z zachowanymi premiami i artefaktami.",
         "effectId": "dziki_mysliwy_return_on_kill"
     },
     {
