@@ -224,7 +224,7 @@
         "abilities": [
             {
                 "trigger": "AURA",
-                "text": "Prowokacja — wrogowie w zasięgu MUSZĄ atakować Błotnika."
+                "text": "Wrogowie w zasięgu muszą {COMBAT}Błotnika."
             }
         ],
         "effectDescription": "Każda istota przeciwnika, która w zasięgu swojego ataku ma błotnika, nie może atakować nikogo innego.",
