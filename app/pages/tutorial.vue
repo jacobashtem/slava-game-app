@@ -12,10 +12,8 @@ const gameReady = ref(false)
 const loadingDone = ref(false)
 
 onMounted(async () => {
-  // Start tutorial game
   game.startTutorial()
 
-  // Prefetch WebGPU (same as game.vue)
   const minDelay = new Promise(r => setTimeout(r, 3500))
   const modules = Promise.all([
     import('three/webgpu').catch(() => {}),
@@ -25,7 +23,6 @@ onMounted(async () => {
   gameReady.value = true
 })
 
-// Start tutorial steps after loading screen completes
 watch(() => loadingDone.value, (done) => {
   if (done) tutorial.startTutorial()
 })
@@ -33,5 +30,6 @@ watch(() => loadingDone.value, (done) => {
 
 <template>
   <GameBoard />
+  <TutorialOverlay />
   <GameLoadingScreen :ready="gameReady" @complete="loadingDone = true" />
 </template>

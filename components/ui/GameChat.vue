@@ -11,12 +11,9 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useNarrator } from '../../composables/useNarrator'
 import { useMultiplayer } from '../../composables/useMultiplayer'
-import { useTutorial } from '../../composables/useTutorial'
-
 const game = useGameStore()
 const narrator = useNarrator()
 const mp = useMultiplayer()
-const tutorial = useTutorial()
 
 const isMP = computed(() => game.isMultiplayerMode)
 
@@ -186,16 +183,6 @@ watch(() => narrator.messages.value.length, (newLen) => {
   }
 })
 
-// ===== TUTORIAL MESSAGES =====
-let lastTutorialIdx = 0
-watch(() => tutorial.messages.value.length, (newLen) => {
-  if (newLen <= lastTutorialIdx) { lastTutorialIdx = newLen; return }
-  const newMsgs = tutorial.messages.value.slice(lastTutorialIdx)
-  lastTutorialIdx = newLen
-  for (const text of newMsgs) {
-    pushMsg('ai', text)
-  }
-})
 
 // ===== MULTIPLAYER CHAT: receive opponent messages =====
 let lastMPChatLen = 0
