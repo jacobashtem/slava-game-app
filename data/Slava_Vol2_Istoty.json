@@ -192,7 +192,7 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Zyskuje tyle {stats.attack} ile straci {stats.defense}.",
+        "effect": "Zyskuje tyle {ATK}, ile stracił {DEF}.",
         "lore": "Duch lasu, będący jego strażnikiem. Pozostaje niewidoczny i spokojny, postacią przypominając prastare drzewo. Rozgniewany, brutalnie miażdży każdego, kto postanowi zaszkodzić puszczy.",
         "abilities": [
             {
@@ -201,7 +201,7 @@
                 "text": "Zyskuje tyle {ATK}, ile stracił {DEF}."
             }
         ],
-        "effectDescription": "Zyskuje tyle {stats.attack} ile straci {stats.defense}.",
+        "effectDescription": "Zyskuje tyle {ATK}, ile stracił {DEF}.",
         "effectId": "bugaj_def_to_atk"
     },
     {
@@ -219,7 +219,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": true
         },
-        "effect": "Każda istota przeciwnika, która w zasięgu swojego ataku ma błotnika, nie może atakować nikogo innego.",
+        "effect": "[AURA] Wrogowie w zasięgu muszą {COMBAT} Błotnika — nie mogą atakować nikogo innego.",
         "lore": "Owadopodobny stwór zamieszkujący bagna i trzęsawiska. WYdziela słabe światło, które wabi zbłąkanych podróżników, by wprowadzić ich w pułapkę i żerowąć na ich truchłach.",
         "abilities": [
             {
@@ -227,7 +227,7 @@
                 "text": "Wrogowie w zasięgu muszą {COMBAT}        Błotnika."
             }
         ],
-        "effectDescription": "Każda istota przeciwnika, która w zasięgu swojego ataku ma błotnika, nie może atakować nikogo innego.",
+        "effectDescription": "[AURA] Wrogowie w zasięgu muszą {COMBAT} Błotnika — nie mogą atakować nikogo innego.",
         "effectId": "blotnik_taunt"
     },
     {
@@ -245,7 +245,7 @@
             "attackTypeString": "Żywioł",
             "isFlying": true
         },
-        "effect": "Uziemia wszystkie wrogie latające istoty (raz na turę).",
+        "effect": "[AKCJA] Wszystkie wrogie istoty tracą {FLY}. Raz na turę.",
         "lore": "Powietrzny duch, dpowiadający za pogodę. Przypomina potężnie zbudowanego mężczyzne. Całymi dniami przesuwa chmury, zsyła grad i ulewy. Jego charakter jest nieprzewidywalny.",
         "abilities": [
             {
@@ -253,7 +253,7 @@
                 "text": "Wszyscy wrogowie tracą {FLY}."
             }
         ],
-        "effectDescription": "Uziemia wszystkie wrogie latające istoty (raz na turę).",
+        "effectDescription": "[AKCJA] Wszystkie wrogie istoty tracą {FLY}. Raz na turę.",
         "effectId": "chmurnik_ground_flying"
     },
     {
@@ -271,7 +271,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Gdy sojusznik jest atakowany, Chowaniec może przyjąć walkę na siebie.",
+        "effect": "[CZUJNOŚĆ] Może przyjąć {COMBAT} wymierzony w sojusznika.",
         "lore": "Pomniejszy demon, który w zamian za schronienie za piecem i skromny pokarm opiekuje się domostwem, znosi do niego różne drobiazgi i pomaga gospodarzowi w niektórych pracach.",
         "abilities": [
             {
@@ -279,7 +279,7 @@
                 "text": "Może przyjąć {COMBAT} wymierzony w sojusznika."
             }
         ],
-        "effectDescription": "Gdy sojusznik jest atakowany, Chowaniec może przyjąć walkę na siebie.",
+        "effectDescription": "[CZUJNOŚĆ] Może przyjąć {COMBAT} wymierzony w sojusznika.",
         "effectId": "chowaniec_intercept"
     },
     {
@@ -349,7 +349,7 @@
             "attackTypeString": "Wręcz/Dystans",
             "isFlying": false
         },
-        "effect": "Za każdym razem, gdy zabije wrogą istotę, może wrócić do talii (zachowując wszystkie działające na niego efekty i artefakty).",
+        "effect": "Za każdym razem, gdy zabije wrogą istotę, wraca do ręki (zachowując wszystkie działające na niego efekty i artefakty).",
         "lore": "Pradawny demon, którego tożsamości nikt nie zna. Od wieków przemierza bezdroża wraz z hordą psów-upiorów. Poluje nocą i morduje tych, którzy zawędrowali za daleko.",
         "abilities": [
             {
@@ -375,7 +375,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": true
         },
-        "effect": "Jeśli atakuje w tej samej rundzie, w której go wystawiono, zadaje podwójne obrażenia",
+        "effect": "[NATARCIE] W rundzie wystawienia zadaje podwójne {DMG}.",
         "lore": "Magiczna istota, posiadająca łeb i skrzydła orła, zaś korpus lwa. Zakłada gniazdo wysoko w górach, gdzie zaciekle broni zarówno swych piskląt, jak i latami gromadzonych skarbów.",
         "abilities": [
             {
@@ -385,7 +385,7 @@
                 "text": "Przy {ATK} w rundzie wystawienia: Podwójne {DMG}."
             }
         ],
-        "effectDescription": "Jeśli atakuje w tej samej rundzie, w której go wystawiono, zadaje podwójne obrażenia",
+        "effectDescription": "[NATARCIE] W rundzie wystawienia zadaje podwójne {DMG}.",
         "effectId": "gryf_double_dmg_on_play_turn"
     },
     {
@@ -403,7 +403,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Nawet w ataku kontratakuje.",
+        "effect": "[AURA] Kontratakuje ZAWSZE — nawet w pozycji {ATK}.",
         "lore": "Majestatyczny gadzi władca, zawsze otoczony kłębowiskiem swoich poddanych. Pomimo swej grozy, jest celem licznych polowań. Myśliwi liczą na cenne trofea i członki o mogicznych mocach.",
         "abilities": [
             {
@@ -411,7 +411,7 @@
                 "text": "Kontratakuje ZAWSZE — nawet w Pozycji {ATK}."
             }
         ],
-        "effectDescription": "Nawet w ataku kontratakuje.",
+        "effectDescription": "[AURA] Kontratakuje ZAWSZE — nawet w pozycji {ATK}.",
         "effectId": "krol_wezow_always_counter",
         "tags": [
             "dragon"
@@ -432,7 +432,7 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Sojusznicy Leszego, po wykonaniu ataku, mogą przejść natychmiast w pozycję obrony.",
+        "effect": "[AURA] Po {COMBAT} sojusznicy mogą przejść w pozycję {DEF}.",
         "lore": "Potężny duch opiekjący się lasem, władca wszystkich leśnych istot. Przybiera różne formy - najczęściej staruszka, drzewa lub zwierzęcia. Mimo, że nieufny, dla szanujących przyrodę bywa życzliwy.",
         "abilities": [
             {
@@ -440,7 +440,7 @@
                 "text": "Po {ATK} sojusznicy mogą przejść w Pozycję {DEF}."
             }
         ],
-        "effectDescription": "Sojusznicy Leszego, po wykonaniu ataku, mogą przejść natychmiast w pozycję obrony.",
+        "effectDescription": "[AURA] Po {COMBAT} sojusznicy mogą przejść w pozycję {DEF}.",
         "effectId": "leszy_post_attack_defend"
     },
     {
@@ -458,7 +458,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Tak dlugo jak jest w polu, czarujące istoty wroga nie mogą atakować.",
+        "effect": "Dopóki jest w polu, wrogie istoty z typem {MAGIC} nie mogą atakować.",
         "lore": "Demon sprawujący nadzór nad ludźmi władającymi magią. Bierze udział we wszystkich sabatach. Okrutnie karze każdego, kto używa magii, by szkodzić ludziom.",
         "abilities": [
             {
@@ -466,7 +466,7 @@
                 "text": "Wrodzy Magowie nie mogą atakować."
             }
         ],
-        "effectDescription": "Tak dlugo jak jest w polu, czarujące istoty wroga nie mogą atakować.",
+        "effectDescription": "Dopóki jest w polu, wrogie istoty z typem {MAGIC} nie mogą atakować.",
         "effectId": "matoha_anti_magic"
     },
     {
@@ -538,7 +538,7 @@
             "attackTypeString": "Magia",
             "isFlying": false
         },
-        "effect": "Atakuje za tyle {stats.attack}, ile {stats.attack} ma atakowana istota. Rodzaj tego ataku także jest taki, jakim dysponuje atakowana istota.",
+        "effect": "Kopiuje {ATK} i typ ataku atakowanej istoty.",
         "lore": "Żeński demon zamieszkujący lasy. Przybiera postać niezwykle urodziwej niewiasty. Uwodzi młodzieńców, by igrać z nimi, wciągać w otchłań jeziora lub nakłaniać do własnej zguby.",
         "abilities": [
             {
@@ -547,7 +547,7 @@
                 "text": "Przy {ATK}: Kopiuje {ATK} i Typ {ATK} celu."
             }
         ],
-        "effectDescription": "Atakuje za tyle {stats.attack}, ile {stats.attack} ma atakowana istota. Rodzaj tego ataku także jest taki, jakim dysponuje atakowana istota.",
+        "effectDescription": "Kopiuje {ATK} i typ ataku atakowanej istoty.",
         "effectId": "rusalka_mirror_attack"
     },
     {
@@ -573,7 +573,7 @@
                 "text": "Wybrany sojusznik ignoruje odporności i ograniczenia wroga."
             }
         ],
-        "effectDescription": "Dopóki żyje, wybrany sojusznik rani wybranego przeciwnika, negując ograniczenia i odporności.",
+        "effectDescription": "[WEJŚCIE] Wybierz sojusznika — jego {COMBAT} ignoruje odporności wroga.",
         "effectId": "rybi_krol_pierce_immunity"
     },
     {
@@ -617,7 +617,7 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Neguje premie odporności na jego atak.",
+        "effect": "Jego {COMBAT} ignoruje odporności celu.",
         "lore": "Mieszka na dnie morza, gdyż nie lubi być przez nikogo niepokojony. Intruzów nie ominie jego gniew: sprowadza sztorm, niszczy okręty i topi nieroztropnych żeglarzy.",
         "abilities": [
             {
@@ -625,7 +625,7 @@
                 "text": "Jego {ATK} ignoruje odporności celu."
             }
         ],
-        "effectDescription": "Neguje premie odporności na jego atak.",
+        "effectDescription": "Jego {COMBAT} ignoruje odporności celu.",
         "effectId": "szalinc_negate_immunity"
     },
     {
@@ -643,7 +643,7 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Przeciaga na swoją stronę wszystkie istoty o mniejszym lub równym jej {stats.attack}. Wszystie istoty w polu o mniejszym lub równym {stats.attack} od Wiły walczą po jej stronie.",
+        "effect": "Przejmuje wszystkich wrogów o {ATK} ≤ {ATK} Wiły.",
         "lore": "Wiły to niesamowicie piękne nimfy leśne. Tańczą w zwiewnych strojach w ustronnych miejscach puszczy. Wciągają do swego kręgu i omotują każdego, kto nazbyt się do nich zbliży.",
         "abilities": [
             {
@@ -651,7 +651,7 @@
                 "text": "Przejmuje wszystkich wrogów o {ATK} ≤ {ATK} Wiły."
             }
         ],
-        "effectDescription": "Przeciaga na swoją stronę wszystkie istoty o mniejszym lub równym jej {stats.attack}. Wszystie istoty w polu o mniejszym lub równym {stats.attack} od Wiły walczą po jej stronie.",
+        "effectDescription": "Przejmuje wszystkich wrogów o {ATK} ≤ {ATK} Wiły.",
         "effectId": "wila_convert_weak_enemies"
     },
     {
@@ -695,7 +695,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Rezygnując z akcji ataku w tej turze, możesz przywrócić wydany wcześniej {Slavic/slawa-icon}.",
+        "effect": "Rezygnując z {COMBAT} w tej turze, odzyskujesz 1 {GOLD}.",
         "lore": "<i>\"Przyjazne zjawy, zmarłych przed laty  zwierząt domowych, wspierających Domowika w codziennych obowiązkach.\"</i>",
         "abilities": [
             {
@@ -704,7 +704,7 @@
                 "text": "Odzyskaj 1 {GOLD}."
             }
         ],
-        "effectDescription": "Rezygnując z akcji ataku w tej turze, możesz przywrócić wydany wcześniej {Slavic/slawa-icon}.",
+        "effectDescription": "Rezygnując z {COMBAT} w tej turze, odzyskujesz 1 {GOLD}.",
         "effectId": "korgorusze_recover_glory"
     },
     {
@@ -722,7 +722,7 @@
             "attackTypeString": "Wręcz",
             "isFlying": false
         },
-        "effect": "Może atakować jedynie <demon>. Gdy jest w polu, nikt nie może wystawić< demon>.",
+        "effect": "Atakuje jedynie {DEMON}. Gdy jest w polu, nikt nie może wystawiać {DEMON}.",
         "lore": "Demon o niezgrabnym ciele polujący nocą na inne demony i zjawy. Jest nieszkodliwy dla żywych, a nawet ich unika. Błąka się po świecie, polując na napotkane duchy.",
         "abilities": [
             {
@@ -730,7 +730,7 @@
                 "text": "Atakuje TYLKO {DEMON}. Nikt nie może wystawiać {DEMON}."
             }
         ],
-        "effectDescription": "Może atakować jedynie <demon>. Gdy jest w polu, nikt nie może wystawić< demon>.",
+        "effectDescription": "Atakuje jedynie {DEMON}. Gdy jest w polu, nikt nie może wystawiać {DEMON}.",
         "effectId": "lapiduch_demon_hunter"
     },
     {
@@ -774,7 +774,7 @@
             "attackTypeString": "Żywioł",
             "isFlying": true
         },
-        "effect": "W chwili śmierci wszystkie istoty w polu tracą 4 {stats.defense}.",
+        "effect": "[POŻEGNANIE] W chwili śmierci wszystkie istoty na polu tracą 4 {DEF}.",
         "lore": "Wielki duch ognia, wysłannik boga Swaroga. Pojawia się pod postacią smoka, ognistego wichru.lub płonącego ptaka o piórach posiadających niesamowitą moc magiczną.",
         "abilities": [
             {
@@ -782,7 +782,7 @@
                 "text": "Wszystkie istoty na stole tracą 4 {DEF}."
             }
         ],
-        "effectDescription": "W chwili śmierci wszystkie istoty w polu tracą 4 {stats.defense}.",
+        "effectDescription": "[POŻEGNANIE] W chwili śmierci wszystkie istoty na polu tracą 4 {DEF}.",
         "effectId": "zar_ptak_death_explosion",
         "tags": [
             "dragon"
@@ -803,7 +803,7 @@
             "attackTypeString": "Żywioł",
             "isFlying": false
         },
-        "effect": "Gdy pole wroga jest puste na koniec Twojej tury — zdobywasz 1 PS.",
+        "effect": "Gdy pole wroga jest puste na koniec Twojej tury — zdobywasz 1 {GOLD}.",
         "lore": "Gdy przeciwnik nie ma istot w polu, może atakować wrogą talię: rywal musi wtedy odrzucić wybraną przez gracza atakującego kartę.",
         "abilities": [
             {
@@ -813,7 +813,7 @@
                 "text": "Gdy pole wroga puste: Zdobywasz 1 {GOLD}."
             }
         ],
-        "effectDescription": "Gdy pole wroga jest puste na koniec Twojej tury — zdobywasz 1 PS.",
+        "effectDescription": "Gdy pole wroga jest puste na koniec Twojej tury — zdobywasz 1 {GOLD}.",
         "effectId": "zmije_glory_on_empty_field",
         "tags": [
             "dragon"
@@ -846,7 +846,7 @@
                 "text": "+4 {ATK} przeciw WSZYSTKIM poza wybranym typem."
             }
         ],
-        "effectDescription": "+4 {stats.attack} do walki z każdym, kto nie jest demonem/człowiekiem (wybór przy wystawieniu).",
+        "effectDescription": "[WEJŚCIE] Wybierz domenę do ochrony. +4 {ATK} przeciw wszystkim pozostałym domenom.",
         "effectId": "baba_bonus_vs_type"
     },
     {
@@ -872,7 +872,7 @@
                 "text": "Może atakować Lokacje (12 {DMG} = zniszczenie)."
             }
         ],
-        "effectDescription": "Można atakować karty lokacji. Zadając im 12 obrażeń, niszczy je.",
+        "effectDescription": "[AKCJA] Może atakować wrogą Lokację. 12 łącznych {DMG} = zniszczenie.",
         "effectId": "chaly_attack_locations",
         "tags": [
             "dragon"
@@ -901,7 +901,7 @@
                 "text": "Za każdego 2. zabitego — dostajesz 1 {GOLD}."
             }
         ],
-        "effectDescription": "Gracz, dla którego walczy Chąśnik, otrzymuje 1 <ZŁ> za każde dwie istoty przez niego zabite.",
+        "effectDescription": "[ZABÓJSTWO] Za każdego 2. zabitego wroga — zdobywasz 1 {GOLD}.",
         "effectId": "chasnik_gold_on_kill"
     },
     {
@@ -927,7 +927,7 @@
                 "text": "+1 dodatkowy {ATK} istotą w Twojej turze."
             }
         ],
-        "effectDescription": "Pozwala na atak dodatkową istotą.",
+        "effectDescription": "[AURA] +1 dodatkowy {COMBAT} istotą w Twojej turze.",
         "effectId": "chlop_extra_attack"
     },
     {
@@ -953,7 +953,7 @@
                 "text": "Przejmuje zdolności zabitego wroga."
             }
         ],
-        "effectDescription": "Przejmuje zdolności zabitych przez siebie istot.",
+        "effectDescription": "[ZABÓJSTWO] Przejmuje zdolności zabitego wroga.",
         "effectId": "czarnoksieznik_steal_abilities"
     },
     {
@@ -982,7 +982,7 @@
                 "text": "Gdy pada Zaklęcie: Zmień jego cel."
             }
         ],
-        "effectDescription": "Może zmienić adresata właśnie zagranego zaklęcia. Pierwszy raz za darmo, każdy kolejny za 1 <ZŁ>.",
+        "effectDescription": "[AURA] Gdy pada Zaklęcie — zmień jego cel. Pierwszy raz gratis, kolejne za 1 {GOLD}.",
         "effectId": "czarownica_redirect_spell"
     },
     {
@@ -1008,7 +1008,7 @@
                 "text": "Zabita istota trafia do Twojej ręki."
             }
         ],
-        "effectDescription": "Każda zabita przez nich istota trafia do rąk gracza posiadającego Dzikich ludzi.",
+        "effectDescription": "[ZABÓJSTWO] Zabita istota trafia do Twojej ręki zamiast na cmentarz.",
         "effectId": "dzicy_ludzie_steal_killed"
     },
     {
@@ -1034,7 +1034,7 @@
                 "text": "Sojusznicy mają +2 {ATK} vs {DEMON}."
             }
         ],
-        "effectDescription": "Dodaje sojusznikom +2 {stats.attack} do walki z <demon>.",
+        "effectDescription": "[AURA] Sojusznicy mają +2 {ATK} vs {DEMON}.",
         "effectId": "guslarka_bonus_vs_demon"
     },
     {
@@ -1060,7 +1060,7 @@
                 "text": "Odporne na Karty Przygody i Zaklęcia."
             }
         ],
-        "effectDescription": "Odporne na wszelkie zaklęcia. / Niewrażliwość na karty przygody",
+        "effectDescription": "[AURA] Odporne na Karty Przygody i Zaklęcia.",
         "effectId": "julki_adventure_immunity"
     },
     {
@@ -1091,7 +1091,7 @@
                 "text": "Po 2. trafieniu w ten sam cel: Cel ginie natychmiast."
             }
         ],
-        "effectDescription": "Jeśli zrani kogoś dwa razy natychmiast go zabija. Jego kontratak pada przed  wrogim atakiem.",
+        "effectDescription": "[AURA] Pierwsze Uderzenie — kontratakuje PRZED {ATK} wroga. Po 2. trafieniu w ten sam cel — cel ginie natychmiast.",
         "effectId": "junak_double_hit_kill"
     },
     {
@@ -1119,7 +1119,7 @@
                 "text": "Usuń 1 premię z dowolnej istoty."
             }
         ],
-        "effectDescription": "Raz na turę może pozbawić wybraną istotę jednej premii.",
+        "effectDescription": "[AKCJA] Usuń 1 premię z dowolnej istoty. Raz na turę.",
         "effectId": "jedza_remove_buff"
     },
     {
@@ -1145,7 +1145,7 @@
                 "text": "Nadmiar {DMG} uderza innego wroga w zasięgu."
             }
         ],
-        "effectDescription": "Jeśli zabije wroga, który miał mniej {stats.defense} niż Konny {stats.attack}, to niewykorzystane obrażenia otrzymuje inna, wskazana istota w zasięgu ataku Konnego.",
+        "effectDescription": "[ZABÓJSTWO] Nadmiar {DMG} uderza innego wroga w zasięgu.",
         "effectId": "konny_cleave"
     },
     {
@@ -1174,7 +1174,7 @@
                 "text": "Wskrześ (tylko po śmierci od {MELEE})."
             }
         ],
-        "effectDescription": "Gdy zginie od ciosu wręcz wskrzesza się: pierwszy raz za darmo, każdy następny raz za <ZŁ>. Wskrzesić go można w dowolnej swojej rundzie podczas gry.",
+        "effectDescription": "[POŻEGNANIE] Po śmierci od {MELEE} — wskrzeszenie. Pierwszy raz gratis, kolejne za 1 {GOLD}.",
         "effectId": "kosciej_melee_resurrection"
     },
     {
@@ -1200,7 +1200,7 @@
                 "text": "Przy {ATK}: Wszyscy sojuszniczy {ZYVI} atakują razem z nim."
             }
         ],
-        "effectDescription": "Gdy atakuje, wszyscy sojusznicy <ludź> również mogą wykonać atak.",
+        "effectDescription": "[NATARCIE] Gdy atakuje — wszyscy sojuszniczy {ZYVI} atakują razem z nim.",
         "effectId": "naczelnik_human_rally"
     },
     {
@@ -1232,7 +1232,7 @@
                 "text": "Wróg może go przekupić."
             }
         ],
-        "effectDescription": "Może zaatakować za każdym razem, gdy gracz korzysta ze swoich <ZŁ>. Jeżeli rywal zapłaci <ZŁ> najemnik przechodzi na jego stronę.",
+        "effectDescription": "[AKCJA] Wydaj 1 {GOLD} — dodatkowy {COMBAT}. Wróg może wydać 1 {GOLD}, by przejąć Najemnika.",
         "effectId": "najemnik_mercenary"
     },
     {
@@ -1259,7 +1259,7 @@
                 "text": "Połącz z {ZYVI} — jeździec rani całą linię."
             }
         ],
-        "effectDescription": "Łączy się z 1 <ludź>, dodając mu premię \"może atakować kilku wrogów w jednej linii\".",
+        "effectDescription": "[AKCJA] Połącz z {ZYVI} — jeździec rani całą linię wroga.",
         "effectId": "rumak_mount"
     },
     {
@@ -1285,7 +1285,7 @@
                 "text": "Widzisz 3 górne karty swojej talii."
             }
         ],
-        "effectDescription": "Dopóki Starszyzna Plemienna jest w polu, gracz może podglądać swoje 3 kolejne karty w talii.",
+        "effectDescription": "[AURA] Widzisz 3 górne karty swojej talii.",
         "effectId": "starszyzna_scry_deck"
     },
     {
@@ -1311,7 +1311,7 @@
                 "text": "Sojusznicy otrzymują -1 {DMG} z każdego źródła."
             }
         ],
-        "effectDescription": "Zmniejsza o 1 każdą ranę, jaką otrzymują sojusznicy.",
+        "effectDescription": "[AURA] Sojusznicy otrzymują -1 {DMG} z każdego źródła.",
         "effectId": "szeptunka_damage_reduction"
     },
     {
@@ -1338,7 +1338,7 @@
                 "text": "Gdy sojusznik atakowany: Kontratakuje dowolnego wroga w zasięgu."
             }
         ],
-        "effectDescription": "Kontratakuje wybraną istotę rywala w zasięgu swego ataku.",
+        "effectDescription": "[CZUJNOŚĆ] Gdy sojusznik atakowany — kontratakuje dowolnego wroga w zasięgu.",
         "effectId": "wielkolud_choose_counter"
     },
     {
@@ -1364,7 +1364,7 @@
                 "text": "Wystaw resztę Wojów z ręki za darmo. Atakujecie razem."
             }
         ],
-        "effectDescription": "Wszyscy wojowie mogą być wystawieni jednocześnie i razem atakować.",
+        "effectDescription": "[WEJŚCIE] Wystaw resztę Wojów z ręki za darmo. Atakujecie razem.",
         "effectId": "woj_mass_deploy"
     },
     {
@@ -1391,7 +1391,7 @@
                 "text": "Ulecz sojusznika w tej samej Linii do pełna."
             }
         ],
-        "effectDescription": "Leczy (odnawia Obronę do wartości początkowej) wybraną jednostkę w tej samej linii. Koszt: 1 Sława.",
+        "effectDescription": "[AKCJA] Ulecz sojusznika w tej samej Linii do pełnej {DEF}. Koszt: 1 {GOLD}.",
         "effectId": "wolch_heal"
     },
     {
@@ -1418,7 +1418,7 @@
                 "text": "Gdy sojusznik przeżyje {ATK}: Zmniejsza {DMG} o swój {ATK}."
             }
         ],
-        "effectDescription": "Jeżeli sojusznik otrzymuje obrażenia, w wyniku których nie ginie, Znachor zmniejsza je o wartość swojego {stats.attack}.",
+        "effectDescription": "[ODWET] Gdy sojusznik przeżyje {COMBAT} — Znachor zmniejsza {DMG} o swój {ATK}.",
         "effectId": "znachor_absorb"
     },
     {
@@ -1444,7 +1444,7 @@
                 "text": "Atakuje 2 razy w turze."
             }
         ],
-        "effectDescription": "Atakuje 2 razy. W jednej rundzie może zaatakować dwa razy.",
+        "effectDescription": "[AURA] Atakuje 2 razy w turze.",
         "effectId": "lesnica_double_attack"
     },
     {
@@ -1470,7 +1470,7 @@
                 "text": "Sąsiedzi w L1 ({ZYVI}) zyskują +1 {ATK}."
             }
         ],
-        "effectDescription": "",
+        "effectDescription": "[AURA] Sąsiedzi w L1 ({ZYVI}) zyskują +1 {ATK}.",
         "effectId": "polewik_buff_neighbors"
     },
     {
@@ -1496,7 +1496,7 @@
                 "text": "Odporny na {RANGED} i {MAGIC}."
             }
         ],
-        "effectDescription": "Odporny na ataki {Slavic/strzala-icon} i  {Slavic/magia-icon}",
+        "effectDescription": "[AURA] Odporny na {RANGED} i {MAGIC}.",
         "effectId": "tur_ranged_magic_immune"
     },
     {
@@ -1523,7 +1523,7 @@
                 "text": "Po zadaniu {DMG}: Cel nie może zmieniać Pozycji."
             }
         ],
-        "effectDescription": "Zraniona przez niego istota nie może zmieniać swego ustawienia.",
+        "effectDescription": "[ZRANIENIE] Cel nie może zmieniać Pozycji.",
         "effectId": "lucznik_pin"
     },
     {
@@ -1549,7 +1549,7 @@
                 "text": "{ATK} uderza we WSZYSTKICH wrogów w jednej Linii."
             }
         ],
-        "effectDescription": "Rani kilku wrogów w jednej linii",
+        "effectDescription": "[AURA] {ATK} uderza we WSZYSTKICH wrogów w jednej Linii.",
         "effectId": "swiatogor_line_cleave"
     },
     {
@@ -1575,7 +1575,7 @@
                 "text": "Brak limitu 5 istot na polu."
             }
         ],
-        "effectDescription": "Zezwala na posiadanie w polu więcej niz 5 kart",
+        "effectDescription": "[AURA] Brak limitu 5 istot na polu.",
         "effectId": "zupan_no_field_limit"
     },
     {
@@ -1601,7 +1601,7 @@
                 "text": "Sojusznicy zyskują jednorazową Tarczę na wrogie Zaklęcie."
             }
         ],
-        "effectDescription": "Daje sojusznikom jednorazową odporność na wszelkie zaklęcia.",
+        "effectDescription": "[WEJŚCIE] Sojusznicy zyskują jednorazową Tarczę na wrogie Zaklęcie.",
         "effectId": "zerca_spell_shield"
     },
     {
@@ -1627,7 +1627,7 @@
                 "text": "Twoje {DEMON} zyskują +1 {ATK}."
             }
         ],
-        "effectDescription": "+1 {stats.attack} sojuszniczym <demon> w polu.",
+        "effectDescription": "[AURA] Twoje {DEMON} zyskują +1 {ATK}.",
         "effectId": "zerca_welesa_demon_buff"
     },
     {
@@ -1648,7 +1648,7 @@
         "effect": "",
         "lore": "<i>\"Wielki smok, żyjący wysoko w chmurach. Jako wróg Swaroga, wielokrotnie próbował połknąć słońce, powodując zaćmienia.\nRuch skrzydłami, zsyłał wichury, a ogonem - grady i deszcze. Jakby było tego mało, lubował się też w ludzkim mięsie.\"</i>",
         "abilities": [],
-        "effectDescription": "",
+        "effectDescription": "Potężny smok. Brak specjalnej zdolności.",
         "effectId": "azdacha_vanilia",
         "tags": [
             "dragon"
@@ -1678,7 +1678,7 @@
                 "text": "Zdejmij negatywny efekt z istoty — Bagiennik ×2 {ATK} i {DEF}."
             }
         ],
-        "effectDescription": "Usuwając negatywny efekt z wybranej karty, podwaja swój {Slavic/atak-ikona} i  {Slavic/obrona-ikona}",
+        "effectDescription": "[AKCJA] Zdejmij negatywny efekt z istoty — Bagiennik podwaja swój {ATK} i {DEF}.",
         "effectId": "bagiennik_cleanse_buff"
     },
     {
@@ -1705,7 +1705,7 @@
                 "text": "Po zadaniu {DMG}: Zabiera {ATK} zamiast {DEF}. {ATK}=0 → śmierć."
             }
         ],
-        "effectDescription": "Gdy rani wroga, odbiera mu {stats.attack} zamiast {stats.defense}, a gdy ten spadnie do zera, przeciwnik ginie.",
+        "effectDescription": "[ZRANIENIE] Zabiera {ATK} zamiast {DEF}. Gdy {ATK} spadnie do 0 — cel ginie.",
         "effectId": "bezkost_atk_drain"
     },
     {
@@ -1758,7 +1758,7 @@
                 "text": "Wskazana istota wraca na wierzch talii (zachowuje modyfikatory)."
             }
         ],
-        "effectDescription": "Po wystawieniu go w pole wskazana istota wraca na szczyt talii, zachowując wszysktie modyfikatory zdobyte podczas gry.",
+        "effectDescription": "[WEJŚCIE] Wskazana istota wraca na wierzch talii (zachowuje premie).",
         "effectId": "bledny_ognik_bounce"
     },
     {
@@ -1785,7 +1785,7 @@
                 "text": "Wskrzesza {UNDEAD} — suma ich {ATK} ≤ {ATK} Cmentarnej Baby."
             }
         ],
-        "effectDescription": "Przywołuje <trup> z cmentarza. Suma {stats.attack} przywołanych istot nie może przekroczyć {stats.attack} Cmentarnej baby.",
+        "effectDescription": "[WEJŚCIE] Wskrzesza {UNDEAD} z cmentarza — suma ich {ATK} ≤ {ATK} Cmentarnej Baby.",
         "effectId": "cmentarna_baba_resurrect"
     },
     {
@@ -1811,7 +1811,7 @@
                 "text": "+Atak Domowika do limitu kart w ręce."
             }
         ],
-        "effectDescription": "Dopóki jest w polu, gracz może mieć w rękach tyle dodatkowych kart, ile Domowik ma {stats.attack}.",
+        "effectDescription": "[AURA] +{ATK} Domowika do limitu kart w ręce.",
         "effectId": "domowik_hand_size"
     },
     {
@@ -1841,7 +1841,7 @@
                 "text": "Wróg nie może grać kart w ciemno."
             }
         ],
-        "effectDescription": "Odsłania wszystkie zakryte istoty wroga w polu. Dopóki Dziad żyje, żadna wroga istota nie może być zagrana w ciemno.",
+        "effectDescription": "[WEJŚCIE] [AURA] Odkrywa wszystkich ukrytych wrogów. Wróg nie może grać kart w ciemno.",
         "effectId": "dziad_reveal_all"
     },
     {
@@ -1868,7 +1868,7 @@
                 "text": "Po zadaniu {DMG}: Zraniony wróg po śmierci staje się Homenem (4/4) po Twojej stronie."
             }
         ],
-        "effectDescription": "Kto zostanie zraniony przez Homen, po śmierci przechodzi na jego stronę i sam staje się Homenem.",
+        "effectDescription": "[ZRANIENIE] Zraniony wróg po śmierci staje się Homenem po Twojej stronie.",
         "effectId": "homen_convert_on_death"
     },
     {
@@ -1894,7 +1894,7 @@
                 "text": "Trwale paraliżuje wybranego wroga."
             }
         ],
-        "effectDescription": "Wybrany wrogi potwór jest unieruchomiony(ent)",
+        "effectDescription": "[WEJŚCIE] Trwale paraliżuje wybranego wroga.",
         "effectId": "jaroszek_paralyze"
     },
     {
@@ -1920,7 +1920,7 @@
                 "text": "Jej {ATK} nie kończy Twojej tury."
             }
         ],
-        "effectDescription": "Co rundę może wykonać atak nie kończący tury gracza.",
+        "effectDescription": "[AURA] Jej {COMBAT} nie kończy Twojej tury.",
         "effectId": "kikimora_free_attack"
     },
     {
@@ -1946,7 +1946,7 @@
                 "text": "Wybierz 1 premię — Kresnik ją zyskuje."
             }
         ],
-        "effectDescription": "Posiada jedną wybraną premię ( wybór przy wystawieniu).",
+        "effectDescription": "[WEJŚCIE] Wybierz 1 premię — Kresnik ją zyskuje na stałe.",
         "effectId": "kresnik_choose_buff"
     },
     {
@@ -1972,7 +1972,7 @@
                 "text": "Można go zranić TYLKO w rundzie, w której nie zadał {DMG}."
             }
         ],
-        "effectDescription": "Zranić można go jedynie w rundzie, w której nie zadał żadnych obrażeń.",
+        "effectDescription": "[AURA] Można go zranić TYLKO w rundzie, w której nie zadał {DMG}.",
         "effectId": "kudlak_conditional_immunity"
     },
     {
@@ -2000,7 +2000,7 @@
                 "text": "Wysysa {ATK} i {DEF} od sojusznika (może go zabić)."
             }
         ],
-        "effectDescription": "Raz na rundę może przejąć od sojuszniczej istoty dowolną liczbę {stats.attack} i {stats.defense}, nawet jeśli spowoduje to śmierć dawcy.",
+        "effectDescription": "[AKCJA] Wysysa {ATK} i {DEF} od sojusznika (może go zabić). Raz na rundę.",
         "effectId": "latawica_drain_ally"
     },
     {
@@ -2026,7 +2026,7 @@
                 "text": "Zabójca ginie razem z nim."
             }
         ],
-        "effectDescription": "Kto go zabije, ginie.",
+        "effectDescription": "[POŻEGNANIE] Zabójca ginie razem z nim.",
         "effectId": "latawiec_mutual_death"
     },
     {
@@ -2052,7 +2052,7 @@
                 "text": "Przy {ATK}: Uderza WSZYSTKICH na stole — sojuszników też."
             }
         ],
-        "effectDescription": "Atakuje wszystkich w polu, nawet sojuszników.",
+        "effectDescription": "[NATARCIE] Uderza WSZYSTKICH na polu — sojuszników też.",
         "effectId": "morowa_dziewica_aoe_all"
     },
     {
@@ -2079,7 +2079,7 @@
                 "text": "Gdy sojusznik atakowany: Kontratakuje napastnika (jeśli w zasięgu)."
             }
         ],
-        "effectDescription": "Za każdym razem, gdy wroga istota atakuje sojusznika Niedźwiedziołaka, może on ją skontatakować (o ile ta jest w jego zasięgu).",
+        "effectDescription": "[CZUJNOŚĆ] Gdy sojusznik atakowany — kontratakuje napastnika (jeśli w zasięgu).",
         "effectId": "niedzwiedzioak_guardian"
     },
     {
@@ -2106,7 +2106,7 @@
                 "text": "Przed {ATK}: Kopiuje zdolność dowolnej istoty na stole na ten {ATK}."
             }
         ],
-        "effectDescription": "Każdorazowo podczas ataku, może skorzystać z umiejętności dowolnej istoty w polu.",
+        "effectDescription": "[NATARCIE] Przed {COMBAT} — kopiuje {ATK} najsilniejszej istoty na polu. Reset po turze.",
         "effectId": "poroniec_copy_ability"
     },
     {
@@ -2132,7 +2132,7 @@
                 "text": "Najsłabsza istota na stole (obie strony!) ginie."
             }
         ],
-        "effectDescription": "Co turę: najsłabsza w {stats.attack} istota w polu ginie.",
+        "effectDescription": "[AURA] Co turę — najsłabsza istota na polu (obie strony!) ginie.",
         "effectId": "poludnica_kill_weakest"
     },
     {
@@ -2160,7 +2160,7 @@
                 "text": "Paraliż wszystkich wrogów na 1 rundę."
             }
         ],
-        "effectDescription": "Może sparaliżować na rundę wszystkie wrogie istoty. Pierwsze użycie jest darmowe, każde następne kosztuje 1 <ZŁ>.",
+        "effectDescription": "[AKCJA] Paraliż wszystkich wrogów na 1 rundę. Pierwsze użycie gratis, kolejne za 1 {GOLD}.",
         "effectId": "polnocnica_mass_paralyze"
     },
     {
@@ -2186,7 +2186,7 @@
                 "text": "Czyści sojuszników z negatywnych efektów i Zaklęć."
             }
         ],
-        "effectDescription": "W chwili wystawienia, usuwa wszystkie negatywne efekty i zaklęcia sojusznikom//",
+        "effectDescription": "[WEJŚCIE] Czyści sojuszników z negatywnych efektów i Zaklęć.",
         "effectId": "siemiargl_cleanse"
     },
     {
@@ -2213,7 +2213,7 @@
                 "text": "Po zadaniu {DMG}: Regeneruje {DEF} o tyle, ile zadała."
             }
         ],
-        "effectDescription": "Gdy zrani wrogą istotę, odzyskuje straconą {stats.defense}.",
+        "effectDescription": "[ZRANIENIE] Regeneruje {DEF} o tyle, ile zadała {DMG}.",
         "effectId": "strzyga_lifesteal"
     },
     {
@@ -2239,7 +2239,7 @@
                 "text": "Wrogowie z wyższym {ATK} NIE MOGĄ go zranić."
             }
         ],
-        "effectDescription": "Istoty o {stats.attack} większym niż Stukacz nie mogą go zranić.",
+        "effectDescription": "[AURA] Wrogowie z wyższym {ATK} NIE MOGĄ go zranić.",
         "effectId": "stukacz_strong_immune"
     },
     {
@@ -2265,7 +2265,7 @@
                 "text": "Wróg nie może ulepszać Zaklęć ani używać Bożych Łask."
             }
         ],
-        "effectDescription": "Tak długo jak żyje, przeciwnik nie może ulepszać żadnych zaklęć ani korzystać z Bożych Łask.",
+        "effectDescription": "[AURA] Wróg nie może ulepszać Zaklęć ani używać Bożych Łask.",
         "effectId": "tesknica_block_enhance"
     },
     {
@@ -2291,7 +2291,7 @@
                 "text": "Otrzymuje ½ {DMG}."
             }
         ],
-        "effectDescription": "Otrzymuje tylko połowę wszelkich obrażeń.",
+        "effectDescription": "[AURA] Otrzymuje ½ {DMG}.",
         "effectId": "utopiec_half_damage"
     },
     {
@@ -2321,7 +2321,7 @@
                 "text": "Posiadacz musi spalić 1 kartę z talii lub pola."
             }
         ],
-        "effectDescription": "Wystaw go po stronie wroga. Jeśli na koniec każdej jego rundy Wieszczy nadal żyje, rywal musi odrzucić na cmentarz własną, wybraną przez siebie kartę z tali lub pola.",
+        "effectDescription": "[WEJŚCIE] Szpieg — zagraj po stronie wroga. Co turę posiadacz spala 1 kartę z talii lub pola.",
         "effectId": "wieszczy_spy_burn"
     },
     {
@@ -2347,7 +2347,7 @@
                 "text": "Odporny na ciosy {MELEE} słabsze niż 7."
             }
         ],
-        "effectDescription": "Nie otrzymuje obrażeń od ciosów wręcz słabszych niż 7.",
+        "effectDescription": "[AURA] Odporny na {MELEE} słabsze niż 7.",
         "effectId": "wilkolak_melee_immune"
     },
     {
@@ -2374,7 +2374,7 @@
                 "text": "W walce: Każdy kto go dotknie (lub kogo dotknie) ląduje na dnie talii."
             }
         ],
-        "effectDescription": "Kogo zrani, a także kto zrani Wisielca, wraca na spód talii.",
+        "effectDescription": "[NATARCIE] Kto go dotknie (lub kogo dotknie) — ląduje na spodzie talii.",
         "effectId": "wisielec_bounce_both"
     },
     {
@@ -2404,7 +2404,7 @@
                 "text": "2 rundy bez ofiar = śmierć."
             }
         ],
-        "effectDescription": "Odporny na wszelkie obrażenia. Ginie, gdy przez 2 rundy nie zada żadnych obrażeń. Może atakować sojuszników.",
+        "effectDescription": "[AURA] Niezniszczalny. Może bić sojuszników. 2 rundy bez ofiar = śmierć.",
         "effectId": "wapierz_invincible_hunger"
     },
     {
@@ -2436,7 +2436,7 @@
                 "text": "Ginie — przejmij wroga o {ATK} ≤ 2× jej {ATK}."
             }
         ],
-        "effectDescription": "Ile zada obrażeń, tyle dodaje sobie {stats.attack} lub < O>. Może poswięcic się, przejmujac istotę rywala o {stats.attack} do dwoch razy większym niż jej.",
+        "effectDescription": "[ZRANIENIE] Zyskuje tyle {ATK} lub {DEF}, ile zadała {DMG}. [AKCJA] Ginie — przejmij wroga o {ATK} ≤ 2× jej {ATK}.",
         "effectId": "zmora_grow_sacrifice"
     },
     {
@@ -2462,7 +2462,7 @@
                 "text": "+1 {ATK} i +1 {DEF} za każdego trupa."
             }
         ],
-        "effectDescription": "plus 1 ataku i obrony za każdego poległego podczas gry",
+        "effectDescription": "[AURA] +1 {ATK} i +1 {DEF} za każdego trupa na polu.",
         "effectId": "baba_jaga_death_growth"
     },
     {
@@ -2489,7 +2489,7 @@
                 "text": "Po zadaniu {DMG}: Zraniony wróg zostaje Sparaliżowany."
             }
         ],
-        "effectDescription": "Dopóki żyje, zranione przez niego istoty są sparaliżowane.",
+        "effectDescription": "[ZRANIENIE] Zraniony wróg zostaje sparaliżowany.",
         "effectId": "bazyliszek_paralyze"
     },
     {
@@ -2517,7 +2517,7 @@
                 "text": "Zmień Pozycję lub Linię wrogich istot."
             }
         ],
-        "effectDescription": "Może dowolnie zmienić ustawienie istot rywala w polu. Pierwsze użycie jest darmowe, każde kolejne kosztuje 1 <ZŁ>.",
+        "effectDescription": "[AKCJA] Zmień Pozycję lub Linię wrogich istot. Pierwsze użycie gratis, kolejne za 1 {GOLD}.",
         "effectId": "belt_rearrange"
     },
     {
@@ -2547,7 +2547,7 @@
                 "text": "Posiadacz nie dobiera kart."
             }
         ],
-        "effectDescription": "Możesz, choć nie musisz, wystawić Biedę po stronie rywala. Gracz posiadający w polu Biedę nie może dociągać nowych kart.",
+        "effectDescription": "[WEJŚCIE] Szpieg — wystawiasz po stronie wroga. Posiadacz nie dobiera kart.",
         "effectId": "bieda_spy_block_draw"
     },
     {
@@ -2573,7 +2573,7 @@
                 "text": "{DMG} ściągają najpierw {ATK}, potem {DEF}."
             }
         ],
-        "effectDescription": "Raniony, najpierw traci {stats.attack}, dopiero potem {stats.defense}.",
+        "effectDescription": "[AURA] {DMG} ściągają najpierw {ATK}, potem {DEF}.",
         "effectId": "bies_reverse_damage"
     },
     {
@@ -2600,7 +2600,7 @@
                 "text": "Przy {ATK} na {ZYVI}: Cel ginie natychmiast."
             }
         ],
-        "effectDescription": "Każdy zaatakowany przez nią <ludź> natychmiast ginie.",
+        "effectDescription": "[NATARCIE] Zaatakowany {ZYVI} ginie natychmiast.",
         "effectId": "bogunka_instant_kill_human"
     },
     {
@@ -2626,7 +2626,7 @@
                 "text": "Wrogowie ze słabszym {ATK} — przymusowa Pozycja {DEF}."
             }
         ],
-        "effectDescription": "Gdy jest w polu, wszystkie wrogie istoty o mniejszym {stats.attack} niż ona muszą być w obronie.",
+        "effectDescription": "[AURA] Wrogowie ze słabszym {ATK} — przymusowa pozycja {DEF}.",
         "effectId": "buka_force_defense"
     },
     {
@@ -2652,7 +2652,7 @@
                 "text": "Istoty z {DEF} < {ATK} Cichej giną (i sojuszniczy!)."
             }
         ],
-        "effectDescription": "Tak długo, jak jest w polu, wszystkie istoty mające mniej {stats.defense} niż ona {stats.attack} giną.",
+        "effectDescription": "[AURA] Istoty z {DEF} < {ATK} Cichej giną (i sojusznicze!).",
         "effectId": "cicha_kill_weak"
     },
     {
@@ -2684,7 +2684,7 @@
                 "text": "Przy {DEF} = 0: Jeden ostatni {ATK} — potem ginie."
             }
         ],
-        "effectDescription": "Może zwiększyć swój {stats.attack} o tyle zmniejszajc swoją {stats.defense}. Jeśli wskutek tego {stats.defense} wyniesie 0, Czart  może wykonać atak, lecz po nim ginie.",
+        "effectDescription": "[AKCJA] Przerzuć dowolną ilość {DEF} na {ATK}. Przy {DEF} = 0 — jeden ostatni {COMBAT}, potem ginie.",
         "effectId": "czart_shift_stats"
     },
     {
@@ -2710,7 +2710,7 @@
                 "text": "Wskazany wróg uderza swojego sojusznika."
             }
         ],
-        "effectDescription": "Wybrany wróg, atakuje swojego sojusznika.",
+        "effectDescription": "[WEJŚCIE] Wskazany wróg uderza swojego sojusznika.",
         "effectId": "darmopych_friendly_fire"
     },
     {
@@ -2736,7 +2736,7 @@
                 "text": "Silniejsi i równi wrogowie ({ATK}) nie mogą go uderzyć."
             }
         ],
-        "effectDescription": "silniejsze lub rowne nie mogą go zaatakować",
+        "effectDescription": "[AURA] Silniejsi i równi wrogowie ({ATK}) nie mogą go uderzyć.",
         "effectId": "dydko_strong_immune"
     },
     {
@@ -2762,7 +2762,7 @@
                 "text": "Wymiana kart — TY wybierasz obie (swoją i wroga)."
             }
         ],
-        "effectDescription": "Za każdym razem, gdy zabije istotę, obaj gracze wymieniają się jedną kartą z ręki- obie wskazuje gracz, który ma Dziwożonę",
+        "effectDescription": "[ZABÓJSTWO] Wymiana kart — TY wybierasz obie (swoją i wroga).",
         "effectId": "dziwolzona_swap_cards"
     },
     {
@@ -2788,7 +2788,7 @@
                 "text": "Wchłania Twoje Smoki na stole — sumuje ich staty."
             }
         ],
-        "effectDescription": "Łączy się z innymi smokami.",
+        "effectDescription": "[WEJŚCIE] Wchłania Twoje Smoki na polu — sumuje ich staty.",
         "effectId": "gorynych_merge_dragons",
         "tags": [
             "dragon"
@@ -2817,7 +2817,7 @@
                 "text": "Odporny na wszystko poza {MAGIC} i {ELEMENTAL}."
             }
         ],
-        "effectDescription": "Odporny na obrażenia istot, które nie walczą  {Slavic/magia-icon} albo {Slavic/zywiol-icon},",
+        "effectDescription": "[AURA] Odporny na wszystko poza {MAGIC} i {ELEMENTAL}.",
         "effectId": "grad_magic_element_only"
     },
     {
@@ -2844,7 +2844,7 @@
                 "text": "Ukradnij premię z istoty i daj komu chcesz."
             }
         ],
-        "effectDescription": "Za każdy poświęcony <ZŁ> odbiera wybranej istocie premię i przekazuje ją dowolnej wskazanej istocie.",
+        "effectDescription": "[AKCJA] Ukradnij premię z istoty i daj komu chcesz. Koszt: 1 {GOLD}.",
         "effectId": "inkluz_steal_buff"
     },
     {
@@ -2870,7 +2870,7 @@
                 "text": "Słabszego wroga: Tura się nie kończy."
             }
         ],
-        "effectDescription": "Gdy zabija istotę słabszą w {stats.attack} runda się nie kończy.",
+        "effectDescription": "[ZABÓJSTWO] Zabicie słabszego wroga — tura się nie kończy.",
         "effectId": "kania_chain_kill"
     },
     {
@@ -2896,7 +2896,7 @@
                 "text": "Wybierz — 1 {GOLD} albo dociągnij 5 kart."
             }
         ],
-        "effectDescription": "Gdy ginie, jego posiadacz otrzymuje 1 <ZŁ> lub dociąga 5 kart.",
+        "effectDescription": "[POŻEGNANIE] Wybierz — 1 {GOLD} albo dobierz 5 kart.",
         "effectId": "lamia_death_reward",
         "tags": [
             "dragon"
@@ -2925,7 +2925,7 @@
                 "text": "Wróg nie dobiera kart (pusta ręka = może wziąć 1)."
             }
         ],
-        "effectDescription": "Dopóki Licho żyję, rywal nie może dobierać nowych kart (gdy nie ma ich wcale, może wziąć jedną).",
+        "effectDescription": "[AURA] Wróg nie dobiera kart. Pusta ręka = może wziąć 1.",
         "effectId": "licho_block_draw"
     },
     {
@@ -2952,7 +2952,7 @@
                 "text": "Przed {ATK}: Wybierz Typ {ATK} — {MELEE}, {ELEMENTAL}, {MAGIC} lub {RANGED}."
             }
         ],
-        "effectDescription": "Każdorazowo, Liczyrzepa wybiera rodzaj ataku: {Slavic/zywiol-icon}/{Slavic/magia-icon}/{Slavic/strzala-icon}/{Slavic/atak-ikona}",
+        "effectDescription": "[NATARCIE] Przed {COMBAT} — wybierz typ: {MELEE}, {ELEMENTAL}, {MAGIC} lub {RANGED}.",
         "effectId": "liczyrzepa_choose_type"
     },
     {
@@ -2979,7 +2979,7 @@
                 "text": "Ginie — przejmij wroga o {ATK} ≤ 2× {ATK} Mary."
             }
         ],
-        "effectDescription": "Odrzucając Marę na cmentarz, możesz przejąć kontrolę nad istotą mającą nie więcej niż dwukrotność aktualnego {Slavic/atak-ikona} Mary",
+        "effectDescription": "[AKCJA] Ginie — przejmij wroga o {ATK} ≤ 2× {ATK} Mary.",
         "effectId": "mara_sacrifice_takeover"
     },
     {
@@ -3005,7 +3005,7 @@
                 "text": "Sojusznicy w Linii Mavki nie mogą być celem {ATK}."
             }
         ],
-        "effectDescription": "Tak długo gdy jest w polu, sojuszników w linii Mavki nie można zaatakować.",
+        "effectDescription": "[AURA] Sojusznicy w Linii Mavki nie mogą być celem {COMBAT}.",
         "effectId": "mavka_line_shield"
     },
     {
@@ -3032,7 +3032,7 @@
                 "text": "Istoty {ZYVI}: Leczy się do pełna."
             }
         ],
-        "effectDescription": "Zabicie {Slavic/zywi-icon} całkowicie go leczy.",
+        "effectDescription": "[ZABÓJSTWO] Po zabiciu {ZYVI} — leczy się do pełna.",
         "effectId": "przyloznik_heal_on_zyvi_kill"
     },
     {
@@ -3093,7 +3093,7 @@
                 "text": "Zyskaj 1 {GOLD}."
             }
         ],
-        "effectDescription": "Gdy Szątopierz jest w polu, możesz odrzucać karty z rąk, za każde dwie otrzymując <ZŁ>.",
+        "effectDescription": "[AKCJA] Odrzuć 2 karty z ręki — zyskaj 1 {GOLD}. Raz na turę.",
         "effectId": "szatopierz_discard_for_gold"
     },
     {
@@ -3121,7 +3121,7 @@
                 "text": "Zmień Pozycję i Linię wrogich istot."
             }
         ],
-        "effectDescription": "Gracz mający Wietrzycę może dowolnie zmienić ustawienie w polu istot przeciwnika.",
+        "effectDescription": "[AKCJA] Zmień Pozycję i Linię wrogich istot.",
         "effectId": "wietrzyca_rearrange_enemy"
     },
     {
@@ -3149,7 +3149,7 @@
                 "text": "Wskrześ na 1 turę — potem usunięty na zawsze."
             }
         ],
-        "effectDescription": "Wskrzesza się na jedną turę, w wybranym przez gracza momencie gry.",
+        "effectDescription": "[AKCJA] Wskrześ na 1 turę — potem usunięty na zawsze.",
         "effectId": "wij_revive_once",
         "tags": [
             "dragon"
@@ -3178,7 +3178,7 @@
                 "text": "Nadmiar {DMG} uderza następnego wroga."
             }
         ],
-        "effectDescription": "Gdy kogoś zabije, niewykorzystane obrażenia otrzymuje inny wrogi potwór",
+        "effectDescription": "[ZABÓJSTWO] Nadmiar {DMG} uderza następnego wroga.",
         "effectId": "waz_tugaryn_cleave",
         "tags": [
             "dragon"
@@ -3208,7 +3208,7 @@
                 "text": "Po zadaniu {DMG}: Klątwa — cel traci 1 {ATK} i 1 {DEF} co turę."
             }
         ],
-        "effectDescription": "Kogo zrani, co turę traci 1 {Slavic/atak-ikona} i {Slavic/obrona-ikona}",
+        "effectDescription": "[ZRANIENIE] Klątwa — cel traci 1 {ATK} i 1 {DEF} co turę.",
         "effectId": "zagorkinia_curse_drain"
     },
     {
@@ -3234,7 +3234,7 @@
                 "text": "Nigdy nie otrzymuje kontrataku."
             }
         ],
-        "effectDescription": "Nie otrzymuje kontrataków.",
+        "effectDescription": "[AURA] Nigdy nie otrzymuje kontrataku.",
         "effectId": "cmuch_no_counter_received"
     },
     {
@@ -3266,7 +3266,7 @@
                 "text": "Gdy ktoś ginie: Uratuj — wraca do talii."
             }
         ],
-        "effectDescription": "Gdy jest w polu, każdy z graczy może zapłacić 1<ZŁ>, by ginąca istota wróciła do talii właściciela (jako bazowa karta), zamiast na cmentarz.  // Jej {Slavic/atak-ikona} i {Slavic/obrona-ikona} rośnie o 1, za każdą śmierć której jej świadkiem",
+        "effectDescription": "[AURA] +1 {ATK} i +1 {DEF} za każdą śmierć. Gdy ktoś ginie — uratuj za 1 {GOLD} (wraca do talii).",
         "effectId": "smierc_death_growth_save"
     }
 ]

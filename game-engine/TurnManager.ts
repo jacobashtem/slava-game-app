@@ -80,21 +80,36 @@ export function processDrawPhase(state: GameState): { newState: GameState; log: 
   const currentPlayer = newState.players[newState.currentTurn]
   const target = GOLD_EDITION_RULES.STARTING_HAND
 
-  // Licho (#108): blokuje dobiór kart rywala
+  // Licho (#108): blokuje dobiór kart rywala (pusta ręka = może wziąć 1)
   const opponentSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
   const hasLicho = getAllCreaturesForPlayer(newState, opponentSide)
     .some(c => (c.cardData as any).effectId === 'licho_block_draw')
   if (hasLicho) {
-    log.push(addLog(newState, `Licho blokuje dobiór kart ${newState.currentTurn} — zdolność: Licho uniemożliwia dobiór kart przez wroga.`, 'effect'))
+    if (currentPlayer.hand.length === 0 && currentPlayer.deck.length > 0) {
+      const card = currentPlayer.deck.shift()!
+      currentPlayer.hand.push(card)
+      drawn.push(card)
+      log.push(addLog(newState, `Licho: Pusta ręka — dobierasz 1 kartę ratunkową.`, 'effect'))
+    } else {
+      log.push(addLog(newState, `Licho blokuje dobiór kart — wróg ma Licho na polu.`, 'effect'))
+    }
     newState.currentPhase = GamePhase.PLAY
     return { newState, log, drawn }
   }
 
-  // Bieda (#94): gracz mający Biedę na swoim polu nie może dobierać kart
+  // Bieda (#94): gracz mający Biedę na swoim polu nie może dobierać kart (pusta ręka = 1 karta)
   const hasBieda = getAllCreaturesForPlayer(newState, newState.currentTurn as PlayerSide)
     .some(c => (c.cardData as any).effectId === 'bieda_spy_block_draw')
   if (hasBieda) {
-    log.push(addLog(newState, `Bieda blokuje dobiór kart ${newState.currentTurn} — zdolność: Bieda na polu gracza uniemożliwia mu dobiór.`, 'effect'))
+    if (currentPlayer.hand.length === 0 && currentPlayer.deck.length > 0) {
+      // Pusta ręka — może dobrać 1 kartę ratunkową
+      const card = currentPlayer.deck.shift()!
+      currentPlayer.hand.push(card)
+      drawn.push(card)
+      log.push(addLog(newState, `Bieda: Pusta ręka — dobierasz 1 kartę ratunkową.`, 'effect'))
+    } else {
+      log.push(addLog(newState, `Bieda blokuje dobiór kart — Bieda na polu uniemożliwia dobiór.`, 'effect'))
+    }
     newState.currentPhase = GamePhase.PLAY
     return { newState, log, drawn }
   }
@@ -326,6 +341,15 @@ export function playAdventure(
       log.push(addLog(newState, `Bzionek przechwytuje zaklęcie wymierzone w ${targetCard.cardData.name}!`, 'effect'))
       targetCard = bzionek
     }
+  }
+
+  // Żerca (#59): spellShield — jednorazowa tarcza na wrogie zaklęcie
+  if (targetCard && targetCard.owner !== newState.currentTurn && targetCard.metadata.spellShield) {
+    delete targetCard.metadata.spellShield
+    log.push(addLog(newState, `Tarcza Żercy chroni ${targetCard.cardData.name} przed zaklęciem! (jednorazowa)`, 'effect'))
+    // Karta przygody idzie na cmentarz, efekt nie odpala
+    currentPlayer.graveyard.push(card)
+    return { newState, log }
   }
 
   // Czarownica (#36): może przekierować zaklęcie na istotę rzucającego

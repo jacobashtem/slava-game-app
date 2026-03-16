@@ -254,17 +254,32 @@ export class AIPlayer {
         const myCount = getAllCreaturesOnField(currentState, this.side).length
         if (myCount <= 2) continue // nie poświęcaj gdy masz ≤ 2 istoty
       }
-      // Wybierz cel jeśli wymaga
+      // Wybierz cel jeśli wymaga — szukaj wśród obu stron (efekty mogą targetować sojuszników)
       let targetId: string | undefined
       if (effect.activationRequiresTarget) {
-        const enemySide = this.side === 'player1' ? 'player2' : 'player1'
-        const enemies = getAllCreaturesOnField(currentState, enemySide)
+        const allTargets: CardInstance[] = []
+        for (const side of ['player1', 'player2'] as const) {
+          allTargets.push(...getAllCreaturesOnField(currentState, side))
+        }
+        const validTargets = allTargets
           .filter(c => c.currentStats.defense > 0)
           .filter(c => !effect.activationTargetFilter || effect.activationTargetFilter(c, creature, currentState))
-        if (enemies.length === 0) continue
-        targetId = enemies.reduce((a, b) =>
-          a.currentStats.defense < b.currentStats.defense ? a : b
-        ).instanceId
+        if (validTargets.length === 0) continue
+        // Heurystyka: wrogów sortuj po najsłabszym, sojuszników po najsilniejszym
+        const enemySide = this.side === 'player1' ? 'player2' : 'player1'
+        const hasEnemyTargets = validTargets.some(c => c.owner === enemySide)
+        if (hasEnemyTargets) {
+          targetId = validTargets
+            .filter(c => c.owner === enemySide)
+            .reduce((a, b) => a.currentStats.defense < b.currentStats.defense ? a : b).instanceId
+        } else {
+          // Sojusznicze cele (np. heal, drain) — wybierz najsłabszego/najbardziej rannego
+          targetId = validTargets.reduce((a, b) => {
+            const aHurt = a.currentStats.maxDefense - a.currentStats.defense
+            const bHurt = b.currentStats.maxDefense - b.currentStats.defense
+            return aHurt > bHurt ? a : b
+          }).instanceId
+        }
       }
       decisions.push({
         type: 'activate_effect',
@@ -401,12 +416,27 @@ export class AIPlayer {
       }
       let targetId: string | undefined
       if (effect.activationRequiresTarget) {
-        const targets = getAllCreaturesOnField(currentState, enemySide)
+        // Szukaj wśród obu stron (efekty mogą targetować sojuszników)
+        const allTargets: CardInstance[] = []
+        for (const side of ['player1', 'player2'] as const) {
+          allTargets.push(...getAllCreaturesOnField(currentState, side))
+        }
+        const validTargets = allTargets
           .filter(c => c.currentStats.defense > 0)
           .filter(c => !effect.activationTargetFilter || effect.activationTargetFilter(c, creature, currentState))
-        if (targets.length === 0) continue
-        // Cel: największe zagrożenie
-        targetId = targets.reduce((a, b) => this.creatureThreatScore(a) > this.creatureThreatScore(b) ? a : b).instanceId
+        if (validTargets.length === 0) continue
+        const hasEnemyTargets = validTargets.some(c => c.owner === enemySide)
+        if (hasEnemyTargets) {
+          targetId = validTargets
+            .filter(c => c.owner === enemySide)
+            .reduce((a, b) => this.creatureThreatScore(a) > this.creatureThreatScore(b) ? a : b).instanceId
+        } else {
+          targetId = validTargets.reduce((a, b) => {
+            const aHurt = a.currentStats.maxDefense - a.currentStats.defense
+            const bHurt = b.currentStats.maxDefense - b.currentStats.defense
+            return aHurt > bHurt ? a : b
+          }).instanceId
+        }
       }
       decisions.push({ type: 'activate_effect', cardInstanceId: creature.instanceId, targetInstanceId: targetId })
     }

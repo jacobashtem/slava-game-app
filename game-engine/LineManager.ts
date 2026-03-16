@@ -145,7 +145,10 @@ export function canAttack(
     }
 
     if (attacker.owner === target.owner) {
-      return { valid: false, reason: 'Nie można atakować własnych istot.' }
+      // Wąpierz (#89): może atakować sojuszników (musi żywić się krwią)
+      if ((attacker.cardData as any).effectId !== 'wapierz_invincible_hunger') {
+        return { valid: false, reason: 'Nie można atakować własnych istot.' }
+      }
     }
 
     // Sprawdź Błotnik — jeśli wróg ma Błotnika w zasięgu, musi go atakować
@@ -176,7 +179,11 @@ export function canAttack(
     return { valid: false, reason: `${target.cardData.name} jest już martwa.` }
   }
 
-  const attackType = ((attacker.cardData as any).attackType as AttackType) ?? AttackType.MELEE
+  // Rusałka/Liczyrzepa: override typu ataku z metadata
+  const attackType = (attacker.metadata.mirrorAttackType as AttackType)
+    ?? (attacker.metadata.licyzrepaAttackTypeChosen as AttackType)
+    ?? ((attacker.cardData as any).attackType as AttackType)
+    ?? AttackType.MELEE
 
   // Chowaniec intercept / efekty pomijające zasięg
   if (options?.skipRangeCheck) return { valid: true }
@@ -222,6 +229,11 @@ export function canAttack(
   }
 
   // ===== PASYWNE ODPORNOŚCI CELU =====
+  // Rybi Król (#21): pobłogosławiony sojusznik ignoruje odporności
+  if (attacker.metadata.rybiKrolBlessing) {
+    // Pomiń WSZYSTKIE odporności celu — przejdź dalej
+    return { valid: true }
+  }
   const targetEffectId = (target.cardData as any).effectId
 
   // Buka (#97): wrogowie ze słabszym ATK muszą być w obronie (nie mogą atakować Buki)
@@ -279,6 +291,16 @@ export function canAttack(
   // Bałwan (#4): odporny na Żywioł
   if (targetEffectId === 'balwan_free_divine_favor' && attackType === AttackType.ELEMENTAL) {
     return { valid: false, reason: `${target.cardData.name}: Bałwan jest odporny na Żywioł!`, softFail: true }
+  }
+
+  // Ruslan Helmet+: nośnik niewidoczny w obronie (nie można go atakować jeśli sam nie atakował)
+  if (target.metadata.ruslanHelmetStealth && !target.hasAttackedThisTurn) {
+    return { valid: false, reason: `${target.cardData.name}: Niewidzialny w obronie! (Ruslan Helmet+)`, softFail: true }
+  }
+
+  // Amulet z Rozetą: nośnik odporny na Magię
+  if (attackType === AttackType.MAGIC && target.equippedArtifacts.some(a => (a as any).effectId === 'adventure_amulet_z_rozeta' || (a as any).effectId === 'adventure_amulet_z_rozeta_enhanced')) {
+    return { valid: false, reason: `${target.cardData.name}: Amulet z Rozetą chroni przed Magią!`, softFail: true }
   }
 
   // Mavka (#111): sojusznicy w tej samej linii co Mavka nie mogą być celem ataków

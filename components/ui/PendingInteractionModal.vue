@@ -136,6 +136,8 @@ const title = computed(() => {
   if (t === 'brzegina_shield') return 'Brzegina — Czujność'
   if (t === 'kosciej_resurrect') return 'Kościej — Wskrzeszenie'
   if (t === 'dziewiatko_poison') return 'Dziewiątko — Trucizna'
+  if (t === 'lamia_death_choice') return 'Lamia — Skarby Śmierci'
+  if (t === 'smierc_save') return 'Śmierć — Ratunek'
   return 'Wybierz'
 })
 
@@ -187,6 +189,11 @@ const description = computed(() => {
   }
   if (t === 'kosciej_resurrect') return 'Kościej zginął od Wręcz — jego serce wciąż bije! Wydaj 1 PS, by wskrzesić go na L1.'
   if (t === 'dziewiatko_poison') return 'Dziewiątko otruło wroga! Wybierz efekt trucizny.'
+  if (t === 'lamia_death_choice') return 'Lamia ginie — z jej ciała wytryskują skarby! Wybierz nagrodę.'
+  if (t === 'smierc_save') {
+    const deadName = (interaction.value?.metadata?.deadCardName as string) ?? 'istota'
+    return `${deadName} ginie! Śmierć może ją uratować za 1 PS — wraca do talii.`
+  }
   return 'Wybierz opcję.'
 })
 
@@ -313,6 +320,32 @@ function pickTarget(choice: string) {
           </button>
           <button class="pi-yn-no" @click="pickTarget('no')">
             <Icon icon="game-icons:cancel" /> Nie, przepuść atak
+          </button>
+        </div>
+
+        <!-- Śmierć: Uratować za PS? -->
+        <div
+          v-if="interaction?.type === 'smierc_save'"
+          class="pi-yn"
+        >
+          <button class="pi-yn-yes" @click="pickTarget('yes')">
+            <Icon icon="game-icons:angel-wings" /> Uratuj za 1 PS
+          </button>
+          <button class="pi-yn-no" @click="pickTarget('no')">
+            <Icon icon="game-icons:skull-crossed-bones" /> Niech odejdzie
+          </button>
+        </div>
+
+        <!-- Lamia: Wybór nagrody po śmierci -->
+        <div
+          v-if="interaction?.type === 'lamia_death_choice'"
+          class="pi-yn"
+        >
+          <button class="pi-yn-yes" @click="pickTarget('glory')">
+            <Icon icon="game-icons:two-coins" /> +1 Punkt Sławy
+          </button>
+          <button class="pi-yn-no" @click="pickTarget('cards')">
+            <Icon icon="game-icons:card-draw" /> Dobierz 5 kart
           </button>
         </div>
 

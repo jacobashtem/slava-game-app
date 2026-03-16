@@ -1066,6 +1066,28 @@ function checkDamagePrevention(
     return { prevented: true, newState: cloneGameState(state), log: [log] }
   }
 
+  // Tarcza Dobryni Nikiticza: absorbuje obrażenia (do wyczerpania)
+  if (typeof defender.metadata?.tarczaDobryni === 'number' && (defender.metadata.tarczaDobryni as number) > 0) {
+    const shield = defender.metadata.tarczaDobryni as number
+    const newState = cloneGameState(state)
+    const defCard = findCardOnField(newState, defender.instanceId)
+    if (defCard) {
+      if (damage <= shield) {
+        // Tarcza absorbuje całość
+        defCard.metadata.tarczaDobryni = shield - damage
+        defCard.currentStats.defense += damage // cofnij obrażenia
+        const log = addLog(newState, `Tarcza Dobryni: Absorbuje ${damage} obrażeń! (Pozostało: ${shield - damage})`, 'effect')
+        return { prevented: true, newState, log: [log] }
+      } else {
+        // Tarcza pęka, nadmiar obrażeń przechodzi
+        defCard.metadata.tarczaDobryni = 0
+        defCard.currentStats.defense += shield // cofnij zaabsorbowaną część
+        const log = addLog(newState, `Tarcza Dobryni: Pęka! Zaabsorbowała ${shield}/${damage} obrażeń.`, 'effect')
+        return { prevented: false, newState, log: [log] }
+      }
+    }
+  }
+
   // Utopiec (#85): połowa obrażeń
   if ((defender.cardData as any).effectId === 'utopiec_half_damage') {
     const reduced = Math.floor(damage / 2)

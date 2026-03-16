@@ -514,8 +514,7 @@ registerEffect({
   },
 })
 
-// 📋 MATOHA — TODO: przeczytać efekt
-registerEffect(noEffect('matoha_effect', 'Matoha'))
+// MATOHA — prawdziwy efekt to matoha_anti_magic (linia niżej). Ten stub usunięty.
 
 // ✅ MRÓZ — Odporny na wrogie premie
 registerEffect({
@@ -615,16 +614,57 @@ registerEffect({
   },
 })
 
-// ✅ RYBI KRÓL — Wybrany sojusznik ignoruje ograniczenia i odporności
+// ✅ RYBI KRÓL — Wybrany sojusznik ignoruje odporności wroga
 registerEffect({
   id: 'rybi_krol_pierce_immunity',
   name: 'Wola Rybiego Króla',
-  description: '[AURA] Dopóki żyje, wybrany sojusznik rani wybranego przeciwnika negując ograniczenia i odporności.',
-  trigger: EffectTrigger.PASSIVE,
-  priority: EffectPriority.PREVENTION,
+  description: '[WEJŚCIE] [AURA] Przy wystawieniu wybierz sojusznika — jego ataki ignorują odporności wroga dopóki Rybi Król żyje.',
+  trigger: [EffectTrigger.ON_PLAY, EffectTrigger.PASSIVE],
+  priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
-    // Sprawdzamy w CombatResolver — jeśli Rybi Król żyje, oznaczony sojusznik ignoruje odporności
-    return effectResult(cloneGameState(ctx.state))
+    const { state, source, target, trigger } = ctx
+    if (trigger !== EffectTrigger.ON_PLAY) return effectResult(cloneGameState(state))
+
+    const newState = cloneGameState(state)
+
+    // Po resolveInteraction — target jest wybranym sojusznikiem
+    if (target && target.instanceId !== source.instanceId) {
+      const card = findCardInState(newState, target.instanceId)
+      if (card) card.metadata.rybiKrolBlessing = true
+      const sourceCard = findCardInState(newState, source.instanceId)
+      if (sourceCard) sourceCard.metadata.blessedAllyId = target.instanceId
+      const log = addLog(newState, `${source.cardData.name}: Błogosławi ${target.cardData.name} — ignoruje odporności wroga!`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    const allies = getAllCreaturesOnField(newState, source.owner)
+      .filter(c => c.instanceId !== source.instanceId && c.currentStats.defense > 0)
+
+    if (allies.length === 0) {
+      const log = addLog(newState, `${source.cardData.name}: Brak sojuszników do pobłogosławienia.`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    // AI: wybierz najsilniejszego sojusznika
+    if (state.players[source.owner].isAI) {
+      const best = allies.sort((a, b) => b.currentStats.attack - a.currentStats.attack)[0]!
+      const card = findCardInState(newState, best.instanceId)
+      if (card) card.metadata.rybiKrolBlessing = true
+      const sourceCard = findCardInState(newState, source.instanceId)
+      if (sourceCard) sourceCard.metadata.blessedAllyId = best.instanceId
+      const log = addLog(newState, `${source.cardData.name}: Błogosławi ${best.cardData.name} — ignoruje odporności wroga!`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    // Gracz: modal z wyborem sojusznika
+    newState.pendingInteraction = {
+      type: 'on_play_target',
+      sourceInstanceId: source.instanceId,
+      respondingPlayer: source.owner as PlayerSide,
+      availableTargetIds: allies.map(c => c.instanceId),
+    }
+    const log = addLog(newState, `${source.cardData.name}: Wybierz sojusznika, który będzie ignorował odporności wroga.`, 'effect')
+    return effectResult(newState, [log])
   },
 })
 
@@ -734,17 +774,30 @@ registerEffect({
   },
 })
 
-// 📋 KORGORUSZE — Rezygnując z ataku, odzyskaj Sławę (tryb Slava!)
+// ✅ KORGORUSZE — Rezygnując z ataku w tej turze, odzyskaj 1 PS
 registerEffect({
   id: 'korgorusze_recover_glory',
   name: 'Odzysk Sławy',
-  description: '[AURA] Rezygnując z ataku w tej turze, odzyskaj 1 wydany punkt Sławy.',
+  description: '[AURA] Jeśli Korgorusze nie atakowały w tej turze, na końcu tury odzyskujesz 1 PS.',
   trigger: EffectTrigger.ON_TURN_END,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
-    // TODO: Integracja z GloryManager (Etap 6)
-    const newState = cloneGameState(ctx.state)
-    return effectResult(newState)
+    const { state, source } = ctx
+    // Tylko w turze właściciela
+    if (state.currentTurn !== source.owner) return effectResult(cloneGameState(state))
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, source.instanceId)
+    if (!card || card.isSilenced) return effectResult(newState)
+
+    // Sprawdź czy Korgorusze nie atakowały
+    if (card.hasAttackedThisTurn) {
+      return effectResult(newState)
+    }
+
+    const owner = newState.players[source.owner]
+    owner.glory += 1
+    const log = addLog(newState, `${source.cardData.name}: Nie atakowały — odzyskujesz 1 PS! (PS: ${owner.glory})`, 'effect')
+    return effectResult(newState, [log])
   },
 })
 
@@ -917,6 +970,33 @@ registerEffect({
   },
 })
 
+// ✅ OBŁĘD+ — 2 Twoje istoty zamieniają się wzajemnie ATK i DEF
+registerEffect({
+  id: 'adventure_obled_enhanced',
+  name: 'Obłęd+',
+  description: '[WEJŚCIE+] 2 Twoje istoty zamieniają się wzajemnie ATK i DEF.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const allies = getAllCreaturesOnField(newState, source.owner)
+    if (allies.length < 2) {
+      return effectResult(newState, [addLog(newState, 'Obłęd+: Za mało sojuszników (min. 2).', 'effect')])
+    }
+    // Weź 2 najsilniejszych i zamień ich staty
+    allies.sort((a, b) => (b.currentStats.attack + b.currentStats.defense) - (a.currentStats.attack + a.currentStats.defense))
+    const a = allies[0]!, b = allies[1]!
+    const tmpAtk = a.currentStats.attack, tmpDef = a.currentStats.defense
+    a.currentStats.attack = b.currentStats.attack
+    a.currentStats.defense = b.currentStats.defense
+    b.currentStats.attack = tmpAtk
+    b.currentStats.defense = tmpDef
+    const log = addLog(newState, `Obłęd+: ${a.cardData.name} i ${b.cardData.name} zamieniają się statami!`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
 // ✅ TOPÓR PERUNA — Jeden atak dystansowy za 4x obrażenia
 registerEffect({
   id: 'adventure_topor_peruna',
@@ -932,6 +1012,28 @@ registerEffect({
       sourceInState.metadata.toporPerunaUsed = true
       sourceInState.metadata.noCounterattack = true
       const log = addLog(ctx.state, `${ctx.source.cardData.name}: Topór Peruna! Czterokrotne obrażenia, bez kontrataku!`, 'effect')
+      return effectResult(newState, [log])
+    }
+    return effectResult(newState)
+  },
+})
+
+// ✅ TOPÓR PERUNA+ — Brak kontrataku, ignoruje odporności
+registerEffect({
+  id: 'adventure_topor_peruna_enhanced',
+  name: 'Topór Peruna+',
+  description: '[CZUJNOŚĆ+] Atak ×4, brak kontrataku, ignoruje odporności.',
+  trigger: EffectTrigger.ON_ATTACK,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const newState = cloneGameState(ctx.state)
+    const sourceInState = findCardInState(newState, ctx.source.instanceId)
+    if (sourceInState && sourceInState.metadata.toporPerunaUsed !== true) {
+      sourceInState.metadata.damageMultiplier = 4
+      sourceInState.metadata.toporPerunaUsed = true
+      sourceInState.metadata.noCounterattack = true
+      sourceInState.metadata.rybiKrolBlessing = true // ignoruje odporności
+      const log = addLog(ctx.state, `${ctx.source.cardData.name}: Topór Peruna+! ×4 DMG, ignoruje odporności, bez kontrataku!`, 'effect')
       return effectResult(newState, [log])
     }
     return effectResult(newState)
@@ -957,6 +1059,31 @@ registerEffect({
       return effectResult(newState, [log])
     }
     return effectResult(newState)
+  },
+})
+
+// ✅ TRUCIZNA+ — Paraliż WSZYSTKICH wrogów na 2 rundy
+registerEffect({
+  id: 'adventure_trucizna_enhanced',
+  name: 'Trucizna+',
+  description: '[WEJŚCIE+] Paraliż WSZYSTKICH wrogów na 2 rundy.',
+  trigger: EffectTrigger.ON_PLAY,
+  priority: EffectPriority.MODIFIER,
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const opponentSide = (source.owner === 'player1' ? 'player2' : 'player1') as PlayerSide
+    const enemies = getAllCreaturesOnField(newState, opponentSide)
+    let count = 0
+    for (const enemy of enemies) {
+      if (!enemy.isImmune) {
+        enemy.cannotAttack = true
+        enemy.paralyzeRoundsLeft = 2
+        count++
+      }
+    }
+    const log = addLog(newState, `Trucizna+: ${count} wrogów sparaliżowanych na 2 rundy!`, 'effect')
+    return effectResult(newState, [log])
   },
 })
 
@@ -1165,6 +1292,12 @@ registerEffect({
     for (const side of ['player1', 'player2'] as const) {
       for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
         for (const card of newState.players[side].field.lines[line]) {
+          // Pomiń martwe karty i odporne
+          if (card.currentStats.defense <= 0) continue
+          if (card.isImmune) {
+            log.push(addLog(newState, `${card.cardData.name} jest odporny na eksplozję Żar-Ptaka!`, 'effect'))
+            continue
+          }
           card.currentStats.defense -= 4
         }
       }
@@ -1173,18 +1306,22 @@ registerEffect({
   },
 })
 
-// ✅ LAMIA (#107) — Przy śmierci: 1 PS lub dobierz 5 kart
+// ✅ LAMIA (#107) — Przy śmierci: wybierz 1 PS lub dobierz 5 kart
 registerEffect({
   id: 'lamia_death_reward',
   name: 'Przekleństwo Lamii',
-  description: '[POŻEGNANIE] Przy śmierci: zdobądź 1 PS (lub w trybie z wyborem: 5 kart).',
+  description: '[POŻEGNANIE] Przy śmierci: właściciel wybiera — 1 PS albo dociągnij 5 kart.',
   trigger: EffectTrigger.ON_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
-    // Auto: daj 1 PS. Wybór gracza (1PS vs 5 kart) wymaga interakcji UI — TODO
     const newState = cloneGameState(ctx.state)
-    newState.players[ctx.source.owner].glory += 1
-    const log = addLog(newState, `${ctx.source.cardData.name}: Śmierć Lamii daje 1 PS.`, 'effect')
+    const log = addLog(newState, `${ctx.source.cardData.name}: Lamia ginie! Wybierz nagrodę — 1 PS albo 5 kart.`, 'effect')
+    newState.pendingInteraction = {
+      type: 'lamia_death_choice',
+      sourceInstanceId: ctx.source.instanceId,
+      respondingPlayer: ctx.source.owner,
+      availableChoices: ['glory', 'cards'],
+    }
     return effectResult(newState, [log])
   },
 })
@@ -1346,6 +1483,12 @@ registerEffect({
   execute: (ctx) => {
     const { state, source, target } = ctx
     if (!target) return effectResult(cloneGameState(state))
+    // Uciszona ofiara nie ma zdolności do ukradzenia
+    if (target.isSilenced) {
+      const ns = cloneGameState(state)
+      const log = addLog(ns, `${source.cardData.name}: ${target.cardData.name} był uciszony — brak zdolności do przejęcia.`, 'effect')
+      return effectResult(ns, [log])
+    }
     const stolenEffectId = (target.cardData as any).effectId
     if (!stolenEffectId || stolenEffectId === source.cardData.effectId) {
       return effectResult(cloneGameState(state))
@@ -1363,7 +1506,7 @@ registerEffect({
           card.activeEffects.push({
             effectId: stolenEffectId,
             sourceInstanceId: source.instanceId,
-            trigger: (stolenEffect.trigger[0] as EffectTrigger) ?? EffectTrigger.PASSIVE,
+            trigger: Array.isArray(stolenEffect.trigger) ? stolenEffect.trigger[0] : stolenEffect.trigger,
             remainingTurns: null, // permanentny
             stackId: `stolen_${stolenEffectId}_${source.instanceId}`,
             metadata: {},
@@ -2009,24 +2152,42 @@ registerEffect({
 registerEffect({
   id: 'polnocnica_mass_paralyze',
   name: 'Północnica (Masowy Paraliż)',
-  description: '[AKCJA] Akcja (1 PS): Paraliżuje WSZYSTKICH wrogów na 2 rundy.',
+  description: '[AKCJA] Paraliż wszystkich wrogów na 1 rundę. Pierwsze użycie gratis, kolejne za 1 PS.',
   trigger: EffectTrigger.ON_ACTIVATE,
   priority: EffectPriority.REACTION,
   activatable: true,
-  activationCost: 1,
+  activationCost: 0, // koszt pobierany ręcznie (1. raz gratis)
   activationCooldown: 'per_round',
+  canActivate: (ctx) => {
+    const usedFree = !!(ctx.source.metadata.polnocnicaUsedFree)
+    return !usedFree || ctx.state.players[ctx.source.owner].glory >= 1
+  },
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
+    const card = findCardInState(newState, ctx.source.instanceId)
+    const owner = newState.players[ctx.source.owner]
+
+    // Koszt: pierwsze użycie gratis, kolejne 1 PS
+    const usedFree = !!(card?.metadata.polnocnicaUsedFree)
+    if (usedFree) {
+      if (owner.glory < 1) {
+        return effectResult(newState, [addLog(newState, `Północnica: Brak PS na kolejny paraliż!`, 'effect')])
+      }
+      owner.glory -= 1
+    }
+    if (card) card.metadata.polnocnicaUsedFree = true
+
     const enemies = getAllCreaturesOnField(newState, ctx.source.owner === 'player1' ? 'player2' : 'player1')
     let count = 0
     for (const enemy of enemies) {
       if (!enemy.isImmune) {
         enemy.cannotAttack = true
-        enemy.paralyzeRoundsLeft = 2
+        enemy.paralyzeRoundsLeft = 1
         count++
       }
     }
-    const log = addLog(newState, `Północnica paraliżuje ${count} wrogów na 2 rundy!`, 'effect')
+    const costLabel = usedFree ? ' (-1 PS)' : ' (gratis)'
+    const log = addLog(newState, `Północnica paraliżuje ${count} wrogów na 1 rundę!${costLabel}`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -2077,25 +2238,36 @@ registerEffect({
   id: 'wieszczy_spy_burn',
   name: 'Przekleństwo Wieszczego',
   playOnEnemyField: true,
-  description: '[WEJŚCIE] [AURA] Przy wystawieniu: ujawnia wszystkie karty na polu wroga. Na końcu każdej tury: niszczy 1 losową kartę z ręki wroga.',
+  description: '[WEJŚCIE] [AURA] Szpieg — zagraj po stronie wroga. Co turę posiadacz spala 1 kartę z talii lub pola.',
   trigger: [EffectTrigger.ON_PLAY, EffectTrigger.ON_TURN_END],
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
-    const opponentSide = ctx.source.owner === 'player1' ? 'player2' : 'player1'
-    const opponent = newState.players[opponentSide]
     const log: LogEntry[] = []
+
     if (ctx.trigger === EffectTrigger.ON_PLAY) {
+      // Ujawnij wszystkich wrogów na polu
+      const opponentSide = ctx.source.owner === 'player1' ? 'player2' : 'player1'
+      const opponent = newState.players[opponentSide]
       for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
         opponent.field.lines[line].forEach(c => { c.isRevealed = true })
       }
       log.push(addLog(newState, `${ctx.source.cardData.name}: Ujawnia wszystkich wrogów na polu!`, 'effect'))
     } else if (ctx.trigger === EffectTrigger.ON_TURN_END) {
-      if (opponent.hand.length > 0) {
-        const idx = Math.floor(Math.random() * opponent.hand.length)
-        const burned = opponent.hand.splice(idx, 1)[0]!
-        opponent.graveyard.push(burned)
-        log.push(addLog(newState, `${ctx.source.cardData.name}: Spala ${burned.cardData.name} z ręki wroga!`, 'effect'))
+      // Posiadacz Wieszczego (ten na którego polu leży) traci kartę
+      const card = findCardInState(newState, ctx.source.instanceId)
+      if (!card) return effectResult(newState)
+      const hostSide = card.owner as PlayerSide
+      const host = newState.players[hostSide]
+
+      // Spala z wierzchu talii (karty losowe, bez wyboru)
+      if (host.deck.length > 0) {
+        const burned = host.deck.shift()!
+        host.graveyard.push(burned)
+        log.push(addLog(newState, `${ctx.source.cardData.name}: Spala ${burned.cardData.name} z talii posiadacza!`, 'effect'))
+      } else {
+        // Brak kart w talii — gracz może przegrać
+        log.push(addLog(newState, `${ctx.source.cardData.name}: Brak kart w talii do spalenia!`, 'effect'))
       }
     }
     return effectResult(newState, log)
@@ -2223,20 +2395,38 @@ registerEffect({
 registerEffect({
   id: 'czart_shift_stats',
   name: 'Czarcia Przemiana',
-  description: '[AKCJA] Akcja (gratis): Przenosi całą DEF na ATK (DEF = 0, ATK += poprzednia DEF). Raz w turze.',
-  trigger: EffectTrigger.ON_ACTIVATE,
+  description: '[AKCJA] Przenosi całą DEF na ATK. Przy DEF = 0 — jeden ostatni atak, potem ginie.',
+  trigger: [EffectTrigger.ON_ACTIVATE, EffectTrigger.ON_DAMAGE_DEALT],
   priority: EffectPriority.REACTION,
   activatable: true,
   activationCost: 0,
   activationCooldown: 'per_turn',
+  canActivate: (ctx) => ctx.source.currentStats.defense > 0,
   execute: (ctx) => {
-    const newState = cloneGameState(ctx.state)
-    const card = findCardInState(newState, ctx.source.instanceId)
+    const { state, source, trigger } = ctx
+
+    // ON_DAMAGE_DEALT: jeśli Czart w trybie last stand — ginie po zadaniu obrażeń
+    if (trigger === EffectTrigger.ON_DAMAGE_DEALT) {
+      const newState = cloneGameState(state)
+      const card = findCardInState(newState, source.instanceId)
+      if (card?.metadata.czartLastStand) {
+        card.currentStats.defense = 0
+        moveToGraveyard(newState, card)
+        const log = addLog(newState, `${source.cardData.name}: Ostatni cios zadany — Czart pada!`, 'effect')
+        return effectResult(newState, [log])
+      }
+      return effectResult(newState)
+    }
+
+    // ON_ACTIVATE: przerzuć DEF na ATK
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, source.instanceId)
     if (!card) return effectResult(newState)
     const def = card.currentStats.defense
     card.currentStats.attack += def
-    card.currentStats.defense = 0
-    const log = addLog(newState, `${ctx.source.cardData.name}: Przenosi ${def} DEF na ATK → teraz ${card.currentStats.attack} ATK / 0 DEF.`, 'effect')
+    card.currentStats.defense = 1 // 1 DEF żeby engine go nie zabił natychmiast
+    card.metadata.czartLastStand = true // Po następnym ataku — ginie
+    const log = addLog(newState, `${source.cardData.name}: Przenosi ${def} DEF na ATK → ${card.currentStats.attack} ATK! Jeden ostatni atak...`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -2677,8 +2867,8 @@ registerEffect({
 
     removeCardFromField(newState, bounceCard.instanceId)
     bounceCard.line = null
-    // Cofnij obrażenia na bounced karcie (wraca z modyfikatorami, ale bez ran)
-    bounceCard.currentStats = { ...(bounceCard.cardData as any).stats }
+    // Reset statów — wraca jako bazowa karta (bez premii i ran)
+    bounceCard.currentStats = { ...(bounceCard.cardData as any).stats, maxAttack: (bounceCard.cardData as any).stats.attack, maxDefense: (bounceCard.cardData as any).stats.defense }
     // Dodaj na spód talii
     newState.players[bounceCard.owner].deck.push(bounceCard)
 
@@ -2736,20 +2926,60 @@ registerEffect({
 registerEffect({
   id: 'zmora_grow_sacrifice',
   name: 'Zmora (Żywienie Lękiem)',
-  description: '[ODWET] Ile zadaje obrażeń, tyle dodaje sobie Ataku lub Obrony.',
-  trigger: EffectTrigger.ON_DAMAGE_DEALT,
+  description: '[ZRANIENIE] Zyskuje tyle {ATK}, ile zadała {DMG}. [AKCJA] Ginie — przejmij wroga o ATK ≤ 2× ATK Zmory.',
+  trigger: [EffectTrigger.ON_DAMAGE_DEALT, EffectTrigger.ON_ACTIVATE],
   priority: EffectPriority.REACTION,
+  activatable: true,
+  activationCost: 0,
+  activationCooldown: 'once',
+  activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    return card.owner !== source.owner && card.currentStats.attack <= source.currentStats.attack * 2
+  },
   execute: (ctx) => {
-    const { state, source, value } = ctx
-    if (!value || value <= 0) return effectResult(cloneGameState(state))
-    const newState = cloneGameState(state)
-    const card = findCardInState(newState, source.instanceId)
-    if (!card) return effectResult(newState)
+    const { state, source, target, value, trigger } = ctx
 
-    // Zwiększ ATK o zadane obrażenia
-    card.currentStats.attack += value
-    const log = addLog(newState, `${source.cardData.name}: Rośnie! +${value} ATK (teraz ${card.currentStats.attack}).`, 'effect')
-    return effectResult(newState, [log])
+    // ON_DAMAGE_DEALT: rośnie o zadane obrażenia
+    if (trigger === EffectTrigger.ON_DAMAGE_DEALT) {
+      if (!value || value <= 0) return effectResult(cloneGameState(state))
+      const newState = cloneGameState(state)
+      const card = findCardInState(newState, source.instanceId)
+      if (!card) return effectResult(newState)
+      card.currentStats.attack += value
+      const log = addLog(newState, `${source.cardData.name}: Rośnie! +${value} {ATK} (teraz ${card.currentStats.attack}).`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    // ON_ACTIVATE: poświęć się — przejmij wroga
+    if (trigger === EffectTrigger.ON_ACTIVATE) {
+      if (!target) return effectResult(cloneGameState(state))
+      const newState = cloneGameState(state)
+      const log: LogEntry[] = []
+      const tgt = findCardInState(newState, target.instanceId)
+      if (!tgt) return effectResult(newState)
+
+      if (tgt.currentStats.attack > source.currentStats.attack * 2) {
+        log.push(addLog(newState, `${source.cardData.name}: Cel zbyt silny (${tgt.currentStats.attack} ATK > ${source.currentStats.attack * 2}).`, 'effect'))
+        return effectResult(newState, log)
+      }
+
+      // Zmora ginie
+      const zmoraCard = findCardInState(newState, source.instanceId)
+      if (zmoraCard) {
+        moveToGraveyard(newState, zmoraCard)
+        log.push(addLog(newState, `${source.cardData.name}: Poświęca się, by przejąć ${tgt.cardData.name}!`, 'effect'))
+      }
+
+      // Przejmij wroga
+      removeCardFromField(newState, tgt.instanceId)
+      tgt.owner = source.owner
+      tgt.line = BattleLine.FRONT
+      newState.players[source.owner].field.lines[BattleLine.FRONT].push(tgt)
+      log.push(addLog(newState, `${tgt.cardData.name} przechodzi na Twoją stronę!`, 'effect'))
+      return effectResult(newState, log)
+    }
+
+    return effectResult(cloneGameState(state))
   },
 })
 
@@ -2978,21 +3208,62 @@ registerEffect({
 registerEffect({
   id: 'smierc_death_growth_save',
   name: 'Śmierć (Zbieraczka Dusz)',
-  description: '[CZUJNOŚĆ] Za każdą śmierć na polu: +1 ATK i +1 DEF. Można zapłacić 1 PS, by ginąca istota wróciła do talii.',
+  description: '[CZUJNOŚĆ] Za każdą śmierć na polu: +1 ATK i +1 DEF. Właściciel Śmierci może zapłacić 1 PS, by ginąca istota wróciła do talii.',
   trigger: EffectTrigger.ON_ANY_DEATH,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
-    const { state, source } = ctx
+    const { state, source, target } = ctx
     const newState = cloneGameState(state)
     const card = findCardInState(newState, source.instanceId)
     if (!card) return effectResult(newState)
 
+    // +1/+1 za każdą śmierć
     card.currentStats.attack += 1
     card.currentStats.defense += 1
     if (typeof card.currentStats.maxDefense === 'number') card.currentStats.maxDefense += 1
     card.metadata.justGrew = true
-    const log = addLog(newState, `${source.cardData.name}: Żniwa! +1/+1 (${card.currentStats.attack}/${card.currentStats.defense}).`, 'effect')
-    return effectResult(newState, [log])
+    const log: LogEntry[] = [addLog(newState, `${source.cardData.name}: Żniwa! +1/+1 (${card.currentStats.attack}/${card.currentStats.defense}).`, 'effect')]
+
+    // Ratowanie: jeśli właściciel Śmierci ma PS i ginąca istota jest w cmentarzu
+    const owner = newState.players[source.owner]
+    if (target && owner.glory >= 1) {
+      // Sprawdź czy ginąca istota jest w cmentarzu (nie Śmierć sama, nie wroga jeśli to wróg)
+      const deadInGraveyard = owner.graveyard.find(c => c.instanceId === target.instanceId)
+        || newState.players[source.owner === 'player1' ? 'player2' : 'player1'].graveyard.find(c => c.instanceId === target.instanceId)
+
+      if (deadInGraveyard && target.instanceId !== source.instanceId) {
+        // AI: ratuj sojuszników o ATK >= 4
+        if (state.players[source.owner].isAI) {
+          if (target.owner === source.owner && target.currentStats.attack >= 4) {
+            owner.glory -= 1
+            const gravSide = newState.players[target.owner as PlayerSide]
+            const idx = gravSide.graveyard.findIndex(c => c.instanceId === target.instanceId)
+            if (idx !== -1) {
+              const saved = gravSide.graveyard.splice(idx, 1)[0]!
+              saved.currentStats = { ...(saved.cardData as any).stats }
+              saved.line = null
+              gravSide.deck.push(saved)
+              log.push(addLog(newState, `${source.cardData.name}: Uratowała ${saved.cardData.name} za 1 PS! Wraca do talii.`, 'effect'))
+            }
+          }
+        } else {
+          // Gracz: modal z pytaniem
+          newState.pendingInteraction = {
+            type: 'smierc_save',
+            sourceInstanceId: source.instanceId,
+            respondingPlayer: source.owner as PlayerSide,
+            metadata: {
+              deadCardId: target.instanceId,
+              deadCardName: target.cardData.name,
+              deadCardOwner: target.owner,
+            },
+          }
+          log.push(addLog(newState, `${source.cardData.name}: Uratować ${target.cardData.name} za 1 PS?`, 'effect'))
+        }
+      }
+    }
+
+    return effectResult(newState, log)
   },
 })
 
@@ -3711,18 +3982,92 @@ registerEffect({
 })
 
 // ===================================================================
-// STUBY — istoty do implementacji w kolejnych etapach
+// ISTOTY — DAWNE STUBY (teraz zaimplementowane)
 // ===================================================================
 
-const todoCreatures = [
-  { id: 'chaly_attack_locations', name: 'Chały' },
-  { id: 'najemnik_mercenary', name: 'Najemnik' },
-  { id: 'azdacha_vanilia', name: 'Ażdacha' },
-]
+// ✅ CHAŁY (#32) — Może atakować Lokacje. 12 DMG = zniszczenie.
+registerEffect({
+  id: 'chaly_attack_locations',
+  name: 'Niszczyciel Lokacji',
+  description: '[AKCJA] Atakuj wrogą Lokację. Zadaje swój ATK jako obrażenia. 12 łącznych obrażeń = zniszczenie Lokacji.',
+  trigger: [EffectTrigger.ON_ACTIVATE],
+  priority: EffectPriority.REACTION,
+  activatable: true,
+  activationCost: 0,
+  activationCooldown: 'per_turn',
+  canActivate: (ctx) => {
+    // Blokuj gdy wróg nie ma aktywnej lokacji
+    const opponentSide = ctx.source.owner === 'player1' ? 'player2' : 'player1'
+    return !!ctx.state.players[opponentSide].activeLocation
+  },
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, source.instanceId)
+    if (!card) return effectResult(newState)
 
-for (const c of todoCreatures) {
-  registerEffect(noEffect(c.id, c.name))
-}
+    const opponentSide = (source.owner === 'player1' ? 'player2' : 'player1') as PlayerSide
+    const location = newState.players[opponentSide].activeLocation
+    if (!location) {
+      const log = addLog(newState, `${source.cardData.name}: Wróg nie ma aktywnej Lokacji.`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    // Śledź obrażenia lokacji w metadata
+    const prevDmg = (location.metadata.locationDamage as number) ?? 0
+    const dmg = card.currentStats.attack
+    const totalDmg = prevDmg + dmg
+    const log: LogEntry[] = []
+
+    if (totalDmg >= 12) {
+      // Zniszcz lokację
+      newState.players[opponentSide].activeLocation = null
+      log.push(addLog(newState, `${source.cardData.name}: ZNISZCZONO Lokację "${location.cardData.name}"! (${dmg} DMG, łącznie ${totalDmg}/12)`, 'effect'))
+      moveToGraveyard(newState, location)
+    } else {
+      location.metadata.locationDamage = totalDmg
+      log.push(addLog(newState, `${source.cardData.name}: Atakuje Lokację "${location.cardData.name}" — ${dmg} DMG (${totalDmg}/12 do zniszczenia).`, 'effect'))
+    }
+
+    // Atak na lokację zużywa akcję ataku
+    card.hasAttackedThisTurn = true
+    return effectResult(newState, log)
+  },
+})
+
+// ✅ NAJEMNIK (#45) — Bonus atak za PS; wróg może przekupić za 1 PS
+registerEffect({
+  id: 'najemnik_mercenary',
+  name: 'Najemnik — Lojalność za złoto',
+  description: '[AKCJA] Wydaj 1 PS: Najemnik wykonuje dodatkowy atak. [AURA] Wróg może wydać 1 PS, by przejąć Najemnika na swoją stronę.',
+  trigger: [EffectTrigger.ON_ACTIVATE],
+  priority: EffectPriority.REACTION,
+  activatable: true,
+  activationCost: 1,
+  activationCooldown: 'per_turn',
+  canActivate: (ctx) => {
+    // Musi być w polu i mieć cel do ataku
+    const opponentSide = ctx.source.owner === 'player1' ? 'player2' : 'player1'
+    const enemies = getAllCreaturesOnField(ctx.state, opponentSide)
+    return enemies.some(e => e.currentStats.defense > 0)
+  },
+  execute: (ctx) => {
+    const { state, source } = ctx
+    const newState = cloneGameState(state)
+    const card = findCardInState(newState, source.instanceId)
+    if (!card) return effectResult(newState)
+
+    // Odblokuj atak — Najemnik dostaje dodatkowy atak w tej turze
+    card.hasAttackedThisTurn = false
+    card.metadata.najemnikBonusAttack = true
+
+    const log = addLog(newState, `${source.cardData.name}: Opłacony! Dostaje dodatkowy atak za 1 PS.`, 'effect')
+    return effectResult(newState, [log])
+  },
+})
+
+// ✅ AŻDACHA (#61) — Vanilia: brak specjalnej zdolności (potężne staty 9/8)
+registerEffect(noEffect('azdacha_vanilia', 'Ażdacha'))
 
 // ===================================================================
 // ✅ OKALECZENIE — -½ ATK i DEF wybranej istoty

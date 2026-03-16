@@ -192,6 +192,8 @@ export type PendingInteractionType =
   | 'swarozyc_split_damage'    // Swarożyc: rozdziel 15 obrażeń
   | 'smocze_jajo_hatch'        // Smocze Jajo: wybierz smoka do wyklucia
   | 'dziewiatko_poison'        // Dziewiątko: wybierz truciznę lub paraliż
+  | 'lamia_death_choice'       // Lamia ON_DEATH: wybierz 1 PS lub 5 kart
+  | 'smierc_save'              // Śmierć: czy zapłacić 1 PS żeby uratować ginącą istotę?
 
 export interface PendingInteraction {
   type: PendingInteractionType

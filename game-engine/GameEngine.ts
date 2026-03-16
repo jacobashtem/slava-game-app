@@ -1158,6 +1158,55 @@ export class GameEngine {
       return cloneGameState(this.state)
     }
 
+    // Śmierć: gracz decyduje czy uratować ginącą istotę za 1 PS
+    if (interaction.type === 'smierc_save') {
+      const meta = interaction.metadata ?? {}
+      if (choice === 'yes') {
+        const owner = newState.players[interaction.respondingPlayer]
+        const deadId = meta.deadCardId as string
+        const deadOwner = meta.deadCardOwner as PlayerSide
+        if (owner.glory >= 1 && deadId) {
+          const gravPlayer = newState.players[deadOwner]
+          const idx = gravPlayer.graveyard.findIndex(c => c.instanceId === deadId)
+          if (idx !== -1) {
+            owner.glory -= 1
+            const saved = gravPlayer.graveyard.splice(idx, 1)[0]!
+            saved.currentStats = { ...(saved.cardData as any).stats }
+            saved.line = null
+            gravPlayer.deck.push(saved)
+            const log = addLog(newState, `Śmierć: Uratowała ${saved.cardData.name} za 1 PS! Wraca do talii.`, 'effect')
+            this.applyStateAndLog(newState, [log])
+          } else {
+            this.applyStateAndLog(newState, [])
+          }
+        } else {
+          this.applyStateAndLog(newState, [])
+        }
+      } else {
+        const log = addLog(newState, `Śmierć: ${meta.deadCardName ?? 'Istota'} nie została uratowana.`, 'effect')
+        this.applyStateAndLog(newState, [log])
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Lamia: gracz wybiera nagrodę po śmierci (1 PS lub 5 kart)
+    if (interaction.type === 'lamia_death_choice') {
+      const side = interaction.respondingPlayer
+      const owner = newState.players[side]
+      if (choice === 'glory') {
+        owner.glory += 1
+        const log = addLog(newState, `Lamia: Skarby! +1 PS. (PS: ${owner.glory})`, 'effect')
+        this.applyStateAndLog(newState, [log])
+      } else {
+        drawCards(owner, 5)
+        const log = addLog(newState, `Lamia: Mądrość! Dobierasz 5 kart.`, 'effect')
+        this.applyStateAndLog(newState, [log])
+      }
+      this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
     // Auction bid — licytacja o Bożą Łaskę (tryb Sława)
     if (interaction.type === 'auction_bid') {
       const meta = interaction.metadata ?? {}
