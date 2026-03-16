@@ -373,26 +373,10 @@ const adventureTypeColor = (card: CardInstance) => {
   justify-content: center;
   padding: 36px 32px 12px;
   overflow: visible;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 80%, rgba(200, 168, 78, 0.04) 0%, transparent 60%),
-    linear-gradient(to top, rgba(4,3,10,0.97) 0%, rgba(4,3,10,0.85) 40%, rgba(4,3,10,0.3) 75%, transparent 100%);
+  background: linear-gradient(to top, rgba(4,3,10,0.97) 0%, rgba(4,3,10,0.85) 40%, rgba(4,3,10,0.3) 75%, transparent 100%);
   border-radius: 28px 28px 0 0;
-  border-top: 1px solid rgba(200, 168, 78, 0.1);
   min-height: 174px;
   perspective: 600px;
-  position: relative;
-}
-/* Gold ornamental line at top of hand */
-.hand-cards::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 15%;
-  right: 15%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200, 168, 78, 0.2) 30%, rgba(200, 168, 78, 0.3) 50%, rgba(200, 168, 78, 0.2) 70%, transparent);
-  pointer-events: none;
-}
 
 .hand-card-wrap {
   cursor: pointer;
