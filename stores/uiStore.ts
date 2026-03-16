@@ -4,7 +4,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, type Ref } from 'vue'
 
 export type UIMode = 'idle' | 'placing' | 'attacking' | 'moving' | 'hypnosis' | 'effect_target'
 
@@ -77,6 +77,15 @@ export const useUIStore = defineStore('ui', () => {
   const turnTimedOut = ref(false)
   // Track UI flash/shake timeouts for cleanup on resetAll
   const _uiTimeouts: ReturnType<typeof setTimeout>[] = []
+
+  /** Flash a ref for a given duration, then clear it. Cancels previous flash on same ref. */
+  function flashRef(target: Ref<string | null>, instanceId: string, durationMs: number) {
+    target.value = instanceId
+    const t = setTimeout(() => {
+      if (target.value === instanceId) target.value = null
+    }, durationMs)
+    _uiTimeouts.push(t)
+  }
 
   // ===== COMPUTED =====
   const isSelectingTarget = computed(() => mode.value === 'attacking' && attackingCardId.value !== null)
@@ -242,47 +251,12 @@ export const useUIStore = defineStore('ui', () => {
     clearSelection()
   }
 
-  function flashEventCard(instanceId: string) {
-    flashingEventId.value = instanceId
-    _uiTimeouts.push(setTimeout(() => {
-      if (flashingEventId.value === instanceId) flashingEventId.value = null
-    }, 1200))
-  }
-
-  function flashCounterAttack(instanceId: string) {
-    counterAttackCardId.value = instanceId
-    _uiTimeouts.push(setTimeout(() => {
-      if (counterAttackCardId.value === instanceId) counterAttackCardId.value = null
-    }, 2400))
-  }
-
-  function flashBlock(instanceId: string) {
-    blockCardId.value = instanceId
-    _uiTimeouts.push(setTimeout(() => {
-      if (blockCardId.value === instanceId) blockCardId.value = null
-    }, 1800))
-  }
-
-  function shakeCard(instanceId: string) {
-    shakeCardId.value = instanceId
-    _uiTimeouts.push(setTimeout(() => {
-      if (shakeCardId.value === instanceId) shakeCardId.value = null
-    }, 800))
-  }
-
-  function flashPoison(instanceId: string) {
-    poisonFlashCardId.value = instanceId
-    _uiTimeouts.push(setTimeout(() => {
-      if (poisonFlashCardId.value === instanceId) poisonFlashCardId.value = null
-    }, 1000))
-  }
-
-  function flashParalyze(instanceId: string) {
-    paralyzeFlashCardId.value = instanceId
-    _uiTimeouts.push(setTimeout(() => {
-      if (paralyzeFlashCardId.value === instanceId) paralyzeFlashCardId.value = null
-    }, 1000))
-  }
+  function flashEventCard(instanceId: string) { flashRef(flashingEventId, instanceId, 1200) }
+  function flashCounterAttack(instanceId: string) { flashRef(counterAttackCardId, instanceId, 2400) }
+  function flashBlock(instanceId: string) { flashRef(blockCardId, instanceId, 1800) }
+  function shakeCard(instanceId: string) { flashRef(shakeCardId, instanceId, 800) }
+  function flashPoison(instanceId: string) { flashRef(poisonFlashCardId, instanceId, 1000) }
+  function flashParalyze(instanceId: string) { flashRef(paralyzeFlashCardId, instanceId, 1000) }
 
   // Banner queue — full-screen banners (like TurnBanner) for important events
   type BannerType = 'player' | 'ai' | 'season' | 'plunder' | 'timeout' | 'effect' | 'steal' | 'death'
