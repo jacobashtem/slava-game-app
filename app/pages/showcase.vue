@@ -328,7 +328,7 @@ p3EffectMeta = {
   'p3-lightning': { name: 'Piorun', desc: 'Żółte błyskawice + biały flash uderzenia + elektryczne iskry.', color: '#fbbf24', trigger: () => demoEffect('p3-defender', 'lightning') },
   'p3-stun': { name: 'Ogłuszenie', desc: 'Orbitujące gwiazdki nad głową + elektryczne iskry.', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'stun') },
   'p3-buff': { name: 'Buff / Wzmocnienie', desc: 'Złote cząstki unoszące się w górę z efektem blasku.', color: '#fbbf24', trigger: () => demoEffect('p3-defender', 'buff') },
-  'p3-resurrect': { name: 'Wskrzeszenie', desc: 'Złote cząstki + promień światła + unoszące się gwiazdy.', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'resurrect') },
+  'p3-resurrect': { name: 'Wskrzeszenie (Wij)', desc: 'Złote cząstki unoszą się z dołu + pierścień światła + gwiazdy. Efekt Wija, Kościeja, Cmentarnej Baby.', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'resurrect') },
   'p3-summon': { name: 'Przywołanie (Portal)', desc: 'Fioletowy portal + cząstki zbiegające się do centrum.', color: '#c084fc', trigger: () => demoEffect('p3-defender', 'summon') },
 }
 
