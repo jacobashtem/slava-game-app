@@ -308,9 +308,11 @@ function play(targetEl: HTMLElement): Promise<void> {
       soul.mesh.visible = false
       sparks = []
       stopLoop()
-      // Clear inline styles so CSS classes work if card survives (arena/showcase).
+      // Clear ALL inline styles so CSS classes work if card survives (arena/showcase).
       // In normal game the card is removed from DOM after this, so it's a no-op.
-      gsap.set(targetEl, { clearProps: 'transform,opacity,filter' })
+      // visibility: hidden is set during Phase 2 — must be cleared too.
+      targetEl.style.visibility = ''
+      gsap.set(targetEl, { clearProps: 'transform,opacity,scale,y,filter' })
       if (cardInner !== targetEl) gsap.set(cardInner, { clearProps: 'filter,boxShadow' })
       _resolve?.()
       // Styles also restored at start of next play() call for showcase/arena reuse.

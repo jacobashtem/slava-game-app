@@ -562,7 +562,7 @@ function onLineDrop(e: DragEvent) {
 .card-wrap {
   position: relative;
   width: 130px;
-  min-height: 175px;
+  height: 175px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -573,8 +573,8 @@ function onLineDrop(e: DragEvent) {
 
 /* ===== EMPTY SLOTS — uniform with card-wrap sizing ===== */
 .slot-empty {
-  width: 100px;
-  height: 140px;
+  width: 130px;
+  height: 175px;
   border-radius: 6px;
   border: 1px solid rgba(200, 168, 78, 0.08);
   background:
@@ -685,13 +685,13 @@ function onLineDrop(e: DragEvent) {
 
   .card-wrap {
     width: 66px;
-    min-height: 90px;
+    height: 90px;
     flex-shrink: 0;
   }
 
   .slot-empty {
-    width: 52px;
-    height: 72px;
+    width: 66px;
+    height: 90px;
     border-radius: 3px;
   }
   .slot-rune { font-size: 12px; }
