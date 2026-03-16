@@ -308,14 +308,11 @@ function play(targetEl: HTMLElement): Promise<void> {
       soul.mesh.visible = false
       sparks = []
       stopLoop()
-      // Clear ALL inline styles so CSS classes work if card survives (arena/showcase).
-      // In normal game the card is removed from DOM after this, so it's a no-op.
-      // visibility: hidden is set during Phase 2 — must be cleared too.
-      targetEl.style.visibility = ''
-      gsap.set(targetEl, { clearProps: 'transform,opacity,scale,y,filter' })
-      if (cardInner !== targetEl) gsap.set(cardInner, { clearProps: 'filter,boxShadow' })
+      // Do NOT clear inline styles here — the card stays hidden until Vue
+      // removes it from DOM via safeUpdateState(). Clearing visibility/opacity
+      // would flash the card for 1 frame before removal.
+      // For arena/showcase reuse, styles are restored at start of next play().
       _resolve?.()
-      // Styles also restored at start of next play() call for showcase/arena reuse.
     },
   })
   currentTl = tl
