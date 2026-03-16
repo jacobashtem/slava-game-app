@@ -10,7 +10,7 @@ const game = useGameStore()
 const ui = useUIStore()
 const arena = useArenaStore()
 
-const isWin = computed(() => game.winner === 'player1')
+const isWin = computed(() => game.winner === game.mySide)
 
 const stats = computed(() => {
   if (!game.state) return null
@@ -32,92 +32,106 @@ const seasonLabel: Record<string, string> = {
   spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima',
 }
 
-// GSAP refs for entrance animation
+// Narrative battle summary
+const narrative = computed(() => {
+  if (!stats.value) return ''
+  const s = stats.value
+  const w = isWin.value
+
+  if (w && s.playerKills >= 6) return 'Rzeź na polu bitwy! Twoi wojownicy nie znali litości.'
+  if (w && s.round <= 3) return 'Błyskawiczne zwycięstwo — wróg nie zdążył nawet dobyć miecza.'
+  if (w && s.playerGlory > s.aiGlory + 5) return 'Twoja sława niesie się echem po wszystkich krainach!'
+  if (w) return 'Bogowie uśmiechnęli się do ciebie. Chwała bohaterowi Słowian!'
+
+  if (!w && s.aiKills <= 1) return 'Walczyłeś dzielnie, lecz los był nieprzychylny.'
+  if (!w && s.round >= 8) return 'Długa, wyczerpująca bitwa — lecz ostatnie słowo należało do wroga.'
+  if (!w) return 'Nawiowie szepczą twoje imię. Ale to jeszcze nie koniec.'
+  return ''
+})
+
+// GSAP refs
 const modalBoxEl = ref<HTMLElement | null>(null)
 const glowEl = ref<HTMLElement | null>(null)
 const iconEl = ref<HTMLElement | null>(null)
 const titleEl = ref<HTMLElement | null>(null)
 const particlesEl = ref<HTMLElement | null>(null)
+const statsEl = ref<HTMLElement | null>(null)
+const narrativeEl = ref<HTMLElement | null>(null)
 
 watch(() => game.winner, (w) => {
   if (!w) return
   nextTick(() => {
-    // Entrance timeline — staggered reveal
     const tl = gsap.timeline({ defaults: { ease: 'back.out(1.7)' } })
 
     if (glowEl.value) {
-      tl.fromTo(glowEl.value, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 0.3, duration: 0.8, ease: 'power2.out' }, 0)
+      tl.fromTo(glowEl.value, { scale: 0.3, opacity: 0 }, { scale: 1, opacity: 0.35, duration: 1, ease: 'power2.out' }, 0)
     }
     if (modalBoxEl.value) {
-      tl.fromTo(modalBoxEl.value, { scale: 0.8, y: 30, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.5 }, 0.1)
+      tl.fromTo(modalBoxEl.value, { scale: 0.85, y: 25, opacity: 0 }, { scale: 1, y: 0, opacity: 1, duration: 0.5 }, 0.15)
     }
     if (iconEl.value) {
-      tl.fromTo(iconEl.value, { scale: 0, rotation: -20, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.6 }, 0.3)
+      tl.fromTo(iconEl.value, { scale: 0, rotation: -15, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 0.6 }, 0.35)
     }
     if (titleEl.value) {
-      tl.fromTo(titleEl.value, { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, 0.5)
+      tl.fromTo(titleEl.value, { y: 12, opacity: 0, letterSpacing: '0.4em' }, { y: 0, opacity: 1, letterSpacing: '0.18em', duration: 0.5 }, 0.55)
+    }
+    if (narrativeEl.value) {
+      tl.fromTo(narrativeEl.value, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.7)
+    }
+    if (statsEl.value) {
+      tl.fromTo(statsEl.value, { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }, 0.8)
     }
 
-    // Breathing glow loop
+    // Glow breathing
     if (glowEl.value) {
-      gsap.to(glowEl.value, { scale: 1.1, opacity: 0.4, duration: 2, yoyo: true, repeat: -1, ease: 'sine.inOut', delay: 1 })
+      gsap.to(glowEl.value, { scale: 1.08, opacity: 0.45, duration: 2.5, yoyo: true, repeat: -1, ease: 'sine.inOut', delay: 1.2 })
     }
 
-    // Victory: confetti burst / Defeat: smoke wisps
+    // Particles
     if (particlesEl.value) {
-      spawnResultParticles(particlesEl.value, w === 'player1')
+      spawnResultParticles(particlesEl.value, isWin.value)
     }
   })
 })
 
-function spawnResultParticles(container: HTMLElement, isVictory: boolean) {
-  const count = isVictory ? 30 : 12
-  const colors = isVictory
-    ? ['#fbbf24', '#f59e0b', '#34d399', '#818cf8', '#fb923c', '#f87171']
-    : ['#334155', '#475569', '#1e293b', '#64748b']
+function spawnResultParticles(container: HTMLElement, victory: boolean) {
+  const count = victory ? 35 : 14
+  const colors = victory
+    ? ['#c8a84e', '#fbbf24', '#f59e0b', '#d4a843', '#e8c96a']
+    : ['#1e1a14', '#2a231a', '#3d342a', '#4a3f33', '#5c4f40']
 
   for (let i = 0; i < count; i++) {
     const el = document.createElement('div')
-    el.style.cssText = `position:absolute;border-radius:${isVictory ? '2px' : '50%'};pointer-events:none;`
-    const size = isVictory ? (4 + Math.random() * 6) : (3 + Math.random() * 8)
-    el.style.width = `${size}px`
-    el.style.height = `${isVictory ? size * 0.6 : size}px`
+    const size = victory ? (2 + Math.random() * 4) : (3 + Math.random() * 6)
+    el.style.cssText = `position:absolute;border-radius:50%;pointer-events:none;width:${size}px;height:${size}px;left:50%;top:50%;`
     el.style.background = colors[Math.floor(Math.random() * colors.length)]!
-    el.style.left = '50%'
-    el.style.top = '50%'
+    if (victory) el.style.boxShadow = `0 0 ${3 + Math.random() * 4}px ${el.style.background}`
     container.appendChild(el)
 
-    if (isVictory) {
-      // Confetti: burst outward in all directions
-      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5
-      const dist = 120 + Math.random() * 180
+    if (victory) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4
+      const dist = 100 + Math.random() * 160
       gsap.fromTo(el,
-        { x: 0, y: 0, rotation: 0, opacity: 1, scale: 0.5 },
+        { x: 0, y: 0, opacity: 1, scale: 0.5 },
         {
-          x: Math.cos(angle) * dist,
-          y: Math.sin(angle) * dist - 40,
-          rotation: 'random(-360, 360)',
-          opacity: 0,
-          scale: 'random(0.8, 1.5)',
-          duration: 1.2 + Math.random() * 0.8,
+          x: Math.cos(angle) * dist, y: Math.sin(angle) * dist - 30,
+          opacity: 0, scale: 0.3,
+          duration: 1.5 + Math.random() * 1,
           ease: 'power2.out',
-          delay: 0.3 + Math.random() * 0.3,
+          delay: 0.3 + Math.random() * 0.4,
           onComplete: () => el.remove(),
         }
       )
     } else {
-      // Defeat: slow rising smoke wisps
       gsap.fromTo(el,
-        { x: (Math.random() - 0.5) * 100, y: 20, opacity: 0.4, scale: 1 },
+        { x: (Math.random() - 0.5) * 80, y: 15, opacity: 0.35, scale: 1 },
         {
-          y: -80 - Math.random() * 60,
-          x: `+=${(Math.random() - 0.5) * 40}`,
-          opacity: 0,
-          scale: 2 + Math.random(),
-          filter: 'blur(3px)',
-          duration: 2 + Math.random() * 1.5,
+          y: -60 - Math.random() * 50,
+          x: `+=${(Math.random() - 0.5) * 30}`,
+          opacity: 0, scale: 1.5 + Math.random(),
+          duration: 2.5 + Math.random() * 2,
           ease: 'power1.out',
-          delay: 0.5 + Math.random() * 0.8,
+          delay: 0.5 + Math.random() * 1,
           onComplete: () => el.remove(),
         }
       )
@@ -145,63 +159,92 @@ function restart() {
 
 <template>
   <Transition name="modal-fade">
-    <div v-if="game.winner" class="modal-overlay">
-      <!-- Radial glow behind modal -->
-      <div ref="glowEl" :class="['modal-glow', isWin ? 'glow-win' : 'glow-lose']" />
+    <div v-if="game.winner" class="go-overlay">
+      <!-- Radial glow -->
+      <div ref="glowEl" :class="['go-glow', isWin ? 'go-glow-win' : 'go-glow-lose']" />
 
-      <!-- Particle burst container -->
-      <div ref="particlesEl" class="result-particles" />
+      <!-- Particles -->
+      <div ref="particlesEl" class="go-particles" />
 
-      <div ref="modalBoxEl" :class="['modal-box', isWin ? 'box-win' : 'box-lose']">
+      <!-- Vignette -->
+      <div class="go-vignette" />
+
+      <div ref="modalBoxEl" :class="['go-box', isWin ? 'go-box-win' : 'go-box-lose']">
+        <!-- Runic border SVG -->
+        <svg class="go-border-svg" viewBox="0 0 340 460" preserveAspectRatio="none">
+          <rect x="1" y="1" width="338" height="458" rx="12" fill="none"
+            :stroke="isWin ? 'rgba(200,168,78,0.25)' : 'rgba(100,80,60,0.15)'" stroke-width="1.5"
+            stroke-dasharray="8 4" class="go-border-dash" />
+          <rect x="6" y="6" width="328" height="448" rx="10" fill="none"
+            :stroke="isWin ? 'rgba(200,168,78,0.12)' : 'rgba(100,80,60,0.08)'" stroke-width="0.5" />
+        </svg>
+
+        <!-- Corner runes -->
+        <span class="go-corner go-corner-tl">ᚱ</span>
+        <span class="go-corner go-corner-tr">ᛊ</span>
+        <span class="go-corner go-corner-bl">ᛝ</span>
+        <span class="go-corner go-corner-br">ᚦ</span>
+
         <!-- Top ornament -->
-        <div class="ornament-top" />
+        <svg viewBox="0 0 160 8" class="go-orn">
+          <path d="M0 4 Q20 0 40 4 Q60 8 80 4 Q100 0 120 4 Q140 8 160 4" fill="none"
+            :stroke="isWin ? 'rgba(200,168,78,0.3)' : 'rgba(100,80,60,0.15)'" stroke-width="1" />
+        </svg>
 
         <!-- Icon -->
-        <div ref="iconEl" :class="['result-icon', isWin ? 'win' : 'lose']">
+        <div ref="iconEl" :class="['go-icon', isWin ? 'go-icon-win' : 'go-icon-lose']">
           <Icon :icon="isWin ? 'game-icons:laurel-crown' : 'game-icons:skull-crossed-bones'" />
         </div>
 
         <!-- Title -->
-        <h2 ref="titleEl" :class="isWin ? 'win-text' : 'lose-text'">
+        <h2 ref="titleEl" :class="['go-title', isWin ? 'go-title-win' : 'go-title-lose']">
           {{ isWin ? 'ZWYCIĘSTWO' : 'PORAŻKA' }}
         </h2>
-        <p class="result-sub">
-          {{ isWin ? 'Chwała bohaterowi Słowian!' : 'Wróg okazał się silniejszy...' }}
-        </p>
 
-        <!-- Stats -->
-        <div v-if="stats" class="game-stats">
-          <div class="stat-row">
-            <span class="stat-label"><Icon icon="game-icons:sundial" class="stat-icon" /> Runda</span>
-            <span class="stat-val">{{ stats.round }} · {{ seasonLabel[stats.season] ?? stats.season }}</span>
+        <!-- Narrative summary -->
+        <p ref="narrativeEl" class="go-narrative">{{ narrative }}</p>
+
+        <!-- Bottom ornament -->
+        <svg viewBox="0 0 160 8" class="go-orn">
+          <path d="M0 4 Q20 8 40 4 Q60 0 80 4 Q100 8 120 4 Q140 0 160 4" fill="none"
+            :stroke="isWin ? 'rgba(200,168,78,0.2)' : 'rgba(100,80,60,0.1)'" stroke-width="1" />
+        </svg>
+
+        <!-- Stats as runic inscriptions -->
+        <div v-if="stats" ref="statsEl" class="go-stats">
+          <div class="go-stat">
+            <span class="go-stat-rune">ᚱ</span>
+            <span class="go-stat-label">Runda</span>
+            <span class="go-stat-val">{{ stats.round }} · {{ seasonLabel[stats.season] ?? stats.season }}</span>
           </div>
-          <div class="stat-row">
-            <span class="stat-label"><Icon icon="game-icons:battle-axe" class="stat-icon stat-kill" /> Zabici</span>
-            <span class="stat-val stat-kills">{{ stats.playerKills }}</span>
+          <div class="go-stat">
+            <span class="go-stat-rune go-rune-kill">ᛏ</span>
+            <span class="go-stat-label">Powaleni wrogowie</span>
+            <span class="go-stat-val go-val-kill">{{ stats.playerKills }}</span>
           </div>
-          <div class="stat-row">
-            <span class="stat-label"><Icon icon="game-icons:tombstone" class="stat-icon stat-loss" /> Straceni</span>
-            <span class="stat-val stat-losses">{{ stats.aiKills }}</span>
+          <div class="go-stat">
+            <span class="go-stat-rune go-rune-loss">ᛒ</span>
+            <span class="go-stat-label">Straceni</span>
+            <span class="go-stat-val go-val-loss">{{ stats.aiKills }}</span>
           </div>
-          <div class="stat-row">
-            <span class="stat-label"><Icon icon="game-icons:laurel-crown" class="stat-icon" style="color:#86efac" /> Sława</span>
-            <span class="stat-val" style="color:#86efac">{{ stats.playerGlory }} vs {{ stats.aiGlory }}</span>
+          <div v-if="stats.isSlava" class="go-stat">
+            <span class="go-stat-rune go-rune-glory">ᛊ</span>
+            <span class="go-stat-label">Punkty Sławy</span>
+            <span class="go-stat-val go-val-glory">{{ stats.playerGlory }} — {{ stats.aiGlory }}</span>
           </div>
-          <div class="stat-row">
-            <span class="stat-label"><Icon icon="game-icons:card-pickup" class="stat-icon" /> Talia</span>
-            <span class="stat-val">{{ stats.playerDeck }}</span>
+          <div class="go-stat">
+            <span class="go-stat-rune">ᚲ</span>
+            <span class="go-stat-label">Karty w talii</span>
+            <span class="go-stat-val">{{ stats.playerDeck }}</span>
           </div>
         </div>
 
-        <!-- Bottom ornament -->
-        <div class="ornament-bottom" />
-
         <!-- Buttons -->
-        <button class="restart-btn" @click="restart">
-          <Icon icon="game-icons:cycle" />
+        <button :class="['go-btn-main', isWin ? 'go-btn-gold' : 'go-btn-ash']" @click="restart">
+          <Icon icon="game-icons:crossed-swords" />
           {{ game.isArenaMode ? 'Resetuj Arenę' : 'Zagraj ponownie' }}
         </button>
-        <NuxtLink to="/" class="menu-link">
+        <NuxtLink to="/" class="go-btn-menu">
           <Icon icon="game-icons:exit-door" />
           Menu główne
         </NuxtLink>
@@ -211,200 +254,277 @@ function restart() {
 </template>
 
 <style scoped>
-.modal-overlay {
+.go-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(4, 3, 10, 0.88);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 200;
-  /* backdrop-filter removed — causes full-screen GPU blur, tanks fps */
 }
 
-.modal-glow {
+/* Radial glow */
+.go-glow {
   position: absolute;
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  /* Static pre-blurred gradient instead of runtime filter: blur(100px) */
-  opacity: 0.3;
+  opacity: 0;
   pointer-events: none;
-  /* GSAP handles glow breathing animation */
 }
-/* Pre-blurred gradients: wider spread replaces runtime filter:blur */
-.glow-win  { background: radial-gradient(circle, rgba(251,191,36,0.5) 0%, rgba(251,191,36,0.1) 30%, transparent 60%); }
-.glow-lose { background: radial-gradient(circle, rgba(239,68,68,0.5) 0%, rgba(239,68,68,0.1) 30%, transparent 60%); }
+.go-glow-win {
+  background: radial-gradient(circle,
+    rgba(200, 168, 78, 0.4) 0%,
+    rgba(200, 100, 30, 0.15) 30%,
+    transparent 60%
+  );
+}
+.go-glow-lose {
+  background: radial-gradient(circle,
+    rgba(120, 40, 15, 0.3) 0%,
+    rgba(60, 20, 10, 0.1) 30%,
+    transparent 60%
+  );
+}
 
-.result-particles {
+.go-vignette {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.5) 100%);
+  pointer-events: none;
+}
+
+.go-particles {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
   pointer-events: none;
   z-index: 201;
 }
 
-.modal-box {
+/* ===== MODAL BOX ===== */
+.go-box {
   position: relative;
-  background: linear-gradient(180deg, #0f172a 0%, #0a0f1e 100%);
-  border: 1px solid;
-  border-radius: 16px;
-  padding: 36px 48px;
+  padding: 32px 40px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.8),
-    0 0 1px 0 rgba(255, 255, 255, 0.1) inset;
-  /* GSAP handles entrance animation */
-  min-width: 320px;
+  gap: 8px;
+  min-width: 300px;
+  max-width: 360px;
+  z-index: 202;
 }
 
-.box-win  { border-color: rgba(251, 191, 36, 0.3); }
-.box-lose { border-color: rgba(100, 116, 139, 0.3); }
-
-/* Ornamental lines */
-.ornament-top, .ornament-bottom {
-  width: 120px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold) 30%, var(--gold) 70%, transparent);
-  opacity: 0.25;
+.go-box-win {
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(200, 168, 78, 0.04) 0%, transparent 50%),
+    linear-gradient(175deg, rgba(14, 12, 8, 0.97), rgba(8, 6, 4, 0.98));
 }
 
-.result-icon {
-  font-size: 64px;
+.go-box-lose {
+  background:
+    radial-gradient(ellipse at 50% 80%, rgba(60, 20, 10, 0.04) 0%, transparent 50%),
+    linear-gradient(175deg, rgba(10, 8, 6, 0.97), rgba(6, 4, 3, 0.98));
+}
+
+/* Runic border SVG */
+.go-border-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.go-border-dash {
+  stroke-dashoffset: 1600;
+  animation: dash-draw 2.5s ease-out 0.3s forwards;
+}
+
+@keyframes dash-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Corner runes */
+.go-corner {
+  position: absolute;
+  font-size: 14px;
+  color: rgba(200, 168, 78, 0.15);
+  pointer-events: none;
   line-height: 1;
-  /* GSAP handles icon entrance */
+}
+.go-corner-tl { top: 12px; left: 14px; }
+.go-corner-tr { top: 12px; right: 14px; }
+.go-corner-bl { bottom: 12px; left: 14px; }
+.go-corner-br { bottom: 12px; right: 14px; }
+
+.go-box-lose .go-corner { color: rgba(100, 60, 40, 0.12); }
+
+/* Ornament */
+.go-orn { width: 140px; height: 8px; flex-shrink: 0; }
+
+/* Icon */
+.go-icon { font-size: 58px; line-height: 1; }
+
+.go-icon-win {
+  color: #c8a84e;
+  filter: drop-shadow(0 0 20px rgba(200, 168, 78, 0.5));
+}
+.go-icon-lose {
+  color: rgba(120, 80, 60, 0.6);
+  filter: drop-shadow(0 0 8px rgba(120, 40, 15, 0.3));
 }
 
-.result-icon.win  { color: #fbbf24; filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.5)); }
-.result-icon.lose { color: #64748b; filter: drop-shadow(0 0 10px rgba(100, 116, 139, 0.3)); }
-
-h2 {
+/* Title */
+.go-title {
   margin: 0;
-  font-size: 32px;
+  font-size: 30px;
   font-family: var(--font-display, Georgia, serif);
-  letter-spacing: 0.15em;
-  /* GSAP handles title entrance */
+  font-weight: 500;
+}
+.go-title-win {
+  color: #ddd6c1;
+  text-shadow:
+    0 0 30px rgba(200, 168, 78, 0.35),
+    0 0 60px rgba(200, 100, 30, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.go-title-lose {
+  color: rgba(160, 140, 120, 0.7);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
-.win-text {
-  color: #fbbf24;
-  text-shadow: 0 0 30px rgba(251, 191, 36, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-.lose-text {
-  color: #94a3b8;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.result-sub {
-  color: #64748b;
-  font-size: 13px;
-  margin: 0;
+/* Narrative */
+.go-narrative {
+  color: rgba(148, 130, 100, 0.6);
+  font-size: 12px;
   font-style: italic;
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.5;
   font-family: Georgia, serif;
 }
 
-/* Stats table */
-.game-stats {
+/* ===== STATS ===== */
+.go-stats {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
   width: 100%;
-  max-width: 260px;
-  padding: 14px 18px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(200, 168, 78, 0.1);
-  border-radius: 10px;
-  margin: 4px 0;
+  max-width: 270px;
+  padding: 10px 0;
+  margin: 2px 0;
 }
 
-.stat-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-}
-
-.stat-label {
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stat-icon {
-  width: 14px;
-  height: 14px;
-  opacity: 0.6;
-}
-.stat-kill { color: #4ade80; }
-.stat-loss { color: #f87171; }
-.stat-gold { color: #fbbf24; }
-
-.stat-val {
-  color: #94a3b8;
-  font-weight: 600;
-  font-family: monospace;
-}
-
-.stat-kills    { color: #4ade80; }
-.stat-losses   { color: #f87171; }
-.stat-gold-val { color: #fbbf24; }
-
-/* Buttons */
-.restart-btn {
+.go-stat {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
-  padding: 10px 28px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.8), rgba(124, 58, 237, 0.8));
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 8px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
-  letter-spacing: 0.05em;
+  padding: 5px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(200, 168, 78, 0.05);
 }
-.restart-btn:hover {
-  background: linear-gradient(135deg, rgba(99, 90, 249, 0.9), rgba(144, 78, 255, 0.9));
-  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
-  transform: translateY(-1px);
+.go-stat:last-child { border-bottom: none; }
+
+.go-stat-rune {
+  font-size: 14px;
+  color: rgba(200, 168, 78, 0.25);
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.go-rune-kill { color: rgba(74, 222, 128, 0.35); }
+.go-rune-loss { color: rgba(248, 113, 113, 0.35); }
+.go-rune-glory { color: rgba(200, 168, 78, 0.4); }
+
+.go-stat-label {
+  flex: 1;
+  color: rgba(148, 130, 100, 0.5);
+  font-size: 11px;
+  letter-spacing: 0.03em;
 }
 
-.menu-link {
+.go-stat-val {
+  color: rgba(200, 190, 170, 0.7);
+  font-weight: 600;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 13px;
+}
+.go-val-kill { color: rgba(74, 222, 128, 0.8); }
+.go-val-loss { color: rgba(248, 113, 113, 0.7); }
+.go-val-glory { color: rgba(200, 168, 78, 0.85); }
+
+/* ===== BUTTONS ===== */
+.go-btn-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.06em;
+  font-family: var(--font-display, Georgia, serif);
+  border: 1px solid;
+}
+.go-btn-main:active { transform: scale(0.98); }
+
+.go-btn-gold {
+  background: linear-gradient(135deg, rgba(200, 100, 30, 0.2), rgba(200, 168, 78, 0.1));
+  border-color: rgba(200, 168, 78, 0.3);
+  color: rgba(200, 168, 78, 0.95);
+}
+.go-btn-gold:hover {
+  background: linear-gradient(135deg, rgba(200, 100, 30, 0.3), rgba(200, 168, 78, 0.15));
+  box-shadow: 0 0 20px rgba(200, 100, 30, 0.12);
+  border-color: rgba(200, 168, 78, 0.5);
+}
+
+.go-btn-ash {
+  background: rgba(100, 80, 60, 0.08);
+  border-color: rgba(100, 80, 60, 0.2);
+  color: rgba(180, 160, 140, 0.8);
+}
+.go-btn-ash:hover {
+  background: rgba(100, 80, 60, 0.15);
+  border-color: rgba(100, 80, 60, 0.35);
+}
+
+.go-btn-menu {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #475569;
+  color: rgba(148, 130, 100, 0.35);
   text-decoration: none;
-  font-size: 12px;
+  font-size: 11px;
   padding: 6px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: color 0.15s, border-color 0.15s;
+  border: 1px solid rgba(200, 168, 78, 0.06);
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
 }
-.menu-link:hover {
-  color: #94a3b8;
-  border-color: rgba(255, 255, 255, 0.15);
+.go-btn-menu:hover {
+  color: rgba(200, 168, 78, 0.7);
+  border-color: rgba(200, 168, 78, 0.15);
 }
 
-.modal-fade-enter-active { transition: opacity 0.4s; }
+/* Transitions */
+.modal-fade-enter-active { transition: opacity 0.5s; }
 .modal-fade-leave-active { transition: opacity 0.3s; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 
-/* ====== MOBILE ====== */
+/* ===== MOBILE ===== */
 @media (max-width: 767px) {
-  .modal-box {
-    max-width: 92vw;
-    padding: 20px 16px;
-  }
+  .go-box { max-width: 92vw; padding: 24px 20px; min-width: 0; }
+  .go-title { font-size: 24px; }
+  .go-icon { font-size: 44px; }
+  .go-narrative { font-size: 11px; }
+  .go-stat { padding: 4px 8px; }
+  .go-btn-main { padding: 10px 22px; font-size: 13px; }
 }
 </style>
