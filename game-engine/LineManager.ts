@@ -298,6 +298,14 @@ export function canAttack(
     return { valid: false, reason: `${target.cardData.name}: Niewidzialny w obronie! (Ruslan Helmet+)`, softFail: true }
   }
 
+  // Sledovik / Srebrna Gałąź+: nośnik odporny na ataki z wybranej domeny
+  if (typeof target.metadata.immuneToDomain === 'number') {
+    const attackerDomain = (attacker.cardData as any).idDomain as number
+    if (attackerDomain === (target.metadata.immuneToDomain as number)) {
+      return { valid: false, reason: `${target.cardData.name}: Odporny na ataki z tej domeny!`, softFail: true }
+    }
+  }
+
   // Amulet z Rozetą: nośnik odporny na Magię
   if (attackType === AttackType.MAGIC && target.equippedArtifacts.some(a => (a as any).effectId === 'adventure_amulet_z_rozeta' || (a as any).effectId === 'adventure_amulet_z_rozeta_enhanced')) {
     return { valid: false, reason: `${target.cardData.name}: Amulet z Rozetą chroni przed Magią!`, softFail: true }

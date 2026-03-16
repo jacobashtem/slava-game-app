@@ -135,6 +135,17 @@ export function resolveAttack(
     [attackerInstanceId, defenderInstanceId]
   ))
 
+  // Topór Peruna Amulet: odbij obrażenia na napastnika
+  if (currentDefender.metadata.toporPerunaReflect && damageToDefender > 0) {
+    delete currentDefender.metadata.toporPerunaReflect
+    // Cofnij obrażenia obrońcy
+    currentDefender.currentStats.defense += damageToDefender
+    // Zadaj je napastnikowi
+    currentAttacker.currentStats.defense -= damageToDefender
+    log.push(addLog(newState, `Topór Peruna: ${currentDefender.cardData.name} odbija ${damageToDefender} obrażeń na ${currentAttacker.cardData.name}!`, 'effect'))
+    damageToDefender = 0
+  }
+
   // Sława: track damage dealt for holiday conditions
   trackDamageDealt(newState, currentAttacker.owner as PlayerSide, damageToDefender)
 
@@ -458,6 +469,14 @@ export function resolveAttack(
         const killResult = triggerEffect(newState, currentAttacker, EffectTrigger.ON_KILL, currentDefender)
         newState = killResult.newState
         log.push(...killResult.log)
+
+        // Łaska Świętowida: +ATK ofiary po zabójstwie
+        const atkAfterKill = findCardOnField(newState, attackerInstanceId)
+        if (atkAfterKill?.metadata.swietowidKillBuff) {
+          const victimAtk = (currentDefender.cardData as any).stats?.attack ?? currentDefender.currentStats.attack
+          atkAfterKill.currentStats.attack += victimAtk
+          log.push(addLog(newState, `Łaska Świętowida: ${atkAfterKill.cardData.name} +${victimAtk} ATK po zabiciu ${currentDefender.cardData.name}!`, 'effect'))
+        }
       }
 
       // Sprawdź efekt Moc Światogora: karta ginie po zabiciu

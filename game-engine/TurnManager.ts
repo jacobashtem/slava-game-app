@@ -55,6 +55,58 @@ export function processStartPhase(state: GameState): { newState: GameState; log:
     }
   }
 
+  // Tick: przygody z limitowanym czasem trwania (odliczaj rundy, zdejmij gdy wygasną)
+  for (const side of ['player1', 'player2'] as PlayerSide[]) {
+    for (const card of getAllCreaturesForPlayer(newState, side)) {
+      // Bezsilność: wrogowie wyciszeni przez X rund
+      if (typeof card.metadata.bezsilnoscRounds === 'number') {
+        card.metadata.bezsilnoscRounds = (card.metadata.bezsilnoscRounds as number) - 1
+        if ((card.metadata.bezsilnoscRounds as number) <= 0) {
+          delete card.metadata.bezsilnoscRounds
+          delete card.metadata.bezsilnoscMeleeOnly
+          card.isSilenced = false
+          log.push(addLog(newState, `${card.cardData.name}: Bezsilność mija!`, 'effect'))
+        }
+      }
+      // Swaćba: wróg nie może atakować X rund
+      if (typeof card.metadata.swacbaRounds === 'number') {
+        card.metadata.swacbaRounds = (card.metadata.swacbaRounds as number) - 1
+        if ((card.metadata.swacbaRounds as number) <= 0) {
+          delete card.metadata.swacbaRounds
+          card.cannotAttack = false
+          log.push(addLog(newState, `${card.cardData.name}: Swaćba mija — może znów atakować!`, 'effect'))
+        }
+      }
+      // Misjonarze: wróg nie atakuje Magią X tur
+      if (typeof card.metadata.misjonarzeRounds === 'number') {
+        card.metadata.misjonarzeRounds = (card.metadata.misjonarzeRounds as number) - 1
+        if ((card.metadata.misjonarzeRounds as number) <= 0) {
+          delete card.metadata.misjonarzeRounds
+          log.push(addLog(newState, `${card.cardData.name}: Misjonarze odchodzą — Magia znów dozwolona!`, 'effect'))
+        }
+      }
+      // Zaćmienie: istoty wyciszone X tur
+      if (typeof card.metadata.zacmienieRounds === 'number') {
+        card.metadata.zacmienieRounds = (card.metadata.zacmienieRounds as number) - 1
+        if ((card.metadata.zacmienieRounds as number) <= 0) {
+          delete card.metadata.zacmienieRounds
+          card.isSilenced = false
+          log.push(addLog(newState, `${card.cardData.name}: Zaćmienie mija!`, 'effect'))
+        }
+      }
+      // Kukła Marzanny: Nieumarli sparaliżowani X rund
+      if (typeof card.metadata.kuklaDoubleVsUndead === 'number') {
+        card.metadata.kuklaDoubleVsUndead = (card.metadata.kuklaDoubleVsUndead as number) - 1
+        if ((card.metadata.kuklaDoubleVsUndead as number) <= 0) {
+          delete card.metadata.kuklaDoubleVsUndead
+          if (card.paralyzeRoundsLeft !== null) card.paralyzeRoundsLeft = 0
+          card.cannotAttack = false
+          log.push(addLog(newState, `${card.cardData.name}: Paraliż od Kukły Marzanny mija!`, 'effect'))
+        }
+      }
+    }
+  }
+
   // Efekty ON_TURN_START (generyczny loop — Cicha, Domowik, Świetle, Południca, Starszyzna, etc.)
   newState = processTurnStartEffects(newState, log)
 
