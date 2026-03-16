@@ -110,31 +110,31 @@ const STEPS: TutorialStep[] = [
 
   // ═══════ TRIGGERY / ZDOLNOŚCI ═══════
   { id: 'trig_intro', icon: 'game-icons:magic-swirl', title: 'Zdolności Istot', position: 'center', advance: 'click',
-    body: ['Wiele istot ma unikalne zdolności! Rozpoznasz je po kolorowej etykiecie na karcie.', 'Każda zdolność ma TRIGGER — warunek kiedy się aktywuje. Zaraz omówię każdy.'] },
+    body: ['Wiele istot ma unikalne zdolności! Rozpoznasz je po etykietach typu [AURA], [WEJŚCIE], [AKCJA] itp. na karcie.', 'Każda etykieta oznacza KIEDY zdolność się aktywuje. Zaraz omówię każdą.'] },
 
   { id: 'trig_entry', icon: 'game-icons:card-play', title: '🟢 WEJŚCIE', position: 'center', advance: 'click',
-    body: ['Zielona etykieta. Aktywuje się RAZ — w momencie gdy wystawiasz istotę na pole.', 'Np. „Gdy wchodzi na pole: zadaj 2 obrażenia losowej wrogiej istocie."', 'Efekt jednorazowy — nie powtarza się.'] },
+    body: ['[WEJŚCIE] — aktywuje się RAZ, w momencie gdy wystawiasz istotę na pole.', 'Np. „Gdy wchodzi na pole: zadaj 2 obrażenia losowej wrogiej istocie."', 'Efekt jednorazowy — nie powtarza się.'] },
 
   { id: 'trig_action', icon: 'game-icons:lightning-trio', title: '🟣 AKCJA ⚡', position: 'center', advance: 'click',
-    body: ['Fioletowa etykieta z ⚡. Zdolność AKTYWOWANA — to TY decydujesz kiedy jej użyć.', 'Kliknij pulsujący przycisk ⚡ na karcie żeby aktywować.', 'Może kosztować PS. Może mieć cooldown (raz na turę / raz na rundę).'] },
+    body: ['[AKCJA] ⚡ — zdolność AKTYWOWANA. To TY decydujesz kiedy jej użyć.', 'Kliknij pulsujący przycisk ⚡ na karcie żeby aktywować.', 'Może kosztować PS. Może mieć cooldown (raz na turę / raz na rundę).'] },
 
   { id: 'trig_aura', icon: 'game-icons:aura', title: '🔵 AURA', position: 'center', advance: 'click',
-    body: ['Niebieska etykieta. Efekt PASYWNY — działa automatycznie co turę.', 'Np. „Na początku tury: przywróć 1 🛡 sojusznikowi obok."', 'Działa dopóki istota żyje. Nie musisz nic klikać.'] },
+    body: ['[AURA] — efekt PASYWNY. Działa automatycznie co turę, nie musisz nic klikać.', 'Np. „Na początku tury: przywróć 1 🛡 sojusznikowi obok."', 'Działa dopóki istota żyje na polu.'] },
 
   { id: 'trig_retaliation', icon: 'game-icons:shield-bash', title: '🟠 ODWET', position: 'center', advance: 'click',
-    body: ['Pomarańczowa etykieta. Aktywuje się gdy ta istota OBERWIE obrażenia.', 'Np. „Gdy otrzyma obrażenia: zadaj 1 obrażenie atakującemu."', 'Działa przy każdym trafieniu — potężne przeciw wielokrotnym atakom!'] },
+    body: ['[ODWET] — aktywuje się gdy ta istota OBERWIE obrażenia.', 'Np. „Gdy otrzyma obrażenia: zadaj 1 obrażenie atakującemu."', 'Działa przy każdym trafieniu — potężne przeciw wielokrotnym atakom!'] },
 
   { id: 'trig_strike', icon: 'game-icons:sword-clash', title: '🔴 NATARCIE', position: 'center', advance: 'click',
-    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZADAJE obrażenia.', 'Np. „Gdy zada obrażenia: ukradnij 1 ⚔ wrogowi."', 'Działa przy każdym twoim uderzeniu — im więcej atakujesz, tym lepiej.'] },
+    body: ['[NATARCIE] — aktywuje się gdy ta istota ZADAJE obrażenia.', 'Np. „Gdy zada obrażenia: ukradnij 1 ⚔ wrogowi."', 'Działa przy każdym twoim uderzeniu — im więcej atakujesz, tym lepiej.'] },
 
   { id: 'trig_kill', icon: 'game-icons:skull-crossed-bones', title: '🔴 ZABÓJSTWO', position: 'center', advance: 'click',
-    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZABIJE wroga (🛡 → 0).', 'Np. „Gdy zabije: zyskaj 1 PS" albo „Gdy zabije: przywróć pełne 🛡."', 'Nagroda za eliminację — im więcej zabijasz, tym silniejszy jesteś!'] },
+    body: ['[ZABÓJSTWO] — aktywuje się gdy ta istota ZABIJE wroga (🛡 → 0).', 'Np. „Gdy zabije: zyskaj 1 PS" albo „Gdy zabije: przywróć pełne 🛡."', 'Nagroda za eliminację — im więcej zabijasz, tym silniejszy jesteś!'] },
 
   { id: 'trig_farewell', icon: 'game-icons:tombstone', title: '⚫ POŻEGNANIE', position: 'center', advance: 'click',
-    body: ['Szara etykieta. Aktywuje się gdy ta istota GINIE.', 'Np. „Gdy zginie: zadaj 3 obrażenia losowemu wrogowi."', 'Ostatni akt — istota umiera, ale zabiera kogoś ze sobą. Potężne!'] },
+    body: ['[POŻEGNANIE] — aktywuje się gdy ta istota GINIE.', 'Np. „Gdy zginie: zadaj 3 obrażenia losowemu wrogowi."', 'Ostatni akt — istota umiera, ale zabiera kogoś ze sobą!'] },
 
   { id: 'trig_vigilance', icon: 'game-icons:eye-shield', title: '🟡 CZUJNOŚĆ', position: 'center', advance: 'click',
-    body: ['Żółta etykieta. Reaguje na ZDARZENIA na polu — śmierć dowolnej istoty, zagranie karty przez wroga itp.', 'Np. „Gdy jakakolwiek istota zginie: zyskaj +1 ⚔."', 'Obserwator pola bitwy — pasywnie zbiera korzyści z chaosu walki.'] },
+    body: ['[CZUJNOŚĆ] — reaguje na zdarzenia na polu: śmierć istoty, zagranie karty przez wroga itp.', 'Np. „Gdy jakakolwiek istota zginie: zyskaj +1 ⚔."', 'Obserwator pola bitwy — pasywnie zbiera korzyści z chaosu walki.'] },
 
   // ═══════ PRZYGODY ═══════
   { id: 'adv_types', icon: 'game-icons:spell-book', title: 'Karty Przygody', position: 'center', advance: 'click',
