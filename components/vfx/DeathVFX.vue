@@ -308,10 +308,12 @@ function play(targetEl: HTMLElement): Promise<void> {
       soul.mesh.visible = false
       sparks = []
       stopLoop()
+      // Clear inline styles so CSS classes work if card survives (arena/showcase).
+      // In normal game the card is removed from DOM after this, so it's a no-op.
+      gsap.set(targetEl, { clearProps: 'transform,opacity,filter' })
+      if (cardInner !== targetEl) gsap.set(cardInner, { clearProps: 'filter,boxShadow' })
       _resolve?.()
-      // Do NOT restore card styles here — in game the card is still in DOM
-      // and restoring opacity causes a flash. Styles are restored at start of
-      // next play() call for showcase/arena reuse.
+      // Styles also restored at start of next play() call for showcase/arena reuse.
     },
   })
   currentTl = tl

@@ -299,6 +299,9 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       implode.mesh.visible = false
       sparks = []
       stopLoop()
+      gsap.set(attackerEl, { clearProps: 'transform,boxShadow' })
+      gsap.set(defenderEl, { clearProps: 'transform' })
+      gsap.set(defInner, { clearProps: 'boxShadow,borderColor' })
       _resolve?.()
     },
   })

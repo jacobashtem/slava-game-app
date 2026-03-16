@@ -328,6 +328,9 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       slashPool.forEach(s => { s.mesh.visible = false })
       sparks = []
       stopLoop()
+      gsap.set(attackerEl, { clearProps: 'transform,boxShadow' })
+      gsap.set(defenderEl, { clearProps: 'transform' })
+      gsap.set(defInner, { clearProps: 'boxShadow,borderColor' })
       _resolve?.()
     },
   })
