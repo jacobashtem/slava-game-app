@@ -103,6 +103,37 @@ export function resolveAttack(
   }
   log.push(...damageCalc.bonusLog)
 
+  // 3b. Junak (#40): First Strike — kontratak PRZED atakiem wroga
+  if ((currentDefender.cardData as any).effectId === 'junak_double_hit_kill'
+      && !currentDefender.isSilenced
+      && currentDefender.position === CardPosition.DEFENSE
+      && damageToDefender > 0) {
+    const firstStrikeDmg = currentDefender.currentStats.defense
+    if (firstStrikeDmg > 0) {
+      currentAttacker.currentStats.defense -= firstStrikeDmg
+      log.push(addLog(newState,
+        `${currentDefender.cardData.name}: Pierwsze Uderzenie! Kontratakuje PRZED atakiem za ${firstStrikeDmg}.`,
+        'effect', [defenderInstanceId, attackerInstanceId]
+      ))
+      if (currentAttacker.currentStats.defense <= 0) {
+        // Atakujący ginie PRZED zadaniem obrażeń — atak anulowany
+        log.push(addLog(newState, `${currentAttacker.cardData.name} ginie od Pierwszego Uderzenia Junaka!`, 'death', [attackerInstanceId]))
+        moveToGraveyard(newState, currentAttacker)
+        currentAttacker.hasAttackedThisTurn = true
+        const finalAtkFS = findCardOnField(newState, attackerInstanceId) ?? currentAttacker
+        return {
+          newState,
+          result: {
+            attacker: finalAtkFS, defender: currentDefender,
+            damageToDefender: 0, damageToAttacker: firstStrikeDmg,
+            defenderDied: false, attackerDied: true, counterattackOccurred: true,
+            effectsTriggered, log,
+          },
+        }
+      }
+    }
+  }
+
   // 4. Sprawdź prewencję obrażeń (np. Brzegina)
   const preventionResult = checkDamagePrevention(newState, currentAttacker, currentDefender, damageToDefender, options?.forceBrzeginaSkip)
   if (preventionResult.prevented) {
