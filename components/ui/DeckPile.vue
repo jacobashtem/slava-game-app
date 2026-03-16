@@ -66,12 +66,15 @@ const emit = defineEmits<{
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 8px 6px;
-  background: linear-gradient(180deg, rgba(15,23,42,0.6) 0%, rgba(10,10,20,0.5) 100%);
-  border: 1px solid rgba(200, 168, 78, 0.1);
-  border-radius: 8px;
-  min-width: 60px;
+  padding: 10px 8px;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(200, 168, 78, 0.04) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(15,23,42,0.7) 0%, rgba(10,10,20,0.6) 100%);
+  border: 1px solid rgba(200, 168, 78, 0.15);
+  border-radius: 10px;
+  min-width: 68px;
   position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Subtle runic corner */
@@ -122,12 +125,13 @@ const emit = defineEmits<{
 
 /* ===== ZŁOTO ===== */
 .gold-section {
-  gap: 2px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(251, 191, 36, 0.15);
-  background: rgba(251, 191, 36, 0.04);
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(134, 239, 172, 0.2);
+  background: rgba(134, 239, 172, 0.04);
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 0 8px rgba(134, 239, 172, 0.05);
 }
 
 .gold-section:hover:not(.gold-section--low) {
@@ -162,25 +166,26 @@ const emit = defineEmits<{
 }
 
 .gold-icon {
-  font-size: 18px;
-  color: #fbbf24;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.3));
+  font-size: 24px;
+  color: #86efac;
+  filter: drop-shadow(0 0 6px rgba(134, 239, 172, 0.4));
 }
 
 .gold-count {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 21px;
+  font-size: 26px;
   font-weight: 500;
-  color: #fbbf24;
-  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+  color: #86efac;
+  text-shadow: 0 0 10px rgba(134, 239, 172, 0.3), 0 0 20px rgba(134, 239, 172, 0.1);
   line-height: 1;
 }
 
 .glory-label {
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  color: rgba(134, 239, 172, 0.5);
+  letter-spacing: 0.15em;
+  color: rgba(134, 239, 172, 0.6);
+  text-transform: uppercase;
 }
 
 .enhanced-label {

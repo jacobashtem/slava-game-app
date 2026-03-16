@@ -407,8 +407,7 @@ const onPlayDescription = computed(() => {
       </div>
     </Transition>
 
-    <!-- ===== PODPOWIEDŹ ===== -->
-    <GameHint />
+    <!-- Podpowiedź usunięta — narrator w czacie przejął tę rolę -->
 
     <!-- ===== CZAT Z NARRATOREM ===== -->
     <GameChat />
