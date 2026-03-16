@@ -28,6 +28,7 @@ import BowAttackWebGL from '../../components/vfx/BowAttackWebGL.vue'
 import DeathVFX from '../../components/vfx/DeathVFX.vue'
 import ElementalVFX from '../../components/vfx/ElementalVFX.vue'
 import MagicVFX from '../../components/vfx/MagicVFX.vue'
+import ResurrectVFX from '../../components/vfx/ResurrectVFX.vue'
 
 const sfx = useAudio()
 const ui = useUIStore()
@@ -59,6 +60,7 @@ const bowGLCompareRef = ref<InstanceType<typeof BowAttackWebGL> | null>(null)
 const deathVfxRef = ref<InstanceType<typeof DeathVFX> | null>(null)
 const elementalVfxRef = ref<InstanceType<typeof ElementalVFX> | null>(null)
 const magicVfxRef = ref<InstanceType<typeof MagicVFX> | null>(null)
+const resurrectVfxRef = ref<InstanceType<typeof ResurrectVFX> | null>(null)
 
 // ===== SANDBOX CONTROLS =====
 const sandboxAutoRepeat = ref(false)
@@ -290,6 +292,12 @@ function demoDeathVFX() {
   deathVfxRef.value?.play(el)
 }
 
+function demoResurrectVFX() {
+  const el = document.querySelector('[data-instance-id="p3-defender"]') as HTMLElement
+  if (!el) return
+  resurrectVfxRef.value?.play(el)
+}
+
 function demoElementalVFX() {
   const atkEl = document.querySelector('[data-instance-id="p3-attacker"]') as HTMLElement
   const defEl = document.querySelector('[data-instance-id="p3-defender"]') as HTMLElement
@@ -328,7 +336,8 @@ p3EffectMeta = {
   'p3-lightning': { name: 'Piorun', desc: 'Żółte błyskawice + biały flash uderzenia + elektryczne iskry.', color: '#fbbf24', trigger: () => demoEffect('p3-defender', 'lightning') },
   'p3-stun': { name: 'Ogłuszenie', desc: 'Orbitujące gwiazdki nad głową + elektryczne iskry.', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'stun') },
   'p3-buff': { name: 'Buff / Wzmocnienie', desc: 'Złote cząstki unoszące się w górę z efektem blasku.', color: '#fbbf24', trigger: () => demoEffect('p3-defender', 'buff') },
-  'p3-resurrect': { name: 'Wskrzeszenie (Wij)', desc: 'Złote cząstki unoszą się z dołu + pierścień światła + gwiazdy. Efekt Wija, Kościeja, Cmentarnej Baby.', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'resurrect') },
+  'p3-resurrect': { name: 'Wskrzeszenie (Wij) — Cząstki', desc: 'Złote cząstki + pierścień światła (canvas P3).', color: '#fde68a', trigger: () => demoEffect('p3-defender', 'resurrect') },
+  'p3-resurrect-webgpu': { name: 'Wskrzeszenie Wija (WebGPU)', desc: 'Ziemia pęka → zielono-złoty portal → duchy spiralnie → eksplozja światła → runiczny krąg.', color: '#22c55e', trigger: () => demoResurrectVFX() },
   'p3-summon': { name: 'Przywołanie (Portal)', desc: 'Fioletowy portal + cząstki zbiegające się do centrum.', color: '#c084fc', trigger: () => demoEffect('p3-defender', 'summon') },
 }
 
@@ -971,6 +980,7 @@ const categories = [...new Set(effects.map(e => e.category))]
             <ClientOnly><DeathVFX ref="deathVfxRef" /></ClientOnly>
             <ClientOnly><ElementalVFX ref="elementalVfxRef" /></ClientOnly>
             <ClientOnly><MagicVFX ref="magicVfxRef" /></ClientOnly>
+            <ClientOnly><ResurrectVFX ref="resurrectVfxRef" /></ClientOnly>
 
             <div class="p3-demo-card p3-card-attacker" data-instance-id="p3-attacker">
               <div class="p3-dc-art"><Icon icon="game-icons:werewolf" class="p3-dc-icon" /></div>

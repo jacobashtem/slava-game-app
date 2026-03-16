@@ -33,6 +33,9 @@ import BowAttackVFX from '../vfx/BowAttackVFX.vue'
 import ElementalVFX from '../vfx/ElementalVFX.vue'
 import MagicVFX from '../vfx/MagicVFX.vue'
 import DeathVFX from '../vfx/DeathVFX.vue'
+import ResurrectVFX from '../vfx/ResurrectVFX.vue'
+
+const resurrectVfxRef = ref<InstanceType<typeof ResurrectVFX> | null>(null)
 
 const game = useGameStore()
 const ui = useUIStore()
@@ -176,6 +179,26 @@ watch(() => game.winner, (v) => {
   else sfx.sfxDefeat()
 })
 watch(() => game.currentPhase, () => sfx.sfxPhase())
+
+// Wij resurrect VFX — detect wijResurrectVFX flag on any card
+watch(() => game.state, (gs) => {
+  if (!gs) return
+  for (const side of ['player1', 'player2'] as const) {
+    for (const line of Object.values(gs.players[side].field.lines)) {
+      for (const card of line as any[]) {
+        if (card.metadata?.wijResurrectVFX) {
+          delete card.metadata.wijResurrectVFX
+          nextTick(() => {
+            const el = document.querySelector(`[data-instance-id="${card.instanceId}"]`) as HTMLElement
+            if (el && resurrectVfxRef.value) {
+              resurrectVfxRef.value.play(el)
+            }
+          })
+        }
+      }
+    }
+  }
+}, { deep: true })
 
 // === UI SFX — card play, draw, gold, adventure, activate, season ===
 // Card play + draw: watch hand size changes
@@ -513,6 +536,7 @@ const onPlayDescription = computed(() => {
     <ClientOnly><ElementalVFX ref="elementalVfxRef" /></ClientOnly>
     <ClientOnly><MagicVFX ref="magicVfxRef" /></ClientOnly>
     <ClientOnly><DeathVFX ref="deathVfxRef" /></ClientOnly>
+    <ClientOnly><ResurrectVFX ref="resurrectVfxRef" /></ClientOnly>
   </div>
 
   <div v-else class="board-loading">
