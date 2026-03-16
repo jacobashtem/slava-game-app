@@ -216,10 +216,12 @@ function s2t(sx: number, sy: number, W: number, H: number) {
 let isPlaying = false
 let currentTl: gsap.core.Timeline | null = null
 
-function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number) {
-  if (isPlaying || !gpuReady.value) return
-  if (!containerRef.value || !renderer || !scene || !camera) return
-  if (!orbObj || !impactObj) return
+function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number): Promise<void> {
+  if (isPlaying || !gpuReady.value) return Promise.resolve()
+  if (!containerRef.value || !renderer || !scene || !camera) return Promise.resolve()
+  if (!orbObj || !impactObj) return Promise.resolve()
+  let _resolve: (() => void) | null = null
+  const promise = new Promise<void>(r => { _resolve = r })
   isPlaying = true
 
   pendingTimeouts.forEach(clearTimeout)
@@ -280,6 +282,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       impact.mesh.visible = false
       sparks = []
       stopLoop()
+      _resolve?.()
     },
   })
   currentTl = tl
@@ -423,6 +426,8 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       }, i * 70) as unknown as number)
     }
   }, undefined, '+=0.3')
+
+  return promise
 }
 
 // ===== LIFECYCLE =====

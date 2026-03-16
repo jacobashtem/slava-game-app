@@ -39,6 +39,14 @@ const domains = [
   { id: Domain.WELES, name: DOMAIN_NAMES[Domain.WELES], color: DOMAIN_COLORS[Domain.WELES], icon: 'game-icons:fire-dash', desc: 'Demony zaświatów' },
 ]
 
+// ===== PREFETCH HEAVY MODULES =====
+// WebGPU + TSL are ~500KB — start loading NOW while user picks settings.
+// By the time they enter game, modules are already cached.
+if (typeof window !== 'undefined') {
+  import('three/webgpu').catch(() => {})
+  import('three/tsl').catch(() => {})
+}
+
 // ===== ATMOSPHERIC PARTICLES =====
 const embers = ref<{ x: number; delay: number; dur: number; size: number }[]>([])
 onMounted(() => {

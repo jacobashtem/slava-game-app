@@ -212,7 +212,7 @@ let lastAnimatedEl: HTMLElement | null = null
 let lastAnimatedCardInner: HTMLElement | null = null
 let lastOrigFilter: string | null = null
 
-function play(targetEl: HTMLElement) {
+function play(targetEl: HTMLElement): Promise<void> {
   // Restore previous target's styles (showcase/arena reuse)
   if (lastAnimatedEl && lastAnimatedEl.isConnected) {
     lastAnimatedEl.style.visibility = ''
@@ -223,9 +223,11 @@ function play(targetEl: HTMLElement) {
     lastAnimatedEl = null
     lastAnimatedCardInner = null
   }
-  if (isPlaying || !gpuReady.value) return
-  if (!containerRef.value || !renderer || !scene || !camera) return
-  if (!smokeObj || !soulObj) return
+  if (isPlaying || !gpuReady.value) return Promise.resolve()
+  if (!containerRef.value || !renderer || !scene || !camera) return Promise.resolve()
+  if (!smokeObj || !soulObj) return Promise.resolve()
+  let _resolve: (() => void) | null = null
+  const promise = new Promise<void>(r => { _resolve = r })
   isPlaying = true
 
   pendingTimeouts.forEach(clearTimeout)
@@ -306,6 +308,7 @@ function play(targetEl: HTMLElement) {
       soul.mesh.visible = false
       sparks = []
       stopLoop()
+      _resolve?.()
       // Do NOT restore card styles here — in game the card is still in DOM
       // and restoring opacity causes a flash. Styles are restored at start of
       // next play() call for showcase/arena reuse.
@@ -412,6 +415,8 @@ function play(targetEl: HTMLElement) {
       }, i * 40) as unknown as number)
     }
   }, undefined, '-=0.3')
+
+  return promise
 }
 
 // ===== LIFECYCLE =====

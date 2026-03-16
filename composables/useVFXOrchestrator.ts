@@ -87,6 +87,9 @@ const queue = shallowRef<VFXEvent[]>([])
 /** Whether the VFX overlay canvas is mounted and ready */
 const ready = ref(false)
 
+/** Completion callbacks for waitFor() — resolved when event completes */
+const _completionCallbacks = new Map<string, () => void>()
+
 // ===== PUBLIC API =====
 
 /**
@@ -104,16 +107,35 @@ function emit(event: Omit<VFXEvent, 'id'>): string {
 /**
  * Mark a VFX event as complete — removes it from the queue.
  * Called by VFXOverlay when the animation finishes.
+ * Also resolves any waitFor() promise listening for this event.
  */
 function complete(eventId: string) {
   queue.value = queue.value.filter(e => e.id !== eventId)
+  const cb = _completionCallbacks.get(eventId)
+  if (cb) { cb(); _completionCallbacks.delete(eventId) }
+}
+
+/**
+ * Wait for a specific VFX event to complete. Returns a Promise that resolves
+ * when VFXOverlay calls complete(eventId).
+ * If the event is already gone from the queue, resolves immediately.
+ */
+function waitFor(eventId: string): Promise<void> {
+  return new Promise(resolve => {
+    // Already completed (not in queue) — resolve immediately
+    if (!queue.value.find(e => e.id === eventId)) { resolve(); return }
+    _completionCallbacks.set(eventId, resolve)
+  })
 }
 
 /**
  * Clear all pending VFX (e.g., on game reset or navigation away).
+ * Also resolves all pending waitFor() promises.
  */
 function clear() {
   queue.value = []
+  for (const cb of _completionCallbacks.values()) cb()
+  _completionCallbacks.clear()
 }
 
 /**
@@ -131,8 +153,15 @@ export function useVFXOrchestrator() {
     ready: readonly(ready),
     /** Emit a new VFX event */
     emit,
+    /** Emit a VFX event and wait for completion */
+    emitAndWait: async (event: Omit<VFXEvent, 'id'>): Promise<void> => {
+      const id = emit(event)
+      await waitFor(id)
+    },
     /** Mark a VFX event as completed */
     complete,
+    /** Wait for a specific VFX event to complete */
+    waitFor,
     /** Clear all VFX */
     clear,
     /** Set overlay readiness */

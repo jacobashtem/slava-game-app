@@ -1434,7 +1434,8 @@ function animate(time: number) {
     return
   }
 
-  const dt = lastTime ? Math.min((time - lastTime) / 16.67, 3) : 1
+  // Clamp dt to 2 frames max — prevents visible "speed burst" after frame drops
+  const dt = lastTime ? Math.min((time - lastTime) / 16.67, 2) : 1
   lastTime = time
 
   const w = canvas.width
@@ -1610,8 +1611,11 @@ function renderDamageNumber(event: VFXEvent) {
 const processedIds = new Set<string>()
 
 watch(
-  () => vfx.queue.value,
-  (events) => {
+  // Shallow watch on queue length — avoids deep comparison of entire array.
+  // processedIds set ensures each event is handled exactly once regardless.
+  () => vfx.queue.value.length,
+  () => {
+    const events = vfx.queue.value
     for (const event of events) {
       if (processedIds.has(event.id)) continue
       processedIds.add(event.id)
@@ -1642,7 +1646,6 @@ watch(
       if (!activeIds.has(id)) processedIds.delete(id)
     }
   },
-  { deep: true }
 )
 
 // ===== LIFECYCLE =====

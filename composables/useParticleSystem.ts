@@ -101,11 +101,15 @@ const sparkDrawRegistry: Record<SparkType, DrawFn> = {
   },
 
   ember(c, s, a) {
-    const gr = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 1.8)
-    gr.addColorStop(0, `rgba(${s.color},${a * 0.7})`)
-    gr.addColorStop(0.4, `rgba(${s.color},${a * 0.3})`)
-    gr.addColorStop(1, `rgba(${s.color},0)`)
-    c.fillStyle = gr
+    // Simple filled circle — avoids expensive createRadialGradient per frame.
+    // At small sizes (2-4px), visually identical to gradient approach.
+    c.globalAlpha = a * 0.7
+    c.fillStyle = `rgb(${s.color})`
+    c.beginPath()
+    c.arc(s.x, s.y, s.size * 1.2, 0, Math.PI * 2)
+    c.fill()
+    // Soft outer glow — single larger circle at low alpha
+    c.globalAlpha = a * 0.15
     c.beginPath()
     c.arc(s.x, s.y, s.size * 1.8, 0, Math.PI * 2)
     c.fill()
@@ -143,12 +147,11 @@ const sparkDrawRegistry: Record<SparkType, DrawFn> = {
   },
 
   mote(c, s, a) {
-    const grad = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size)
-    grad.addColorStop(0, `rgba(${s.color},${a * 0.6})`)
-    grad.addColorStop(1, `rgba(${s.color},0)`)
-    c.fillStyle = grad
+    // Simple filled circle — avoids expensive createRadialGradient per frame
+    c.globalAlpha = a * 0.6
+    c.fillStyle = `rgb(${s.color})`
     c.beginPath()
-    c.arc(s.x, s.y, s.size, 0, Math.PI * 2)
+    c.arc(s.x, s.y, s.size * 0.6, 0, Math.PI * 2)
     c.fill()
   },
 

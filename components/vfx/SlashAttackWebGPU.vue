@@ -219,9 +219,11 @@ function animate() {
 let isPlaying = false
 let currentTl: gsap.core.Timeline | null = null
 
-function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number) {
-  if (isPlaying || !gpuReady.value) return
-  if (!containerRef.value || !renderer || !scene || !camera) return
+function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number): Promise<void> {
+  if (isPlaying || !gpuReady.value) return Promise.resolve()
+  if (!containerRef.value || !renderer || !scene || !camera) return Promise.resolve()
+  let _resolve: (() => void) | null = null
+  const promise = new Promise<void>(r => { _resolve = r })
   isPlaying = true
 
   pendingTimeouts.forEach(clearTimeout)
@@ -281,6 +283,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       slashPool.forEach(s => { s.mesh.visible = false })
       sparks = []
       stopLoop()
+      _resolve?.()
     },
   })
   currentTl = tl
@@ -405,6 +408,8 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       }, i * 80) as unknown as number)
     }
   }, undefined, '-=0.2')
+
+  return promise
 }
 
 // ===== LIFECYCLE =====

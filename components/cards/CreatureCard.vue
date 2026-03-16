@@ -1604,4 +1604,15 @@ function onClick() {
   .state-overlay-icon { font-size: 16px; }
   .state-overlay-label { font-size: 5px; }
 }
+
+/* ===== VFX ANIMATING — disable infinite CSS animations during GSAP combat VFX =====
+ * The .vfx-animating class is added/removed by AnimationDirector on the card element.
+ * This prevents CSS animations (opacity, box-shadow) from fighting GSAP transforms. */
+.creature-card.vfx-animating .effect-activate-btn,
+.creature-card.vfx-animating .effect-cost-pill {
+  animation: none;
+}
+.creature-card.vfx-animating .pos-clickable {
+  animation: none;
+}
 </style>

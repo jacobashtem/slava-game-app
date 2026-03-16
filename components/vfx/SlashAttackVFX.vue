@@ -253,12 +253,14 @@ function animate() {
 let isPlaying = false
 let currentTl: gsap.core.Timeline | null = null
 
-function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number) {
-  if (isPlaying) { console.warn('[SlashVFX] Already playing, skipped'); return }
+function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number): Promise<void> {
+  if (isPlaying) { console.warn('[SlashVFX] Already playing, skipped'); return Promise.resolve() }
   if (!containerRef.value || !renderer || !scene || !camera) {
     console.warn('[SlashVFX] Not ready:', { container: !!containerRef.value, renderer: !!renderer, scene: !!scene, camera: !!camera })
-    return
+    return Promise.resolve()
   }
+  let _resolve: (() => void) | null = null
+  const promise = new Promise<void>(r => { _resolve = r })
   // console.info('[SlashVFX] play() called, dmg:', damage)
   isPlaying = true
 
@@ -326,6 +328,7 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       slashPool.forEach(s => { s.mesh.visible = false })
       sparks = []
       stopLoop()
+      _resolve?.()
     },
   })
   currentTl = tl
@@ -461,6 +464,8 @@ function play(attackerEl: HTMLElement, defenderEl: HTMLElement, damage?: number)
       }, i * 80) as unknown as number)
     }
   }, undefined, '-=0.2')
+
+  return promise
 }
 
 // ===== LIFECYCLE =====

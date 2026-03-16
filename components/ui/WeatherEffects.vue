@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * WeatherEffects — premium canvas-based seasonal particles.
- * Zero dependencies — requestAnimationFrame + canvas 2D.
+ * Uses central rafLoop — no independent requestAnimationFrame.
  * ALL shapes drawn via canvas paths (no emoji — avoids cross-platform rendering issues).
  *
  * Spring: cherry blossom petals + pollen dust motes + soft green glow
@@ -10,6 +10,7 @@
  * Winter: snowflakes (6-fold symmetry) + ice crystals + frost mist
  */
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { rafLoop } from '../../composables/useRAFLoop'
 
 const props = defineProps<{
   season: 'spring' | 'summer' | 'autumn' | 'winter'
@@ -17,7 +18,7 @@ const props = defineProps<{
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
-let rafId = 0
+let rafHandle = -1
 let particles: Particle[] = []
 let ambientLayers: AmbientLayer[] = []
 
@@ -52,6 +53,8 @@ interface AmbientLayer {
   speed: number
   phase: number
   color: string
+  /** Pre-built gradient — avoids creating new gradient objects every frame */
+  cachedGrad?: CanvasGradient
 }
 
 interface ParticleConfig {
@@ -396,6 +399,8 @@ function initParticles() {
       ambientLayers.push(createAmbient(w, h, cfg))
     }
   }
+  // Sort once at init — layer never changes, so no per-frame sort needed
+  particles.sort((a, b) => a.layer - b.layer)
 }
 
 function resizeCanvas() {
@@ -410,11 +415,11 @@ function resizeCanvas() {
 let lastTime = 0
 
 function animate(time: number) {
-  rafId = requestAnimationFrame(animate)
   const canvas = canvasRef.value
   if (!canvas || !ctx) return
 
-  const dt = lastTime ? Math.min((time - lastTime) / 16.67, 3) : 1
+  // Clamp dt to 2 frames max — prevents visible "speed burst" after frame drops
+  const dt = lastTime ? Math.min((time - lastTime) / 16.67, 2) : 1
   lastTime = time
 
   const w = canvas.width
@@ -426,7 +431,7 @@ function animate(time: number) {
   const season = SEASONS[props.season]
   if (!season) return
 
-  // --- Ambient layers (behind particles) ---
+  // --- Ambient layers (behind particles) — gradients cached at init ---
   for (const a of ambientLayers) {
     a.phase += a.speed * dt
     const pulseFactor = 0.5 + 0.5 * Math.sin(a.phase)
@@ -436,32 +441,37 @@ function animate(time: number) {
     if (a.type === 'ray') {
       ctx.translate(a.x, a.y)
       ctx.rotate(a.angle)
-      const grad = ctx.createLinearGradient(-a.width / 2, 0, a.width / 2, 0)
-      grad.addColorStop(0, 'transparent')
-      grad.addColorStop(0.3, a.color)
-      grad.addColorStop(0.7, a.color)
-      grad.addColorStop(1, 'transparent')
-      ctx.fillStyle = grad
+      if (!a.cachedGrad) {
+        a.cachedGrad = ctx.createLinearGradient(-a.width / 2, 0, a.width / 2, 0)
+        a.cachedGrad.addColorStop(0, 'transparent')
+        a.cachedGrad.addColorStop(0.3, a.color)
+        a.cachedGrad.addColorStop(0.7, a.color)
+        a.cachedGrad.addColorStop(1, 'transparent')
+      }
+      ctx.fillStyle = a.cachedGrad
       ctx.fillRect(-a.width / 2, 0, a.width, a.height)
     } else if (a.type === 'mist') {
-      const grad = ctx.createLinearGradient(0, a.y, 0, a.y + a.height)
-      grad.addColorStop(0, 'transparent')
-      grad.addColorStop(0.4, a.color)
-      grad.addColorStop(1, a.color)
-      ctx.fillStyle = grad
+      if (!a.cachedGrad) {
+        a.cachedGrad = ctx.createLinearGradient(0, a.y, 0, a.y + a.height)
+        a.cachedGrad.addColorStop(0, 'transparent')
+        a.cachedGrad.addColorStop(0.4, a.color)
+        a.cachedGrad.addColorStop(1, a.color)
+      }
+      ctx.fillStyle = a.cachedGrad
       ctx.fillRect(0, a.y, w, a.height)
     } else {
-      const grad = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.width / 2)
-      grad.addColorStop(0, a.color)
-      grad.addColorStop(1, 'transparent')
-      ctx.fillStyle = grad
+      if (!a.cachedGrad) {
+        a.cachedGrad = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.width / 2)
+        a.cachedGrad.addColorStop(0, a.color)
+        a.cachedGrad.addColorStop(1, 'transparent')
+      }
+      ctx.fillStyle = a.cachedGrad
       ctx.fillRect(a.x - a.width / 2, a.y - a.height / 2, a.width, a.height)
     }
     ctx.restore()
   }
 
-  // --- Particles sorted by layer (far → near) ---
-  particles.sort((a, b) => a.layer - b.layer)
+  // --- Particles already sorted by layer on init (no per-frame sort) ---
 
   const cfgPools = season.particles
 
@@ -566,14 +576,11 @@ function start() {
   resizeCanvas()
   initParticles()
   lastTime = 0
-  rafId = requestAnimationFrame(animate)
+  if (rafHandle < 0) rafHandle = rafLoop.register(animate)
 }
 
 function stop() {
-  if (rafId) {
-    cancelAnimationFrame(rafId)
-    rafId = 0
-  }
+  if (rafHandle >= 0) { rafLoop.unregister(rafHandle); rafHandle = -1 }
   particles = []
   ambientLayers = []
   lastTime = 0

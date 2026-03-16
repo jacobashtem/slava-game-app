@@ -72,30 +72,8 @@ function snapshotCardPosition(instanceId: string): { x: number; y: number } | nu
  * Total VFX duration for combat sequence.
  * Used by attack() to delay state update / end-turn.
  */
-const COMBAT_VFX_BASE_MS = 1200     // hit + shake + damage number (canvas fallback)
-const COMBAT_VFX_SLASH_MS = 2200    // WebGPU slash full choreography (melee)
-const COMBAT_VFX_BOW_MS = 2400      // WebGPU bow draw + arrow flight + impact (ranged)
-const COMBAT_VFX_ELEMENTAL_MS = 2600 // WebGPU fire orb charge + flight + impact (elemental)
-const COMBAT_VFX_MAGIC_MS = 1600    // WebGPU crystal orb + explosion (magic)
-const COMBAT_VFX_COUNTER_MS = 1800  // counter overlay (600ms) + hit + damage (1200ms)
-const COMBAT_VFX_DEATH_MS = 2000    // WebGPU death dissolution
-
-function getCombatVFXDuration(combat: CombatResult | null): number {
-  if (!combat) return 0
-  const attackVisual = toVisualAttackType(combat.attacker)
-  const isSlash = attackVisual === 'melee' && useSlashAttack().ready
-  const isBow = attackVisual === 'ranged' && useBowAttack().ready
-  const isElemental = attackVisual === 'elemental' && useElementalAttack().ready
-  const isMagic = attackVisual === 'magic' && useMagicAttack().ready
-  let ms = isSlash ? COMBAT_VFX_SLASH_MS
-    : isBow ? COMBAT_VFX_BOW_MS
-    : isElemental ? COMBAT_VFX_ELEMENTAL_MS
-    : isMagic ? COMBAT_VFX_MAGIC_MS
-    : COMBAT_VFX_BASE_MS
-  if (combat.counterattackOccurred && combat.damageToAttacker > 0) ms += COMBAT_VFX_COUNTER_MS
-  if ((combat.defenderDied || combat.attackerDied) && useDeathVFX().ready) ms += COMBAT_VFX_DEATH_MS
-  return ms
-}
+// Fallback duration for canvas-only VFX paths (no WebGPU bridge)
+const COMBAT_VFX_BASE_MS = 1200
 
 /**
  * Find a card on the field by instanceId across both sides & all lines.
@@ -113,36 +91,23 @@ function findCardInLiveState(stateRef: Ref<GameState | null>, instanceId: string
   return null
 }
 
-// Track combat VFX timeouts for cleanup on unmount/new combat
-const _combatTimeouts: ReturnType<typeof setTimeout>[] = []
-
-function clearCombatTimeouts() {
-  _combatTimeouts.forEach(clearTimeout)
-  _combatTimeouts.length = 0
-}
-
-function combatTimeout(fn: () => void, ms: number) {
-  _combatTimeouts.push(setTimeout(fn, ms))
-}
-
 /**
  * Emit SEQUENCED VFX events from a CombatResult.
- * Timeline:
- *   0ms   — hit particles on defender + damage number
- *   BASE_MS — defender DEF updates on card
- *   BASE_MS — counter-attack hit on attacker + damage number (if counter)
- *   BASE_MS + COUNTER_MS — attacker DEF updates, then death VFX
+ * Promise-based — awaits actual animation completion instead of hardcoded ms.
+ *
+ * Phase 1: Attack VFX on defender (WebGPU or canvas fallback)
+ * Phase 2: Counter-attack VFX on attacker (if occurred)
+ * Phase 3: Death VFX (parallel if both die)
  */
-function emitCombatVFX(
+async function emitCombatVFX(
   vfx: ReturnType<typeof useVFXOrchestrator>,
   combat: CombatResult | null,
   stateRef?: Ref<GameState | null>,
-) {
+): Promise<void> {
   if (!combat) {
     if (import.meta.dev) console.warn('[VFX] emitCombatVFX called with null combat')
     return
   }
-  clearCombatTimeouts()
   const ui = useUIStore()
   const attackVisual = toVisualAttackType(combat.attacker)
 
@@ -157,25 +122,19 @@ function emitCombatVFX(
       'dmg:', combat.damageToDefender, '/', combat.damageToAttacker)
   }
 
-  let t = 0
-
-  // === PHASE 1a: SoftFail / Odporny — shield block VFX (0ms) ===
-  // Card overlay shows "ODPORNY" — no extra floating text needed
+  // === PHASE 1a: SoftFail / Odporny — shield block VFX ===
   if (combat.softFail && defenderRect) {
-    combatTimeout(() => {
-      ui.flashBlock(combat.defender.instanceId)
-      vfx.emit({
-        type: 'block',
-        targetId: combat.defender.instanceId,
-        attackType: attackVisual,
-        label: combat.softFailReason ?? 'Odporny!',
-        meta: { rect: defenderRect, attackerRect },
-      })
-    }, t)
+    ui.flashBlock(combat.defender.instanceId)
+    await vfx.emitAndWait({
+      type: 'block',
+      targetId: combat.defender.instanceId,
+      attackType: attackVisual,
+      label: combat.softFailReason ?? 'Odporny!',
+      meta: { rect: defenderRect, attackerRect },
+    })
   }
-  // === PHASE 1b: Normal hit on defender (0ms) ===
+  // === PHASE 1b: Normal hit on defender ===
   else if (defenderRect) {
-    // Nawet przy 0 dmg — pokaż animację ataku (np. Bugaj 0 ATK, hipnoza)
     const hasDamage = combat.damageToDefender > 0
     const slash = useSlashAttack()
     const bow = useBowAttack()
@@ -187,36 +146,25 @@ function emitCombatVFX(
     const useMagic = attackVisual === 'magic' && magic.ready
 
     if (hasDamage && useSlash) {
-      combatTimeout(() => {
-        slash.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
-      }, t)
+      await slash.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else if (hasDamage && useBow) {
-      combatTimeout(() => {
-        bow.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
-      }, t)
+      await bow.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else if (hasDamage && useElemental) {
-      combatTimeout(() => {
-        elemental.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
-      }, t)
+      await elemental.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else if (hasDamage && useMagic) {
-      combatTimeout(() => {
-        magic.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
-      }, t)
+      await magic.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else {
       // Fallback / 0-dmg: canvas particle hit + shake + damage number
-      combatTimeout(() => {
-        ui.shakeCard(combat.defender.instanceId)
-        vfx.emit({
-          type: 'hit',
-          targetId: combat.defender.instanceId,
-          attackType: attackVisual,
-          value: combat.damageToDefender,
-          meta: { rect: defenderRect, attackerRect },
-        })
-      }, t)
-      combatTimeout(() => {
-        if (!defenderPos) return
-        vfx.emit({
+      ui.shakeCard(combat.defender.instanceId)
+      vfx.emit({
+        type: 'hit',
+        targetId: combat.defender.instanceId,
+        attackType: attackVisual,
+        value: combat.damageToDefender,
+        meta: { rect: defenderRect, attackerRect },
+      })
+      if (defenderPos) {
+        await vfx.emitAndWait({
           type: 'damage-number',
           targetId: combat.defender.instanceId,
           value: combat.damageToDefender,
@@ -224,37 +172,32 @@ function emitCombatVFX(
           attackType: attackVisual,
           meta: { pos: defenderPos },
         })
-      }, t + 200)
+      } else {
+        await delay(COMBAT_VFX_BASE_MS)
+      }
     }
   }
 
-  t += COMBAT_VFX_BASE_MS
-
   // === Intermediate: update defender DEF on card after hit VFX ===
   if (stateRef && combat.damageToDefender > 0 && !combat.softFail) {
-    combatTimeout(() => {
-      const card = findCardInLiveState(stateRef, combat.defender.instanceId)
-      if (card) {
-        card.currentStats = {
-          ...card.currentStats,
-          defense: Math.max(0, card.currentStats.defense - combat.damageToDefender),
-        }
-        stateRef.value = { ...stateRef.value! }
+    const card = findCardInLiveState(stateRef, combat.defender.instanceId)
+    if (card) {
+      card.currentStats = {
+        ...card.currentStats,
+        defense: Math.max(0, card.currentStats.defense - combat.damageToDefender),
       }
-    }, t - 200) // slightly before counter starts
+      stateRef.value = { ...stateRef.value! }
+    }
   }
 
-  // === PHASE 2: Counter-attack (700ms) ===
-  // Overlay: DEFENDER shows shield (they're counter-attacking)
-  // Particles + blue damage: on ATTACKER (they're receiving the hit)
+  // === PHASE 2: Counter-attack ===
   if (combat.counterattackOccurred && combat.damageToAttacker > 0) {
     const counterVisual = toVisualAttackType(combat.defender)
     if (import.meta.dev) console.info('[VFX] Counter:', combat.attacker.cardData.name, counterVisual)
-    // Counter overlay on defender (they're counter-attacking) — shows first
-    combatTimeout(() => {
-      if (!attackerRect) return
-      ui.flashCounterAttack(combat.defender.instanceId)
-    }, t)
+
+    // Counter overlay flash (fire-and-forget)
+    if (attackerRect) ui.flashCounterAttack(combat.defender.instanceId)
+    await delay(600) // brief pause before counter strike
 
     const slash = useSlashAttack()
     const bow = useBowAttack()
@@ -266,29 +209,16 @@ function emitCombatVFX(
     const useMagicCounter = counterVisual === 'magic' && magic.ready
 
     if (useSlashCounter) {
-      // Melee counter: WebGPU slash (defender strikes back at attacker)
-      combatTimeout(() => {
-        slash.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
-      }, t + 600)
+      await slash.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
     } else if (useBowCounter) {
-      // Ranged counter: bow attack (defender shoots at attacker)
-      combatTimeout(() => {
-        bow.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
-      }, t + 600)
+      await bow.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
     } else if (useElementalCounter) {
-      // Elemental counter: fire orb (defender strikes back)
-      combatTimeout(() => {
-        elemental.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
-      }, t + 600)
+      await elemental.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
     } else if (useMagicCounter) {
-      // Magic counter: rune circles + implosion (defender strikes back)
-      combatTimeout(() => {
-        magic.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
-      }, t + 600)
+      await magic.trigger(combat.defender.instanceId, combat.attacker.instanceId, combat.damageToAttacker)
     } else {
       // Fallback: canvas particle hit
-      combatTimeout(() => {
-        if (!attackerRect) return
+      if (attackerRect) {
         ui.shakeCard(combat.attacker.instanceId)
         vfx.emit({
           type: 'hit',
@@ -298,11 +228,9 @@ function emitCombatVFX(
           label: 'kontra',
           meta: { rect: attackerRect },
         })
-      }, t + 600)
-      // Counter damage number — delayed 800ms
-      combatTimeout(() => {
-        if (!attackerPos) return
-        vfx.emit({
+      }
+      if (attackerPos) {
+        await vfx.emitAndWait({
           type: 'damage-number',
           targetId: combat.attacker.instanceId,
           value: combat.damageToAttacker,
@@ -310,39 +238,37 @@ function emitCombatVFX(
           label: 'kontra',
           meta: { pos: attackerPos },
         })
-      }, t + 800)
+      } else {
+        await delay(COMBAT_VFX_BASE_MS)
+      }
     }
 
-    // === Intermediate: update attacker DEF on card after counter VFX ===
+    // Update attacker DEF on card after counter VFX
     if (stateRef && combat.damageToAttacker > 0) {
-      combatTimeout(() => {
-        const card = findCardInLiveState(stateRef, combat.attacker.instanceId)
-        if (card) {
-          card.currentStats = {
-            ...card.currentStats,
-            defense: Math.max(0, card.currentStats.defense - combat.damageToAttacker),
-          }
-          stateRef.value = { ...stateRef.value! }
+      const card = findCardInLiveState(stateRef, combat.attacker.instanceId)
+      if (card) {
+        card.currentStats = {
+          ...card.currentStats,
+          defense: Math.max(0, card.currentStats.defense - combat.damageToAttacker),
         }
-      }, t + COMBAT_VFX_COUNTER_MS - 200) // just before death
+        stateRef.value = { ...stateRef.value! }
+      }
     }
-
-    t += COMBAT_VFX_COUNTER_MS
   }
 
-  // === PHASE 3: Death (WebGPU smoke + soul wisp) ===
+  // === PHASE 3: Death (parallel if both die) ===
   const death = useDeathVFX()
   if (death.ready) {
+    const deathPromises: Promise<void>[] = []
     if (combat.defenderDied) {
-      combatTimeout(() => {
-        death.trigger(combat.defender.instanceId)
-      }, t)
+      deathPromises.push(death.trigger(combat.defender.instanceId))
     }
     if (combat.attackerDied) {
-      combatTimeout(() => {
-        death.trigger(combat.attacker.instanceId)
-      }, t + 200) // slight stagger if both die
+      // Slight stagger if both die
+      if (combat.defenderDied) await delay(200)
+      deathPromises.push(death.trigger(combat.attacker.instanceId))
     }
+    if (deathPromises.length > 0) await Promise.all(deathPromises)
   }
 }
 
@@ -609,7 +535,7 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  function attack(attackerInstanceId: string, defenderInstanceId: string) {
+  async function attack(attackerInstanceId: string, defenderInstanceId: string) {
     if (!isPlayerTurn.value) return
     if (mpSend) {
       mpSend({ type: 'attack', attackerInstanceId, defenderInstanceId })
@@ -631,30 +557,28 @@ export const useGameStore = defineStore('game', () => {
         state.value = { ...state.value } // trigger reactivity
       }
 
-      // Emit VFX events from combat result
-      emitCombatVFX(vfx, combatResult, state)
-      engine.lastCombatResult = null
-
       // Clear selection immediately so player can't double-attack
       ui.clearSelection()
+      engine.lastCombatResult = null
 
-      // DELAY state update to let VFX play (dead cards need to stay in DOM)
-      const vfxMs = getCombatVFXDuration(combatResult)
-      setTimeout(() => {
-        safeUpdateState(newState)
+      // Await VFX sequence — resolves when animations actually complete
+      await emitCombatVFX(vfx, combatResult, state)
 
-        // Auto-resolve AI interaction (single-player only)
-        if (!isMultiplayerMode.value && newState.pendingInteraction?.respondingPlayer === opponentSide.value) {
-          autoResolveAIInteraction()
+      // Apply final state (dead cards removed from DOM)
+      safeUpdateState(newState)
+
+      // Auto-resolve AI interaction (single-player only)
+      if (!isMultiplayerMode.value && newState.pendingInteraction?.respondingPlayer === opponentSide.value) {
+        autoResolveAIInteraction()
+      }
+
+      // Auto-end turn if no more attacks
+      if (!state.value?.pendingInteraction && !winner.value) {
+        if (!hasRemainingAttacks(newState)) {
+          await delay(600)
+          endTurn()
         }
-
-        // Auto-end turn if no more attacks
-        if (!state.value?.pendingInteraction && !winner.value) {
-          if (!hasRemainingAttacks(newState)) {
-            setTimeout(() => endTurn(), 600)
-          }
-        }
-      }, vfxMs)
+      }
     } catch (e: any) {
       ui.showPlayLimitToast(e.message ?? 'Nie można zaatakować.')
     }
@@ -691,10 +615,8 @@ export const useGameStore = defineStore('game', () => {
           revealCombatants(state.value, combatResult)
           state.value = { ...state.value }
         }
-        emitCombatVFX(vfx, combatResult, state)
         engine.lastCombatResult = null
-        const vfxMs = getCombatVFXDuration(combatResult)
-        if (vfxMs > 0) await delay(vfxMs)
+        await emitCombatVFX(vfx, combatResult, state)
       }
       if (wasHypnosis && combatResult) {
         const vfx = useVFXOrchestrator()
@@ -702,10 +624,8 @@ export const useGameStore = defineStore('game', () => {
           revealCombatants(state.value, combatResult)
           state.value = { ...state.value }
         }
-        emitCombatVFX(vfx, combatResult, state)
         engine.lastCombatResult = null
-        const vfxMs = getCombatVFXDuration(combatResult)
-        await delay(vfxMs)
+        await emitCombatVFX(vfx, combatResult, state)
       }
 
       // Brzegina: flash ODPORNY na osłoniętej karcie
@@ -873,10 +793,8 @@ export const useGameStore = defineStore('game', () => {
         // Combat VFX (strzała, obrażenia, kontratak, shake, śmierć)
         if (combatResult) {
           const vfx = useVFXOrchestrator()
-          emitCombatVFX(vfx, combatResult, state)
           engine.lastCombatResult = null
-          const vfxMs = getCombatVFXDuration(combatResult)
-          if (vfxMs > 0) await delay(vfxMs)
+          await emitCombatVFX(vfx, combatResult, state)
         }
 
         safeUpdateState(newState)
@@ -895,10 +813,8 @@ export const useGameStore = defineStore('game', () => {
       const combatResult = engine.lastCombatResult
       if (combatResult) {
         const vfx = useVFXOrchestrator()
-        emitCombatVFX(vfx, combatResult, state)
         engine.lastCombatResult = null
-        const vfxMs = getCombatVFXDuration(combatResult)
-        if (vfxMs > 0) await delay(vfxMs)
+        await emitCombatVFX(vfx, combatResult, state)
       }
 
       // Heal VFX: efekt zostawia metadata.lastHealTargetId + lastHealAmount
@@ -1115,10 +1031,8 @@ export const useGameStore = defineStore('game', () => {
                 state.value = { ...state.value }
               }
               if (combatResult) {
-                emitCombatVFX(vfx, combatResult, state)
                 engine.lastCombatResult = null
-                const vfxMs = getCombatVFXDuration(combatResult)
-                if (vfxMs > 0) await delay(vfxMs)
+                await emitCombatVFX(vfx, combatResult, state)
               }
               state.value = newState
             } catch (e) {
@@ -1216,13 +1130,9 @@ export const useGameStore = defineStore('game', () => {
               state.value = { ...state.value }
             }
 
-            // Emit VFX events from combat result
-            emitCombatVFX(vfx, combatResult, state)
+            // Await VFX sequence — resolves when animations complete
             engine.lastCombatResult = null
-
-            // WAIT for VFX to play before updating state (removes dead cards from DOM)
-            const vfxMs = getCombatVFXDuration(combatResult)
-            if (vfxMs > 0) await delay(vfxMs)
+            await emitCombatVFX(vfx, combatResult, state)
 
             // Apply state
             state.value = newState
@@ -1234,10 +1144,8 @@ export const useGameStore = defineStore('game', () => {
               const activateCombat = engine.lastCombatResult
               if (activateCombat) {
                 // Dziewiątko AI: pełny combat VFX
-                emitCombatVFX(vfx, activateCombat, state)
                 engine.lastCombatResult = null
-                const activateVfxMs = getCombatVFXDuration(activateCombat)
-                if (activateVfxMs > 0) await delay(activateVfxMs)
+                await emitCombatVFX(vfx, activateCombat, state)
               }
               state.value = newActivateState
             }

@@ -3,9 +3,11 @@
  *
  * GameBoard registers the component's play() function on mount.
  * emitCombatVFX calls trigger() to play death animation after combat.
+ *
+ * P3: play() returns Promise<void> resolved on GSAP onComplete.
  */
 
-type PlayFn = (targetEl: HTMLElement) => void
+type PlayFn = (targetEl: HTMLElement) => Promise<void>
 
 let _playFn: PlayFn | null = null
 
@@ -17,14 +19,15 @@ export function useDeathVFX() {
       console.info('[DeathBridge] Registered play function')
     },
 
-    /** Called by emitCombatVFX to trigger death animation */
-    trigger(instanceId: string) {
+    /** Called by emitCombatVFX to trigger death animation. Returns Promise. */
+    trigger(instanceId: string): Promise<void> {
       const el = document.querySelector(`[data-instance-id="${instanceId}"]`) as HTMLElement | null
       if (el && _playFn) {
         console.info('[DeathBridge] Triggering death:', instanceId)
-        _playFn(el)
+        return _playFn(el)
       } else {
         console.warn('[DeathBridge] Cannot trigger:', { el: !!el, ready: !!_playFn })
+        return Promise.resolve()
       }
     },
 
