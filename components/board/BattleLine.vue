@@ -447,27 +447,27 @@ function onLineDrop(e: DragEvent) {
   overflow: visible;
 }
 
-/* Per-zone styling with atmospheric gradients — strengthened for visibility */
+/* Per-zone styling with VISIBLE atmospheric gradients */
 .battle-line.line-1 {
   background:
-    radial-gradient(ellipse 80% 60% at 50% 30%, rgba(200, 160, 60, 0.06) 0%, transparent 70%),
-    linear-gradient(180deg, rgba(200, 160, 60, 0.08) 0%, rgba(180, 130, 60, 0.02) 100%);
-  border-color: rgba(200, 160, 60, 0.18);
-  box-shadow: inset 0 0 25px rgba(200, 160, 60, 0.04);
+    radial-gradient(ellipse 90% 70% at 50% 30%, rgba(200, 160, 60, 0.1) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(200, 160, 60, 0.12) 0%, rgba(180, 130, 60, 0.03) 100%);
+  border-color: rgba(200, 160, 60, 0.22);
+  box-shadow: inset 0 0 30px rgba(200, 160, 60, 0.06), 0 0 1px rgba(200, 160, 60, 0.1);
 }
 .battle-line.line-2 {
   background:
-    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(99, 102, 241, 0.05) 0%, transparent 70%),
-    linear-gradient(180deg, rgba(99, 102, 241, 0.07) 0%, rgba(79, 70, 229, 0.02) 100%);
-  border-color: rgba(99, 102, 241, 0.16);
-  box-shadow: inset 0 0 25px rgba(99, 102, 241, 0.04);
+    radial-gradient(ellipse 90% 70% at 50% 40%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.03) 100%);
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.05), 0 0 1px rgba(99, 102, 241, 0.08);
 }
 .battle-line.line-3 {
   background:
-    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 70%),
-    linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, rgba(88, 28, 135, 0.02) 100%);
-  border-color: rgba(139, 92, 246, 0.16);
-  box-shadow: inset 0 0 25px rgba(139, 92, 246, 0.04);
+    radial-gradient(ellipse 90% 70% at 50% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(139, 92, 246, 0.12) 0%, rgba(88, 28, 135, 0.03) 100%);
+  border-color: rgba(139, 92, 246, 0.2);
+  box-shadow: inset 0 0 30px rgba(139, 92, 246, 0.05), 0 0 1px rgba(139, 92, 246, 0.08);
 }
 
 .battle-line.highlighted {
@@ -512,13 +512,13 @@ function onLineDrop(e: DragEvent) {
 }
 
 .line-rune {
-  font-size: 11px;
-  opacity: 0.5;
-  animation: rune-shimmer 4s ease-in-out infinite;
+  font-size: 13px;
+  opacity: 0.6;
+  animation: rune-shimmer 3.5s ease-in-out infinite;
 }
 @keyframes rune-shimmer {
-  0%, 100% { opacity: 0.35; text-shadow: none; }
-  50% { opacity: 0.7; text-shadow: 0 0 6px currentColor; }
+  0%, 100% { opacity: 0.4; text-shadow: none; }
+  50% { opacity: 0.9; text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
 }
 
 .line-label {
@@ -586,10 +586,10 @@ function onLineDrop(e: DragEvent) {
   width: 130px;
   height: 175px;
   border-radius: 6px;
-  border: 1px solid rgba(200, 168, 78, 0.08);
+  border: 1px dashed rgba(200, 168, 78, 0.12);
   background:
-    radial-gradient(ellipse at center, rgba(200, 168, 78, 0.02) 0%, transparent 70%),
-    rgba(255, 255, 255, 0.01);
+    radial-gradient(ellipse at center, rgba(200, 168, 78, 0.04) 0%, transparent 60%),
+    rgba(255, 255, 255, 0.012);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -599,8 +599,8 @@ function onLineDrop(e: DragEvent) {
 }
 
 .slot-rune {
-  font-size: 20px;
-  opacity: 0.08;
+  font-size: 22px;
+  opacity: 0.12;
   color: var(--gold);
   user-select: none;
   transition: opacity 0.15s;

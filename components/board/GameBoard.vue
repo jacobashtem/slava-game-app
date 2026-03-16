@@ -848,10 +848,10 @@ const onPlayDescription = computed(() => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  /* Subtle atmospheric glow at the center of the battlefield */
+  /* Atmospheric glow at the center of the battlefield — the "front line" heat */
   background:
-    radial-gradient(ellipse 40% 60% at 50% 50%, rgba(200, 100, 30, 0.03) 0%, transparent 70%),
-    radial-gradient(ellipse 80% 30% at 50% 50%, rgba(200, 168, 78, 0.02) 0%, transparent 60%);
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(200, 100, 30, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 20% at 50% 50%, rgba(200, 168, 78, 0.05) 0%, transparent 50%);
 }
 
 /* ====== SIDEBARY ====== */
@@ -904,15 +904,15 @@ const onPlayDescription = computed(() => {
   position: relative;
 }
 
-/* Soft glow behind divider — the "front line" ambiance */
+/* Strong glow behind divider — the "front line" heat */
 .center-divider::before {
   content: '';
   position: absolute;
-  top: 15%;
-  bottom: 15%;
-  left: -12px;
-  right: -12px;
-  background: radial-gradient(ellipse at center, rgba(200, 100, 30, 0.06) 0%, transparent 70%);
+  top: 5%;
+  bottom: 5%;
+  left: -30px;
+  right: -30px;
+  background: radial-gradient(ellipse at center, rgba(200, 100, 30, 0.12) 0%, transparent 65%);
   pointer-events: none;
 }
 
@@ -922,27 +922,27 @@ const onPlayDescription = computed(() => {
   border-radius: 1px;
   background: linear-gradient(
     to bottom,
-    transparent,
-    rgba(200, 168, 78, 0.15) 20%,
-    rgba(200, 168, 78, 0.4) 50%,
-    rgba(200, 168, 78, 0.15) 80%,
-    transparent
+    transparent 5%,
+    rgba(200, 168, 78, 0.25) 20%,
+    rgba(200, 168, 78, 0.6) 50%,
+    rgba(200, 168, 78, 0.25) 80%,
+    transparent 95%
   );
-  box-shadow: 0 0 6px rgba(200, 168, 78, 0.1);
+  box-shadow: 0 0 10px rgba(200, 168, 78, 0.15), 0 0 20px rgba(200, 100, 30, 0.06);
 }
 
 .divider-badge {
-  font-size: 18px;
-  color: rgba(200, 168, 78, 0.5);
-  padding: 8px 0;
+  font-size: 20px;
+  color: rgba(200, 168, 78, 0.7);
+  padding: 10px 0;
   writing-mode: vertical-rl;
-  text-shadow: 0 0 12px rgba(200, 100, 30, 0.3);
+  text-shadow: 0 0 15px rgba(200, 100, 30, 0.5);
   animation: divider-glow 3s ease-in-out infinite;
 }
 
 @keyframes divider-glow {
-  0%, 100% { color: rgba(200, 168, 78, 0.4); text-shadow: 0 0 8px rgba(200, 100, 30, 0.2); }
-  50% { color: rgba(200, 168, 78, 0.65); text-shadow: 0 0 16px rgba(200, 100, 30, 0.4); }
+  0%, 100% { color: rgba(200, 168, 78, 0.5); text-shadow: 0 0 10px rgba(200, 100, 30, 0.3); }
+  50% { color: rgba(200, 168, 78, 0.9); text-shadow: 0 0 20px rgba(200, 100, 30, 0.6), 0 0 40px rgba(200, 100, 30, 0.2); }
 }
 
 
