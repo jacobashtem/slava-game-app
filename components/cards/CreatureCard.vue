@@ -1056,7 +1056,8 @@ function onClick() {
   margin-top: auto;
   position: relative;
   z-index: 1;
-  background: rgba(0,0,0,0.88);
+  background: linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.92) 100%);
+  border-top: 1px solid rgba(200, 168, 78, 0.1);
   border-radius: 0 0 4px 4px;
 }
 

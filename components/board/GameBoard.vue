@@ -672,10 +672,11 @@ const onPlayDescription = computed(() => {
   font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.12em;
-  padding: 3px 16px;
-  border-radius: 5px;
+  padding: 4px 18px;
+  border-radius: 6px;
   border: 1px solid;
   position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 /* Runiczna dekoracja po bokach */
 .turn-badge::before { content: '᛫'; margin-right: 6px; opacity: 0.4; font-size: 10px; }
@@ -771,32 +772,37 @@ const onPlayDescription = computed(() => {
   text-transform: uppercase;
   white-space: nowrap;
   letter-spacing: 0.06em;
-  transition: color 0.4s, background-color 0.4s, border-color 0.4s, text-shadow 0.4s;
+  transition: color 0.4s, background 0.4s, border-color 0.4s, text-shadow 0.4s, box-shadow 0.4s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
-/* Season colors */
+/* Season colors — enhanced with radial gradient + soft glow */
 .season-spring {
   color: #86efac;
-  background: rgba(74, 222, 128, 0.08);
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  background: radial-gradient(ellipse at 50% 40%, rgba(74, 222, 128, 0.12) 0%, rgba(74, 222, 128, 0.06) 100%);
+  border: 1px solid rgba(74, 222, 128, 0.25);
   text-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(74, 222, 128, 0.06);
 }
 .season-summer {
   color: #fbbf24;
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  background: radial-gradient(ellipse at 50% 40%, rgba(251, 191, 36, 0.12) 0%, rgba(251, 191, 36, 0.06) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.25);
   text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(251, 191, 36, 0.06);
 }
 .season-autumn {
   color: #fb923c;
-  background: rgba(249, 115, 22, 0.08);
-  border: 1px solid rgba(249, 115, 22, 0.2);
+  background: radial-gradient(ellipse at 50% 40%, rgba(249, 115, 22, 0.12) 0%, rgba(249, 115, 22, 0.06) 100%);
+  border: 1px solid rgba(249, 115, 22, 0.25);
   text-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(249, 115, 22, 0.06);
 }
 .season-winter {
   color: #93c5fd;
-  background: rgba(96, 165, 250, 0.08);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  background: radial-gradient(ellipse at 50% 40%, rgba(96, 165, 250, 0.12) 0%, rgba(96, 165, 250, 0.06) 100%);
+  border: 1px solid rgba(96, 165, 250, 0.25);
   text-shadow: 0 0 10px rgba(96, 165, 250, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(96, 165, 250, 0.06);
 }
 
 .fullscreen-btn {
@@ -842,6 +848,10 @@ const onPlayDescription = computed(() => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* Subtle atmospheric glow at the center of the battlefield */
+  background:
+    radial-gradient(ellipse 40% 60% at 50% 50%, rgba(200, 100, 30, 0.03) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 30% at 50% 50%, rgba(200, 168, 78, 0.02) 0%, transparent 60%);
 }
 
 /* ====== SIDEBARY ====== */
@@ -890,29 +900,49 @@ const onPlayDescription = computed(() => {
   align-items: center;
   padding: 8px 0;
   flex-shrink: 0;
-  width: 24px;
+  width: 28px;
+  position: relative;
+}
+
+/* Soft glow behind divider — the "front line" ambiance */
+.center-divider::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  left: -12px;
+  right: -12px;
+  background: radial-gradient(ellipse at center, rgba(200, 100, 30, 0.06) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .divider-line {
   flex: 1;
-  width: 1px;
+  width: 2px;
+  border-radius: 1px;
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(200, 168, 78, 0.2) 30%,
-    rgba(200, 168, 78, 0.35) 50%,
-    rgba(200, 168, 78, 0.2) 70%,
+    rgba(200, 168, 78, 0.15) 20%,
+    rgba(200, 168, 78, 0.4) 50%,
+    rgba(200, 168, 78, 0.15) 80%,
     transparent
   );
+  box-shadow: 0 0 6px rgba(200, 168, 78, 0.1);
 }
 
 .divider-badge {
-  font-size: 16px;
-  color: rgba(200, 168, 78, 0.35);
-  padding: 6px 0;
+  font-size: 18px;
+  color: rgba(200, 168, 78, 0.5);
+  padding: 8px 0;
   writing-mode: vertical-rl;
-  text-shadow: 0 0 12px rgba(200, 168, 78, 0.2);
-  /* rune-glow animation removed — static for performance */
+  text-shadow: 0 0 12px rgba(200, 100, 30, 0.3);
+  animation: divider-glow 3s ease-in-out infinite;
+}
+
+@keyframes divider-glow {
+  0%, 100% { color: rgba(200, 168, 78, 0.4); text-shadow: 0 0 8px rgba(200, 100, 30, 0.2); }
+  50% { color: rgba(200, 168, 78, 0.65); text-shadow: 0 0 16px rgba(200, 100, 30, 0.4); }
 }
 
 

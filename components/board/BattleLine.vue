@@ -447,21 +447,27 @@ function onLineDrop(e: DragEvent) {
   overflow: visible;
 }
 
-/* Per-zone styling with atmospheric gradients */
+/* Per-zone styling with atmospheric gradients — strengthened for visibility */
 .battle-line.line-1 {
-  background: linear-gradient(180deg, rgba(200, 160, 60, 0.06) 0%, rgba(180, 130, 60, 0.02) 100%);
-  border-color: rgba(200, 160, 60, 0.15);
-  box-shadow: inset 0 0 20px rgba(200, 160, 60, 0.03);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 30%, rgba(200, 160, 60, 0.06) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(200, 160, 60, 0.08) 0%, rgba(180, 130, 60, 0.02) 100%);
+  border-color: rgba(200, 160, 60, 0.18);
+  box-shadow: inset 0 0 25px rgba(200, 160, 60, 0.04);
 }
 .battle-line.line-2 {
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.05) 0%, rgba(79, 70, 229, 0.02) 100%);
-  border-color: rgba(99, 102, 241, 0.12);
-  box-shadow: inset 0 0 20px rgba(99, 102, 241, 0.03);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(99, 102, 241, 0.05) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(99, 102, 241, 0.07) 0%, rgba(79, 70, 229, 0.02) 100%);
+  border-color: rgba(99, 102, 241, 0.16);
+  box-shadow: inset 0 0 25px rgba(99, 102, 241, 0.04);
 }
 .battle-line.line-3 {
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, rgba(88, 28, 135, 0.02) 100%);
-  border-color: rgba(139, 92, 246, 0.12);
-  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.03);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(139, 92, 246, 0.08) 0%, rgba(88, 28, 135, 0.02) 100%);
+  border-color: rgba(139, 92, 246, 0.16);
+  box-shadow: inset 0 0 25px rgba(139, 92, 246, 0.04);
 }
 
 .battle-line.highlighted {
@@ -506,9 +512,13 @@ function onLineDrop(e: DragEvent) {
 }
 
 .line-rune {
-  font-size: 10px;
-  opacity: 0.4;
-  /* no infinite animation — static glow */
+  font-size: 11px;
+  opacity: 0.5;
+  animation: rune-shimmer 4s ease-in-out infinite;
+}
+@keyframes rune-shimmer {
+  0%, 100% { opacity: 0.35; text-shadow: none; }
+  50% { opacity: 0.7; text-shadow: 0 0 6px currentColor; }
 }
 
 .line-label {
