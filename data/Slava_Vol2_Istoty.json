@@ -2106,7 +2106,7 @@
                 "text": "Przed {ATK}: Kopiuje zdolność dowolnej istoty na stole na ten {ATK}."
             }
         ],
-        "effectDescription": "[NATARCIE] Przed {COMBAT} — kopiuje {ATK} najsilniejszej istoty na polu. Reset po turze.",
+        "effectDescription": "[AKCJA] Wybierz istotę na polu — kopiuje jej zdolność do końca tury.",
         "effectId": "poroniec_copy_ability"
     },
     {
@@ -2684,7 +2684,7 @@
                 "text": "Przy {DEF} = 0: Jeden ostatni {ATK} — potem ginie."
             }
         ],
-        "effectDescription": "[AKCJA] Przerzuć dowolną ilość {DEF} na {ATK}. Przy {DEF} = 0 — jeden ostatni {COMBAT}, potem ginie.",
+        "effectDescription": "[AKCJA] Przenosi całą {DEF} na {ATK}. Przy {DEF} = 0 — jeden ostatni {COMBAT}, potem ginie.",
         "effectId": "czart_shift_stats"
     },
     {
@@ -2762,7 +2762,7 @@
                 "text": "Wymiana kart — TY wybierasz obie (swoją i wroga)."
             }
         ],
-        "effectDescription": "[ZABÓJSTWO] Wymiana kart — TY wybierasz obie (swoją i wroga).",
+        "effectDescription": "[ZABÓJSTWO] Dobierz 1 kartę z własnej talii + 1 z talii wroga.",
         "effectId": "dziwolzona_swap_cards"
     },
     {
@@ -3149,7 +3149,7 @@
                 "text": "Wskrześ na 1 turę — potem usunięty na zawsze."
             }
         ],
-        "effectDescription": "[AKCJA] Wskrześ na 1 turę — potem usunięty na zawsze.",
+        "effectDescription": "[POŻEGNANIE] Po śmierci — wskrzesza się na 1 turę (raz na grę). Potem ginie na zawsze.",
         "effectId": "wij_revive_once",
         "tags": [
             "dragon"

@@ -3814,40 +3814,58 @@ registerEffect({
 registerEffect({
   id: 'poroniec_copy_ability',
   name: 'Porońiec (Duch Niespełnionego Życia)',
-  description: '[CZUJNOŚĆ] [AURA] Przed atakiem kopiuje ATK najsilniejszej istoty na polu. Efekt resetuje się po turze.',
-  trigger: [EffectTrigger.ON_ATTACK, EffectTrigger.ON_TURN_END],
+  description: '[AKCJA] Wybierz istotę na polu — Poroniec kopiuje jej zdolność do końca tury. Raz na turę.',
+  trigger: [EffectTrigger.ON_ACTIVATE, EffectTrigger.ON_TURN_END],
   priority: EffectPriority.MODIFIER,
+  activatable: true,
+  activationCost: 0,
+  activationCooldown: 'per_turn',
+  activationRequiresTarget: true,
+  activationTargetFilter: (card, source, _state) => {
+    // Dowolna istota na polu (obie strony), z efektem
+    return card.instanceId !== source.instanceId
+      && !!(card.cardData as any).effectId
+      && (card.cardData as any).effectId !== 'azdacha_vanilia'
+      && (card.cardData as any).effectId !== 'poroniec_copy_ability'
+  },
   execute: (ctx) => {
-    const { state, source, trigger } = ctx
+    const { state, source, target, trigger } = ctx
     const newState = cloneGameState(state)
     const card = findCardInState(newState, source.instanceId)
     if (!card) return effectResult(newState)
 
     if (trigger === EffectTrigger.ON_TURN_END) {
-      // Zresetuj skopiowany ATK
-      if (card.metadata.poroniecOriginalAtk !== undefined) {
-        card.currentStats.attack = card.metadata.poroniecOriginalAtk as number
-        delete card.metadata.poroniecOriginalAtk
+      // Zresetuj skopiowaną zdolność
+      if (card.metadata.poroniecCopiedEffect) {
+        card.activeEffects = (card.activeEffects ?? []).filter(ae => ae.stackId !== 'poroniec_copy')
+        delete card.metadata.poroniecCopiedEffect
       }
       return effectResult(newState)
     }
 
-    // ON_ATTACK: skopiuj ATK najsilniejszej istoty
-    if (card.metadata.poroniecOriginalAtk !== undefined) return effectResult(newState)  // już skopiowane w tej turze
+    // ON_ACTIVATE: skopiuj zdolność wybranej istoty
+    if (!target) return effectResult(newState)
+    const targetEffectId = (target.cardData as any).effectId as string
+    if (!targetEffectId) return effectResult(newState)
 
-    const allCreatures = getAllCreaturesOnField(newState, 'player1')
-      .concat(getAllCreaturesOnField(newState, 'player2'))
-      .filter(c => c.instanceId !== source.instanceId)
-      .sort((a, b) => b.currentStats.attack - a.currentStats.attack)
+    const copiedEffect = getEffect(targetEffectId)
+    if (!copiedEffect) return effectResult(newState)
 
-    if (allCreatures.length === 0) return effectResult(newState)
-    const strongest = allCreatures[0]!
-
-    card.metadata.poroniecOriginalAtk = card.currentStats.attack
-    card.currentStats.attack = strongest.currentStats.attack
+    // Dodaj jako tymczasowy activeEffect
+    card.activeEffects = card.activeEffects ?? []
+    card.activeEffects = card.activeEffects.filter(ae => ae.stackId !== 'poroniec_copy')
+    card.activeEffects.push({
+      effectId: targetEffectId,
+      sourceInstanceId: source.instanceId,
+      trigger: Array.isArray(copiedEffect.trigger) ? copiedEffect.trigger[0] : copiedEffect.trigger,
+      remainingTurns: 1,
+      stackId: 'poroniec_copy',
+      metadata: {},
+    })
+    card.metadata.poroniecCopiedEffect = targetEffectId
 
     const log = addLog(newState,
-      `${source.cardData.name}: Kopiuje moc ${strongest.cardData.name}! ATK: ${strongest.currentStats.attack}`, 'effect')
+      `${source.cardData.name}: Kopiuje zdolność ${target.cardData.name} ("${copiedEffect.name}") do końca tury!`, 'effect')
     return effectResult(newState, [log])
   },
 })
