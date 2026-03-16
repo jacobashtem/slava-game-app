@@ -215,8 +215,8 @@ let lastOrigFilter: string | null = null
 function play(targetEl: HTMLElement): Promise<void> {
   // Restore previous target's styles (showcase/arena reuse)
   if (lastAnimatedEl && lastAnimatedEl.isConnected) {
-    lastAnimatedEl.style.visibility = ''
-    gsap.set(lastAnimatedEl, { opacity: 1, scale: 1, y: 0 })
+    lastAnimatedEl.classList.remove('vfx-dead')
+    gsap.set(lastAnimatedEl, { clearProps: 'transform,opacity,scale,y,filter,visibility' })
     if (lastAnimatedCardInner) {
       gsap.set(lastAnimatedCardInner, { filter: lastOrigFilter || 'none', boxShadow: 'none' })
     }
@@ -352,8 +352,8 @@ function play(targetEl: HTMLElement): Promise<void> {
   tl.to(targetEl, {
     opacity: 0, scale: 0.6, y: 30, duration: 0.3, ease: 'power3.in',
     onComplete: () => {
-      // Hide card so Vue re-render can't flash it back
-      targetEl.style.visibility = 'hidden'
+      // Hide card via CSS class — immune to Vue re-render clearing inline styles
+      targetEl.classList.add('vfx-dead')
     },
   })
 

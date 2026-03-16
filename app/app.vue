@@ -77,6 +77,14 @@ html, body {
 ::-webkit-scrollbar-track { background: var(--bg-deep); }
 ::-webkit-scrollbar-thumb { background: var(--border-highlight); border-radius: 2px; }
 
+/* Dead card — hidden with !important so Vue re-renders can't flash it back.
+   Applied by DeathVFX, removed when Vue unmounts the element. */
+.vfx-dead {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .glow-perun  { box-shadow: 0 0 12px 2px rgba(245,197,66,0.4); }
 .glow-zyvi   { box-shadow: 0 0 12px 2px rgba(76,175,80,0.4); }
 .glow-undead { box-shadow: 0 0 12px 2px rgba(156,39,176,0.4); }

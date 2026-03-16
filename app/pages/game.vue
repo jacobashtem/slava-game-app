@@ -66,7 +66,7 @@ onMounted(async () => {
 
   // Wait for WebGPU/TSL modules (already prefetched from index page)
   // plus a minimum time so the loading screen isn't a flash
-  const minDelay = new Promise(r => setTimeout(r, 2200))
+  const minDelay = new Promise(r => setTimeout(r, 3500))
   const modules = Promise.all([
     import('three/webgpu').catch(() => {}),
     import('three/tsl').catch(() => {}),
