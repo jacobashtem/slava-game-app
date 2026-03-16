@@ -22,416 +22,133 @@ export interface TutorialStep {
 }
 
 const STEPS: TutorialStep[] = [
-  // ═══════ 1. INTRO ═══════
-  {
-    id: 'welcome',
-    icon: 'game-icons:hooded-figure',
-    title: 'Witaj, Wojowniku!',
-    body: [
-      'Ja Żerca — kapłan bogów słowiańskich. Poprowadzę cię przez twoją pierwszą bitwę.',
-      'Będziemy szli krok po kroku. Każdą mechanikę wyjaśnię osobno, spokojnie.',
-      'Kliknij DALEJ gdy będziesz gotowy.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ INTRO ═══════
+  { id: 'welcome', icon: 'game-icons:hooded-figure', title: 'Witaj, Wojowniku!', position: 'center', advance: 'click',
+    body: ['Ja Żerca — kapłan bogów słowiańskich. Poprowadzę cię przez pierwszą bitwę.', 'Każdą mechanikę wyjaśnię osobno, krok po kroku. Kliknij DALEJ.'] },
 
-  // ═══════ 2. RĘKA ═══════
-  {
-    id: 'hand_cards',
-    icon: 'game-icons:card-pickup',
-    title: 'Twoja Ręka',
-    body: [
-      'Na dole ekranu widzisz swoje karty — to twoja RĘKA. Zaczynasz z 5 kartami.',
-      'Karty dzielą się na ISTOTY i PRZYGODY. Istoty to twoi wojownicy — wystawiasz ich na pole bitwy. Przygody to zaklęcia i przedmioty — dają specjalne efekty.',
-    ],
-    highlight: '.hand-cards',
-    position: 'top',
-    advance: 'click',
-  },
+  // ═══════ RĘKA ═══════
+  { id: 'hand', icon: 'game-icons:card-pickup', title: 'Twoja Ręka', highlight: '.hand-cards', position: 'top', advance: 'click',
+    body: ['Na dole ekranu widzisz swoje karty — RĘKA. Zaczynasz z 5.', 'Karty dzielą się na ISTOTY (twoi wojownicy) i PRZYGODY (zaklęcia, artefakty).'] },
 
-  // ═══════ 3. STATY KARTY ═══════
-  {
-    id: 'card_stats',
-    icon: 'game-icons:crossed-swords',
-    title: 'Statystyki Istoty',
-    body: [
-      'Każda istota ma dwie liczby na dole karty:',
-      'ATK (czerwona, miecz) — siła ataku. Tyle obrażeń zadaje w walce.',
-      'DEF (niebieska, tarcza) — wytrzymałość. Gdy DEF spadnie do 0 — istota GINIE i trafia na cmentarz.',
-      'Przykład: istota z ATK 4 atakuje wroga z DEF 6. Wróg traci 4 DEF → zostaje mu 2. Przeżył, ale jest osłabiony!',
-    ],
-    highlight: '.hand-cards .creature-card',
-    position: 'top',
-    advance: 'click',
-  },
+  // ═══════ STATY ═══════
+  { id: 'stats_atk', icon: 'game-icons:battle-axe', title: '⚔ ATK — Siła Ataku', highlight: '.hand-cards .creature-card', position: 'top', advance: 'click',
+    body: ['Czerwona liczba na dole karty to ATK — siła ataku.', 'Tyle obrażeń istota zadaje gdy uderzy wroga. ATK 4 = wróg straci 4 punkty życia.'] },
+  { id: 'stats_def', icon: 'game-icons:shield-echoes', title: '🛡 DEF — Wytrzymałość', highlight: '.hand-cards .creature-card', position: 'top', advance: 'click',
+    body: ['Niebieska liczba to DEF — punkty życia.', 'Gdy istota oberwie, traci DEF. Gdy DEF spadnie do 0 → ginie i trafia na cmentarz.', 'Przykład: ATK 4 uderza DEF 6. Wróg traci 4, zostaje mu 2. Przeżył, ale osłabiony!'] },
 
-  // ═══════ 4. POLE BITWY ═══════
-  {
-    id: 'field_overview',
-    icon: 'game-icons:battle-gear',
-    title: 'Pole Bitwy',
-    body: [
-      'Pole bitwy ma 3 linie — myśl o nich jak o rzędach formacji wojennej.',
-      'Twoje pole jest na dole ekranu, wroga na górze. Pośrodku widzisz separator z mieczami — to linia frontu.',
-      'Gdzie postawisz istotę ma OGROMNE znaczenie. Zaraz wyjaśnię każdą linię osobno.',
-    ],
-    highlight: '.player-field',
-    position: 'top',
-    advance: 'click',
-  },
+  // ═══════ POLE BITWY ═══════
+  { id: 'field', icon: 'game-icons:battle-gear', title: 'Pole Bitwy', highlight: '.player-field', position: 'top', advance: 'click',
+    body: ['Pole bitwy ma 3 linie — jak rzędy formacji wojennej.', 'Twoje na dole, wroga na górze. Pośrodku ⚔ — linia frontu.', 'Gdzie postawisz istotę ma OGROMNE znaczenie!'] },
 
-  // ═══════ 5. ATAK WRĘCZ ═══════
-  {
-    id: 'melee',
-    icon: 'game-icons:broadsword',
-    title: 'Typ Ataku: Wręcz',
-    body: [
-      'Wojownicy WRĘCZ walczą mieczami, toporami, pięściami. Muszą być blisko wroga.',
-      'Wręcz trafia TYLKO pierwszą zajętą linię wroga. Jeśli wróg ma istoty na L1 — twój wojownik wręcz nie przeskoczy do L2 ani L3. Musi najpierw oczyścić front.',
-      'Miecz nie sięgnie też LATAJĄCYCH istot — smok w powietrzu jest bezpieczny przed mieczem!',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ TYPY ATAKU — każdy osobno ═══════
+  { id: 'melee', icon: 'game-icons:battle-axe', title: '⚔ Wręcz', position: 'center', advance: 'click',
+    body: ['Miecze, topory, pięści. Klasyczny wojownik bliskiego zasięgu.', 'Trafia TYLKO pierwszą zajętą linię wroga. Nie przeskoczy nad frontem do tyłów.', '❌ Nie trafia LATAJĄCYCH — miecz nie dosięgnie smoka w powietrzu!'] },
+  { id: 'elemental', icon: 'bi:fire', title: '🔥 Żywioł', highlight: '.player-field .line-1', position: 'top', advance: 'click',
+    body: ['Ogień, lód, wiatr. Zasięg jak wręcz ⚔ — trafia pierwszą zajętą linię.', 'ALE: ogień dosięgnie LATAJĄCEGO! Smok uniknie miecza, ale nie uniknie płomieni. 🔥', '⚔ Wręcz i 🔥 Żywioł walczą na linii L1 (FRONT).'] },
+  { id: 'ranged', icon: 'boxicons:bow-filled', title: '🏹 Dystans', highlight: '.player-field .line-2', position: 'top', advance: 'click',
+    body: ['Łucznicy i strzelcy. Strzała leci nad formacją prosto do celu!', 'Celuje w DOWOLNĄ linię wroga — L1, L2 czy L3. Ignoruje front.', '🏹 Dystans walczy na L2. Chroniony przez L1 — wróg ⚔ nie dosięgnie dopóki front stoi.'] },
+  { id: 'magic', icon: 'fa6-solid:wand-sparkles', title: '✨ Magia', highlight: '.player-field .line-3', position: 'top', advance: 'click',
+    body: ['Zaklęcia i rytuały. Celuje w dowolną linię, jak 🏹 dystans.', '✨ Magia walczy na L3 (WSPARCIE) — chroniona podwójnie: przez L1 ORAZ L2.', 'Żeby wróg ⚔ dosięgnął maga, musi wyeliminować WSZYSTKICH z L1, potem z L2!'] },
 
-  // ═══════ 6. ATAK ŻYWIOŁEM ═══════
-  {
-    id: 'elemental',
-    icon: 'game-icons:fire-ring',
-    title: 'Typ Ataku: Żywioł',
-    body: [
-      'ŻYWIOŁACY walczą ogniem, lodem, wiatrem. Zasięg mają taki sam jak wręcz — trafiają pierwszą zajętą linię.',
-      'ALE mają kluczową przewagę: ogień dosięgnie LATAJĄCEGO! Smok uniknie miecza, ale nie uniknie płomieni.',
-      'Wręcz i żywioł walczą na linii L1 (Front).',
-    ],
-    highlight: '.player-field .line-1',
-    position: 'top',
-    advance: 'click',
-  },
+  // ═══════ PUSTE LINIE ═══════
+  { id: 'empty_lines', icon: 'game-icons:broken-shield', title: '⚠ Puste Linie!', position: 'center', advance: 'click',
+    body: ['Jeśli L1 pusta → wróg ⚔ celuje w L2!', 'Jeśli L1 i L2 puste → wróg ⚔ uderzy prosto w L3. Magowie bezbronni!', 'ZAWSZE pilnuj frontu. Pusty front = tyły odsłonięte.', '🏹 i ✨ wroga i tak celują wszędzie — ale nie dawaj ⚔ darmowego dostępu!'] },
 
-  // ═══════ 7. ATAK DYSTANSOWY ═══════
-  {
-    id: 'ranged',
-    icon: 'game-icons:bow-arrow',
-    title: 'Typ Ataku: Dystans',
-    body: [
-      'ŁUCZNICY i strzelcy ignorują formację wroga! Strzała leci nad głowami frontu prosto do celu.',
-      'Dystans celuje w DOWOLNĄ linię wroga — L1, L2 lub L3. Nie obchodzi go kto stoi z przodu.',
-      'Łucznicy walczą na linii L2 (Dystans). Są chronieni przez L1 — wróg wręcz nie dosięgnie L2 dopóki masz kogoś na froncie.',
-    ],
-    highlight: '.player-field .line-2',
-    position: 'top',
-    advance: 'click',
-  },
+  // ═══════ LATAJĄCE ═══════
+  { id: 'flying', icon: 'game-icons:liberty-wing', title: '🦅 Istoty Latające', position: 'center', advance: 'click',
+    body: ['Ikona skrzydeł 🦅 na karcie = latający.', '⚔ Wręcz → ❌ nie trafia latających.', '🔥 Żywioł → ✅ ogień dosięgnie.', '🏹 Dystans → ✅ strzała doleci.', '✨ Magia → ✅ zaklęcie trafi.', 'Pilnuj żeby mieć sposób na latające wrogi!'] },
 
-  // ═══════ 8. ATAK MAGICZNY ═══════
-  {
-    id: 'magic',
-    icon: 'game-icons:magic-swirl',
-    title: 'Typ Ataku: Magia',
-    body: [
-      'MAGOWIE rzucają zaklęcia — celują w kogo chcą, jak dystans. Dowolna linia wroga.',
-      'Magia walczy na linii L3 (Wsparcie). To najdalsza linia — chroniona podwójnie: przez L1 ORAZ L2.',
-      'Żeby wróg wręcz dosięgnął twojego maga, musi najpierw wyeliminować WSZYSTKICH z L1, potem z L2. Magia jest bezpieczna… dopóki masz front!',
-    ],
-    highlight: '.player-field .line-3',
-    position: 'top',
-    advance: 'click',
-  },
+  // ═══════ ODPORNOŚCI ═══════
+  { id: 'immunities', icon: 'game-icons:shield-reflect', title: '🛡 Odporności', position: 'center', advance: 'click',
+    body: ['Niektóre istoty mają ODPORNOŚCI — np. „Odporny na magię" albo „Odporny na dystans".', 'Jeśli zaatakujesz odporną istotę typem na który jest odporna → atak zostaje ZABLOKOWANY, 0 obrażeń!', 'Dlatego dywersyfikuj armię — miej różne typy ataku żeby nie utknąć.'] },
 
-  // ═══════ 9. GDY LINIE SĄ PUSTE ═══════
-  {
-    id: 'empty_lines',
-    icon: 'game-icons:broken-shield',
-    title: 'Uwaga: Puste Linie!',
-    body: [
-      'Co się stanie jeśli twoja L1 jest pusta? Wróg wręcz celuje w NASTĘPNĄ zajętą linię — więc może uderzyć L2!',
-      'A jeśli L1 i L2 są puste? Wróg wręcz uderzy prosto w L3 — twoi magowie są bezbronni!',
-      'Dlatego ZAWSZE pilnuj frontu. Pusty front = twoje tyły odsłonięte na ataki wręcz i żywioł.',
-      'Dystans i magia wroga i tak celują wszędzie — ale przynajmniej nie dawaj wręcz darmowego dostępu!',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ WYSTAWIANIE ═══════
+  { id: 'play_prompt', icon: 'game-icons:card-play', title: 'Wystaw Istotę!', highlight: '.hand-cards', position: 'top', advance: 'field',
+    body: ['Czas na praktykę! Kliknij istotę w ręce, potem kliknij podświetloną linię.'] },
+  { id: 'play_done', icon: 'game-icons:check-mark', title: 'Świetnie!', highlight: '.player-field .creature-card', position: 'top', advance: 'click',
+    body: ['Istota na polu! Pionowa karta, niebieski border = 🛡 OBRONA.'] },
 
-  // ═══════ 10. LATAJĄCE ═══════
-  {
-    id: 'flying',
-    icon: 'game-icons:liberty-wing',
-    title: 'Istoty Latające',
-    body: [
-      'Niektóre istoty LATAJĄ — rozpoznasz je po ikonie skrzydeł na karcie.',
-      'Atak WRĘCZ kompletnie nie trafia latających. Miecz nie dosięgnie smoka!',
-      'Ale ŻYWIOŁ (ogień, lód), DYSTANS (strzały) i MAGIA — trafiają latających normalnie.',
-      'Budując armię, upewnij się że masz sposób na latające istoty wroga!',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ POZYCJE ═══════
+  { id: 'pos_defense', icon: 'game-icons:shield-echoes', title: '🛡 Pozycja: OBRONA', position: 'center', advance: 'click',
+    body: ['Karta PIONOWO, niebieski border.', 'NIE może aktywnie atakować. Ale gdy wróg ją zaatakuje — KONTRATAKUJE automatycznie!', 'Wróg uderza → twój wojownik odpowiada ciosem. Obaj tracą życie!'] },
+  { id: 'pos_attack', icon: 'game-icons:broadsword', title: '⚔ Pozycja: ATAK', position: 'center', advance: 'click',
+    body: ['Karta POZIOMO, czerwony border.', 'MOŻE celować we wroga i zadać obrażenia. Ale sama NIE kontratakuje gdy ją zaatakują.', 'Atakujesz wroga w 🛡 → on kontruje. Wroga w ⚔ → nie kontruje. Ryzyko vs zysk!'] },
 
-  // ═══════ 11. WYSTAWIANIE ISTOTY ═══════
-  {
-    id: 'play_prompt',
-    icon: 'game-icons:card-play',
-    title: 'Wystaw Istotę!',
-    body: [
-      'Czas na praktykę! Kliknij kartę istoty w ręce.',
-      'Podświetlą się linie na które możesz ją postawić — kliknij wybraną. Istota pojawi się na polu.',
-    ],
-    highlight: '.hand-cards',
-    position: 'top',
-    advance: 'field',
-  },
-  {
-    id: 'play_done',
-    icon: 'game-icons:check-mark',
-    title: 'Świetnie!',
-    body: [
-      'Twoja istota jest na polu! Widzisz pionową kartę z niebieską ramką? To pozycja OBRONA.',
-    ],
-    highlight: '.player-field .creature-card',
-    position: 'top',
-    advance: 'click',
-  },
+  // ═══════ KONTRATAK ═══════
+  { id: 'counter', icon: 'game-icons:shield-bash', title: '↩ Kontratak — Zasięg', position: 'center', advance: 'click',
+    body: ['Kontratak ma ten sam ZASIĘG co normalny atak obrońcy.', 'Twój 🏹 z L2 strzela wroga ⚔ na L1 w 🛡. Wróg chce kontrować — ale miecz ⚔ nie dosięgnie L2! Brak kontry.', 'Twój ⚔ z L1 bije wroga ⚔ na L1 w 🛡. Miecz dosięgnie — kontra!', 'Atakuj dystansem/magią żeby unikać kontr bliskiego zasięgu.'] },
 
-  // ═══════ 13. POZYCJA OBRONA ═══════
-  {
-    id: 'defense_explain',
-    icon: 'game-icons:shield-echoes',
-    title: 'Pozycja: OBRONA',
-    body: [
-      'Karta stoi PIONOWO, niebieski border = OBRONA.',
-      'Istota w obronie NIE może aktywnie atakować. Ale gdy wróg ją zaatakuje — KONTRATAKUJE automatycznie!',
-      'Wyobraź sobie: wróg uderza mieczem, a twój wojownik odpowiada ciosem. Obaj tracą życie. Obaj mogą paść!',
-      'To potężna mechanika obronna — wróg dwa razy się zastanowi zanim uderzy.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ OBRÓĆ KARTĘ ═══════
+  { id: 'pos_prompt', icon: 'game-icons:cycle', title: 'Obróć Kartę!', highlight: '.player-field .creature-card', position: 'top', advance: 'position',
+    body: ['Kliknij kartę na polu → zmiana 🛡 OBRONA ↔ ⚔ ATAK.', 'Darmowe, ale: istota nie atakuje w turze gdy zmieniła pozycję!'] },
+  { id: 'pos_done', icon: 'game-icons:check-mark', title: 'Doskonale!', position: 'center', advance: 'click',
+    body: ['Poziomo, czerwona ramka — gotowa do boju następnej tury!'] },
 
-  // ═══════ 14. POZYCJA ATAK ═══════
-  {
-    id: 'attack_explain',
-    icon: 'game-icons:broadsword',
-    title: 'Pozycja: ATAK',
-    body: [
-      'Karta leży POZIOMO, czerwony border = ATAK.',
-      'Istota w ataku MOŻE celować we wroga i zadać mu obrażenia. Ale jest ryzyko!',
-      'Jeśli wróg jest w OBRONIE — kontruje cię. Jeśli wróg jest w ATAKU — NIE kontruje (jest odsłonięty).',
-      'Sama istota w ATAKU też NIE kontratakuje gdy ją zaatakują. Jest na to za zajęta szarżą.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ FAZY ═══════
+  { id: 'phases', icon: 'game-icons:hourglass', title: 'Przebieg Tury', position: 'center', advance: 'click',
+    body: ['Każda tura to 3 fazy:', '1️⃣ WYSTAWIANIE — grasz karty, zmieniasz pozycje.', '2️⃣ WALKA — atakujesz istotami w ⚔.', '3️⃣ KONIEC — efekty końca tury, tura wroga.'] },
+  { id: 'phase_btn', icon: 'game-icons:sword-clash', title: 'Przejdź do Walki!', highlight: '.phase-btn', position: 'bottom', advance: 'phase', waitPhase: GamePhase.COMBAT,
+    body: ['Kliknij przycisk fazy żeby przejść do WALKI!'] },
 
-  // ═══════ 15. KONTRATAK SZCZEGÓŁY ═══════
-  {
-    id: 'counter_details',
-    icon: 'game-icons:shield-bash',
-    title: 'Kontratak — Ważne Szczegóły',
-    body: [
-      'Kontratak działa TYLKO gdy obrońca jest w pozycji OBRONA i jest w ZASIĘGU.',
-      'Przykład: twój wojownik wręcz z L1 atakuje wroga na L1 w OBRONIE — wróg kontruje. Normalka.',
-      'Ale jeśli twój łucznik z L2 strzela we wroga wręcz na L1 — wróg NIE kontruje! Miecz nie dosięgnie łucznika na L2.',
-      'Zasięg kontry = taki sam jak zasięg ataku obrońcy. Wręcz kontruje tylko bliskie cele.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ WALKA ═══════
+  { id: 'fight', icon: 'game-icons:battle-axe', title: '⚔ Do Boju!', highlight: '.enemy-field .creature-card', position: 'top', advance: 'attack',
+    body: ['Kliknij swoją istotę w ⚔ ATAK, potem kliknij wroga.', 'Obrażenia = twój ATK. DEF wroga spadnie. DEF ≤ 0 → śmierć!'] },
+  { id: 'fight_done', icon: 'game-icons:check-mark', title: 'Pierwsza Walka!', position: 'center', advance: 'click',
+    body: ['Brawo! Widziałeś obrażenia w akcji.', 'Po ataku istota nie może atakować ponownie w tej turze.'] },
 
-  // ═══════ 16. OBRÓĆ KARTĘ ═══════
-  {
-    id: 'position_prompt',
-    icon: 'game-icons:cycle',
-    title: 'Obróć Kartę!',
-    body: [
-      'Kliknij swoją kartę na polu aby zmienić pozycję z OBRONY na ATAK.',
-      'Zmiana pozycji jest darmowa — ale istota nie może atakować w turze gdy zmieniła pozycję!',
-    ],
-    highlight: '.player-field .creature-card',
-    position: 'top',
-    advance: 'position',
-  },
-  {
-    id: 'position_done',
-    icon: 'game-icons:check-mark',
-    title: 'Doskonale!',
-    body: [
-      'Karta leży poziomo, czerwona ramka — gotowa do boju w następnej turze!',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ TURA WROGA ═══════
+  { id: 'enemy', icon: 'game-icons:skull-crossed-bones', title: 'Tura Wroga', position: 'center', advance: 'click',
+    body: ['Gdy zakończysz turę → wróg gra. Wystawia istoty, atakuje.', 'Nie możesz nic robić — ale twoje istoty w 🛡 kontrują automatycznie!', 'Dlatego zostawiaj ważne istoty w 🛡 na koniec tury.'] },
 
-  // ═══════ 18. FAZY TURY ═══════
-  {
-    id: 'phases_intro',
-    icon: 'game-icons:hourglass',
-    title: 'Przebieg Tury',
-    body: [
-      'Każda tura ma 3 fazy:',
-      '1. WYSTAWIANIE — grasz karty z ręki, zmieniasz pozycje istot.',
-      '2. WALKA — atakujesz wrogów istotami w pozycji ATAK.',
-      '3. KONIEC — efekty końca tury, tura przechodzi do wroga.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
-  {
-    id: 'phase_button',
-    icon: 'game-icons:sword-clash',
-    title: 'Przycisk Fazy',
-    body: [
-      'Widzisz przycisk na dole? Kliknij go żeby przejść do fazy WALKI!',
-      'Przycisk zmienia nazwę w zależności od fazy: "DO BOJU", "ZAKOŃCZ TURĘ" itp.',
-    ],
-    highlight: '.phase-btn',
-    position: 'bottom',
-    advance: 'phase',
-    waitPhase: GamePhase.COMBAT,
-  },
+  // ═══════ TALIA I CMENTARZ ═══════
+  { id: 'deck', icon: 'game-icons:card-draw', title: 'Talia i Cmentarz', highlight: '.sidebar', position: 'center', advance: 'click',
+    body: ['TALIA (stos kart po lewej) — co turę dobierasz 1 kartę.', 'CMENTARZ (pod talią) — zabite istoty. Kliknij żeby przejrzeć.', 'Talia pusta + brak istot na polu i w ręce = PRZEGRANA!'] },
 
-  // ═══════ 20. WALKA ═══════
-  {
-    id: 'combat_how',
-    icon: 'game-icons:battle-axe',
-    title: 'Czas na Walkę!',
-    body: [
-      'Faza WALKI! Kliknij swoją istotę w ATAKU (poziomą), potem kliknij wrogą istotę.',
-      'Twoja istota zada obrażenia = swój ATK. DEF wroga spadnie o tyle. Jeśli DEF ≤ 0 — wróg ginie!',
-    ],
-    highlight: '.enemy-field .creature-card',
-    position: 'top',
-    advance: 'attack',
-  },
-  {
-    id: 'combat_done',
-    icon: 'game-icons:check-mark',
-    title: 'Pierwsza Walka za Tobą!',
-    body: [
-      'Brawo! Widziałeś animację walki i obrażenia.',
-      'Pamiętaj: jeśli cel był w OBRONIE — kontrował. Jeśli w ATAKU — nie.',
-      'Po ataku istota nie może atakować ponownie w tej turze (chyba że ma specjalną zdolność).',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ PS ═══════
+  { id: 'ps', icon: 'game-icons:laurel-crown', title: 'PS — Punkty Sławy', highlight: '.gold-section', position: 'center', advance: 'click',
+    body: ['Zielona liczba = twoje PS. Waluta gry.', 'Wydajesz na: wzmocnione przygody (1 PS) i aktywowane zdolności istot.', 'PS jest mało — nie marnuj! Zostawiaj na kluczowe momenty.'] },
 
-  // ═══════ 22. TURA WROGA ═══════
-  {
-    id: 'enemy_turn',
-    icon: 'game-icons:skull-crossed-bones',
-    title: 'Tura Wroga',
-    body: [
-      'Gdy zakończysz turę — gra przechodzi do wroga. AI wykona swoje ruchy: wystawi istoty, zmieni pozycje, zaatakuje.',
-      'Nie możesz nic robić w turze wroga — ale twoje istoty w OBRONIE kontrują automatycznie!',
-      'Dlatego dobrze jest zostawiać ważne istoty w OBRONIE na koniec tury.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  // ═══════ TRIGGERY / ZDOLNOŚCI ═══════
+  { id: 'trig_intro', icon: 'game-icons:magic-swirl', title: 'Zdolności Istot', position: 'center', advance: 'click',
+    body: ['Wiele istot ma unikalne zdolności! Rozpoznasz je po kolorowej etykiecie na karcie.', 'Każda zdolność ma TRIGGER — warunek kiedy się aktywuje. Zaraz omówię każdy.'] },
 
-  // ═══════ 23. TALIA I CMENTARZ ═══════
-  {
-    id: 'deck_grave',
-    icon: 'game-icons:card-draw',
-    title: 'Talia i Cmentarz',
-    body: [
-      'Po lewej widzisz TALIĘ (stos kart) — co turę dobierasz 1 kartę. Gdy talia się skończy i nie masz istot — przegrywasz!',
-      'Pod talią jest CMENTARZ — tu trafiają zabite istoty. Kliknij żeby przejrzeć co tam leży.',
-      'Pilnuj zasobów! Nie trać istot bezmyślnie.',
-    ],
-    highlight: '.sidebar',
-    position: 'center',
-    advance: 'click',
-  },
+  { id: 'trig_entry', icon: 'game-icons:card-play', title: '🟢 WEJŚCIE', position: 'center', advance: 'click',
+    body: ['Zielona etykieta. Aktywuje się RAZ — w momencie gdy wystawiasz istotę na pole.', 'Np. „Gdy wchodzi na pole: zadaj 2 obrażenia losowej wrogiej istocie."', 'Efekt jednorazowy — nie powtarza się.'] },
 
-  // ═══════ 24. PUNKTY SŁAWY ═══════
-  {
-    id: 'ps',
-    icon: 'game-icons:laurel-crown',
-    title: 'Punkty Sławy (PS)',
-    body: [
-      'Duża zielona liczba to twoje PS — Punkty Sławy. Waluta gry.',
-      'Wydajesz je na: wzmocnione efekty przygód (1 PS za silniejszą wersję) i aktywowane zdolności istot (koszt na karcie).',
-      'PS jest mało — nie wydawaj na byle co! Najlepsze wzmocnienia zostawiaj na kluczowe momenty.',
-    ],
-    highlight: '.gold-section',
-    position: 'center',
-    advance: 'click',
-  },
+  { id: 'trig_action', icon: 'game-icons:lightning-trio', title: '🟣 AKCJA ⚡', position: 'center', advance: 'click',
+    body: ['Fioletowa etykieta z ⚡. Zdolność AKTYWOWANA — to TY decydujesz kiedy jej użyć.', 'Kliknij pulsujący przycisk ⚡ na karcie żeby aktywować.', 'Może kosztować PS. Może mieć cooldown (raz na turę / raz na rundę).'] },
 
-  // ═══════ 25. ZDOLNOŚCI ISTOT ═══════
-  {
-    id: 'abilities',
-    icon: 'game-icons:lightning-trio',
-    title: 'Zdolności Istot',
-    body: [
-      'Wiele istot ma unikalne zdolności! Rozpoznasz je po ikonce błyskawicy ⚡ na karcie.',
-      'Zdolności PASYWNE działają automatycznie (np. "gdy ta istota zabije wroga…").',
-      'Zdolności AKTYWOWANE wymagają kliknięcia ⚡ i mogą kosztować PS.',
-      'Czytaj opisy kart — zdolności to klucz do wygranej!',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  { id: 'trig_aura', icon: 'game-icons:aura', title: '🔵 AURA', position: 'center', advance: 'click',
+    body: ['Niebieska etykieta. Efekt PASYWNY — działa automatycznie co turę.', 'Np. „Na początku tury: lecz 1 DEF sojusznikowi obok."', 'Działa dopóki istota żyje. Nie musisz nic klikać.'] },
 
-  // ═══════ 26. PRZYGODY SZCZEGÓŁOWO ═══════
-  {
-    id: 'adventures_types',
-    icon: 'game-icons:spell-book',
-    title: 'Karty Przygody',
-    body: [
-      'Przygody mają kolorowe tło w ręce. Są 3 typy:',
-      'ZDARZENIE — jednorazowy efekt: obrażenia, leczenie, zamiana statystyk. Znika po użyciu.',
-      'ARTEFAKT — przypinasz do istoty na polu. Daje trwały bonus (np. +2 ATK). Ginie z istotą.',
-      'LOKACJA — pasywny efekt na całe pole. Trwa kilka rund.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
-  {
-    id: 'adventures_enhanced',
-    icon: 'game-icons:two-coins',
-    title: 'Wzmocnione Przygody',
-    body: [
-      'Każda przygoda ma DWA efekty: podstawowy (darmowy) i WZMOCNIONY (kosztuje 1 PS).',
-      'Wzmocniony efekt jest ZNACZNIE silniejszy — np. zamiast 2 obrażeń zadaje 5.',
-      'Aby zagrać wzmocnioną wersję: kliknij ikonę monet 🪙 przy karcie w ręce PRZED zagraniem.',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  { id: 'trig_retaliation', icon: 'game-icons:shield-bash', title: '🟠 ODWET', position: 'center', advance: 'click',
+    body: ['Pomarańczowa etykieta. Aktywuje się gdy ta istota OBERWIE obrażenia.', 'Np. „Gdy otrzyma obrażenia: zadaj 1 obrażenie atakującemu."', 'Działa przy każdym trafieniu — potężne przeciw wielokrotnym atakom!'] },
 
-  // ═══════ 28. WARUNKI ZWYCIĘSTWA ═══════
-  {
-    id: 'victory',
-    icon: 'game-icons:laurel-crown',
-    title: 'Jak Wygrać?',
-    body: [
-      'Wygrywasz gdy wróg nie ma ŻADNYCH istot — ani na polu, ani w ręce, ani w talii.',
-      'Czyli musisz zabić wszystko co wystawi I wyczerpać jego talię.',
-      'Przegrywasz gdy tobie się to samo stanie. Pilnuj swoich zasobów!',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  { id: 'trig_strike', icon: 'game-icons:sword-clash', title: '🔴 NATARCIE', position: 'center', advance: 'click',
+    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZADAJE obrażenia.', 'Np. „Gdy zada obrażenia: ukradnij 1 ATK wrogowi."', 'Działa przy każdym twoim uderzeniu — im więcej atakujesz, tym lepiej.'] },
 
-  // ═══════ 29. ZAKOŃCZENIE ═══════
-  {
-    id: 'complete',
-    icon: 'game-icons:triquetra',
-    title: 'Gotowy do Bitwy!',
-    body: [
-      'To wszystko co musisz wiedzieć na start!',
-      'Klikaj przycisk fazy żeby przechodzić dalej. Zakończ turę gdy nie masz więcej ruchów.',
-      'Z każdą kartą odkryjesz nowe zdolności i taktyki. Reszta zależy od ciebie, wojowniku!',
-      'Niech bogowie będą łaskawi! ⚔',
-    ],
-    position: 'center',
-    advance: 'click',
-  },
+  { id: 'trig_kill', icon: 'game-icons:skull-crossed-bones', title: '🔴 ZABÓJSTWO', position: 'center', advance: 'click',
+    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZABIJE wroga (DEF → 0).', 'Np. „Gdy zabije: zyskaj 1 PS" albo „Gdy zabije: lecz się pełni."', 'Nagroda za eliminację — im więcej zabijasz, tym silniejszy jesteś!'] },
+
+  { id: 'trig_farewell', icon: 'game-icons:tombstone', title: '⚫ POŻEGNANIE', position: 'center', advance: 'click',
+    body: ['Szara etykieta. Aktywuje się gdy ta istota GINIE.', 'Np. „Gdy zginie: zadaj 3 obrażenia losowemu wrogowi."', 'Ostatni akt — istota umiera, ale zabiera kogoś ze sobą. Potężne!'] },
+
+  { id: 'trig_vigilance', icon: 'game-icons:eye-shield', title: '🟡 CZUJNOŚĆ', position: 'center', advance: 'click',
+    body: ['Żółta etykieta. Reaguje na ZDARZENIA na polu — śmierć dowolnej istoty, zagranie karty przez wroga itp.', 'Np. „Gdy jakakolwiek istota zginie: zyskaj +1 ATK."', 'Obserwator pola bitwy — pasywnie zbiera korzyści z chaosu walki.'] },
+
+  // ═══════ PRZYGODY ═══════
+  { id: 'adv_types', icon: 'game-icons:spell-book', title: 'Karty Przygody', position: 'center', advance: 'click',
+    body: ['Kolorowe karty w ręce. 3 typy:', 'ZDARZENIE — jednorazowy efekt. Znika po użyciu.', 'ARTEFAKT — przypinasz do istoty. Trwały bonus. Ginie z istotą.', 'LOKACJA — pasywny efekt na pole. Trwa kilka rund.'] },
+  { id: 'adv_enhanced', icon: 'game-icons:two-coins', title: '💰 Wzmocnione Przygody', position: 'center', advance: 'click',
+    body: ['Każda przygoda ma efekt PODSTAWOWY (darmowy) i WZMOCNIONY (1 PS).', 'Wzmocniony jest DUŻO silniejszy. Kliknij 🪙 przy karcie PRZED zagraniem.'] },
+
+  // ═══════ ZWYCIĘSTWO ═══════
+  { id: 'victory', icon: 'game-icons:laurel-crown', title: '🏆 Jak Wygrać?', position: 'center', advance: 'click',
+    body: ['Wróg nie ma istot na polu + w ręce + w talii = TWOJE ZWYCIĘSTWO!', 'Tobie się to stanie = PRZEGRANA.', 'Zarządzaj zasobami. Nie trać istot bezmyślnie!'] },
+
+  // ═══════ KONIEC ═══════
+  { id: 'complete', icon: 'game-icons:triquetra', title: 'Gotowy do Bitwy!', position: 'center', advance: 'click',
+    body: ['To wszystko na start! Z każdą kartą odkryjesz nowe taktyki.', 'Niech bogowie będą łaskawi, wojowniku! ⚔'] },
 ]
 
 // ===== STATE =====
