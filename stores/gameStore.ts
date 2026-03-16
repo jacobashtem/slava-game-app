@@ -16,6 +16,7 @@ import type { PlayerSide } from '../game-engine/types'
 import { useUIStore } from './uiStore'
 import { useVFXOrchestrator, type AttackVisualType } from '../composables/useVFXOrchestrator'
 import { useSlashAttack } from '../composables/useSlashAttack'
+import { useAudio } from '../composables/useAudio'
 import { useBowAttack } from '../composables/useBowAttack'
 import { useElementalAttack } from '../composables/useElementalAttack'
 import { useMagicAttack } from '../composables/useMagicAttack'
@@ -109,7 +110,18 @@ async function emitCombatVFX(
     return
   }
   const ui = useUIStore()
+  const audio = useAudio()
   const attackVisual = toVisualAttackType(combat.attacker)
+
+  // Fire attack SFX matching visual type (fire-and-forget, no await needed)
+  const attackSFX: Record<string, () => void> = {
+    melee: audio.sfxAttackMelee, elemental: audio.sfxAttackElemental,
+    magic: audio.sfxAttackMagic, ranged: audio.sfxAttackRanged,
+  }
+  const hitSFX: Record<string, () => void> = {
+    melee: audio.sfxHitMelee, elemental: audio.sfxHitElemental,
+    magic: audio.sfxHitMagic, ranged: audio.sfxHitRanged,
+  }
 
   // Snapshot FULL rects NOW — before state update removes dead cards from DOM
   const defenderRect = snapshotCardRect(combat.defender.instanceId)
@@ -124,6 +136,7 @@ async function emitCombatVFX(
 
   // === PHASE 1a: SoftFail / Odporny — shield block VFX ===
   if (combat.softFail && defenderRect) {
+    audio.sfxImmune()
     ui.flashBlock(combat.defender.instanceId)
     await vfx.emitAndWait({
       type: 'block',
@@ -146,15 +159,20 @@ async function emitCombatVFX(
     const useMagic = attackVisual === 'magic' && magic.ready
 
     if (hasDamage && useSlash) {
+      attackSFX[attackVisual]?.()
       await slash.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else if (hasDamage && useBow) {
+      attackSFX[attackVisual]?.()
       await bow.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else if (hasDamage && useElemental) {
+      attackSFX[attackVisual]?.()
       await elemental.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else if (hasDamage && useMagic) {
+      attackSFX[attackVisual]?.()
       await magic.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else {
       // Fallback / 0-dmg: canvas particle hit + shake + damage number
+      audio.sfxHit()
       ui.shakeCard(combat.defender.instanceId)
       vfx.emit({
         type: 'hit',
@@ -196,6 +214,7 @@ async function emitCombatVFX(
     if (import.meta.dev) console.info('[VFX] Counter:', combat.attacker.cardData.name, counterVisual)
 
     // Counter overlay flash (fire-and-forget)
+    audio.sfxCounterattack()
     if (attackerRect) ui.flashCounterAttack(combat.defender.instanceId)
     await delay(600) // brief pause before counter strike
 
@@ -261,6 +280,7 @@ async function emitCombatVFX(
   if (death.ready) {
     const deathPromises: Promise<void>[] = []
     if (combat.defenderDied) {
+      audio.sfxDeath()
       deathPromises.push(death.trigger(combat.defender.instanceId))
     }
     if (combat.attackerDied) {
