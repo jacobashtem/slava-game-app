@@ -1,15 +1,12 @@
 <script setup lang="ts">
 /**
- * GameChat — Slavic-themed in-game chat replacing ActionLog.
+ * GameChat — Slavic-themed in-game chat (no action log).
  *
- * Features:
- * - AI "narrator" posts game events as styled messages
- * - Player can type messages (shown locally)
- * - AI responds to player messages with themed quips
- * - Collapsible panel (like old ActionLog)
- * - Runic ornaments and dark atmosphere
+ * Pure chat between player and AI narrator persona.
+ * Player can set nick + icon. AI greets and responds in character.
+ * Collapsible panel.
  */
-import { computed, ref, watch, nextTick, onMounted } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 
@@ -19,7 +16,36 @@ const game = useGameStore()
 const panelOpen = ref(true)
 const inputText = ref('')
 const listRef = ref<HTMLElement | null>(null)
-const inputRef = ref<HTMLInputElement | null>(null)
+const showProfile = ref(false)
+const profileNameInput = ref(game.playerName || '')
+
+// ===== PLAYER ICON OPTIONS =====
+const PLAYER_ICONS = [
+  'game-icons:viking-helmet',
+  'game-icons:swords-emblem',
+  'game-icons:wolf-head',
+  'game-icons:bear-head',
+  'game-icons:hawk-emblem',
+  'game-icons:raven',
+  'game-icons:crown',
+  'game-icons:war-axe',
+  'game-icons:fire-ring',
+  'game-icons:triquetra',
+  'game-icons:oak-leaf',
+  'game-icons:eye-shield',
+]
+
+const playerDisplayName = computed(() => game.playerName || 'Wojownik')
+const playerDisplayIcon = computed(() => game.playerIcon || 'game-icons:viking-helmet')
+
+function selectIcon(icon: string) {
+  game.setPlayerProfile(profileNameInput.value.trim() || game.playerName, icon)
+}
+
+function saveProfile() {
+  game.setPlayerProfile(profileNameInput.value.trim() || 'Wojownik', game.playerIcon)
+  showProfile.value = false
+}
 
 // ===== AI NARRATOR CONFIG =====
 const AI_NAMES: Record<string, string> = {
@@ -32,32 +58,22 @@ const AI_AVATARS: Record<string, string> = {
   medium: 'game-icons:hooded-figure',
   hard: 'game-icons:death-skull',
 }
+const AI_TITLES: Record<string, string> = {
+  easy: 'duch domowy',
+  medium: 'kapłan',
+  hard: 'bóg zaświatów',
+}
 
 const aiName = computed(() => AI_NAMES[game.selectedDifficulty] ?? 'Żerca')
 const aiAvatar = computed(() => AI_AVATARS[game.selectedDifficulty] ?? 'game-icons:hooded-figure')
+const aiTitle = computed(() => AI_TITLES[game.selectedDifficulty] ?? 'narrator')
 
-// ===== MESSAGE TYPES =====
+// ===== MESSAGES =====
 interface ChatMessage {
   id: number
-  sender: 'ai' | 'player' | 'system'
+  sender: 'ai' | 'player'
   text: string
-  icon?: string
-  color?: string
   time: string
-}
-
-const typeIcons: Record<string, { icon: string; color: string }> = {
-  attack:  { icon: 'game-icons:battle-axe', color: '#fb923c' },
-  combat:  { icon: 'game-icons:sword-clash', color: '#fb923c' },
-  death:   { icon: 'game-icons:skull-crossed-bones', color: '#ef4444' },
-  play:    { icon: 'game-icons:card-play', color: '#4ade80' },
-  phase:   { icon: 'game-icons:hourglass', color: '#a78bfa' },
-  system:  { icon: 'game-icons:scroll-unfurled', color: '#fbbf24' },
-  effect:  { icon: 'game-icons:magic-swirl', color: '#c084fc' },
-  draw:    { icon: 'game-icons:card-draw', color: '#60a5fa' },
-  gold:    { icon: 'game-icons:two-coins', color: '#c8a84e' },
-  glory:   { icon: 'game-icons:laurels', color: '#c8a84e' },
-  damage:  { icon: 'game-icons:drop', color: '#ef4444' },
 }
 
 let nextId = 0
@@ -68,57 +84,64 @@ function now(): string {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
-function pushMsg(sender: ChatMessage['sender'], text: string, icon?: string, color?: string) {
-  messages.value.push({ id: nextId++, sender, text, icon, color, time: now() })
-  // Keep last 50 messages
+function pushMsg(sender: ChatMessage['sender'], text: string) {
+  messages.value.push({ id: nextId++, sender, text, time: now() })
   if (messages.value.length > 50) messages.value.splice(0, messages.value.length - 50)
-  scrollBottom()
-}
-
-function scrollBottom() {
   nextTick(() => {
     if (listRef.value) listRef.value.scrollTop = listRef.value.scrollHeight
   })
 }
 
-// ===== AI GREETING =====
+// ===== AI GREETINGS =====
 const greetings: Record<string, string[]> = {
   easy: [
-    'Witaj, wojowniku! Ja Domowik — duch twego domu. Postaram się nie za bardzo przeszkadzać… 🍄',
-    'Ach, gość! Siadaj przy ognisku, Domowik cię poprowadzi. 🔥',
+    'Witaj, wojowniku! Domowik — duch twego domu, do usług. Postaram się nie przeszkadzać… 🍄',
+    'Ach, gość! Siadaj przy ognisku, opowiem ci co widzę z kąta izby. 🔥',
+    'Domowik się kłania! Będę cicho szeptał podpowiedzi… ale nic nie obiecuję!',
   ],
   medium: [
     'Żerca wita cię przy świętym ogniu. Bogowie patrzą — walcz dzielnie.',
     'Runy zostały rzucone. Żerca odczytuje twój los… Zaczynajmy.',
+    'Ogień płonie, wiatr niesie szept bogów. Żerca jest gotowy.',
   ],
   hard: [
     'Weles otwiera bramy Nawii. Twoje dusze będą moje, śmiertelniku.',
     'Ciemność szepce twoje imię. Weles czeka na ofiarę…',
+    'Witaj w krainie cieni. Każda karta przybliża cię do mojego królestwa.',
   ],
 }
 
-// ===== AI QUIP RESPONSES =====
+// ===== AI RESPONSES =====
 const quips: Record<string, string[]> = {
   easy: [
     'Domowik kibicuje! Ale cicho, żeby nie usłyszeli…',
     'Oj, to był dobry ruch! Chyba…',
     'Domowik myśli, że dasz radę!',
     'Hm, może spróbuj coś innego?',
-    '*szeleszczenie w kącie*',
+    '*szeleszczenie w kącie izby*',
+    'Ciiii… słyszę kroki wrogów…',
+    'Domowik schował się za piecem, ale dalej kibicuje!',
+    'A co tam u ciebie? Ja tu siedzę i patrzę.',
   ],
   medium: [
     'Żerca kiwa głową z aprobatą.',
     'Bogowie obserwują twoje poczynania.',
-    'Ciekawe zagranie… zobaczymy.',
+    'Ciekawe zagranie… zobaczymy co przyniesie.',
     'Runy mówią, że los się zmienia.',
-    'Perun grzmi w oddali.',
+    'Perun grzmi w oddali. Dobry znak.',
+    'Ogień święty szepce odpowiedzi, lecz ja milczę.',
+    'Cierpliwość, wojowniku. Bogowie wynagradzają wytrwałych.',
+    'Żerca widzi przyszłość, ale nie zdradza jej.',
   ],
   hard: [
     'Weles się śmieje. Żałosne.',
     'Czy to wszystko na co cię stać?',
     'Nawiowie szepczą o twojej porażce.',
     'Twoje karty pachną strachem.',
-    'Ciemność rośnie…',
+    'Ciemność rośnie… i jest głodna.',
+    'Każdy twój ruch przybliża koniec.',
+    'Słyszę płacz twoich przodków.',
+    'Weles jest cierpliwy. Weles zawsze wygrywa.',
   ],
 }
 
@@ -132,7 +155,7 @@ function getGreeting(): string {
   return pool[Math.floor(Math.random() * pool.length)]!
 }
 
-// ===== INIT: AI greeting =====
+// ===== INIT =====
 let greeted = false
 watch(() => game.gameStarted, (started) => {
   if (started && !greeted) {
@@ -142,36 +165,13 @@ watch(() => game.gameStarted, (started) => {
   }
 }, { immediate: true })
 
-// ===== WATCH ACTION LOG: convert new entries to chat messages =====
-let lastLogLen = 0
-watch(() => game.actionLog?.length ?? 0, (newLen) => {
-  if (newLen <= lastLogLen) { lastLogLen = newLen; return }
-  const log = game.actionLog ?? []
-  const newEntries = log.slice(lastLogLen)
-  lastLogLen = newLen
-
-  for (const entry of newEntries) {
-    const tc = typeIcons[entry.type]
-    pushMsg(
-      entry.type === 'system' ? 'system' : 'ai',
-      entry.message,
-      tc?.icon,
-      tc?.color,
-    )
-  }
-})
-
 // ===== PLAYER INPUT =====
 function sendMessage() {
   const text = inputText.value.trim()
   if (!text) return
   inputText.value = ''
   pushMsg('player', text)
-
-  // AI responds after a short delay
-  setTimeout(() => {
-    pushMsg('ai', getRandomQuip())
-  }, 600 + Math.random() * 800)
+  setTimeout(() => pushMsg('ai', getRandomQuip()), 600 + Math.random() * 800)
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -193,20 +193,59 @@ const show = computed(() => game.gameStarted)
 
   <Transition name="chat-slide">
     <div v-if="show && panelOpen" class="chat-panel">
-      <!-- Header -->
-      <div class="chat-header" @click="panelOpen = false">
-        <div class="ch-left">
-          <Icon :icon="aiAvatar" class="ch-avatar" />
+      <!-- Header: two participants -->
+      <div class="chat-header">
+        <!-- AI side -->
+        <div class="ch-participant" @click="panelOpen = false">
+          <Icon :icon="aiAvatar" class="ch-avatar ch-avatar-ai" />
           <div class="ch-info">
             <span class="ch-name">{{ aiName }}</span>
-            <span class="ch-status">narrator</span>
+            <span class="ch-title">{{ aiTitle }}</span>
           </div>
         </div>
-        <div class="ch-orn">⟡</div>
+
+        <div class="ch-vs">⚔</div>
+
+        <!-- Player side -->
+        <div class="ch-participant ch-participant-right" @click="showProfile = !showProfile">
+          <div class="ch-info ch-info-right">
+            <span class="ch-name ch-name-player">{{ playerDisplayName }}</span>
+            <span class="ch-title">{{ game.selectedDifficulty }}</span>
+          </div>
+          <Icon :icon="playerDisplayIcon" class="ch-avatar ch-avatar-player" />
+        </div>
+
         <button class="ch-close" @click.stop="panelOpen = false">
           <Icon icon="mdi:chevron-down" />
         </button>
       </div>
+
+      <!-- Profile editor (inline) -->
+      <Transition name="profile-slide">
+        <div v-if="showProfile" class="profile-editor">
+          <div class="pe-row">
+            <input
+              v-model="profileNameInput"
+              class="pe-name-input"
+              placeholder="Twój nick…"
+              maxlength="20"
+              @keydown.enter="saveProfile"
+            />
+            <button class="pe-save" @click="saveProfile">
+              <Icon icon="mdi:check" />
+            </button>
+          </div>
+          <div class="pe-icons">
+            <button
+              v-for="icon in PLAYER_ICONS" :key="icon"
+              :class="['pe-icon-btn', { active: game.playerIcon === icon }]"
+              @click="selectIcon(icon)"
+            >
+              <Icon :icon="icon" />
+            </button>
+          </div>
+        </div>
+      </Transition>
 
       <!-- Messages -->
       <div ref="listRef" class="chat-messages">
@@ -215,21 +254,20 @@ const show = computed(() => game.gameStarted)
           :key="msg.id"
           :class="['chat-msg', `msg-${msg.sender}`]"
         >
-          <!-- AI / System message -->
-          <template v-if="msg.sender === 'ai' || msg.sender === 'system'">
-            <div class="msg-bubble msg-bubble-ai" :style="msg.color ? { '--mc': msg.color } : {}">
-              <Icon v-if="msg.icon" :icon="msg.icon" class="msg-type-icon" />
-              <span class="msg-text">{{ msg.text }}</span>
+          <template v-if="msg.sender === 'ai'">
+            <Icon :icon="aiAvatar" class="msg-avatar msg-avatar-ai" />
+            <div class="msg-col">
+              <div class="msg-bubble msg-bubble-ai">{{ msg.text }}</div>
+              <span class="msg-time">{{ msg.time }}</span>
             </div>
-            <span class="msg-time">{{ msg.time }}</span>
           </template>
 
-          <!-- Player message -->
           <template v-else>
-            <span class="msg-time msg-time-right">{{ msg.time }}</span>
-            <div class="msg-bubble msg-bubble-player">
-              <span class="msg-text">{{ msg.text }}</span>
+            <div class="msg-col msg-col-right">
+              <div class="msg-bubble msg-bubble-player">{{ msg.text }}</div>
+              <span class="msg-time msg-time-right">{{ msg.time }}</span>
             </div>
+            <Icon :icon="playerDisplayIcon" class="msg-avatar msg-avatar-player" />
           </template>
         </div>
       </div>
@@ -244,10 +282,9 @@ const show = computed(() => game.gameStarted)
       <!-- Input -->
       <div class="chat-input-row">
         <input
-          ref="inputRef"
           v-model="inputText"
           class="chat-input"
-          placeholder="Napisz do narratora…"
+          :placeholder="`Napisz do ${aiName}…`"
           maxlength="120"
           @keydown="onKeydown"
         />
@@ -261,24 +298,19 @@ const show = computed(() => game.gameStarted)
 
 <style scoped>
 /* ===== MOBILE TOGGLE ===== */
-.chat-mobile-toggle {
-  display: none;
-}
+.chat-mobile-toggle { display: none; }
 
 /* ===== PANEL ===== */
 .chat-panel {
   position: fixed;
   bottom: 12px;
   left: 12px;
-  width: 290px;
-  max-height: 340px;
-  background:
-    linear-gradient(165deg, rgba(14, 10, 20, 0.97) 0%, rgba(8, 6, 14, 0.98) 100%);
+  width: 300px;
+  max-height: 380px;
+  background: linear-gradient(165deg, rgba(14, 10, 20, 0.97), rgba(8, 6, 14, 0.98));
   border-radius: 10px;
   border: 1px solid rgba(200, 168, 78, 0.18);
-  box-shadow:
-    0 8px 40px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 rgba(200, 168, 78, 0.06);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(200, 168, 78, 0.06);
   z-index: 150;
   display: flex;
   flex-direction: column;
@@ -290,60 +322,69 @@ const show = computed(() => game.gameStarted)
 .chat-header {
   display: flex;
   align-items: center;
-  padding: 8px 10px;
-  background:
-    linear-gradient(90deg, rgba(200, 168, 78, 0.06) 0%, rgba(120, 40, 15, 0.04) 100%);
+  padding: 7px 8px;
+  background: linear-gradient(90deg, rgba(200, 168, 78, 0.06), rgba(120, 40, 15, 0.04));
   border-bottom: 1px solid rgba(200, 168, 78, 0.1);
   flex-shrink: 0;
-  cursor: pointer;
-  user-select: none;
+  gap: 4px;
 }
 
-.chat-header:hover {
-  background:
-    linear-gradient(90deg, rgba(200, 168, 78, 0.1) 0%, rgba(120, 40, 15, 0.06) 100%);
-}
-
-.ch-left {
+.ch-participant {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
   flex: 1;
+  min-width: 0;
 }
+.ch-participant:hover { background: rgba(200, 168, 78, 0.06); }
+.ch-participant-right { justify-content: flex-end; }
 
 .ch-avatar {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.ch-avatar-ai {
   color: rgba(200, 168, 78, 0.7);
-  filter: drop-shadow(0 0 4px rgba(200, 100, 30, 0.3));
+  filter: drop-shadow(0 0 3px rgba(200, 100, 30, 0.25));
+}
+.ch-avatar-player {
+  color: rgba(100, 160, 250, 0.7);
+  filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.25));
 }
 
-.ch-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+.ch-info { display: flex; flex-direction: column; min-width: 0; }
+.ch-info-right { align-items: flex-end; }
 
 .ch-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: rgba(200, 168, 78, 0.85);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.ch-name-player { color: rgba(140, 180, 240, 0.85); }
 
-.ch-status {
-  font-size: 8px;
-  color: rgba(148, 130, 100, 0.45);
+.ch-title {
+  font-size: 7.5px;
+  color: rgba(148, 130, 100, 0.4);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
 }
 
-.ch-orn {
+.ch-vs {
   font-size: 10px;
-  color: rgba(200, 168, 78, 0.12);
-  margin: 0 6px;
+  color: rgba(200, 168, 78, 0.15);
+  flex-shrink: 0;
+  margin: 0 2px;
 }
 
 .ch-close {
@@ -352,17 +393,92 @@ const show = computed(() => game.gameStarted)
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 4px;
-  color: rgba(200, 168, 78, 0.4);
-  font-size: 16px;
+  color: rgba(200, 168, 78, 0.35);
+  font-size: 14px;
+  flex-shrink: 0;
   transition: color 0.15s, background 0.15s;
 }
-.ch-close:hover {
-  color: rgba(200, 168, 78, 0.8);
-  background: rgba(200, 168, 78, 0.08);
+.ch-close:hover { color: rgba(200, 168, 78, 0.8); background: rgba(200, 168, 78, 0.08); }
+
+/* ===== PROFILE EDITOR ===== */
+.profile-editor {
+  padding: 8px 10px;
+  background: rgba(59, 130, 246, 0.04);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
+
+.pe-row {
+  display: flex;
+  gap: 4px;
+}
+
+.pe-name-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(100, 160, 250, 0.15);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: rgba(186, 210, 245, 0.9);
+  outline: none;
+  font-family: inherit;
+}
+.pe-name-input::placeholder { color: rgba(148, 160, 180, 0.3); }
+.pe-name-input:focus { border-color: rgba(100, 160, 250, 0.35); }
+
+.pe-save {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: rgba(140, 180, 240, 0.8);
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.pe-save:hover { background: rgba(59, 130, 246, 0.2); color: #93bbfd; }
+
+.pe-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.pe-icon-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid rgba(100, 160, 250, 0.08);
+  color: rgba(148, 160, 180, 0.5);
+  font-size: 15px;
+  transition: all 0.15s;
+}
+.pe-icon-btn:hover { color: rgba(140, 180, 240, 0.8); background: rgba(59, 130, 246, 0.08); border-color: rgba(100, 160, 250, 0.2); }
+.pe-icon-btn.active {
+  color: rgba(140, 180, 240, 0.95);
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.2);
+}
+
+.profile-slide-enter-active, .profile-slide-leave-active { transition: all 0.2s ease; }
+.profile-slide-enter-from, .profile-slide-leave-to { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
 
 /* ===== MESSAGES ===== */
 .chat-messages {
@@ -371,7 +487,7 @@ const show = computed(() => game.gameStarted)
   padding: 8px 8px 4px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   scrollbar-width: thin;
   scrollbar-color: rgba(200, 168, 78, 0.1) transparent;
   min-height: 0;
@@ -380,27 +496,35 @@ const show = computed(() => game.gameStarted)
 
 .chat-msg {
   display: flex;
-  align-items: flex-end;
-  gap: 5px;
+  align-items: flex-start;
+  gap: 6px;
   animation: msg-appear 0.25s ease-out;
 }
+.msg-player { justify-content: flex-end; }
 
 @keyframes msg-appear {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.msg-player {
-  justify-content: flex-end;
+.msg-avatar {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  opacity: 0.5;
 }
+.msg-avatar-ai { color: rgba(200, 168, 78, 0.6); }
+.msg-avatar-player { color: rgba(100, 160, 250, 0.6); }
 
-/* Bubbles */
+.msg-col { display: flex; flex-direction: column; gap: 1px; max-width: 80%; }
+.msg-col-right { align-items: flex-end; }
+
 .msg-bubble {
-  max-width: 85%;
-  padding: 5px 9px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
   font-size: 10.5px;
-  line-height: 1.45;
+  line-height: 1.5;
   word-break: break-word;
 }
 
@@ -409,63 +533,25 @@ const show = computed(() => game.gameStarted)
   border: 1px solid rgba(200, 168, 78, 0.1);
   color: rgba(200, 190, 170, 0.85);
   border-top-left-radius: 2px;
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-}
-
-.msg-type-icon {
-  width: 11px;
-  height: 11px;
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--mc, rgba(200, 168, 78, 0.5));
-  opacity: 0.8;
 }
 
 .msg-bubble-player {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08));
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0.07));
+  border: 1px solid rgba(59, 130, 246, 0.18);
   color: rgba(186, 210, 245, 0.9);
   border-top-right-radius: 2px;
 }
 
-.msg-text {
-  flex: 1;
-}
-
 .msg-time {
-  font-size: 8px;
-  color: rgba(148, 130, 100, 0.3);
-  flex-shrink: 0;
-  align-self: flex-end;
-  margin-bottom: 1px;
+  font-size: 7.5px;
+  color: rgba(148, 130, 100, 0.25);
+  padding: 0 2px;
 }
-
-.msg-time-right {
-  order: 0;
-}
-
-/* System messages */
-.msg-system .msg-bubble-ai {
-  background: rgba(251, 191, 36, 0.05);
-  border-color: rgba(251, 191, 36, 0.12);
-  color: rgba(251, 191, 36, 0.6);
-  font-style: italic;
-  font-size: 9.5px;
-}
+.msg-time-right { text-align: right; }
 
 /* ===== SEPARATOR ===== */
-.chat-sep {
-  padding: 0 12px;
-  flex-shrink: 0;
-}
-
-.sep-svg {
-  width: 100%;
-  height: 6px;
-  display: block;
-}
+.chat-sep { padding: 0 12px; flex-shrink: 0; }
+.sep-svg { width: 100%; height: 6px; display: block; }
 
 /* ===== INPUT ===== */
 .chat-input-row {
@@ -488,16 +574,8 @@ const show = computed(() => game.gameStarted)
   transition: border-color 0.15s;
   font-family: inherit;
 }
-
-.chat-input::placeholder {
-  color: rgba(148, 130, 100, 0.3);
-  font-style: italic;
-}
-
-.chat-input:focus {
-  border-color: rgba(200, 168, 78, 0.3);
-  background: rgba(255, 255, 255, 0.04);
-}
+.chat-input::placeholder { color: rgba(148, 130, 100, 0.3); font-style: italic; }
+.chat-input:focus { border-color: rgba(200, 168, 78, 0.3); background: rgba(255, 255, 255, 0.04); }
 
 .chat-send {
   all: unset;
@@ -514,29 +592,12 @@ const show = computed(() => game.gameStarted)
   font-size: 14px;
   transition: all 0.15s;
 }
-
-.chat-send:hover:not(:disabled) {
-  background: rgba(200, 168, 78, 0.15);
-  color: rgba(200, 168, 78, 0.9);
-  border-color: rgba(200, 168, 78, 0.3);
-}
-
-.chat-send:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
+.chat-send:hover:not(:disabled) { background: rgba(200, 168, 78, 0.15); color: rgba(200, 168, 78, 0.9); }
+.chat-send:disabled { opacity: 0.3; cursor: default; }
 
 /* ===== TRANSITIONS ===== */
-.chat-slide-enter-active,
-.chat-slide-leave-active {
-  transition: opacity 0.25s, transform 0.25s;
-}
-
-.chat-slide-enter-from,
-.chat-slide-leave-to {
-  opacity: 0;
-  transform: translateY(20px) scale(0.95);
-}
+.chat-slide-enter-active, .chat-slide-leave-active { transition: opacity 0.25s, transform 0.25s; }
+.chat-slide-enter-from, .chat-slide-leave-to { opacity: 0; transform: translateY(20px) scale(0.95); }
 
 /* ===== MOBILE ===== */
 @media (max-width: 767px) {
@@ -559,28 +620,29 @@ const show = computed(() => game.gameStarted)
     padding: 0;
     backdrop-filter: blur(4px);
   }
-
   .chat-panel {
     position: fixed;
     top: 62px;
     left: 4px;
     bottom: auto;
-    width: 240px;
-    max-height: 200px;
+    width: 250px;
+    max-height: 240px;
     border-radius: 8px;
     z-index: 155;
   }
-
-  .chat-messages { max-height: 100px; padding: 4px 6px 2px; gap: 4px; }
-  .chat-header { padding: 5px 8px; }
-  .ch-avatar { width: 16px; height: 16px; }
-  .ch-name { font-size: 10px; }
-  .ch-status { font-size: 7px; }
-  .msg-bubble { font-size: 9px; padding: 3px 7px; }
-  .msg-type-icon { width: 9px; height: 9px; }
-  .msg-time { font-size: 7px; }
+  .chat-messages { max-height: 110px; padding: 4px 6px 2px; gap: 5px; }
+  .chat-header { padding: 5px 6px; }
+  .ch-avatar { width: 14px; height: 14px; }
+  .ch-name { font-size: 9px; }
+  .ch-title { font-size: 6.5px; }
+  .ch-vs { font-size: 8px; }
+  .msg-bubble { font-size: 9px; padding: 4px 7px; }
+  .msg-avatar { width: 12px; height: 12px; }
+  .msg-time { font-size: 6.5px; }
   .chat-input { font-size: 9px; padding: 4px 6px; }
   .chat-send { width: 24px; height: 24px; font-size: 12px; }
   .chat-input-row { padding: 4px 6px 6px; }
+  .pe-icon-btn { width: 24px; height: 24px; font-size: 12px; }
+  .pe-name-input { font-size: 9px; }
 }
 </style>

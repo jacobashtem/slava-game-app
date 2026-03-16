@@ -279,6 +279,10 @@ export const useGameStore = defineStore('game', () => {
   const selectedDifficulty = ref<AIDifficulty>('medium')
   const selectedDomains = ref<number[]>([]) // empty = all domains
 
+  // Player profile (persisted in localStorage)
+  const playerName = ref(typeof localStorage !== 'undefined' ? localStorage.getItem('slava_playerName') ?? '' : '')
+  const playerIcon = ref(typeof localStorage !== 'undefined' ? localStorage.getItem('slava_playerIcon') ?? 'game-icons:viking-helmet' : 'game-icons:viking-helmet')
+
   const state = shallowRef<GameState | null>(null)
   const isAIThinking = ref(false)
   const gameStarted = ref(false)
@@ -379,6 +383,15 @@ export const useGameStore = defineStore('game', () => {
   // ===== SETUP =====
   function setDifficulty(diff: AIDifficulty) {
     selectedDifficulty.value = diff
+  }
+
+  function setPlayerProfile(name: string, icon: string) {
+    playerName.value = name
+    playerIcon.value = icon
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('slava_playerName', name)
+      localStorage.setItem('slava_playerIcon', icon)
+    }
   }
 
   function setDomains(domains: number[]) {
@@ -1557,6 +1570,8 @@ export const useGameStore = defineStore('game', () => {
     arenaFocusedName,
     selectedDifficulty,
     selectedDomains,
+    playerName,
+    playerIcon,
     // computed
     player,
     ai,
@@ -1577,6 +1592,7 @@ export const useGameStore = defineStore('game', () => {
     setupArenaMode,
     setDifficulty,
     setDomains,
+    setPlayerProfile,
     playCreature,
     playAdventure,
     attack,
