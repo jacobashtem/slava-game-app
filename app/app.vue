@@ -77,18 +77,20 @@ html, body {
 ::-webkit-scrollbar-track { background: var(--bg-deep); }
 ::-webkit-scrollbar-thumb { background: var(--border-highlight); border-radius: 2px; }
 
-/* Tutorial highlight — pulsing golden outline on elements the narrator references */
+/* Tutorial highlight — glowing element visible through dark overlay */
 .tutorial-highlight {
-  outline: 2px solid rgba(200, 168, 78, 0.6) !important;
-  outline-offset: 3px;
-  animation: tutorial-pulse 1.5s ease-in-out infinite !important;
-  position: relative;
-  z-index: 50;
+  position: relative !important;
+  z-index: 600 !important;
+  outline: 2px solid rgba(200, 168, 78, 0.8) !important;
+  outline-offset: 4px;
+  border-radius: 8px;
+  animation: tutorial-pulse 1.8s ease-in-out infinite !important;
+  box-shadow: 0 0 30px rgba(200, 168, 78, 0.15), 0 0 60px rgba(200, 100, 30, 0.08) !important;
 }
 
 @keyframes tutorial-pulse {
-  0%, 100% { outline-color: rgba(200, 168, 78, 0.3); box-shadow: 0 0 8px rgba(200, 168, 78, 0.1); }
-  50% { outline-color: rgba(200, 168, 78, 0.8); box-shadow: 0 0 20px rgba(200, 168, 78, 0.2); }
+  0%, 100% { outline-color: rgba(200, 168, 78, 0.5); box-shadow: 0 0 20px rgba(200, 168, 78, 0.1); }
+  50% { outline-color: rgba(200, 168, 78, 1); box-shadow: 0 0 40px rgba(200, 168, 78, 0.25), 0 0 80px rgba(200, 100, 30, 0.1); }
 }
 
 /* Dead card — hidden with !important so Vue re-renders can't flash it back.

@@ -81,7 +81,7 @@ const progressPct = computed(() =>
 .tut-dim {
   position: absolute;
   inset: 0;
-  background: rgba(4, 3, 10, 0.55);
+  background: rgba(4, 3, 10, 0.75);
   pointer-events: none;
 }
 
@@ -168,7 +168,7 @@ const progressPct = computed(() =>
 
 .tut-title {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 500;
   color: rgba(221, 214, 193, 0.95);
   margin: 0;
@@ -177,7 +177,7 @@ const progressPct = computed(() =>
 }
 
 .tut-step-num {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(148, 130, 100, 0.4);
   letter-spacing: 0.1em;
 }
@@ -191,8 +191,8 @@ const progressPct = computed(() =>
 
 .tut-body p {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.65;
   color: rgba(200, 190, 170, 0.75);
 }
 
@@ -210,10 +210,10 @@ const progressPct = computed(() =>
 .tut-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 20px;
+  gap: 8px;
+  padding: 12px 28px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid;

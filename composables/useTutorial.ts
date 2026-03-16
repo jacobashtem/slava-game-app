@@ -32,16 +32,16 @@ const STEPS: TutorialStep[] = [
 
   // ═══════ STATY ═══════
   { id: 'stats_atk', icon: 'game-icons:battle-axe', title: '⚔ ATK — Siła Ataku', highlight: '.hand-cards .creature-card', position: 'top', advance: 'click',
-    body: ['Czerwona liczba na dole karty to ATK — siła ataku.', 'Tyle obrażeń istota zadaje gdy uderzy wroga. ATK 4 = wróg straci 4 punkty życia.'] },
+    body: ['Czerwona liczba na dole karty to ⚔ — siła ataku.', 'Tyle obrażeń istota zadaje gdy uderzy wroga. ⚔ 4 = wróg straci 4 punktów życia.'] },
   { id: 'stats_def', icon: 'game-icons:shield-echoes', title: '🛡 DEF — Wytrzymałość', highlight: '.hand-cards .creature-card', position: 'top', advance: 'click',
-    body: ['Niebieska liczba to DEF — punkty życia.', 'Gdy istota oberwie, traci DEF. Gdy DEF spadnie do 0 → ginie i trafia na cmentarz.', 'Przykład: ATK 4 uderza DEF 6. Wróg traci 4, zostaje mu 2. Przeżył, ale osłabiony!'] },
+    body: ['Niebieska liczba to 🛡 — punkty życia istoty.', 'Gdy istota oberwie, traci 🛡. Gdy 🛡 spadnie do 0 → ginie i trafia na cmentarz.', 'Przykład: ⚔ 4 uderza 🛡 6 → wróg traci 4 → zostaje mu 🛡 2. Przeżył, ale osłabiony!'] },
 
   // ═══════ POLE BITWY ═══════
   { id: 'field', icon: 'game-icons:battle-gear', title: 'Pole Bitwy', highlight: '.player-field', position: 'top', advance: 'click',
-    body: ['Pole bitwy ma 3 linie — jak rzędy formacji wojennej.', 'Twoje na dole, wroga na górze. Pośrodku ⚔ — linia frontu.', 'Gdzie postawisz istotę ma OGROMNE znaczenie!'] },
+    body: ['Pole bitwy ma 3 linie — jak rzędy formacji wojennej.', 'Twoje pole jest po lewej, wroga po prawej. Pośrodku ⚔ — linia frontu.', 'Gdzie postawisz istotę ma OGROMNE znaczenie!'] },
 
   // ═══════ TYPY ATAKU — każdy osobno ═══════
-  { id: 'melee', icon: 'game-icons:battle-axe', title: '⚔ Wręcz', position: 'center', advance: 'click',
+  { id: 'melee', icon: 'game-icons:battle-axe', title: '⚔ Wręcz', highlight: '.player-field .line-1', position: 'top', advance: 'click',
     body: ['Miecze, topory, pięści. Klasyczny wojownik bliskiego zasięgu.', 'Trafia TYLKO pierwszą zajętą linię wroga. Nie przeskoczy nad frontem do tyłów.', '❌ Nie trafia LATAJĄCYCH — miecz nie dosięgnie smoka w powietrzu!'] },
   { id: 'elemental', icon: 'bi:fire', title: '🔥 Żywioł', highlight: '.player-field .line-1', position: 'top', advance: 'click',
     body: ['Ogień, lód, wiatr. Zasięg jak wręcz ⚔ — trafia pierwszą zajętą linię.', 'ALE: ogień dosięgnie LATAJĄCEGO! Smok uniknie miecza, ale nie uniknie płomieni. 🔥', '⚔ Wręcz i 🔥 Żywioł walczą na linii L1 (FRONT).'] },
@@ -51,15 +51,15 @@ const STEPS: TutorialStep[] = [
     body: ['Zaklęcia i rytuały. Celuje w dowolną linię, jak 🏹 dystans.', '✨ Magia walczy na L3 (WSPARCIE) — chroniona podwójnie: przez L1 ORAZ L2.', 'Żeby wróg ⚔ dosięgnął maga, musi wyeliminować WSZYSTKICH z L1, potem z L2!'] },
 
   // ═══════ PUSTE LINIE ═══════
-  { id: 'empty_lines', icon: 'game-icons:broken-shield', title: '⚠ Puste Linie!', position: 'center', advance: 'click',
+  { id: 'empty_lines', icon: 'game-icons:broken-shield', title: '⚠ Puste Linie!', highlight: '.player-field .battle-line', position: 'top', advance: 'click',
     body: ['Jeśli L1 pusta → wróg ⚔ celuje w L2!', 'Jeśli L1 i L2 puste → wróg ⚔ uderzy prosto w L3. Magowie bezbronni!', 'ZAWSZE pilnuj frontu. Pusty front = tyły odsłonięte.', '🏹 i ✨ wroga i tak celują wszędzie — ale nie dawaj ⚔ darmowego dostępu!'] },
 
   // ═══════ LATAJĄCE ═══════
-  { id: 'flying', icon: 'game-icons:liberty-wing', title: '🦅 Istoty Latające', position: 'center', advance: 'click',
+  { id: 'flying', icon: 'game-icons:liberty-wing', title: '🦅 Istoty Latające', highlight: '.player-field', position: 'top', advance: 'click',
     body: ['Ikona skrzydeł 🦅 na karcie = latający.', '⚔ Wręcz → ❌ nie trafia latających.', '🔥 Żywioł → ✅ ogień dosięgnie.', '🏹 Dystans → ✅ strzała doleci.', '✨ Magia → ✅ zaklęcie trafi.', 'Pilnuj żeby mieć sposób na latające wrogi!'] },
 
   // ═══════ ODPORNOŚCI ═══════
-  { id: 'immunities', icon: 'game-icons:shield-reflect', title: '🛡 Odporności', position: 'center', advance: 'click',
+  { id: 'immunities', icon: 'game-icons:shield-reflect', title: '🛡 Odporności', highlight: '.player-field', position: 'top', advance: 'click',
     body: ['Niektóre istoty mają ODPORNOŚCI — np. „Odporny na magię" albo „Odporny na dystans".', 'Jeśli zaatakujesz odporną istotę typem na który jest odporna → atak zostaje ZABLOKOWANY, 0 obrażeń!', 'Dlatego dywersyfikuj armię — miej różne typy ataku żeby nie utknąć.'] },
 
   // ═══════ WYSTAWIANIE ═══════
@@ -70,12 +70,12 @@ const STEPS: TutorialStep[] = [
 
   // ═══════ POZYCJE ═══════
   { id: 'pos_defense', icon: 'game-icons:shield-echoes', title: '🛡 Pozycja: OBRONA', position: 'center', advance: 'click',
-    body: ['Karta PIONOWO, niebieski border.', 'NIE może aktywnie atakować. Ale gdy wróg ją zaatakuje — KONTRATAKUJE automatycznie!', 'Wróg uderza → twój wojownik odpowiada ciosem. Obaj tracą życie!'] },
-  { id: 'pos_attack', icon: 'game-icons:broadsword', title: '⚔ Pozycja: ATAK', position: 'center', advance: 'click',
-    body: ['Karta POZIOMO, czerwony border.', 'MOŻE celować we wroga i zadać obrażenia. Ale sama NIE kontratakuje gdy ją zaatakują.', 'Atakujesz wroga w 🛡 → on kontruje. Wroga w ⚔ → nie kontruje. Ryzyko vs zysk!'] },
+    body: ['Karta PIONOWO, niebieski border.', 'NIE może aktywnie atakować. Ale gdy wróg ją zaatakuje — KONTRATAKUJE automatycznie!', 'Wróg uderza → twój wojownik odpowiada ciosem swoim ⚔. Obaj tracą 🛡!'] },
+  { id: 'pos_attack', icon: 'game-icons:broadsword', title: '⚔ Pozycja: ATAK', highlight: '.player-field .creature-card', position: 'top', advance: 'click',
+    body: ['Karta POZIOMO, czerwony border.', 'MOŻE celować we wroga i zadać ⚔ obrażeń. Ale sama NIE kontratakuje gdy ją zaatakują.', 'Atakujesz wroga w 🛡 → on kontruje swoim ⚔. Wroga w ⚔ → nie kontruje. Ryzyko vs zysk!'] },
 
   // ═══════ KONTRATAK ═══════
-  { id: 'counter', icon: 'game-icons:shield-bash', title: '↩ Kontratak — Zasięg', position: 'center', advance: 'click',
+  { id: 'counter', icon: 'game-icons:shield-bash', title: '↩ Kontratak — Zasięg', highlight: '.player-field', position: 'top', advance: 'click',
     body: ['Kontratak ma ten sam ZASIĘG co normalny atak obrońcy.', 'Twój 🏹 z L2 strzela wroga ⚔ na L1 w 🛡. Wróg chce kontrować — ale miecz ⚔ nie dosięgnie L2! Brak kontry.', 'Twój ⚔ z L1 bije wroga ⚔ na L1 w 🛡. Miecz dosięgnie — kontra!', 'Atakuj dystansem/magią żeby unikać kontr bliskiego zasięgu.'] },
 
   // ═══════ OBRÓĆ KARTĘ ═══════
@@ -92,7 +92,7 @@ const STEPS: TutorialStep[] = [
 
   // ═══════ WALKA ═══════
   { id: 'fight', icon: 'game-icons:battle-axe', title: '⚔ Do Boju!', highlight: '.enemy-field .creature-card', position: 'top', advance: 'attack',
-    body: ['Kliknij swoją istotę w ⚔ ATAK, potem kliknij wroga.', 'Obrażenia = twój ATK. DEF wroga spadnie. DEF ≤ 0 → śmierć!'] },
+    body: ['Kliknij swoją istotę w ⚔, potem kliknij wrogą istotę.', 'Obrażenia = twój ⚔. Wroga 🛡 spadnie o tyle. 🛡 ≤ 0 → śmierć!'] },
   { id: 'fight_done', icon: 'game-icons:check-mark', title: 'Pierwsza Walka!', position: 'center', advance: 'click',
     body: ['Brawo! Widziałeś obrażenia w akcji.', 'Po ataku istota nie może atakować ponownie w tej turze.'] },
 
@@ -119,22 +119,22 @@ const STEPS: TutorialStep[] = [
     body: ['Fioletowa etykieta z ⚡. Zdolność AKTYWOWANA — to TY decydujesz kiedy jej użyć.', 'Kliknij pulsujący przycisk ⚡ na karcie żeby aktywować.', 'Może kosztować PS. Może mieć cooldown (raz na turę / raz na rundę).'] },
 
   { id: 'trig_aura', icon: 'game-icons:aura', title: '🔵 AURA', position: 'center', advance: 'click',
-    body: ['Niebieska etykieta. Efekt PASYWNY — działa automatycznie co turę.', 'Np. „Na początku tury: lecz 1 DEF sojusznikowi obok."', 'Działa dopóki istota żyje. Nie musisz nic klikać.'] },
+    body: ['Niebieska etykieta. Efekt PASYWNY — działa automatycznie co turę.', 'Np. „Na początku tury: przywróć 1 🛡 sojusznikowi obok."', 'Działa dopóki istota żyje. Nie musisz nic klikać.'] },
 
   { id: 'trig_retaliation', icon: 'game-icons:shield-bash', title: '🟠 ODWET', position: 'center', advance: 'click',
     body: ['Pomarańczowa etykieta. Aktywuje się gdy ta istota OBERWIE obrażenia.', 'Np. „Gdy otrzyma obrażenia: zadaj 1 obrażenie atakującemu."', 'Działa przy każdym trafieniu — potężne przeciw wielokrotnym atakom!'] },
 
   { id: 'trig_strike', icon: 'game-icons:sword-clash', title: '🔴 NATARCIE', position: 'center', advance: 'click',
-    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZADAJE obrażenia.', 'Np. „Gdy zada obrażenia: ukradnij 1 ATK wrogowi."', 'Działa przy każdym twoim uderzeniu — im więcej atakujesz, tym lepiej.'] },
+    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZADAJE obrażenia.', 'Np. „Gdy zada obrażenia: ukradnij 1 ⚔ wrogowi."', 'Działa przy każdym twoim uderzeniu — im więcej atakujesz, tym lepiej.'] },
 
   { id: 'trig_kill', icon: 'game-icons:skull-crossed-bones', title: '🔴 ZABÓJSTWO', position: 'center', advance: 'click',
-    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZABIJE wroga (DEF → 0).', 'Np. „Gdy zabije: zyskaj 1 PS" albo „Gdy zabije: lecz się pełni."', 'Nagroda za eliminację — im więcej zabijasz, tym silniejszy jesteś!'] },
+    body: ['Czerwona etykieta. Aktywuje się gdy ta istota ZABIJE wroga (🛡 → 0).', 'Np. „Gdy zabije: zyskaj 1 PS" albo „Gdy zabije: przywróć pełne 🛡."', 'Nagroda za eliminację — im więcej zabijasz, tym silniejszy jesteś!'] },
 
   { id: 'trig_farewell', icon: 'game-icons:tombstone', title: '⚫ POŻEGNANIE', position: 'center', advance: 'click',
     body: ['Szara etykieta. Aktywuje się gdy ta istota GINIE.', 'Np. „Gdy zginie: zadaj 3 obrażenia losowemu wrogowi."', 'Ostatni akt — istota umiera, ale zabiera kogoś ze sobą. Potężne!'] },
 
   { id: 'trig_vigilance', icon: 'game-icons:eye-shield', title: '🟡 CZUJNOŚĆ', position: 'center', advance: 'click',
-    body: ['Żółta etykieta. Reaguje na ZDARZENIA na polu — śmierć dowolnej istoty, zagranie karty przez wroga itp.', 'Np. „Gdy jakakolwiek istota zginie: zyskaj +1 ATK."', 'Obserwator pola bitwy — pasywnie zbiera korzyści z chaosu walki.'] },
+    body: ['Żółta etykieta. Reaguje na ZDARZENIA na polu — śmierć dowolnej istoty, zagranie karty przez wroga itp.', 'Np. „Gdy jakakolwiek istota zginie: zyskaj +1 ⚔."', 'Obserwator pola bitwy — pasywnie zbiera korzyści z chaosu walki.'] },
 
   // ═══════ PRZYGODY ═══════
   { id: 'adv_types', icon: 'game-icons:spell-book', title: 'Karty Przygody', position: 'center', advance: 'click',
