@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import istotypData from '../../data/Slava_Vol2_Istoty.json'
 import przygodyData from '../../data/Slava_Vol2_KartyPrzygody.json'
 
 definePageMeta({ ssr: false })
 
-// ===== DATA =====
 const creatures = istotypData as any[]
 const adventures = przygodyData as any[]
 
@@ -14,29 +13,25 @@ type Tab = 'creatures' | 'adventures'
 const activeTab = ref<Tab>('creatures')
 const searchQuery = ref('')
 const domainFilter = ref<number | null>(null)
-const typeFilter = ref<string | null>(null) // adventure type filter
+const typeFilter = ref<string | null>(null)
 
-const DOMAIN_INFO: Record<number, { name: string; color: string; icon: string }> = {
-  1: { name: 'Perun', color: '#f5c542', icon: 'game-icons:lightning-storm' },
-  2: { name: 'Żywi', color: '#4caf50', icon: 'game-icons:oak-leaf' },
-  3: { name: 'Nieumarli', color: '#9c27b0', icon: 'game-icons:skull-crossed-bones' },
-  4: { name: 'Weles', color: '#c62828', icon: 'game-icons:fire-dash' },
+const DOMAIN_INFO: Record<number, { name: string; color: string; icon: string; rune: string }> = {
+  1: { name: 'Perun', color: '#d4a843', icon: 'game-icons:lightning-storm', rune: 'ᛈ' },
+  2: { name: 'Żywi', color: '#4a9e4a', icon: 'game-icons:oak-leaf', rune: 'ᛉ' },
+  3: { name: 'Nieumarli', color: '#9c6fbf', icon: 'game-icons:skull-crossed-bones', rune: 'ᚾ' },
+  4: { name: 'Weles', color: '#c44040', icon: 'game-icons:fire-dash', rune: 'ᚹ' },
 }
 
-const ATK_TYPE_LABELS: Record<number, string> = {
-  0: 'Wręcz', 1: 'Żywioł', 2: 'Magia', 3: 'Dystans',
+const ATK_TYPE_LABELS: Record<number, { label: string; icon: string }> = {
+  0: { label: 'Wręcz', icon: 'game-icons:broadsword' },
+  1: { label: 'Żywioł', icon: 'game-icons:fire-ring' },
+  2: { label: 'Magia', icon: 'game-icons:magic-swirl' },
+  3: { label: 'Dystans', icon: 'game-icons:bow-arrow' },
 }
 
-const ATK_TYPE_COLORS: Record<number, string> = {
-  0: '#fb923c', 1: '#fb923c', 2: '#fb923c', 3: '#fb923c',
-}
-
-// ===== FILTERED LISTS =====
 const filteredCreatures = computed(() => {
   let list = creatures
-  if (domainFilter.value !== null) {
-    list = list.filter(c => c.idDomain === domainFilter.value)
-  }
+  if (domainFilter.value !== null) list = list.filter(c => c.idDomain === domainFilter.value)
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim()
     list = list.filter(c =>
@@ -50,9 +45,7 @@ const filteredCreatures = computed(() => {
 
 const filteredAdventures = computed(() => {
   let list = adventures
-  if (typeFilter.value !== null) {
-    list = list.filter(a => a.type === typeFilter.value)
-  }
+  if (typeFilter.value !== null) list = list.filter(a => a.type === typeFilter.value)
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim()
     list = list.filter(a =>
@@ -68,7 +61,6 @@ const displayList = computed(() =>
   activeTab.value === 'creatures' ? filteredCreatures.value : filteredAdventures.value
 )
 
-// ===== EXPANDED CARD =====
 const expandedId = ref<number | null>(null)
 function toggleExpand(id: number) {
   expandedId.value = expandedId.value === id ? null : id
@@ -77,434 +69,505 @@ function toggleExpand(id: number) {
 function getDomainColor(domainId: number): string {
   return DOMAIN_INFO[domainId]?.color ?? '#94a3b8'
 }
+
+// Embers
+const embers = ref<{ x: number; delay: number; dur: number; size: number }[]>([])
+onMounted(() => {
+  embers.value = Array.from({ length: 12 }, () => ({
+    x: Math.random() * 100,
+    delay: Math.random() * 10,
+    dur: 8 + Math.random() * 8,
+    size: 1.5 + Math.random() * 2,
+  }))
+})
 </script>
 
 <template>
-  <div class="gallery-page">
-    <!-- HEADER -->
-    <div class="gallery-header">
-      <NuxtLink to="/" class="back-link">
-        <Icon icon="game-icons:return-arrow" /> Menu
-      </NuxtLink>
-      <h1>Kolekcja kart</h1>
-      <span class="card-count">
-        {{ activeTab === 'creatures' ? `${filteredCreatures.length}/${creatures.length} istot` : `${filteredAdventures.length}/${adventures.length} przygod` }}
-      </span>
-    </div>
-
-    <!-- TABS -->
-    <div class="tabs-bar">
-      <button :class="['tab', { active: activeTab === 'creatures' }]" @click="activeTab = 'creatures'; typeFilter = null">
-        <Icon icon="game-icons:dragon-head" /> Istoty ({{ creatures.length }})
-      </button>
-      <button :class="['tab', { active: activeTab === 'adventures' }]" @click="activeTab = 'adventures'; domainFilter = null">
-        <Icon icon="game-icons:spell-book" /> Przygody ({{ adventures.length }})
-      </button>
-    </div>
-
-    <!-- FILTERS -->
-    <div class="filters-bar">
-      <input
-        v-model="searchQuery"
-        type="text"
-        class="search-input"
-        placeholder="Szukaj po nazwie, efekcie..."
+  <div class="gal-page">
+    <!-- Background -->
+    <div class="gal-bg">
+      <div class="gal-fog gal-fog-1" />
+      <div class="gal-fog gal-fog-2" />
+      <div class="gal-vignette" />
+      <div
+        v-for="(e, i) in embers" :key="i"
+        class="gal-ember"
+        :style="{ left: e.x + '%', animationDelay: e.delay + 's', animationDuration: e.dur + 's', '--sz': e.size + 'px' }"
       />
-
-      <!-- Domain filter (creatures only) -->
-      <div v-if="activeTab === 'creatures'" class="filter-pills">
-        <button
-          :class="['pill', { active: domainFilter === null }]"
-          @click="domainFilter = null"
-        >Wszystkie</button>
-        <button
-          v-for="(info, id) in DOMAIN_INFO" :key="id"
-          :class="['pill', { active: domainFilter === Number(id) }]"
-          :style="domainFilter === Number(id) ? `border-color: ${info.color}; color: ${info.color}` : ''"
-          @click="domainFilter = Number(id)"
-        >
-          <Icon :icon="info.icon" /> {{ info.name }}
-        </button>
-      </div>
-
-      <!-- Type filter (adventures only) -->
-      <div v-if="activeTab === 'adventures'" class="filter-pills">
-        <button :class="['pill', { active: typeFilter === null }]" @click="typeFilter = null">Wszystkie</button>
-        <button :class="['pill', { active: typeFilter === 'Zdarzenie' }]" @click="typeFilter = 'Zdarzenie'">Zdarzenia</button>
-        <button :class="['pill', { active: typeFilter === 'Artefakt' }]" @click="typeFilter = 'Artefakt'">Artefakty</button>
-        <button :class="['pill', { active: typeFilter === 'Lokacja' }]" @click="typeFilter = 'Lokacja'">Lokacje</button>
-      </div>
     </div>
 
-    <!-- CARD LIST -->
-    <div class="card-list">
-      <!-- CREATURE CARDS -->
-      <template v-if="activeTab === 'creatures'">
-        <div
-          v-for="card in filteredCreatures" :key="card.id"
-          :class="['card-entry', { expanded: expandedId === card.id }]"
-          :style="`--dc: ${getDomainColor(card.idDomain)}`"
-          @click="toggleExpand(card.id)"
-        >
-          <div class="card-row">
-            <span class="card-id">#{{ card.id }}</span>
-            <span class="card-domain-dot" :style="`background: ${getDomainColor(card.idDomain)}`" />
-            <span class="card-name">{{ card.name }}</span>
-            <span class="card-stats">
-              <span class="stat atk">{{ card.stats.attack }}</span>
-              /
-              <span class="stat def">{{ card.stats.defense }}</span>
-            </span>
-            <span
-              class="atk-type-badge"
-              :style="`color: ${ATK_TYPE_COLORS[card.combat?.attackType ?? 0]}; background: ${ATK_TYPE_COLORS[card.combat?.attackType ?? 0]}18`"
-            >{{ ATK_TYPE_LABELS[card.combat?.attackType ?? 0] }}</span>
-            <Icon v-if="card.combat?.isFlying" icon="game-icons:liberty-wing" class="flying-icon" title="Latający" />
-          </div>
+    <!-- Content -->
+    <div class="gal-scroll">
+      <div class="gal-content">
+        <!-- Header -->
+        <div class="gal-header">
+          <NuxtLink to="/" class="gal-back">
+            <Icon icon="mdi:arrow-left" /> Powrót
+          </NuxtLink>
 
-          <div v-if="expandedId === card.id" class="card-details">
-            <div class="detail-section">
-              <div class="detail-label">Domena</div>
-              <div :style="`color: ${getDomainColor(card.idDomain)}`">{{ card.domain }}</div>
+          <div class="gal-title-block">
+            <svg viewBox="0 0 120 8" class="gal-orn"><path d="M0 4 Q15 0 30 4 Q45 8 60 4 Q75 0 90 4 Q105 8 120 4" fill="none" stroke="rgba(200,168,78,0.2)" stroke-width="1"/></svg>
+            <div class="gal-emblem">
+              <Icon icon="game-icons:card-pickup" class="gal-emblem-icon" />
             </div>
-            <div v-if="card.abilities?.length" class="detail-section">
-              <div class="detail-label">Zdolności</div>
-              <div v-for="(ab, i) in card.abilities" :key="i" class="ability-line">
-                <span class="trigger-badge">{{ ab.trigger }}</span>
-                <span v-if="ab.cost" class="cost-badge">{{ ab.cost }} ZL</span>
-                {{ ab.text }}
-              </div>
-            </div>
-            <div v-if="card.effectDescription" class="detail-section">
-              <div class="detail-label">Efekt</div>
-              <div class="effect-text">{{ card.effectDescription }}</div>
-            </div>
-            <div v-if="card.lore" class="detail-section lore">
-              <div class="detail-label">Lore</div>
-              <div class="lore-text">{{ card.lore }}</div>
-            </div>
-            <div class="detail-section">
-              <div class="detail-label">Effect ID</div>
-              <code class="effect-id">{{ card.effectId }}</code>
-            </div>
+            <h1 class="gal-title">Kronika Kart</h1>
+            <p class="gal-subtitle">
+              {{ activeTab === 'creatures'
+                ? `${filteredCreatures.length} z ${creatures.length} istot`
+                : `${filteredAdventures.length} z ${adventures.length} przygód` }}
+            </p>
+            <svg viewBox="0 0 120 8" class="gal-orn"><path d="M0 4 Q15 8 30 4 Q45 0 60 4 Q75 8 90 4 Q105 0 120 4" fill="none" stroke="rgba(200,168,78,0.2)" stroke-width="1"/></svg>
           </div>
         </div>
-      </template>
 
-      <!-- ADVENTURE CARDS -->
-      <template v-else>
-        <div
-          v-for="card in filteredAdventures" :key="card.id"
-          :class="['card-entry adventure-entry', { expanded: expandedId === card.id + 1000 }]"
-          @click="toggleExpand(card.id + 1000)"
-        >
-          <div class="card-row">
-            <span class="card-id">#{{ card.id }}</span>
-            <span class="adv-type-badge" :class="card.type?.toLowerCase()">{{ card.type }}</span>
-            <span class="card-name">{{ card.name }}</span>
-            <span v-if="card.persistence" class="persistence-badge">{{ card.persistence }}</span>
+        <!-- Tabs -->
+        <div class="gal-tabs">
+          <button :class="['gal-tab', { active: activeTab === 'creatures' }]" @click="activeTab = 'creatures'; typeFilter = null">
+            <Icon icon="game-icons:dragon-head" />
+            <span>Istoty</span>
+            <span class="gal-tab-count">{{ creatures.length }}</span>
+          </button>
+          <button :class="['gal-tab', { active: activeTab === 'adventures' }]" @click="activeTab = 'adventures'; domainFilter = null">
+            <Icon icon="game-icons:spell-book" />
+            <span>Przygody</span>
+            <span class="gal-tab-count">{{ adventures.length }}</span>
+          </button>
+        </div>
+
+        <!-- Search + Filters -->
+        <div class="gal-filters">
+          <div class="gal-search-wrap">
+            <Icon icon="game-icons:magnifying-glass" class="gal-search-icon" />
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="gal-search"
+              placeholder="Szukaj po nazwie, efekcie…"
+            />
           </div>
 
-          <div v-if="expandedId === card.id + 1000" class="card-details">
-            <div v-if="card.effect" class="detail-section">
-              <div class="detail-label">Efekt podstawowy</div>
-              <div class="effect-text">{{ card.effect }}</div>
-            </div>
-            <div v-if="card.enhancedEffect" class="detail-section">
-              <div class="detail-label">Efekt wzmocniony (1 ZL)</div>
-              <div class="effect-text enhanced">{{ card.enhancedEffect }}</div>
-            </div>
-            <div v-if="card.abilities?.length" class="detail-section">
-              <div class="detail-label">Zdolności</div>
-              <div v-for="(ab, i) in card.abilities" :key="i" class="ability-line">
-                <span class="trigger-badge" :class="{ enhanced: ab.enhanced }">{{ ab.enhanced ? 'WZMOCNIONY' : ab.trigger }}</span>
-                {{ ab.text }}
-              </div>
-            </div>
-            <div v-if="card.lore" class="detail-section lore">
-              <div class="detail-label">Lore</div>
-              <div class="lore-text">{{ card.lore }}</div>
-            </div>
-            <div class="detail-section">
-              <div class="detail-label">Effect IDs</div>
-              <code class="effect-id">{{ card.effectId }}</code>
-              <code v-if="card.enhancedEffectId" class="effect-id enh">{{ card.enhancedEffectId }}</code>
-            </div>
+          <!-- Domain pills -->
+          <div v-if="activeTab === 'creatures'" class="gal-pills">
+            <button :class="['gal-pill', { active: domainFilter === null }]" @click="domainFilter = null">
+              <span class="gal-pill-rune">✦</span> Wszystkie
+            </button>
+            <button
+              v-for="(info, id) in DOMAIN_INFO" :key="id"
+              :class="['gal-pill', { active: domainFilter === Number(id) }]"
+              :style="{ '--pill-color': info.color }"
+              @click="domainFilter = Number(id)"
+            >
+              <span class="gal-pill-rune">{{ info.rune }}</span>
+              <Icon :icon="info.icon" class="gal-pill-icon" />
+              {{ info.name }}
+            </button>
+          </div>
+
+          <!-- Adventure type pills -->
+          <div v-if="activeTab === 'adventures'" class="gal-pills">
+            <button :class="['gal-pill', { active: typeFilter === null }]" @click="typeFilter = null">Wszystkie</button>
+            <button :class="['gal-pill', { active: typeFilter === 'Zdarzenie' }]" style="--pill-color:#60a5fa" @click="typeFilter = 'Zdarzenie'">
+              <Icon icon="game-icons:lightning-helix" class="gal-pill-icon" /> Zdarzenia
+            </button>
+            <button :class="['gal-pill', { active: typeFilter === 'Artefakt' }]" style="--pill-color:#fbbf24" @click="typeFilter = 'Artefakt'">
+              <Icon icon="game-icons:gem-pendant" class="gal-pill-icon" /> Artefakty
+            </button>
+            <button :class="['gal-pill', { active: typeFilter === 'Lokacja' }]" style="--pill-color:#34d399" @click="typeFilter = 'Lokacja'">
+              <Icon icon="game-icons:forest" class="gal-pill-icon" /> Lokacje
+            </button>
           </div>
         </div>
-      </template>
 
-      <div v-if="displayList.length === 0" class="no-results">
-        Brak wynikow dla "{{ searchQuery }}"
+        <!-- Card List -->
+        <div class="gal-list">
+          <template v-if="activeTab === 'creatures'">
+            <div
+              v-for="card in filteredCreatures" :key="card.id"
+              :class="['gal-card', { expanded: expandedId === card.id }]"
+              :style="{ '--dc': getDomainColor(card.idDomain) }"
+              @click="toggleExpand(card.id)"
+            >
+              <div class="gc-row">
+                <span class="gc-domain-mark" :style="{ background: getDomainColor(card.idDomain) }" />
+                <span class="gc-name">{{ card.name }}</span>
+                <span class="gc-stats">
+                  <span class="gc-atk">{{ card.stats.attack }}</span>
+                  <span class="gc-sep">⁄</span>
+                  <span class="gc-def">{{ card.stats.defense }}</span>
+                </span>
+                <span class="gc-type-badge">
+                  <Icon :icon="ATK_TYPE_LABELS[card.combat?.attackType ?? 0]?.icon ?? ''" />
+                  {{ ATK_TYPE_LABELS[card.combat?.attackType ?? 0]?.label }}
+                </span>
+                <Icon v-if="card.combat?.isFlying" icon="game-icons:liberty-wing" class="gc-fly" title="Latający" />
+              </div>
+
+              <Transition name="details-slide">
+                <div v-if="expandedId === card.id" class="gc-details">
+                  <div class="gc-detail">
+                    <span class="gc-dl">Domena</span>
+                    <span :style="{ color: getDomainColor(card.idDomain) }">{{ card.domain }}</span>
+                  </div>
+                  <div v-if="card.abilities?.length" class="gc-detail">
+                    <span class="gc-dl">Zdolności</span>
+                    <div v-for="(ab, i) in card.abilities" :key="i" class="gc-ability">
+                      <span class="gc-trigger">{{ ab.trigger }}</span>
+                      <span v-if="ab.cost" class="gc-cost">{{ ab.cost }} PS</span>
+                      <span class="gc-ab-text">{{ ab.text }}</span>
+                    </div>
+                  </div>
+                  <div v-if="card.effectDescription" class="gc-detail">
+                    <span class="gc-dl">Efekt</span>
+                    <span class="gc-effect">{{ card.effectDescription }}</span>
+                  </div>
+                  <div v-if="card.lore" class="gc-detail gc-lore-section">
+                    <span class="gc-dl">Legenda</span>
+                    <span class="gc-lore">{{ card.lore }}</span>
+                  </div>
+                </div>
+              </Transition>
+            </div>
+          </template>
+
+          <template v-else>
+            <div
+              v-for="card in filteredAdventures" :key="card.id"
+              :class="['gal-card gal-card-adv', { expanded: expandedId === card.id + 1000 }]"
+              @click="toggleExpand(card.id + 1000)"
+            >
+              <div class="gc-row">
+                <span :class="['gc-adv-badge', card.type?.toLowerCase()]">{{ card.type }}</span>
+                <span class="gc-name">{{ card.name }}</span>
+                <span v-if="card.persistence" class="gc-persist">{{ card.persistence }}</span>
+              </div>
+
+              <Transition name="details-slide">
+                <div v-if="expandedId === card.id + 1000" class="gc-details">
+                  <div v-if="card.effect" class="gc-detail">
+                    <span class="gc-dl">Efekt</span>
+                    <span class="gc-effect">{{ card.effect }}</span>
+                  </div>
+                  <div v-if="card.enhancedEffect" class="gc-detail">
+                    <span class="gc-dl gc-dl-enh">Wzmocniony (1 PS)</span>
+                    <span class="gc-effect gc-enh">{{ card.enhancedEffect }}</span>
+                  </div>
+                  <div v-if="card.abilities?.length" class="gc-detail">
+                    <span class="gc-dl">Zdolności</span>
+                    <div v-for="(ab, i) in card.abilities" :key="i" class="gc-ability">
+                      <span :class="['gc-trigger', { 'gc-trigger-enh': ab.enhanced }]">{{ ab.enhanced ? 'WZMOCNIONY' : ab.trigger }}</span>
+                      <span class="gc-ab-text">{{ ab.text }}</span>
+                    </div>
+                  </div>
+                  <div v-if="card.lore" class="gc-detail gc-lore-section">
+                    <span class="gc-dl">Legenda</span>
+                    <span class="gc-lore">{{ card.lore }}</span>
+                  </div>
+                </div>
+              </Transition>
+            </div>
+          </template>
+
+          <div v-if="displayList.length === 0" class="gal-empty">
+            <Icon icon="game-icons:scroll-unfurled" class="gal-empty-icon" />
+            <span>Brak wyników dla „{{ searchQuery }}"</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.gallery-page {
+.gal-page {
+  position: relative;
   min-height: 100vh;
-  background: var(--bg-board);
+  background: #04030a;
   color: #e2e8f0;
-  padding: 16px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  overflow: hidden;
 }
 
-.gallery-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  max-width: 800px;
-  margin-inline: auto;
+/* ===== BACKGROUND ===== */
+.gal-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.gal-fog { position: absolute; border-radius: 50%; animation: gal-fog 12s ease-in-out infinite; }
+.gal-fog-1 { width: 100%; height: 40%; bottom: -10%; left: 0; background: radial-gradient(ellipse, rgba(140, 50, 10, 0.07) 0%, transparent 55%); }
+.gal-fog-2 { width: 60%; height: 60%; top: -15%; right: -5%; background: radial-gradient(ellipse, rgba(60, 20, 80, 0.05) 0%, transparent 50%); animation-delay: -6s; }
+@keyframes gal-fog { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.06); } }
+.gal-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.6) 100%); }
+.gal-ember {
+  position: absolute; bottom: -6px;
+  width: var(--sz, 2px); height: var(--sz, 2px);
+  border-radius: 50%; background: rgba(200, 100, 30, 0.5);
+  animation: gal-rise linear infinite; will-change: transform, opacity;
+}
+@keyframes gal-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  8% { opacity: 0.7; }
+  50% { transform: translateY(-50vh) translateX(6px); opacity: 0.3; }
+  100% { transform: translateY(-105vh) translateX(-4px); opacity: 0; }
+}
+
+/* ===== SCROLL ===== */
+.gal-scroll {
+  position: relative; z-index: 1;
+  width: 100%; min-height: 100vh;
+  overflow-y: auto;
+  display: flex; justify-content: center;
+  scrollbar-width: thin; scrollbar-color: rgba(200,168,78,0.1) transparent;
+}
+
+.gal-content {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 16px; padding: 24px 16px 50px; max-width: 680px; width: 100%;
+}
+
+/* ===== HEADER ===== */
+.gal-header {
   width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
 
-.gallery-header h1 {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 0;
-  letter-spacing: 0.04em;
+.gal-back {
+  align-self: flex-start;
+  display: flex; align-items: center; gap: 4px;
+  color: rgba(200, 168, 78, 0.5); text-decoration: none;
+  font-size: 12px; padding: 5px 12px; border-radius: 6px;
+  border: 1px solid rgba(200, 168, 78, 0.1);
+  background: rgba(4, 3, 10, 0.6); transition: all 0.15s;
+}
+.gal-back:hover { color: rgba(200, 168, 78, 0.9); border-color: rgba(200, 168, 78, 0.25); }
+
+.gal-title-block {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.gal-orn { width: 140px; height: 8px; }
+
+.gal-emblem {
+  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 6px 0 2px; position: relative;
+}
+.gal-emblem::before {
+  content: ''; position: absolute; inset: -3px;
+  border-radius: 50%; border: 1px solid rgba(200, 168, 78, 0.15);
+  animation: gal-spin 20s linear infinite;
+}
+@keyframes gal-spin { to { transform: rotate(360deg); } }
+.gal-emblem-icon { font-size: 24px; color: rgba(200, 168, 78, 0.6); }
+
+.gal-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 26px; font-weight: 500; letter-spacing: 0.12em;
+  color: #ddd6c1; margin: 0;
+  text-shadow: 0 0 25px rgba(200, 100, 30, 0.15), 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
-.card-count {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--text-muted);
+.gal-subtitle {
+  font-size: 11px; color: rgba(200, 168, 78, 0.4);
+  letter-spacing: 0.12em; text-transform: uppercase; margin: 0;
 }
 
-.back-link {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #a78bfa;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  transition: background 0.15s;
-  flex-shrink: 0;
+/* ===== TABS ===== */
+.gal-tabs {
+  display: flex; gap: 6px; width: 100%;
 }
-.back-link:hover { background: rgba(139, 92, 246, 0.2); }
-
-/* TABS */
-.tabs-bar {
-  display: flex;
-  gap: 4px;
-  max-width: 800px;
-  margin-inline: auto;
-  width: 100%;
+.gal-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px; border-radius: 8px;
+  border: 1px solid rgba(200, 168, 78, 0.08);
+  background: rgba(200, 168, 78, 0.02);
+  color: rgba(148, 130, 100, 0.5);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.gal-tab.active {
+  border-color: rgba(200, 168, 78, 0.3);
+  background: rgba(200, 168, 78, 0.06);
+  color: rgba(200, 168, 78, 0.9);
+}
+.gal-tab:hover:not(.active) { background: rgba(200, 168, 78, 0.04); color: rgba(200, 168, 78, 0.6); }
+.gal-tab-count {
+  font-size: 10px; opacity: 0.5;
+  background: rgba(200, 168, 78, 0.08); padding: 1px 6px; border-radius: 8px;
 }
 
-.tab {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #1e293b;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.02);
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+/* ===== FILTERS ===== */
+.gal-filters {
+  display: flex; flex-direction: column; gap: 8px; width: 100%;
 }
-.tab.active {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: #4f46e5;
-  color: #a5b4fc;
+.gal-search-wrap {
+  position: relative; width: 100%;
 }
-.tab:hover:not(.active) { background: rgba(255,255,255,0.04); }
+.gal-search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; color: rgba(200, 168, 78, 0.25); pointer-events: none;
+}
+.gal-search {
+  width: 100%; padding: 9px 12px 9px 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(200, 168, 78, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  color: #e2e8f0; font-size: 13px; outline: none;
+  transition: border-color 0.2s; font-family: inherit; box-sizing: border-box;
+}
+.gal-search::placeholder { color: rgba(148, 130, 100, 0.3); }
+.gal-search:focus { border-color: rgba(200, 168, 78, 0.3); }
 
-/* FILTERS */
-.filters-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 800px;
-  margin-inline: auto;
-  width: 100%;
-}
+.gal-pills { display: flex; gap: 4px; flex-wrap: wrap; }
 
-.search-input {
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #334155;
-  background: rgba(255,255,255,0.04);
-  color: #e2e8f0;
-  font-size: 13px;
-  outline: none;
+.gal-pill {
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid rgba(200, 168, 78, 0.08);
+  background: rgba(200, 168, 78, 0.02);
+  color: rgba(148, 130, 100, 0.5);
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+  transition: all 0.15s; font-family: inherit;
 }
-.search-input:focus { border-color: #6366f1; }
-.search-input::placeholder { color: #475569; }
+.gal-pill.active {
+  border-color: color-mix(in srgb, var(--pill-color, rgba(200,168,78,1)) 50%, transparent);
+  color: var(--pill-color, rgba(200, 168, 78, 0.9));
+  background: color-mix(in srgb, var(--pill-color, rgba(200,168,78,1)) 8%, transparent);
+}
+.gal-pill:hover:not(.active) { background: rgba(200, 168, 78, 0.04); color: rgba(200, 168, 78, 0.6); }
+.gal-pill-rune { font-size: 13px; opacity: 0.5; }
+.gal-pill-icon { font-size: 12px; }
 
-.filter-pills {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+/* ===== CARD LIST ===== */
+.gal-list {
+  width: 100%; display: flex; flex-direction: column; gap: 3px;
 }
 
-.pill {
-  padding: 4px 10px;
-  border-radius: 12px;
-  border: 1px solid #334155;
-  background: rgba(255,255,255,0.03);
-  color: #94a3b8;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-}
-.pill.active { border-color: #6366f1; color: #a5b4fc; background: rgba(99, 102, 241, 0.1); }
-.pill:hover:not(.active) { background: rgba(255,255,255,0.06); }
-
-/* CARD LIST */
-.card-list {
-  max-width: 800px;
-  margin-inline: auto;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.card-entry {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.02);
+.gal-card {
+  padding: 10px 14px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
   border: 1px solid transparent;
-  cursor: pointer;
-  transition: background-color 0.12s, border-color 0.12s;
+  cursor: pointer; transition: all 0.15s;
+  border-left: 2px solid transparent;
 }
-.card-entry:hover { background: rgba(255,255,255,0.05); border-color: #1e293b; }
-.card-entry.expanded { background: rgba(255,255,255,0.04); border-color: var(--dc, #334155); }
-
-.card-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.gal-card:hover {
+  background: rgba(200, 168, 78, 0.03);
+  border-color: rgba(200, 168, 78, 0.06);
+  border-left-color: var(--dc, rgba(200, 168, 78, 0.15));
+}
+.gal-card.expanded {
+  background: rgba(200, 168, 78, 0.03);
+  border-color: rgba(200, 168, 78, 0.08);
+  border-left-color: var(--dc, rgba(200, 168, 78, 0.3));
 }
 
-.card-id { font-size: 10px; color: #475569; min-width: 28px; font-family: monospace; }
+.gc-row {
+  display: flex; align-items: center; gap: 8px;
+}
 
-.card-domain-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.gc-domain-mark {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 4px currentColor;
+}
 
-.card-name { font-size: 13px; font-weight: 600; flex: 1; }
+.gc-name {
+  font-size: 13px; font-weight: 600; flex: 1;
+  color: rgba(226, 232, 240, 0.85);
+}
 
-.card-stats { font-size: 13px; font-weight: 700; font-family: monospace; }
-.stat.atk { color: #f87171; }
-.stat.def { color: #60a5fa; }
+.gc-stats {
+  font-size: 13px; font-weight: 700;
+  font-family: var(--font-display, Georgia, serif);
+  display: flex; align-items: center; gap: 2px;
+}
+.gc-atk { color: #f87171; }
+.gc-sep { color: rgba(148, 130, 100, 0.25); font-size: 11px; }
+.gc-def { color: #60a5fa; }
 
-.atk-type-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
+.gc-type-badge {
+  font-size: 10px; font-weight: 600;
+  color: rgba(200, 168, 78, 0.5);
+  display: flex; align-items: center; gap: 3px;
+}
+
+.gc-fly { font-size: 13px; color: rgba(148, 163, 184, 0.4); }
+
+/* Adventure badges */
+.gc-adv-badge {
+  font-size: 9px; font-weight: 700; padding: 2px 7px;
+  border-radius: 4px; letter-spacing: 0.04em; flex-shrink: 0;
+}
+.gc-adv-badge.zdarzenie { color: #60a5fa; background: rgba(59, 130, 246, 0.12); }
+.gc-adv-badge.artefakt { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+.gc-adv-badge.lokacja { color: #34d399; background: rgba(52, 211, 153, 0.12); }
+
+.gc-persist {
+  font-size: 9px; color: rgba(148, 130, 100, 0.4);
+  background: rgba(200, 168, 78, 0.04); padding: 2px 6px; border-radius: 3px;
+}
+
+/* ===== DETAILS ===== */
+.gc-details {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid rgba(200, 168, 78, 0.06);
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.gc-detail { display: flex; flex-direction: column; gap: 2px; }
+.gc-dl {
+  font-size: 9px; color: rgba(200, 168, 78, 0.4);
+  text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
+}
+.gc-dl-enh { color: rgba(251, 191, 36, 0.5); }
+
+.gc-ability {
+  font-size: 12px; color: rgba(200, 190, 170, 0.75);
+  line-height: 1.5; display: flex; align-items: flex-start; gap: 5px;
+}
+
+.gc-trigger {
+  font-size: 8px; font-weight: 700; padding: 1px 5px;
   border-radius: 3px;
-  letter-spacing: 0.03em;
+  background: rgba(200, 168, 78, 0.08); color: rgba(200, 168, 78, 0.6);
+  flex-shrink: 0; margin-top: 3px; letter-spacing: 0.04em;
 }
+.gc-trigger-enh { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
 
-.flying-icon { font-size: 14px; color: #94a3b8; }
-
-/* Adventure type badges */
-.adv-type-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
+.gc-cost {
+  font-size: 8px; font-weight: 700; padding: 1px 5px;
   border-radius: 3px;
-  letter-spacing: 0.03em;
-}
-.adv-type-badge.zdarzenie { color: #60a5fa; background: rgba(59, 130, 246, 0.15); }
-.adv-type-badge.artefakt { color: #fbbf24; background: rgba(251, 191, 36, 0.15); }
-.adv-type-badge.lokacja { color: #34d399; background: rgba(52, 211, 153, 0.15); }
-
-.persistence-badge {
-  font-size: 9px;
-  color: #94a3b8;
-  background: rgba(255,255,255,0.05);
-  padding: 2px 6px;
-  border-radius: 3px;
+  background: rgba(251, 191, 36, 0.1); color: rgba(251, 191, 36, 0.7);
+  flex-shrink: 0; margin-top: 3px;
 }
 
-/* DETAILS */
-.card-details {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.gc-ab-text { flex: 1; }
+.gc-effect { font-size: 12px; color: rgba(200, 190, 170, 0.7); line-height: 1.5; }
+.gc-enh { color: rgba(251, 191, 36, 0.7); }
+
+.gc-lore-section { opacity: 0.7; }
+.gc-lore {
+  font-size: 11px; color: rgba(148, 130, 100, 0.4);
+  line-height: 1.5; font-style: italic;
+  font-family: Georgia, serif;
 }
 
-.detail-section { }
-.detail-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 3px; }
+/* Detail transition */
+.details-slide-enter-active { transition: all 0.2s ease-out; }
+.details-slide-leave-active { transition: all 0.15s ease-in; }
+.details-slide-enter-from { opacity: 0; max-height: 0; margin-top: 0; padding-top: 0; }
+.details-slide-leave-to { opacity: 0; }
 
-.ability-line {
-  font-size: 12px;
-  color: #cbd5e1;
-  line-height: 1.5;
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin-bottom: 2px;
+/* Empty state */
+.gal-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 50px 20px;
+  color: rgba(148, 130, 100, 0.3);
+  font-size: 13px; font-style: italic;
 }
+.gal-empty-icon { font-size: 28px; opacity: 0.3; }
 
-.trigger-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.trigger-badge.enhanced {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-}
-
-.cost-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.effect-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; }
-.effect-text.enhanced { color: #fbbf24; }
-
-.lore-text { font-size: 11px; color: #64748b; line-height: 1.5; font-style: italic; }
-
-.effect-id {
-  font-size: 11px;
-  color: #94a3b8;
-  background: rgba(255,255,255,0.04);
-  padding: 2px 6px;
-  border-radius: 3px;
-  display: inline-block;
-  margin-right: 4px;
-}
-.effect-id.enh { color: #fbbf24; }
-
-.no-results {
-  text-align: center;
-  padding: 40px;
-  color: #475569;
-  font-size: 14px;
+/* ===== MOBILE ===== */
+@media (max-width: 600px) {
+  .gal-content { padding: 16px 10px 40px; }
+  .gal-title { font-size: 20px; }
+  .gc-name { font-size: 12px; }
+  .gc-stats { font-size: 12px; }
+  .gc-type-badge { display: none; }
+  .gal-tab { font-size: 12px; padding: 8px; }
+  .gal-pill { font-size: 10px; padding: 4px 8px; }
 }
 </style>
