@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useMultiplayer } from '../../composables/useMultiplayer'
 import { useRoute } from 'vue-router'
@@ -55,13 +55,28 @@ if (isMultiplayer) {
   })
 }
 
-onMounted(() => {
+const gameReady = ref(false)
+const loadingDone = ref(false)
+
+onMounted(async () => {
   if (!game.gameStarted && !isMultiplayer) {
     navigateTo('/')
+    return
   }
+
+  // Wait for WebGPU/TSL modules (already prefetched from index page)
+  // plus a minimum time so the loading screen isn't a flash
+  const minDelay = new Promise(r => setTimeout(r, 2200))
+  const modules = Promise.all([
+    import('three/webgpu').catch(() => {}),
+    import('three/tsl').catch(() => {}),
+  ])
+  await Promise.all([minDelay, modules])
+  gameReady.value = true
 })
 </script>
 
 <template>
   <GameBoard />
+  <GameLoadingScreen :ready="gameReady" @complete="loadingDone = true" />
 </template>
