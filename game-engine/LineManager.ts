@@ -298,6 +298,11 @@ export function canAttack(
     return { valid: false, reason: `${target.cardData.name}: Niewidzialny w obronie! (Ruslan Helmet+)`, softFail: true }
   }
 
+  // Kwiat Paproci+: immuneToAttackType — odporny na ataki tego samego typu
+  if (typeof target.metadata.immuneToAttackType === 'number' && attackType === (target.metadata.immuneToAttackType as number)) {
+    return { valid: false, reason: `${target.cardData.name}: Odporny na ten typ ataku! (Kwiat Paproci+)`, softFail: true }
+  }
+
   // Sledovik / Srebrna Gałąź+: nośnik odporny na ataki z wybranej domeny
   if (typeof target.metadata.immuneToDomain === 'number') {
     const attackerDomain = (attacker.cardData as any).idDomain as number

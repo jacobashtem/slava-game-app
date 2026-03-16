@@ -135,6 +135,14 @@ export function resolveAttack(
     [attackerInstanceId, defenderInstanceId]
   ))
 
+  // Młot Swaroga x3: kara — istota otrzymuje potrójne obrażenia
+  if (currentDefender.metadata.tripleIncomingDamage && damageToDefender > 0) {
+    const extra = damageToDefender * 2
+    currentDefender.currentStats.defense -= extra
+    damageToDefender *= 3
+    log.push(addLog(newState, `Młot Swaroga: ${currentDefender.cardData.name} otrzymuje potrójne obrażenia! (${damageToDefender})`, 'effect'))
+  }
+
   // Topór Peruna Amulet: odbij obrażenia na napastnika
   if (currentDefender.metadata.toporPerunaReflect && damageToDefender > 0) {
     delete currentDefender.metadata.toporPerunaReflect
