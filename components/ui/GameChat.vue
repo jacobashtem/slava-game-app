@@ -219,7 +219,7 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-const show = computed(() => game.gameStarted)
+const show = computed(() => game.gameStarted && !game.isTutorialMode)
 </script>
 
 <template>

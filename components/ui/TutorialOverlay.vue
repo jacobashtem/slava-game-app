@@ -22,8 +22,7 @@ const progressPct = computed(() =>
 <template>
   <Transition name="tut-fade">
     <div v-if="tutorial.showModal.value && tutorial.step.value" class="tut-overlay" @click.self="isAction ? tutorial.dismissModal() : undefined">
-      <!-- Dimmed backdrop (lighter than game over — player needs to see board) -->
-      <div class="tut-dim" />
+      <!-- Dim handled by .tutorial-highlight box-shadow spotlight -->
 
       <!-- Modal popup -->
       <div :class="['tut-modal', `tut-pos-${tutorial.step.value.position ?? 'center'}`]">
@@ -76,13 +75,6 @@ const progressPct = computed(() =>
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-}
-
-.tut-dim {
-  position: absolute;
-  inset: 0;
-  background: rgba(4, 3, 10, 0.75);
-  pointer-events: none;
 }
 
 /* ===== MODAL ===== */
