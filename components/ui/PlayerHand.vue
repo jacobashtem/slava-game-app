@@ -377,6 +377,7 @@ const adventureTypeColor = (card: CardInstance) => {
   border-radius: 28px 28px 0 0;
   min-height: 174px;
   perspective: 600px;
+}
 
 .hand-card-wrap {
   cursor: pointer;

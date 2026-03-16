@@ -11,10 +11,12 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useNarrator } from '../../composables/useNarrator'
 import { useMultiplayer } from '../../composables/useMultiplayer'
+import { useTutorial } from '../../composables/useTutorial'
 
 const game = useGameStore()
 const narrator = useNarrator()
 const mp = useMultiplayer()
+const tutorial = useTutorial()
 
 const isMP = computed(() => game.isMultiplayerMode)
 
@@ -175,8 +177,21 @@ watch(() => game.gameStarted, (started) => {
 let lastNarratorIdx = 0
 watch(() => narrator.messages.value.length, (newLen) => {
   if (newLen <= lastNarratorIdx) { lastNarratorIdx = newLen; return }
+  // In tutorial mode, suppress narrator — tutorial steps handle messages
+  if (game.isTutorialMode) { lastNarratorIdx = newLen; return }
   const newMsgs = narrator.messages.value.slice(lastNarratorIdx)
   lastNarratorIdx = newLen
+  for (const text of newMsgs) {
+    pushMsg('ai', text)
+  }
+})
+
+// ===== TUTORIAL MESSAGES =====
+let lastTutorialIdx = 0
+watch(() => tutorial.messages.value.length, (newLen) => {
+  if (newLen <= lastTutorialIdx) { lastTutorialIdx = newLen; return }
+  const newMsgs = tutorial.messages.value.slice(lastTutorialIdx)
+  lastTutorialIdx = newLen
   for (const text of newMsgs) {
     pushMsg('ai', text)
   }

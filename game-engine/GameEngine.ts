@@ -109,6 +109,55 @@ export class GameEngine {
     return cloneGameState(this.state)
   }
 
+  /**
+   * Tutorial mode — deterministic decks, player always first, easy AI.
+   * Cards are hand-picked for teaching: melee, ranged, magic, elemental + 2 adventures.
+   */
+  startTutorialGame(): GameState {
+    this.arenaMode = false
+    this.state = createInitialGameState('gold')
+    this.state.seasonOffset = 0 // Wiosna
+    this.state.currentTurn = 'player1' // Gracz zawsze pierwszy
+
+    // Deterministic tutorial decks — simple, diverse cards
+    // Player: melee tank, ranged, healer, elemental, magic + adventures
+    const playerCreatureIds = [8, 55, 13, 6, 51, 17, 54, 47, 19, 28] // Błotnik, Tur, Dziki Myśliwy, Brzegina, Wołch, Matoha, Polewik, Starszyzna, Rodzanice, Świetle
+    const playerAdventureIds = [6, 10, 3] // Okaleczenie, Rusałczy Taniec, Oblęd
+    const aiCreatureIds = [82, 85, 69, 92, 75, 70, 79, 65, 68, 80] // Strzyga, Utopiec, Homen, Bazyliszek, Topielec, Kostobój, Południca, Boginki, Ghul, Poroniec
+    const aiAdventureIds = [6, 3, 7] // Okaleczenie, Oblęd, Arkona
+
+    const buildDeck = (creatureIds: number[], adventureIds: number[], owner: 'player1' | 'player2') => {
+      const deck: CardInstance[] = []
+      for (const id of creatureIds) {
+        const card = this.factory.createCreatureInstance(id, owner)
+        if (card) deck.push(card)
+      }
+      for (const id of adventureIds) {
+        const card = this.factory.createAdventureInstance(id, owner)
+        if (card) deck.push(card)
+      }
+      return deck
+    }
+
+    this.state.players.player1.deck = buildDeck(playerCreatureIds, playerAdventureIds, 'player1')
+    this.state.players.player2.deck = buildDeck(aiCreatureIds, aiAdventureIds, 'player2')
+
+    drawCards(this.state.players.player1, 5)
+    drawCards(this.state.players.player2, 5)
+
+    this.state.players.player1.glory = 3 // Mniej PS — tutorial uczy oszczędzania
+    this.state.players.player2.glory = 3
+
+    const startLog = addLog(this.state, 'Samouczek rozpoczęty! Żerca poprowadzi Cię przez zasady.', 'system')
+    this.state.actionLog.push(startLog)
+    this.onLogEntry?.(startLog)
+
+    this.state = this.runStartPhase(this.state)
+
+    this.notifyStateChange()
+    return cloneGameState(this.state)
+  }
+
   startGame(gameMode: 'gold' | 'slava' = 'gold', playerDomainFilter?: number[]): GameState {
     this.arenaMode = false
     this.state = createInitialGameState(gameMode)

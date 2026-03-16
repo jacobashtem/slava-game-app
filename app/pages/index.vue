@@ -132,6 +132,15 @@ const showSettings = ref(false)
           </button>
         </div>
 
+        <!-- TUTORIAL -->
+        <NuxtLink to="/tutorial" class="mode-card mode-tutorial">
+          <Icon icon="game-icons:book-cover" class="mode-icon" />
+          <div class="mode-text">
+            <span class="mode-name">Samouczek</span>
+            <span class="mode-desc">Żerca nauczy Cię zasad w trakcie gry</span>
+          </div>
+        </NuxtLink>
+
         <!-- SETTINGS (collapsible) -->
         <button class="settings-toggle" @click="showSettings = !showSettings">
           <Icon icon="game-icons:battle-gear" class="st-icon" />
@@ -476,6 +485,30 @@ const showSettings = ref(false)
   font-size: 28px;
   color: #c45030;
   z-index: 1;
+  flex-shrink: 0;
+}
+
+.mode-tutorial {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(30, 60, 120, 0.08) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  color: #e2e8f0;
+  width: 100%;
+}
+.mode-tutorial:hover {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 60, 120, 0.12) 100%);
+}
+.mode-tutorial .mode-icon {
+  font-size: 24px;
+  color: #60a5fa;
   flex-shrink: 0;
 }
 

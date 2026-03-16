@@ -77,6 +77,20 @@ html, body {
 ::-webkit-scrollbar-track { background: var(--bg-deep); }
 ::-webkit-scrollbar-thumb { background: var(--border-highlight); border-radius: 2px; }
 
+/* Tutorial highlight — pulsing golden outline on elements the narrator references */
+.tutorial-highlight {
+  outline: 2px solid rgba(200, 168, 78, 0.6) !important;
+  outline-offset: 3px;
+  animation: tutorial-pulse 1.5s ease-in-out infinite !important;
+  position: relative;
+  z-index: 50;
+}
+
+@keyframes tutorial-pulse {
+  0%, 100% { outline-color: rgba(200, 168, 78, 0.3); box-shadow: 0 0 8px rgba(200, 168, 78, 0.1); }
+  50% { outline-color: rgba(200, 168, 78, 0.8); box-shadow: 0 0 20px rgba(200, 168, 78, 0.2); }
+}
+
 /* Dead card — hidden with !important so Vue re-renders can't flash it back.
    Applied by DeathVFX, removed when Vue unmounts the element. */
 .vfx-dead {

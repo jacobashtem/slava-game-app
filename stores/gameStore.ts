@@ -309,6 +309,7 @@ export const useGameStore = defineStore('game', () => {
   const aiTurnSummary = ref<string[]>([])
   const playerTurnSummary = ref<string[]>([])
   const isArenaMode = ref(false)
+  const isTutorialMode = ref(false)
   const arenaFocusedName = ref('')
   const playerTurnLogStart = ref(0)
   const aiTurnLogStart = ref(0)
@@ -444,8 +445,21 @@ export const useGameStore = defineStore('game', () => {
     gameStarted.value = true
   }
 
+  function startTutorial() {
+    isArenaMode.value = false
+    isTutorialMode.value = true
+    arenaFocusedName.value = ''
+    useUIStore().resetAll()
+    aiPlayer = new AIPlayer('player2', 'easy')
+    state.value = engine.startTutorialGame()
+    gameStarted.value = true
+    playerTurnLogStart.value = state.value.actionLog.length
+    useUIStore().startTurnTimer()
+  }
+
   function startAlphaGame() {
     isArenaMode.value = false
+    isTutorialMode.value = false
     arenaFocusedName.value = ''
     useUIStore().resetAll()
     aiPlayer = new AIPlayer('player2', selectedDifficulty.value)
@@ -1587,6 +1601,7 @@ export const useGameStore = defineStore('game', () => {
     aiTurnSummary,
     playerTurnSummary,
     isArenaMode,
+    isTutorialMode,
     arenaFocusedName,
     selectedDifficulty,
     selectedDomains,
@@ -1607,6 +1622,7 @@ export const useGameStore = defineStore('game', () => {
     aiCurrentLogs,
     // actions
     startGame,
+    startTutorial,
     startAlphaGame,
     startSlavaGame,
     setupArenaMode,
