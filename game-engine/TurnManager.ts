@@ -74,6 +74,8 @@ export function processStartPhase(state: GameState): { newState: GameState; log:
         if ((card.metadata.swacbaRounds as number) <= 0) {
           delete card.metadata.swacbaRounds
           card.cannotAttack = false
+          // Reset Swaćba+ block
+          delete (newState.players[side] as any).swacbaBlock
           log.push(addLog(newState, `${card.cardData.name}: Swaćba mija — może znów atakować!`, 'effect'))
         }
       }
@@ -243,6 +245,36 @@ export function playCreature(
 
   if (!canPlaceInLine(newState, newState.currentTurn, targetLine)) {
     throw new Error(`[TurnManager] Linia ${targetLine} jest pełna.`)
+  }
+
+  // Łaska Morany: następne 3 wystawione istoty wroga giną natychmiast
+  const moranaSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+  const moranaCount = (newState.players[moranaSide] as any).moranaKillCount as number | undefined
+  if (moranaCount && moranaCount > 0) {
+    // Wystawiana karta ginie natychmiast
+    ;(newState.players[moranaSide] as any).moranaKillCount = moranaCount - 1
+    // Wystawmy kartę, potem od razu na cmentarz
+    const cardCopy = { ...card }
+    currentPlayer.hand.splice(handIdx, 1)
+    currentPlayer.graveyard.push(cardCopy as CardInstance)
+    log.push(addLog(newState, `Łaska Morany: ${card.cardData.name} ginie zaraz po wystawieniu! (${moranaCount - 1} pozostało)`, 'death'))
+
+    // Morana+: pierwsza zabita trafia do talii tego kto zagrał Moranę
+    if ((newState.players[moranaSide] as any).moranaStealOne && moranaCount === 3) {
+      currentPlayer.graveyard.pop() // cofnij z cmentarza
+      const stolenCard = cardCopy as CardInstance
+      stolenCard.owner = moranaSide
+      newState.players[moranaSide].deck.push(stolenCard)
+      log.push(addLog(newState, `Łaska Morany+: ${card.cardData.name} trafia do talii wroga!`, 'effect'))
+    }
+
+    return { newState, log }
+  }
+
+  // Swaćba+: wróg nie może wystawiać nowych istot
+  const opponentSideForSwacba: PlayerSide = newState.currentTurn === 'player1' ? 'player2' : 'player1'
+  if ((newState.players[newState.currentTurn] as any).swacbaBlock) {
+    throw new Error(`[TurnManager] Swaćba+ blokuje wystawianie istot!`)
   }
 
   // Łapiduch: gdy wróg ma Łapiducha na polu, nie można wystawiać demonów (Weles, idDomain=4)
