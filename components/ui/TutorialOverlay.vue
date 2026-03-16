@@ -17,6 +17,21 @@ const isAction = computed(() => {
 const progressPct = computed(() =>
   Math.round(((tutorial.stepIndex.value + 1) / tutorial.totalSteps) * 100)
 )
+
+/** Parse {i:icon-name} tokens in text into segments for v-for rendering */
+function parseSegments(text: string): Array<{ type: 'text' | 'icon'; value: string }> {
+  const parts: Array<{ type: 'text' | 'icon'; value: string }> = []
+  const re = /\{i:([^}]+)\}/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push({ type: 'text', value: text.slice(last, m.index) })
+    parts.push({ type: 'icon', value: m[1]! })
+    last = re.lastIndex
+  }
+  if (last < text.length) parts.push({ type: 'text', value: text.slice(last) })
+  return parts
+}
 </script>
 
 <template>
@@ -44,9 +59,14 @@ const progressPct = computed(() =>
             </div>
           </div>
 
-          <!-- Body text -->
+          <!-- Body text with inline icons via {i:icon-name} tokens -->
           <div class="tut-body">
-            <p v-for="(line, i) in tutorial.step.value.body" :key="i">{{ line }}</p>
+            <p v-for="(line, i) in tutorial.step.value.body" :key="i">
+              <template v-for="(seg, j) in parseSegments(line)" :key="j">
+                <Icon v-if="seg.type === 'icon'" :icon="seg.value" class="tut-inline-icon" />
+                <span v-else>{{ seg.value }}</span>
+              </template>
+            </p>
           </div>
 
           <!-- Action area -->
@@ -190,6 +210,16 @@ const progressPct = computed(() =>
 
 .tut-body p:first-child {
   color: rgba(200, 190, 170, 0.9);
+}
+
+.tut-inline-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+  margin: 0 2px;
+  color: rgba(200, 168, 78, 0.85);
+  filter: drop-shadow(0 0 3px rgba(200, 100, 30, 0.3));
 }
 
 /* Actions */
