@@ -9,7 +9,7 @@
  *   slashRef.value?.play(attackerEl, defenderEl)
  */
 import { ref, onMounted, onUnmounted } from 'vue'
-import * as THREE from 'three'
+import { WebGLRenderer, Scene, OrthographicCamera, ShaderMaterial, PlaneGeometry, Mesh, Vector3, DoubleSide, AdditiveBlending } from 'three'
 import gsap from 'gsap'
 import { Spark, tickSparks, acquireSpark } from '../../composables/useParticleSystem'
 import { rafLoop } from '../../composables/useRAFLoop'
@@ -21,9 +21,9 @@ const sparkCanvasRef = ref<HTMLCanvasElement | null>(null)
 const flashRef = ref<HTMLDivElement | null>(null)
 const dmgRef = ref<HTMLDivElement | null>(null)
 
-let renderer: THREE.WebGLRenderer | null = null
-let scene: THREE.Scene | null = null
-let camera: THREE.OrthographicCamera | null = null
+let renderer: WebGLRenderer | null = null
+let scene: Scene | null = null
+let camera: OrthographicCamera | null = null
 let rafHandle = -1
 let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
@@ -157,32 +157,32 @@ function spawnSlashSparks(x1: number, y1: number, x2: number, y2: number, count:
 // ===== THREE.JS SETUP =====
 
 interface SlashObj {
-  mesh: THREE.Mesh
-  mat: THREE.ShaderMaterial
+  mesh: Mesh
+  mat: ShaderMaterial
 }
 const slashPool: SlashObj[] = []
 
 function createSlashMaterial(color: { r: number; g: number; b: number }, intensity: number): SlashObj {
-  const material = new THREE.ShaderMaterial({
+  const material = new ShaderMaterial({
     vertexShader: slashVert,
     fragmentShader: slashFrag,
     transparent: true,
     depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
+    side: DoubleSide,
+    blending: AdditiveBlending,
     uniforms: {
       uProgress: { value: 0.0 },
       uLife: { value: 1.0 },
       uWidth: { value: 0.08 },
       uDistort: { value: 1.0 },
       uTime: { value: 0.0 },
-      uSlashColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
+      uSlashColor: { value: new Vector3(color.r, color.g, color.b) },
       uIntensity: { value: intensity },
     },
   })
 
-  const geo = new THREE.PlaneGeometry(1, 1, 64, 16)
-  const mesh = new THREE.Mesh(geo, material)
+  const geo = new PlaneGeometry(1, 1, 64, 16)
+  const mesh = new Mesh(geo, material)
   mesh.visible = false
 
   return { mesh, mat: material }
@@ -479,12 +479,12 @@ onMounted(() => {
   if (!canvas) { console.warn('[SlashVFX] No canvas on mount'); return }
 
   console.info('[SlashVFX] Initializing Three.js renderer')
-  renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
+  renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true })
   renderer.setClearColor(0x000000, 0)
   renderer.setPixelRatio(window.devicePixelRatio)
 
-  scene = new THREE.Scene()
-  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100)
+  scene = new Scene()
+  camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100)
   camera.position.z = 10
 
   // Pre-create slash pool (meshes hidden, render loop starts on-demand in play())

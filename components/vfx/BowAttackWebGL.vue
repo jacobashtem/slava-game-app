@@ -9,7 +9,7 @@
  *   bowRef.value?.play(attackerEl, defenderEl, damage?)
  */
 import { ref, onMounted, onUnmounted } from 'vue'
-import * as THREE from 'three'
+import { WebGLRenderer, Scene, OrthographicCamera, ShaderMaterial, PlaneGeometry, Mesh, Clock, DoubleSide, AdditiveBlending, type IUniform } from 'three'
 import gsap from 'gsap'
 import { Spark, tickSparks, acquireSpark } from '../../composables/useParticleSystem'
 import { rafLoop } from '../../composables/useRAFLoop'
@@ -22,9 +22,9 @@ const dmgRef = ref<HTMLDivElement | null>(null)
 
 const ready = ref(false)
 
-let renderer: THREE.WebGLRenderer | null = null
-let scene: THREE.Scene | null = null
-let camera: THREE.OrthographicCamera | null = null
+let renderer: WebGLRenderer | null = null
+let scene: Scene | null = null
+let camera: OrthographicCamera | null = null
 let rafHandle = -1
 let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
@@ -267,72 +267,72 @@ function spawnEmbers(x: number, y: number, count: number, spread = 30, col = '10
 // ===== THREE.JS OBJECTS =====
 
 // Typed uniform accessors — avoids TS "possibly undefined" on uniforms dict access
-type Uniforms = Record<string, THREE.IUniform>
-interface BowObj { mesh: THREE.Mesh; u: { uDraw: THREE.IUniform; uIntensity: THREE.IUniform; uCharge: THREE.IUniform; uTime: THREE.IUniform } }
-interface ArrowObj { mesh: THREE.Mesh; u: { uIntensity: THREE.IUniform; uTime: THREE.IUniform } }
-interface ImpactObj { mesh: THREE.Mesh; u: { uIntensity: THREE.IUniform; uExpand: THREE.IUniform; uTime: THREE.IUniform } }
+type Uniforms = Record<string, IUniform>
+interface BowObj { mesh: Mesh; u: { uDraw: IUniform; uIntensity: IUniform; uCharge: IUniform; uTime: IUniform } }
+interface ArrowObj { mesh: Mesh; u: { uIntensity: IUniform; uTime: IUniform } }
+interface ImpactObj { mesh: Mesh; u: { uIntensity: IUniform; uExpand: IUniform; uTime: IUniform } }
 
 let bowObj: BowObj | null = null
 let arrowObj: ArrowObj | null = null
 let impactObj: ImpactObj | null = null
-let clock: THREE.Clock | null = null
+let clock: Clock | null = null
 
 function createBowMesh(): BowObj {
   const u = {
-    uDraw: { value: 0.0 } as THREE.IUniform,
-    uIntensity: { value: 0.0 } as THREE.IUniform,
-    uCharge: { value: 0.0 } as THREE.IUniform,
-    uTime: { value: 0.0 } as THREE.IUniform,
+    uDraw: { value: 0.0 } as IUniform,
+    uIntensity: { value: 0.0 } as IUniform,
+    uCharge: { value: 0.0 } as IUniform,
+    uTime: { value: 0.0 } as IUniform,
   }
-  const material = new THREE.ShaderMaterial({
+  const material = new ShaderMaterial({
     vertexShader: commonVert,
     fragmentShader: bowFrag,
     uniforms: u,
     transparent: true,
     depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
+    side: DoubleSide,
+    blending: AdditiveBlending,
   })
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 48, 48), material)
+  const mesh = new Mesh(new PlaneGeometry(1, 1, 48, 48), material)
   mesh.visible = false
   return { mesh, u }
 }
 
 function createArrowMesh(): ArrowObj {
   const u = {
-    uIntensity: { value: 0.0 } as THREE.IUniform,
-    uTime: { value: 0.0 } as THREE.IUniform,
+    uIntensity: { value: 0.0 } as IUniform,
+    uTime: { value: 0.0 } as IUniform,
   }
-  const material = new THREE.ShaderMaterial({
+  const material = new ShaderMaterial({
     vertexShader: commonVert,
     fragmentShader: arrowFrag,
     uniforms: u,
     transparent: true,
     depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
+    side: DoubleSide,
+    blending: AdditiveBlending,
   })
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 32, 8), material)
+  const mesh = new Mesh(new PlaneGeometry(1, 1, 32, 8), material)
   mesh.visible = false
   return { mesh, u }
 }
 
 function createImpactMesh(): ImpactObj {
   const u = {
-    uIntensity: { value: 0.0 } as THREE.IUniform,
-    uExpand: { value: 0.0 } as THREE.IUniform,
-    uTime: { value: 0.0 } as THREE.IUniform,
+    uIntensity: { value: 0.0 } as IUniform,
+    uExpand: { value: 0.0 } as IUniform,
+    uTime: { value: 0.0 } as IUniform,
   }
-  const material = new THREE.ShaderMaterial({
+  const material = new ShaderMaterial({
     vertexShader: commonVert,
     fragmentShader: impactFrag,
     uniforms: u,
     transparent: true,
     depthWrite: false,
-    side: THREE.DoubleSide,
-    blending: THREE.AdditiveBlending,
+    side: DoubleSide,
+    blending: AdditiveBlending,
   })
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 32, 32), material)
+  const mesh = new Mesh(new PlaneGeometry(1, 1, 32, 32), material)
   mesh.visible = false
   return { mesh, u }
 }
@@ -618,14 +618,14 @@ function initWebGL() {
   if (!canvas) return
 
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
+    renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true })
     renderer.setClearColor(0x000000, 0)
     renderer.setPixelRatio(window.devicePixelRatio)
 
-    scene = new THREE.Scene()
-    camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100)
+    scene = new Scene()
+    camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 100)
     camera.position.z = 10
-    clock = new THREE.Clock()
+    clock = new Clock()
 
     bowObj = createBowMesh()
     scene.add(bowObj.mesh)
@@ -658,11 +658,11 @@ onUnmounted(() => {
   if (currentTl) { currentTl.kill(); currentTl = null }
   stopLoop()
   bowObj?.mesh.geometry?.dispose()
-  ;(bowObj?.mesh.material as THREE.ShaderMaterial)?.dispose()
+  ;(bowObj?.mesh.material as ShaderMaterial)?.dispose()
   arrowObj?.mesh.geometry?.dispose()
-  ;(arrowObj?.mesh.material as THREE.ShaderMaterial)?.dispose()
+  ;(arrowObj?.mesh.material as ShaderMaterial)?.dispose()
   impactObj?.mesh.geometry?.dispose()
-  ;(impactObj?.mesh.material as THREE.ShaderMaterial)?.dispose()
+  ;(impactObj?.mesh.material as ShaderMaterial)?.dispose()
   renderer?.dispose()
   renderer = null
   scene = null
