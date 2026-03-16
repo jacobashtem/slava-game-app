@@ -3838,8 +3838,9 @@ registerEffect({
 
       card.metadata.wijRevived = true
       card.metadata.wijHasRevived = true
+      card.metadata.wijResurrectVFX = true // signal for gameStore → VFX
       card.currentStats.defense = (card.cardData as any).stats.defense
-      const log = addLog(newState, `${source.cardData.name}: Wstaje z martwych na jedną ostatnią turę! (zdolność: jednorazowe zmartwychwstanie)`, 'effect')
+      const log = addLog(newState, `${source.cardData.name}: Wstaje z martwych na jedną ostatnią turę!`, 'effect')
       return effectResult(newState, [log])
     }
 

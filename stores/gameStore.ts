@@ -1377,6 +1377,19 @@ export const useGameStore = defineStore('game', () => {
     }
     // Hipnoza Alkonosta — podświetl cele na polu zamiast modalu
     checkHypnosisMode(newState)
+
+    // Wij resurrect VFX — szukaj karty z flagą wijResurrectVFX
+    for (const side of ['player1', 'player2'] as const) {
+      for (const line of Object.values(newState.players[side].field.lines)) {
+        for (const card of line as any[]) {
+          if (card.metadata?.wijResurrectVFX) {
+            delete card.metadata.wijResurrectVFX
+            const vfx = useVFXOrchestrator()
+            vfx.emit({ type: 'resurrect', targetId: card.instanceId })
+          }
+        }
+      }
+    }
   }
 
   function checkHypnosisMode(gs: GameState) {
