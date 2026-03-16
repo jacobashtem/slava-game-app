@@ -485,6 +485,12 @@ export function resolveAttack(
           atkAfterKill.currentStats.attack += victimAtk
           log.push(addLog(newState, `Łaska Świętowida: ${atkAfterKill.cardData.name} +${victimAtk} ATK po zabiciu ${currentDefender.cardData.name}!`, 'effect'))
         }
+
+        // Łaska Świętowida+: po zabiciu nie kończy tury
+        if (atkAfterKill?.metadata.swietowidFreeKill) {
+          atkAfterKill.hasAttackedThisTurn = false
+          log.push(addLog(newState, `Łaska Świętowida+: ${atkAfterKill.cardData.name} — zabójstwo nie kończy tury!`, 'effect'))
+        }
       }
 
       // Sprawdź efekt Moc Światogora: karta ginie po zabiciu
