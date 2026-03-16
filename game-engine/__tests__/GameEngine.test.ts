@@ -34,6 +34,15 @@ function getFieldCreatures(state: GameState, side: 'player1' | 'player2'): CardI
   ]
 }
 
+/** Start game and force player1 turn (deterministic for tests) */
+function startTestGame(engine: GameEngine, mode: 'gold' | 'slava' = 'gold'): GameState {
+  const state = engine.startGame(mode)
+  if (state.currentTurn !== 'player1') {
+    return engine.forcePlayerTurn('player1')
+  }
+  return state
+}
+
 /** Find a creature on field by instanceId */
 function findOnField(state: GameState, instanceId: string): CardInstance | null {
   for (const side of ['player1', 'player2'] as const) {
@@ -61,7 +70,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('Game Setup', () => {
     it('startGame() creates valid state with decks, hands, and gold', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
 
       // Both players should have hands drawn
       expect(state.players.player1.hand.length).toBe(GOLD_EDITION_RULES.STARTING_HAND)
@@ -93,13 +102,13 @@ describe('GameEngine', () => {
     })
 
     it('player1 is human, player2 is AI', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       expect(state.players.player1.isAI).toBe(false)
       expect(state.players.player2.isAI).toBe(true)
     })
 
     it('deck has correct total size (deck + hand = DECK_SIZE)', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const p1Total = state.players.player1.deck.length + state.players.player1.hand.length
       const p2Total = state.players.player2.deck.length + state.players.player2.hand.length
       expect(p1Total).toBe(GOLD_EDITION_RULES.DECK_SIZE)
@@ -112,7 +121,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('Card Playing', () => {
     it('player can play a creature to L1', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')
       expect(creature).toBeDefined()
 
@@ -124,7 +133,7 @@ describe('GameEngine', () => {
     })
 
     it('player can play a creature to L2 (RANGED)', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')
       expect(creature).toBeDefined()
 
@@ -134,7 +143,7 @@ describe('GameEngine', () => {
     })
 
     it('player can play a creature to L3 (SUPPORT)', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')
       expect(creature).toBeDefined()
 
@@ -144,7 +153,7 @@ describe('GameEngine', () => {
     })
 
     it('playing a creature increments creaturesPlayedThisTurn', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       expect(state.players.player1.creaturesPlayedThisTurn).toBe(0)
 
       const creature = findCreatureInHand(state, 'player1')
@@ -153,7 +162,7 @@ describe('GameEngine', () => {
     })
 
     it('playing a creature removes it from hand', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')
       const handSizeBefore = state.players.player1.hand.length
 
@@ -163,7 +172,7 @@ describe('GameEngine', () => {
     })
 
     it('card starts in DEFENSE position by default', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')
 
       const newState = engine.playerPlayCreature(creature!.instanceId, BattleLine.FRONT)
@@ -172,7 +181,7 @@ describe('GameEngine', () => {
     })
 
     it('cannot play more creatures than PLAY_LIMIT_CREATURES per turn', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
 
       // Play first creature (should succeed)
       const creature1 = findCreatureInHand(state, 'player1')
@@ -189,7 +198,7 @@ describe('GameEngine', () => {
     })
 
     it('cannot play creature during COMBAT phase', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')
 
       // Advance to COMBAT
@@ -206,7 +215,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('Drawing Cards', () => {
     it('player can draw during PLAY phase', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
 
       // First, play a creature to make room in hand (hand starts at 5)
       const creature = findCreatureInHand(state, 'player1')
@@ -221,7 +230,7 @@ describe('GameEngine', () => {
     })
 
     it('player can draw during COMBAT phase', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
 
       // Play a creature to make room
       const creature = findCreatureInHand(state, 'player1')
@@ -239,7 +248,7 @@ describe('GameEngine', () => {
     })
 
     it('cannot draw when hand is full (5 cards)', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       // Hand starts at 5 — should fail
       expect(state.players.player1.hand.length).toBe(GOLD_EDITION_RULES.STARTING_HAND)
 
@@ -249,7 +258,7 @@ describe('GameEngine', () => {
     })
 
     it('cannot draw when deck is empty', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
 
       // Play a creature to make room
       const creature = findCreatureInHand(state, 'player1')
@@ -272,7 +281,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('Phase Advancement', () => {
     it('PLAY -> COMBAT via playerAdvancePhase()', () => {
-      engine.startGame('gold')
+      startTestGame(engine)
       expect(engine.getCurrentPhase()).toBe(GamePhase.PLAY)
 
       const state = engine.playerAdvancePhase()
@@ -280,7 +289,7 @@ describe('GameEngine', () => {
     })
 
     it('COMBAT -> ends turn via playerAdvancePhase()', () => {
-      engine.startGame('gold')
+      startTestGame(engine)
 
       // Go to COMBAT
       engine.playerAdvancePhase()
@@ -292,7 +301,7 @@ describe('GameEngine', () => {
     })
 
     it('after player ends turn, currentTurn switches to player2', () => {
-      engine.startGame('gold')
+      startTestGame(engine)
       expect(engine.getCurrentTurn()).toBe('player1')
 
       engine.playerAdvancePhase() // PLAY -> COMBAT
@@ -302,7 +311,7 @@ describe('GameEngine', () => {
     })
 
     it('turnNumber increments when turn switches', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       const initialTurn = state.turnNumber
 
       engine.playerAdvancePhase() // PLAY -> COMBAT
@@ -330,6 +339,7 @@ describe('GameEngine', () => {
       if (retries > 15) throw new Error('setupCombatScenario: too many retries — no valid combat scenario found')
       const currentEng = eng ?? new GameEngine()
       let state = currentEng.startGame('gold')
+      if (state.currentTurn !== 'player1') state = currentEng.forcePlayerTurn('player1')
 
       // Play a creature from player1's hand
       const creature = findCreatureInHand(state, 'player1')
@@ -482,7 +492,7 @@ describe('GameEngine', () => {
     })
 
     it('cannot attack during PLAY phase', () => {
-      engine.startGame('gold')
+      startTestGame(engine)
       expect(engine.getCurrentPhase()).toBe(GamePhase.PLAY)
 
       // Even if we had valid cards, attacking in PLAY should throw
@@ -496,6 +506,8 @@ describe('GameEngine', () => {
       for (let attempt = 0; attempt < 5; attempt++) {
         const eng = new GameEngine()
         let state = eng.startGame('gold')
+  if (state.currentTurn !== 'player1') state = eng.forcePlayerTurn('player1')
+        if (state.currentTurn !== 'player1') state = eng.forcePlayerTurn('player1')
 
         const creature = findCreatureInHand(state, 'player1')
         if (!creature) continue
@@ -583,7 +595,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('Position Changes', () => {
     it('can toggle between ATTACK and DEFENSE', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')!
 
       state = engine.playerPlayCreature(creature.instanceId, BattleLine.FRONT)
@@ -604,7 +616,7 @@ describe('GameEngine', () => {
     })
 
     it('card in DEFENSE position cannot attack', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')!
 
       state = engine.playerPlayCreature(creature.instanceId, BattleLine.FRONT)
@@ -625,7 +637,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('Adventure Cards', () => {
     it('can play adventure card during PLAY phase', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
       const adventure = findAdventureInHand(state, 'player1')
 
       if (adventure) {
@@ -644,7 +656,7 @@ describe('GameEngine', () => {
     })
 
     it('no limit on adventures per turn', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
 
       // Try to play multiple adventures (if available)
       let adventuresPlayed = 0
@@ -670,7 +682,7 @@ describe('GameEngine', () => {
     })
 
     it('enhanced adventure costs gold', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
       const adventure = findAdventureInHand(state, 'player1')
 
       if (adventure) {
@@ -693,7 +705,7 @@ describe('GameEngine', () => {
   describe('Win Condition', () => {
     it('game ends when opponent has no cards on field, hand, or deck', () => {
       // We test this by using surrender as a proxy for win detection
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
       expect(state.winner).toBeNull()
 
       state = engine.surrender('player1')
@@ -701,7 +713,7 @@ describe('GameEngine', () => {
     })
 
     it('surrender sets winner to opposite side', () => {
-      engine.startGame('gold')
+      startTestGame(engine)
 
       let state = engine.surrender('player2')
       expect(state.winner).toBe('player1')
@@ -713,7 +725,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('State Consistency', () => {
     it('getState() returns a clone (mutations do not affect engine)', () => {
-      engine.startGame('gold')
+      startTestGame(engine)
       const state1 = engine.getState()
       state1.players.player1.gold = 9999
 
@@ -722,7 +734,7 @@ describe('GameEngine', () => {
     })
 
     it('returned state from actions is a clone', () => {
-      const state = engine.startGame('gold')
+      const state = startTestGame(engine)
       state.roundNumber = 999
 
       const freshState = engine.getState()
@@ -730,7 +742,7 @@ describe('GameEngine', () => {
     })
 
     it('creaturesPlayedThisTurn resets on new turn', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')!
       engine.playerPlayCreature(creature.instanceId, BattleLine.FRONT)
 
@@ -793,7 +805,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('AI Turn Actions', () => {
     it('AI can play creature, advance to combat, and end turn', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
 
       // Player1 passes turn
       engine.playerAdvancePhase() // PLAY -> COMBAT
@@ -817,7 +829,7 @@ describe('GameEngine', () => {
     })
 
     it('AI cannot play during wrong phase', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
 
       // Player1 passes
       engine.playerAdvancePhase() // PLAY -> COMBAT
@@ -843,7 +855,7 @@ describe('GameEngine', () => {
   // =======================================================================
   describe('Move Creature Line', () => {
     it('can move creature between lines', () => {
-      let state = engine.startGame('gold')
+      let state = startTestGame(engine)
       const creature = findCreatureInHand(state, 'player1')!
 
       state = engine.playerPlayCreature(creature.instanceId, BattleLine.FRONT)
@@ -866,6 +878,7 @@ function setupCombatScenarioSimple(eng: GameEngine): {
   defenderId: string
 } {
   let state = eng.startGame('gold')
+  if (state.currentTurn !== 'player1') state = eng.forcePlayerTurn('player1')
 
   // Play a creature
   const creature = findCreatureInHand(state, 'player1')
