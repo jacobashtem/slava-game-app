@@ -11,7 +11,7 @@ import CardTooltip from '../ui/CardTooltip.vue'
 import GameOverModal from '../ui/GameOverModal.vue'
 import GraveyardModal from '../ui/GraveyardModal.vue'
 import PendingInteractionModal from '../ui/PendingInteractionModal.vue'
-import GameHint from '../ui/GameHint.vue'
+// GameHint removed — narrator in chat handles context hints
 import WeatherEffects from '../ui/WeatherEffects.vue'
 import MusicPlayer from '../ui/MusicPlayer.vue'
 import TurnBanner from '../ui/TurnBanner.vue'
