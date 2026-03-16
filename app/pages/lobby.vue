@@ -404,7 +404,7 @@ onMounted(() => {
 
 .lb-label {
   display: flex; align-items: center; gap: 5px;
-  font-size: 10px; color: rgba(200, 168, 78, 0.55);
+  font-size: 12px; color: rgba(200, 168, 78, 0.55);
   text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
 }
 .lb-label-icon { font-size: 12px; opacity: 0.6; }
@@ -446,7 +446,7 @@ onMounted(() => {
   box-shadow: 0 0 12px rgba(200, 100, 30, 0.08);
 }
 .lb-mode-icon { font-size: 20px; }
-.lb-mode-name { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+.lb-mode-name { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; }
 
 /* Actions */
 .lb-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
@@ -455,7 +455,7 @@ onMounted(() => {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 14px; border-radius: 10px;
   border: 1px solid rgba(200, 168, 78, 0.2);
-  font-size: 14px; font-weight: 600; cursor: pointer;
+  font-size: 16px; font-weight: 600; cursor: pointer;
   transition: all 0.2s; width: 100%;
   position: relative; overflow: hidden;
   font-family: var(--font-display, Georgia, serif);
@@ -464,7 +464,7 @@ onMounted(() => {
 .lb-btn:disabled { opacity: 0.3; cursor: default; }
 .lb-btn:active:not(:disabled) { transform: scale(0.98); }
 .lb-btn-icon { font-size: 18px; }
-.lb-btn-hint { font-size: 9px; opacity: 0.5; font-weight: 400; letter-spacing: 0.08em; }
+.lb-btn-hint { font-size: 12px; opacity: 0.6; font-weight: 400; letter-spacing: 0.06em; }
 
 .lb-btn-create {
   background: linear-gradient(135deg, rgba(200, 100, 30, 0.15), rgba(200, 168, 78, 0.08));
@@ -491,7 +491,7 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(200, 168, 78, 0.2), rgba(200, 100, 30, 0.12));
   color: rgba(200, 168, 78, 1);
   border-color: rgba(200, 168, 78, 0.4);
-  font-size: 16px; padding: 16px;
+  font-size: 18px; padding: 16px;
   text-shadow: 0 0 12px rgba(200, 100, 30, 0.3);
 }
 .lb-btn-start:hover:not(:disabled) {
@@ -555,7 +555,7 @@ onMounted(() => {
   border: 1px solid rgba(200, 168, 78, 0.12);
   color: rgba(200, 168, 78, 0.6);
   border-radius: 6px; padding: 5px 14px;
-  cursor: pointer; font-size: 10px; letter-spacing: 0.04em;
+  cursor: pointer; font-size: 12px; letter-spacing: 0.04em;
   transition: all 0.15s; font-family: inherit;
 }
 .lb-copy:hover { border-color: rgba(200, 168, 78, 0.3); color: rgba(200, 168, 78, 0.9); }
@@ -599,7 +599,7 @@ onMounted(() => {
 
 .lb-banner-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 12px; font-weight: 600;
+  font-size: 14px; font-weight: 600;
   color: rgba(226, 232, 240, 0.8);
   letter-spacing: 0.05em; z-index: 1;
   text-align: center;
@@ -655,8 +655,8 @@ onMounted(() => {
   all: unset; cursor: pointer;
   display: flex; align-items: center; gap: 5px;
   color: rgba(239, 68, 68, 0.4);
-  font-size: 11px; letter-spacing: 0.04em;
-  padding: 6px 14px; border-radius: 6px;
+  font-size: 13px; letter-spacing: 0.04em;
+  padding: 8px 16px; border-radius: 6px;
   border: 1px solid rgba(239, 68, 68, 0.1);
   transition: all 0.15s; font-family: inherit;
 }

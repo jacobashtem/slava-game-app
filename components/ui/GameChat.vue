@@ -362,7 +362,7 @@ const show = computed(() => game.gameStarted)
 
 .ch-name {
   font-family: var(--font-display, Georgia, serif);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: rgba(200, 168, 78, 0.85);
   letter-spacing: 0.04em;
@@ -374,14 +374,14 @@ const show = computed(() => game.gameStarted)
 .ch-name-player { color: rgba(140, 180, 240, 0.85); }
 
 .ch-title {
-  font-size: 7.5px;
+  font-size: 9px;
   color: rgba(148, 130, 100, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
 .ch-vs {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(200, 168, 78, 0.15);
   flex-shrink: 0;
   margin: 0 2px;
@@ -523,7 +523,7 @@ const show = computed(() => game.gameStarted)
 .msg-bubble {
   padding: 6px 10px;
   border-radius: 10px;
-  font-size: 10.5px;
+  font-size: 12.5px;
   line-height: 1.5;
   word-break: break-word;
 }
@@ -543,7 +543,7 @@ const show = computed(() => game.gameStarted)
 }
 
 .msg-time {
-  font-size: 7.5px;
+  font-size: 9px;
   color: rgba(148, 130, 100, 0.25);
   padding: 0 2px;
 }
@@ -567,8 +567,8 @@ const show = computed(() => game.gameStarted)
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(200, 168, 78, 0.1);
   border-radius: 6px;
-  padding: 5px 8px;
-  font-size: 10.5px;
+  padding: 7px 10px;
+  font-size: 12.5px;
   color: rgba(226, 232, 240, 0.85);
   outline: none;
   transition: border-color 0.15s;
