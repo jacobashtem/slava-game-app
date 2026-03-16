@@ -9,8 +9,10 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
+import { useNarrator } from '../../composables/useNarrator'
 
 const game = useGameStore()
+const narrator = useNarrator()
 
 // ===== PANEL STATE =====
 const panelOpen = ref(true)
@@ -164,6 +166,17 @@ watch(() => game.gameStarted, (started) => {
     setTimeout(() => pushMsg('ai', getGreeting()), 800)
   }
 }, { immediate: true })
+
+// ===== NARRATOR EVENT REACTIONS =====
+let lastNarratorIdx = 0
+watch(() => narrator.messages.value.length, (newLen) => {
+  if (newLen <= lastNarratorIdx) { lastNarratorIdx = newLen; return }
+  const newMsgs = narrator.messages.value.slice(lastNarratorIdx)
+  lastNarratorIdx = newLen
+  for (const text of newMsgs) {
+    pushMsg('ai', text)
+  }
+})
 
 // ===== PLAYER INPUT =====
 function sendMessage() {
