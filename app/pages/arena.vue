@@ -199,7 +199,7 @@ function getDomainColor(data: any): string {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background: #070b14;
+  background: #04030a;
 }
 
 /* ===== SIDEBAR ===== */
@@ -208,7 +208,7 @@ function getDomainColor(data: any): string {
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  background: rgba(10, 15, 30, 0.95);
+  background: linear-gradient(180deg, rgba(14, 10, 20, 0.97), rgba(8, 6, 14, 0.98));
   border-right: 1px solid rgba(200, 168, 78, 0.1);
   z-index: 10;
 }
@@ -218,7 +218,8 @@ function getDomainColor(data: any): string {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(200, 168, 78, 0.06);
+  background: linear-gradient(90deg, rgba(200, 168, 78, 0.03), transparent);
 }
 
 .arena-back-btn {
@@ -227,24 +228,25 @@ function getDomainColor(data: any): string {
   justify-content: center;
   width: 32px;
   height: 32px;
-  color: #64748b;
+  color: rgba(200, 168, 78, 0.4);
   text-decoration: none;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
-  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+  border: 1px solid rgba(200, 168, 78, 0.1);
+  background: rgba(200, 168, 78, 0.02);
+  transition: all 0.15s;
   flex-shrink: 0;
 }
-.arena-back-btn:hover { color: #e2e8f0; border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05); }
+.arena-back-btn:hover { color: rgba(200, 168, 78, 0.9); border-color: rgba(200, 168, 78, 0.25); }
 
 .sidebar-title {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--font-display, Georgia, serif);
   font-size: 14px;
-  font-weight: 800;
-  color: #e2e8f0;
-  letter-spacing: 0.03em;
+  font-weight: 600;
+  color: rgba(200, 168, 78, 0.85);
+  letter-spacing: 0.06em;
 }
 
 .title-icon { font-size: 18px; color: #c8a84e; }
