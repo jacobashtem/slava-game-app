@@ -888,7 +888,11 @@ const categories = [...new Set(effects.map(e => e.category))]
         <div class="cat-label">Specjalne</div>
         <div :class="['effect-item', { active: activeEffectId === 'p3-resurrect' }]" style="--ec: #fde68a"
           @click="activeEffectId = 'p3-resurrect'">
-          <Icon icon="game-icons:angel-wings" class="eff-icon" /><span class="eff-name">Wskrzeszenie</span>
+          <Icon icon="game-icons:angel-wings" class="eff-icon" /><span class="eff-name">Wskrzeszenie (P3)</span>
+        </div>
+        <div :class="['effect-item', { active: activeEffectId === 'p3-resurrect-webgpu' }]" style="--ec: #22c55e"
+          @click="activeEffectId = 'p3-resurrect-webgpu'">
+          <Icon icon="game-icons:skull-crossed-bones" class="eff-icon" /><span class="eff-name">Wskrzeszenie Wija (WebGPU)</span>
         </div>
         <div :class="['effect-item', { active: activeEffectId === 'p3-summon' }]" style="--ec: #c084fc"
           @click="activeEffectId = 'p3-summon'">
