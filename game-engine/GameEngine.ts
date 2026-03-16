@@ -7,7 +7,7 @@
 import type { GameState, LogEntry, CardInstance, CombatResult } from './types'
 import { GamePhase, BattleLine, CardPosition } from './constants'
 import type { PlayerSide } from './types'
-import { createInitialGameState, cloneGameState, addLog, moveToGraveyard } from './GameStateUtils'
+import { createInitialGameState, cloneGameState, addLog, moveToGraveyard, removeCardFromField } from './GameStateUtils'
 import { CardFactory } from './CardFactory'
 import { buildRandomDeck, drawCards, GOLD_EDITION_DECK_CONFIG } from './DeckBuilder'
 import { checkWinCondition, getAllCreaturesOnField, canAttack } from './LineManager'
@@ -1187,6 +1187,74 @@ export class GameEngine {
         this.applyStateAndLog(newState, [log])
       }
       this.checkWinAndNotify()
+      return cloneGameState(this.state)
+    }
+
+    // Najemnik: wróg decyduje czy przekupić
+    if (interaction.type === 'najemnik_bribe') {
+      if (choice === 'yes') {
+        const briber = interaction.respondingPlayer
+        const owner = newState.players[briber]
+        if (owner.glory >= 1) {
+          owner.glory -= 1
+          const najemnik = this.findCardInState(newState, interaction.sourceInstanceId)
+          if (najemnik) {
+            removeCardFromField(newState, najemnik.instanceId)
+            najemnik.owner = briber
+            najemnik.line = BattleLine.FRONT
+            newState.players[briber].field.lines[BattleLine.FRONT].push(najemnik)
+            const log = addLog(newState, `Najemnik przekupiony! ${najemnik.cardData.name} przechodzi na stronę ${briber} za 1 PS.`, 'effect')
+            this.applyStateAndLog(newState, [log])
+          } else {
+            this.applyStateAndLog(newState, [])
+          }
+        } else {
+          this.applyStateAndLog(newState, [addLog(newState, 'Brak PS na przekupienie Najemnika!', 'effect')])
+        }
+      } else {
+        this.applyStateAndLog(newState, [addLog(newState, 'Najemnik pozostaje lojalny — wróg nie zapłacił.', 'effect')])
+      }
+      return cloneGameState(this.state)
+    }
+
+    // Dziwożona: gracz wybrał kartę do oddania
+    if (interaction.type === 'dziwolzona_swap') {
+      const effect = getEffect('dziwolzona_swap_cards')
+      const sourceCard = this.findCardInState(newState, interaction.sourceInstanceId)
+      if (effect && sourceCard) {
+        const result = effect.execute({
+          state: newState,
+          source: sourceCard,
+          trigger: EffectTrigger.ON_KILL,
+          metadata: { dziwolzonaChoice: choice },
+        })
+        this.applyStateAndLog(result.newState, result.log)
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      return cloneGameState(this.state)
+    }
+
+    // Czart: suwak DEF→ATK
+    if (interaction.type === 'czart_shift') {
+      const amount = parseInt(choice, 10)
+      if (isNaN(amount) || amount < 0) {
+        this.applyStateAndLog(newState, [])
+        return cloneGameState(this.state)
+      }
+      const effect = getEffect('czart_shift_stats')
+      const sourceCard = this.findCardInState(newState, interaction.sourceInstanceId)
+      if (effect && sourceCard) {
+        const result = effect.execute({
+          state: newState,
+          source: sourceCard,
+          trigger: EffectTrigger.ON_ACTIVATE,
+          metadata: { czartShiftAmount: amount },
+        })
+        this.applyStateAndLog(result.newState, result.log)
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
       return cloneGameState(this.state)
     }
 

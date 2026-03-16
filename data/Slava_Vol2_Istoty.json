@@ -2684,7 +2684,7 @@
                 "text": "Przy {DEF} = 0: Jeden ostatni {ATK} — potem ginie."
             }
         ],
-        "effectDescription": "[AKCJA] Przenosi całą {DEF} na {ATK}. Przy {DEF} = 0 — jeden ostatni {COMBAT}, potem ginie.",
+        "effectDescription": "[AKCJA] Przerzuć wybraną ilość {DEF} na {ATK}. Przerzucenie całości = ostatni {COMBAT}, potem ginie.",
         "effectId": "czart_shift_stats"
     },
     {
@@ -2762,7 +2762,7 @@
                 "text": "Wymiana kart — TY wybierasz obie (swoją i wroga)."
             }
         ],
-        "effectDescription": "[ZABÓJSTWO] Dobierz 1 kartę z własnej talii + 1 z talii wroga.",
+        "effectDescription": "[ZABÓJSTWO] Wymiana — oddaj kartę z ręki wrogowi, ukradnij kartę z jego talii.",
         "effectId": "dziwolzona_swap_cards"
     },
     {

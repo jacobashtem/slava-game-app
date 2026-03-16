@@ -26,6 +26,20 @@ export function processStartPhase(state: GameState): { newState: GameState; log:
 
   const currentPlayer = newState.players[newState.currentTurn]
 
+  // Wanda: wróg pomija turę
+  if ((currentPlayer as any).wandaSkipTurn) {
+    const rounds = (currentPlayer as any).wandaSkipTurn as number
+    if (rounds > 0) {
+      (currentPlayer as any).wandaSkipTurn = rounds - 1
+      if (rounds - 1 <= 0) delete (currentPlayer as any).wandaSkipTurn
+      log.push(addLog(newState, `Poświęcenie Wandy: ${newState.currentTurn} traci turę! (${rounds - 1} pozostało)`, 'effect'))
+      // Oznacz turę jako do pominięcia — GameEngine/gameStore to odczyta
+      ;(newState as any).wandaSkipCurrentTurn = true
+      newState.currentPhase = GamePhase.END
+      return { newState, log, drawn: [] }
+    }
+  }
+
   // Resetuj liczniki tury
   currentPlayer.creaturesPlayedThisTurn = 0
   currentPlayer.adventuresPlayedThisTurn = 0

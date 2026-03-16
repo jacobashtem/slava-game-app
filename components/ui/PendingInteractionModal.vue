@@ -38,8 +38,15 @@ const dragonChoices = computed(() => {
 })
 const targetSearch = ref('')
 const kresnikSearch = ref('')
+const czartSlider = ref(1)
 // Reset szukajki gdy zmieni się interakcja
-watch(interaction, () => { targetSearch.value = ''; kresnikSearch.value = '' })
+watch(interaction, (v) => {
+  targetSearch.value = ''
+  kresnikSearch.value = ''
+  if (v?.type === 'czart_shift') {
+    czartSlider.value = Math.floor(((v.metadata?.maxDef as number) ?? 2) / 2)
+  }
+})
 
 const filteredKresnikChoices = computed(() => {
   const choices = interaction.value?.availableChoices ?? []
@@ -147,6 +154,9 @@ const title = computed(() => {
   if (t === 'brzegina_shield') return 'Brzegina — Czujność'
   if (t === 'kosciej_resurrect') return 'Kościej — Wskrzeszenie'
   if (t === 'dziewiatko_poison') return 'Dziewiątko — Trucizna'
+  if (t === 'czart_shift') return 'Czart — Przemiana'
+  if (t === 'dziwolzona_swap') return 'Dziwożona — Wymiana'
+  if (t === 'najemnik_bribe') return 'Najemnik — Przekupstwo'
   if (t === 'lamia_death_choice') return 'Lamia — Skarby Śmierci'
   if (t === 'smierc_save') return 'Śmierć — Ratunek'
   return 'Wybierz'
@@ -200,6 +210,12 @@ const description = computed(() => {
   }
   if (t === 'kosciej_resurrect') return 'Kościej zginął od Wręcz — jego serce wciąż bije! Wydaj 1 PS, by wskrzesić go na L1.'
   if (t === 'dziewiatko_poison') return 'Dziewiątko otruło wroga! Wybierz efekt trucizny.'
+  if (t === 'czart_shift') {
+    const maxDef = (interaction.value?.metadata?.maxDef as number) ?? 1
+    return `Ile DEF przerzucić na ATK? (max ${maxDef}, przerzucenie całości = ostatni atak)`
+  }
+  if (t === 'dziwolzona_swap') return 'Dziwożona zabiła wroga! Wybierz kartę z ręki do oddania wrogowi.'
+  if (t === 'najemnik_bribe') return 'Najemnik wroga czeka na łapówkę! Zapłać 1 PS, by przejąć go na swoją stronę.'
   if (t === 'lamia_death_choice') return 'Lamia ginie — z jej ciała wytryskują skarby! Wybierz nagrodę.'
   if (t === 'smierc_save') {
     const deadName = (interaction.value?.metadata?.deadCardName as string) ?? 'istota'
@@ -352,6 +368,54 @@ function pickTarget(choice: string) {
           </button>
           <button class="pi-yn-no" @click="pickTarget('no')">
             <Icon icon="game-icons:cancel" /> Nie, przepuść atak
+          </button>
+        </div>
+
+        <!-- Czart: Suwak DEF→ATK -->
+        <div v-if="interaction?.type === 'czart_shift'" class="pi-czart">
+          <div class="pi-czart-preview">
+            <span class="pi-czart-stat">ATK: {{ (interaction.metadata?.currentAtk as number ?? 0) + czartSlider }}</span>
+            <span class="pi-czart-stat">DEF: {{ (interaction.metadata?.maxDef as number ?? 0) - czartSlider }}</span>
+            <span v-if="czartSlider >= (interaction.metadata?.maxDef as number ?? 0)" class="pi-czart-warn">OSTATNI ATAK!</span>
+          </div>
+          <input
+            v-model.number="czartSlider"
+            type="range"
+            :min="1"
+            :max="interaction.metadata?.maxDef as number ?? 1"
+            class="pi-czart-slider"
+          />
+          <div class="pi-czart-labels">
+            <span>1</span>
+            <span>{{ interaction.metadata?.maxDef }}</span>
+          </div>
+          <button class="pi-yn-yes" @click="pickTarget(String(czartSlider))">
+            <Icon icon="game-icons:fire-dash" /> Przerzuć {{ czartSlider }} DEF
+          </button>
+        </div>
+
+        <!-- Dziwożona: Wybierz kartę z ręki -->
+        <div v-if="interaction?.type === 'dziwolzona_swap' && interaction?.availableTargetIds" class="pi-targets">
+          <div class="pi-target-grid">
+            <button
+              v-for="card in availableTargets"
+              :key="card?.instanceId"
+              class="pi-target-card"
+              @click="pickTarget(card?.instanceId ?? '')"
+            >
+              <span class="pi-target-name">{{ (card?.cardData as any)?.name }}</span>
+              <span class="pi-target-stats">{{ card?.currentStats.attack }}/{{ card?.currentStats.defense }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Najemnik: Przekup za PS -->
+        <div v-if="interaction?.type === 'najemnik_bribe'" class="pi-yn">
+          <button class="pi-yn-yes" @click="pickTarget('yes')">
+            <Icon icon="game-icons:two-coins" /> Przekup za 1 PS
+          </button>
+          <button class="pi-yn-no" @click="pickTarget('no')">
+            <Icon icon="game-icons:cancel" /> Nie kupuję
           </button>
         </div>
 
@@ -734,6 +798,36 @@ function pickTarget(choice: string) {
 }
 
 /* ===== STRING CHOICES ===== */
+.pi-czart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.pi-czart-preview {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+.pi-czart-stat { color: #c8a84e; }
+.pi-czart-warn { color: #ef4444; font-size: 12px; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: 0.5; } }
+.pi-czart-slider {
+  width: 100%;
+  accent-color: #c8a84e;
+  cursor: pointer;
+}
+.pi-czart-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 10px;
+  color: rgba(148, 130, 100, 0.5);
+}
+
 .pi-kresnik {
   display: flex;
   flex-direction: column;

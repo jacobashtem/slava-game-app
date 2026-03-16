@@ -194,6 +194,9 @@ export type PendingInteractionType =
   | 'dziewiatko_poison'        // Dziewiątko: wybierz truciznę lub paraliż
   | 'lamia_death_choice'       // Lamia ON_DEATH: wybierz 1 PS lub 5 kart
   | 'smierc_save'              // Śmierć: czy zapłacić 1 PS żeby uratować ginącą istotę?
+  | 'czart_shift'              // Czart: ile DEF przerzucić na ATK? (suwak)
+  | 'dziwolzona_swap'          // Dziwożona ON_KILL: wybierz kartę z ręki do oddania
+  | 'najemnik_bribe'           // Najemnik: wróg może zapłacić 1 PS żeby go przejąć
 
 export interface PendingInteraction {
   type: PendingInteractionType

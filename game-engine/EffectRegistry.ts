@@ -1556,30 +1556,53 @@ registerEffect({
 registerEffect({
   id: 'dziwolzona_swap_cards',
   name: 'Wymiana Dziwożony',
-  description: '[ZABÓJSTWO] Po zabiciu wroga: dobierz po 1 karcie z obu talii (wybierasz którą zatrzymać — auto: bierzesz obie).',
+  description: '[ZABÓJSTWO] Wymiana kart — oddaj kartę z ręki wrogowi, ukradnij kartę z talii wroga.',
   trigger: EffectTrigger.ON_KILL,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
     const { state, source } = ctx
     const newState = cloneGameState(state)
-    const log: LogEntry[] = []
     const ownerPlayer = newState.players[source.owner]
-    const opponentSide = source.owner === 'player1' ? 'player2' : 'player1'
+    const isHuman = !state.players[source.owner].isAI
+
+    // Gracz: pokaż modal z kartami z ręki do oddania
+    if (isHuman && ownerPlayer.hand.length > 0 && !ctx.metadata?.dziwolzonaChoice) {
+      newState.pendingInteraction = {
+        type: 'dziwolzona_swap',
+        sourceInstanceId: source.instanceId,
+        respondingPlayer: source.owner as PlayerSide,
+        availableTargetIds: ownerPlayer.hand.map(c => c.instanceId),
+      }
+      const log = addLog(newState, `${source.cardData.name}: Wybierz kartę z ręki do oddania wrogowi!`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    // Po wyborze lub AI: wykonaj wymianę
+    const log: LogEntry[] = []
+    const opponentSide = (source.owner === 'player1' ? 'player2' : 'player1') as PlayerSide
     const opponent = newState.players[opponentSide]
 
-    if (ownerPlayer.deck.length > 0) {
-      const ownCard = ownerPlayer.deck.splice(0, 1)[0]!
-      ownCard.owner = source.owner
-      ownerPlayer.hand.push(ownCard)
-      log.push(addLog(newState, `${source.cardData.name}: Dziwożona dobiera kartę z własnej talii.`, 'effect'))
+    // Oddaj wybraną kartę wrogowi
+    const givenId = ctx.metadata?.dziwolzonaChoice as string
+    const givenIdx = givenId
+      ? ownerPlayer.hand.findIndex(c => c.instanceId === givenId)
+      : 0 // AI: oddaj pierwszą
+    if (givenIdx >= 0 && ownerPlayer.hand.length > 0) {
+      const given = ownerPlayer.hand.splice(givenIdx, 1)[0]!
+      given.owner = opponentSide
+      opponent.hand.push(given)
+      log.push(addLog(newState, `${source.cardData.name}: Oddaje ${given.cardData.name} wrogowi.`, 'effect'))
     }
+
+    // Ukradnij kartę z talii wroga
     if (opponent.deck.length > 0) {
-      const enemyCard = opponent.deck.splice(0, 1)[0]!
-      enemyCard.owner = source.owner
-      enemyCard.isRevealed = true
-      ownerPlayer.hand.push(enemyCard)
-      log.push(addLog(newState, `${source.cardData.name}: Dziwożona kradnie kartę z talii wroga!`, 'effect'))
+      const stolen = opponent.deck.shift()!
+      stolen.owner = source.owner
+      stolen.isRevealed = true
+      ownerPlayer.hand.push(stolen)
+      log.push(addLog(newState, `${source.cardData.name}: Kradnie ${stolen.cardData.name} z talii wroga!`, 'effect'))
     }
+
     return effectResult(newState, log)
   },
 })
@@ -2395,13 +2418,13 @@ registerEffect({
 registerEffect({
   id: 'czart_shift_stats',
   name: 'Czarcia Przemiana',
-  description: '[AKCJA] Przenosi całą DEF na ATK. Przy DEF = 0 — jeden ostatni atak, potem ginie.',
+  description: '[AKCJA] Przerzuć wybraną ilość DEF na ATK. Przy DEF = 0 — jeden ostatni atak, potem ginie.',
   trigger: [EffectTrigger.ON_ACTIVATE, EffectTrigger.ON_DAMAGE_DEALT],
   priority: EffectPriority.REACTION,
   activatable: true,
   activationCost: 0,
   activationCooldown: 'per_turn',
-  canActivate: (ctx) => ctx.source.currentStats.defense > 0,
+  canActivate: (ctx) => ctx.source.currentStats.defense > 1, // min 2 DEF (1 to keep alive)
   execute: (ctx) => {
     const { state, source, trigger } = ctx
 
@@ -2418,15 +2441,46 @@ registerEffect({
       return effectResult(newState)
     }
 
-    // ON_ACTIVATE: przerzuć DEF na ATK
+    // ON_ACTIVATE: pokaż suwak (gracz) lub auto-max (AI)
     const newState = cloneGameState(state)
     const card = findCardInState(newState, source.instanceId)
     if (!card) return effectResult(newState)
+
+    const maxShift = card.currentStats.defense - 1 // zostawiamy min 1 DEF (lub all → last stand)
+    const isHuman = !state.players[source.owner].isAI
+
+    // Jeśli gracz podał wartość z modala
+    if (ctx.metadata?.czartShiftAmount !== undefined) {
+      const amount = ctx.metadata.czartShiftAmount as number
+      const clamped = Math.min(amount, card.currentStats.defense)
+      card.currentStats.attack += clamped
+      card.currentStats.defense -= clamped
+      if (card.currentStats.defense <= 0) {
+        card.currentStats.defense = 1
+        card.metadata.czartLastStand = true
+      }
+      const log = addLog(newState, `${source.cardData.name}: Przerzuca ${clamped} DEF na ATK → ${card.currentStats.attack}/${card.currentStats.defense}${card.metadata.czartLastStand ? ' (ostatni atak!)' : ''}.`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    if (isHuman) {
+      // Pokaż suwak
+      newState.pendingInteraction = {
+        type: 'czart_shift',
+        sourceInstanceId: source.instanceId,
+        respondingPlayer: source.owner as PlayerSide,
+        metadata: { maxDef: card.currentStats.defense, currentAtk: card.currentStats.attack },
+      }
+      const log = addLog(newState, `${source.cardData.name}: Ile DEF przerzucić na ATK?`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    // AI: przerzuć całość (last stand)
     const def = card.currentStats.defense
     card.currentStats.attack += def
-    card.currentStats.defense = 1 // 1 DEF żeby engine go nie zabił natychmiast
-    card.metadata.czartLastStand = true // Po następnym ataku — ginie
-    const log = addLog(newState, `${source.cardData.name}: Przenosi ${def} DEF na ATK → ${card.currentStats.attack} ATK! Jeden ostatni atak...`, 'effect')
+    card.currentStats.defense = 1
+    card.metadata.czartLastStand = true
+    const log = addLog(newState, `${source.cardData.name}: Przerzuca ${def} DEF na ATK → ${card.currentStats.attack} ATK! Ostatni atak...`, 'effect')
     return effectResult(newState, [log])
   },
 })
@@ -4074,8 +4128,8 @@ registerEffect({
 registerEffect({
   id: 'najemnik_mercenary',
   name: 'Najemnik — Lojalność za złoto',
-  description: '[AKCJA] Wydaj 1 PS: Najemnik wykonuje dodatkowy atak. [AURA] Wróg może wydać 1 PS, by przejąć Najemnika na swoją stronę.',
-  trigger: [EffectTrigger.ON_ACTIVATE],
+  description: '[AKCJA] Wydaj 1 PS: dodatkowy atak. [AURA] Na początku tury wroga: wróg może wydać 1 PS, by przejąć Najemnika.',
+  trigger: [EffectTrigger.ON_ACTIVATE, EffectTrigger.ON_TURN_START],
   priority: EffectPriority.REACTION,
   activatable: true,
   activationCost: 1,
@@ -4087,16 +4141,51 @@ registerEffect({
     return enemies.some(e => e.currentStats.defense > 0)
   },
   execute: (ctx) => {
-    const { state, source } = ctx
+    const { state, source, trigger } = ctx
+
+    // ON_TURN_START: jeśli to tura wroga i wróg ma PS → zaoferuj przekupstwo
+    if (trigger === EffectTrigger.ON_TURN_START) {
+      const enemySide = (source.owner === 'player1' ? 'player2' : 'player1') as PlayerSide
+      // Tylko gdy tura wroga
+      if (state.currentTurn !== enemySide) return effectResult(cloneGameState(state))
+      const enemy = state.players[enemySide]
+      if (enemy.glory < 1) return effectResult(cloneGameState(state))
+      // Nie oferuj jeśli AI jest właścicielem (AI nie jest "wrogiem" z perspektywy modala)
+      if (enemy.isAI) {
+        // AI decyduje: przekup jeśli Najemnik ma dużo ATK
+        if (source.currentStats.attack >= 5) {
+          const newState = cloneGameState(state)
+          const card = findCardInState(newState, source.instanceId)
+          if (card) {
+            newState.players[enemySide].glory -= 1
+            removeCardFromField(newState, card.instanceId)
+            card.owner = enemySide
+            card.line = BattleLine.FRONT
+            newState.players[enemySide].field.lines[BattleLine.FRONT].push(card)
+            const log = addLog(newState, `AI przekupuje ${card.cardData.name} za 1 PS!`, 'effect')
+            return effectResult(newState, [log])
+          }
+        }
+        return effectResult(cloneGameState(state))
+      }
+      // Gracz: pokaż modal
+      const newState = cloneGameState(state)
+      newState.pendingInteraction = {
+        type: 'najemnik_bribe',
+        sourceInstanceId: source.instanceId,
+        respondingPlayer: enemySide,
+        metadata: { najemnikName: source.cardData.name, najemnikAtk: source.currentStats.attack },
+      }
+      return effectResult(newState, [addLog(newState, `${source.cardData.name}: Wróg może go przekupić za 1 PS!`, 'effect')])
+    }
+
+    // ON_ACTIVATE: dodatkowy atak za 1 PS
     const newState = cloneGameState(state)
     const card = findCardInState(newState, source.instanceId)
     if (!card) return effectResult(newState)
-
-    // Odblokuj atak — Najemnik dostaje dodatkowy atak w tej turze
     card.hasAttackedThisTurn = false
     card.metadata.najemnikBonusAttack = true
-
-    const log = addLog(newState, `${source.cardData.name}: Opłacony! Dostaje dodatkowy atak za 1 PS.`, 'effect')
+    const log = addLog(newState, `${source.cardData.name}: Opłacony! Dodatkowy atak za 1 PS.`, 'effect')
     return effectResult(newState, [log])
   },
 })
