@@ -22,6 +22,10 @@ const lastError = ref<string | null>(null)
 const isHost = ref(false)
 const gameStarted = ref(false)
 
+// Chat messages from opponent
+interface ChatMsg { from: string; text: string; time: number }
+const chatMessages = ref<ChatMsg[]>([])
+
 // Callbacks for UI notifications
 type EventCallback = (msg: ServerMessage) => void
 const listeners = new Set<EventCallback>()
@@ -116,6 +120,11 @@ function handleMessage(msg: ServerMessage): void {
     case 'room_closed':
       resetState()
       lastError.value = msg.reason
+      break
+
+    case 'chat_message':
+      chatMessages.value = [...chatMessages.value, { from: msg.from, text: msg.text, time: msg.time }]
+      if (chatMessages.value.length > 50) chatMessages.value = chatMessages.value.slice(-50)
       break
   }
 
@@ -258,6 +267,11 @@ export function useMultiplayer() {
     sendMessage({ type: 'plunder' })
   }
 
+  // ===== CHAT =====
+  function sendChat(text: string) {
+    sendMessage({ type: 'chat_message', text })
+  }
+
   // Event listener management — track per-component listeners for cleanup
   const _componentListeners = new Set<EventCallback>()
 
@@ -322,6 +336,10 @@ export function useMultiplayer() {
     activateFavor,
     claimHoliday,
     plunder,
+
+    // Chat
+    chatMessages,
+    sendChat,
 
     // Events
     onServerMessage,

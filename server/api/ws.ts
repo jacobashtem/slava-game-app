@@ -143,6 +143,24 @@ export default defineWebSocketHandler({
         break
       }
 
+      case 'chat_message': {
+        const room = getRoomForPeer(peer.id)
+        if (!room) return
+        const player = room.players.find(p => p.peerId === peer.id)
+        if (!player) return
+        // Relay to opponent
+        const opponent = room.players.find(p => p.peerId !== peer.id)
+        if (opponent) {
+          sendToPeer(activePeers, opponent.peerId, {
+            type: 'chat_message',
+            from: player.displayName,
+            text: (msg.text || '').slice(0, 200),
+            time: Date.now(),
+          })
+        }
+        break
+      }
+
       // All game actions
       default: {
         const room = getRoomForPeer(peer.id)

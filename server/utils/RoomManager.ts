@@ -45,6 +45,7 @@ export type ServerMessage =
   | { type: 'state_update'; state: GameState }
   | { type: 'error'; message: string }
   | { type: 'room_closed'; reason: string }
+  | { type: 'chat_message'; from: string; text: string; time: number }
 
 export type ClientMessage =
   | { type: 'create_room'; displayName: string; settings: RoomSettings }
@@ -69,6 +70,7 @@ export type ClientMessage =
   | { type: 'activate_favor'; targetInstanceId?: string }
   | { type: 'claim_holiday' }
   | { type: 'plunder' }
+  | { type: 'chat_message'; text: string }
 
 // ===== ROOM MANAGER =====
 

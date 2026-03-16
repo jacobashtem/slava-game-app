@@ -10,9 +10,13 @@ import { computed, ref, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
 import { useNarrator } from '../../composables/useNarrator'
+import { useMultiplayer } from '../../composables/useMultiplayer'
 
 const game = useGameStore()
 const narrator = useNarrator()
+const mp = useMultiplayer()
+
+const isMP = computed(() => game.isMultiplayerMode)
 
 // ===== PANEL STATE =====
 const panelOpen = ref(true)
@@ -178,13 +182,31 @@ watch(() => narrator.messages.value.length, (newLen) => {
   }
 })
 
+// ===== MULTIPLAYER CHAT: receive opponent messages =====
+let lastMPChatLen = 0
+watch(() => mp.chatMessages.value.length, (newLen) => {
+  if (newLen <= lastMPChatLen) { lastMPChatLen = newLen; return }
+  const newMsgs = mp.chatMessages.value.slice(lastMPChatLen)
+  lastMPChatLen = newLen
+  for (const msg of newMsgs) {
+    pushMsg('ai', msg.text) // opponent messages show as "other" side
+  }
+})
+
 // ===== PLAYER INPUT =====
 function sendMessage() {
   const text = inputText.value.trim()
   if (!text) return
   inputText.value = ''
   pushMsg('player', text)
-  setTimeout(() => pushMsg('ai', getRandomQuip()), 600 + Math.random() * 800)
+
+  if (isMP.value) {
+    // Multiplayer: send via WebSocket, no AI response
+    mp.sendChat(text)
+  } else {
+    // Single-player: AI narrator responds
+    setTimeout(() => pushMsg('ai', getRandomQuip()), 600 + Math.random() * 800)
+  }
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -208,12 +230,12 @@ const show = computed(() => game.gameStarted)
     <div v-if="show && panelOpen" class="chat-panel">
       <!-- Header: two participants -->
       <div class="chat-header">
-        <!-- AI side -->
+        <!-- AI / Opponent side -->
         <div class="ch-participant" @click="panelOpen = false">
-          <Icon :icon="aiAvatar" class="ch-avatar ch-avatar-ai" />
+          <Icon :icon="isMP ? 'game-icons:horned-helmet' : aiAvatar" class="ch-avatar ch-avatar-ai" />
           <div class="ch-info">
-            <span class="ch-name">{{ aiName }}</span>
-            <span class="ch-title">{{ aiTitle }}</span>
+            <span class="ch-name">{{ isMP ? (mp.opponentName.value || 'Przeciwnik') : aiName }}</span>
+            <span class="ch-title">{{ isMP ? 'gracz' : aiTitle }}</span>
           </div>
         </div>
 
@@ -297,7 +319,7 @@ const show = computed(() => game.gameStarted)
         <input
           v-model="inputText"
           class="chat-input"
-          :placeholder="`Napisz do ${aiName}…`"
+          :placeholder="isMP ? 'Napisz do przeciwnika…' : `Napisz do ${aiName}…`"
           maxlength="120"
           @keydown="onKeydown"
         />
