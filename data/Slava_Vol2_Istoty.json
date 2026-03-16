@@ -756,7 +756,7 @@
                 "text": "Odkryj 1 zakrytą kartę wroga."
             }
         ],
-        "effectDescription": "Co rundę odkrywa wybraną nieznaną kartę rywala.",
+        "effectDescription": "[AURA] Co turę odkrywa 1 ukrytą kartę wroga.",
         "effectId": "swietle_reveal_card"
     },
     {
@@ -1946,7 +1946,7 @@
                 "text": "Wybierz 1 premię — Kresnik ją zyskuje."
             }
         ],
-        "effectDescription": "[WEJŚCIE] Wybierz 1 premię — Kresnik ją zyskuje na stałe.",
+        "effectDescription": "[WEJŚCIE] Wybierz zdolność dowolnej istoty — Kresnik ją zyskuje na stałe.",
         "effectId": "kresnik_choose_buff"
     },
     {

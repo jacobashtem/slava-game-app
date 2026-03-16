@@ -37,8 +37,19 @@ const dragonChoices = computed(() => {
   return (interaction.value.metadata?.dragons as any[]) ?? []
 })
 const targetSearch = ref('')
+const kresnikSearch = ref('')
 // Reset szukajki gdy zmieni się interakcja
-watch(interaction, () => { targetSearch.value = '' })
+watch(interaction, () => { targetSearch.value = ''; kresnikSearch.value = '' })
+
+const filteredKresnikChoices = computed(() => {
+  const choices = interaction.value?.availableChoices ?? []
+  if (!kresnikSearch.value) return choices
+  const q = kresnikSearch.value.toLowerCase()
+  return choices.filter(raw => {
+    const parts = raw.split('|')
+    return (parts[1]?.toLowerCase().includes(q)) || (parts[2]?.toLowerCase().includes(q))
+  })
+})
 
 // Wyszukaj kartę po instanceId na polach, rękach i cmentarzach obu graczy
 function findCard(instanceId: string) {
@@ -125,7 +136,7 @@ const title = computed(() => {
   if (t === 'auction_bid') return 'Licytacja — Łaska Boga'
   if (t === 'alkonost_target') return 'Hipnoza Alkonosta'
   if (t === 'chowaniec_intercept') return 'Chowaniec — Czujność'
-  if (t === 'kresnik_buff') return 'Kresnik — Wybierz premię'
+  if (t === 'kresnik_buff') return 'Kresnik — Wybierz zdolność'
   if (t === 'baba_domain') return 'Baba — Wybierz domenę'
   if (t === 'cmentarna_baba_resurrect') return 'Cmentarna Baba — Wskrzeszenie'
   if (t === 'inkluz_recipient') return 'Inkluz — Komu dać premię?'
@@ -154,7 +165,7 @@ const description = computed(() => {
     return `Hipnoza! ${(atk?.cardData as any)?.name ?? 'Wroga istota'} jest zmuszona zaatakować jednego ze swoich sojuszników. Wybierz cel.`
   }
   if (t === 'chowaniec_intercept') return 'Przejąć atak wymierzony w sojusznika?'
-  if (t === 'kresnik_buff') return 'Wybierz jedną premię dla Kresnika (trwałą na całą grę).'
+  if (t === 'kresnik_buff') return 'Wybierz zdolność dowolnej istoty — Kresnik ją zyskuje na stałe.'
   if (t === 'baba_domain') return 'Wybierz domenę chronioną — Baba zyska +4 ATK vs wszystkich POZOSTAŁYCH.'
   if (t === 'cmentarna_baba_resurrect') return 'Wybierz Nieumarłego z cmentarza do wskrzeszenia w Linii 1.'
   if (t === 'inkluz_recipient') {
@@ -273,9 +284,30 @@ function pickTarget(choice: string) {
           <p v-else-if="filteredTargets.length === 0" class="pi-empty">Brak wyników dla "{{ targetSearch }}"</p>
         </div>
 
-        <!-- Wybór stringowy (kresnik_buff, baba_domain, liczyrzepa_type) -->
+        <!-- Kresnik: lista zdolności z szukajką -->
+        <div v-if="interaction?.type === 'kresnik_buff' && interaction?.availableChoices" class="pi-kresnik">
+          <input
+            v-model="kresnikSearch"
+            class="pi-search"
+            type="text"
+            placeholder="Szukaj zdolności..."
+          />
+          <div class="pi-kresnik-list">
+            <button
+              v-for="raw in filteredKresnikChoices"
+              :key="raw"
+              class="pi-kresnik-btn"
+              @click="pickTarget(raw)"
+            >
+              <span class="pi-kresnik-name">{{ raw.split('|')[1] }}</span>
+              <span class="pi-kresnik-desc">{{ raw.split('|')[2] }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Wybór stringowy (baba_domain, liczyrzepa_type) -->
         <div
-          v-if="['kresnik_buff', 'baba_domain', 'liczyrzepa_type'].includes(interaction?.type ?? '') && interaction?.availableChoices"
+          v-if="['baba_domain', 'liczyrzepa_type'].includes(interaction?.type ?? '') && interaction?.availableChoices"
           class="pi-choices"
         >
           <button
@@ -702,6 +734,59 @@ function pickTarget(choice: string) {
 }
 
 /* ===== STRING CHOICES ===== */
+.pi-kresnik {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-height: 320px;
+}
+.pi-kresnik .pi-search {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(200, 168, 78, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: #e8dcc8;
+  font-size: 12px;
+  outline: none;
+}
+.pi-kresnik .pi-search:focus { border-color: rgba(200, 168, 78, 0.5); }
+.pi-kresnik-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  max-height: 260px;
+  scrollbar-width: thin;
+}
+.pi-kresnik-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(200, 168, 78, 0.08);
+  background: rgba(200, 168, 78, 0.03);
+  color: #e8dcc8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.pi-kresnik-btn:hover {
+  background: rgba(200, 168, 78, 0.1);
+  border-color: rgba(200, 168, 78, 0.3);
+}
+.pi-kresnik-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: #c8a84e;
+}
+.pi-kresnik-desc {
+  font-size: 10px;
+  color: rgba(148, 130, 100, 0.6);
+  line-height: 1.3;
+}
+
 .pi-choices {
   display: flex;
   flex-wrap: wrap;

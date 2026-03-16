@@ -3464,7 +3464,7 @@ registerEffect({
 registerEffect({
   id: 'kresnik_choose_buff',
   name: 'Kresnik (Wybrany Kapłan)',
-  description: '[WEJŚCIE] Przy wystawieniu: wybierz 1 premię — +3 ATK, +3 DEF, Latanie lub Brak kontrataku.',
+  description: '[WEJŚCIE] Przy wystawieniu: wybierz zdolność dowolnej istoty — Kresnik ją zyskuje na stałe.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.MODIFIER,
   execute: (ctx) => {
@@ -3473,53 +3473,70 @@ registerEffect({
     const card = findCardInState(newState, source.instanceId)
     if (!card) return effectResult(newState)
 
+    // Zbuduj listę wszystkich dostępnych efektów z istot (bez vanilii, bez samego Kresnika)
+    const allEffectIds = getAllEffectIds()
+    const creatureEffects = allEffectIds
+      .filter(id => {
+        if (id === 'kresnik_choose_buff') return false
+        if (id === 'azdacha_vanilia') return false
+        if (id.startsWith('adventure_')) return false
+        if (id.startsWith('zyvi_placeholder') || id.startsWith('undead_placeholder') || id.startsWith('weles_placeholder')) return false
+        const eff = getEffect(id)
+        if (!eff) return false
+        if (eff.description === 'Brak specjalnej zdolności.') return false
+        return true
+      })
+
     const isHuman = !state.players[source.owner].isAI
 
-    // Gracz ludzki: ustaw pendingInteraction — UI pokaże modal z wyborem
     if (isHuman && !ctx.metadata?.kresnikBuff) {
+      // Buduj wybory w formacie "effectId" — modal wyświetli nazwę + opis
+      const choices = creatureEffects.map(id => {
+        const eff = getEffect(id)!
+        return `${id}|${eff.name}|${eff.description}`
+      })
       newState.pendingInteraction = {
         type: 'kresnik_buff',
         sourceInstanceId: source.instanceId,
         respondingPlayer: source.owner as PlayerSide,
-        availableChoices: ['+3 ATK', '+3 DEF', 'Latanie', 'Bez kontrataku'],
+        availableChoices: choices,
       }
-      const log = addLog(newState, `${source.cardData.name}: Kapłan prosi o wybór premii...`, 'effect')
+      const log = addLog(newState, `${source.cardData.name}: Kapłan prosi o wybór zdolności...`, 'effect')
       return effectResult(newState, [log])
     }
 
-    // AI lub odpowiedź z resolvePendingInteraction: zastosuj premię
-    type BuffType = 'atk+3' | 'def+3' | 'flying' | 'no_counter'
-    const choiceMap: Record<string, BuffType> = {
-      '+3 ATK': 'atk+3',
-      '+3 DEF': 'def+3',
-      'Latanie': 'flying',
-      'Bez kontrataku': 'no_counter',
-    }
-    const rawChoice = ctx.metadata?.kresnikBuff as string ?? '+3 ATK'
-    const chosen: BuffType = choiceMap[rawChoice] ?? (rawChoice as BuffType)
+    // AI: wybierz najlepszą zdolność (heurystyka)
+    const aiPicks = [
+      'strzyga_lifesteal',         // lifesteal
+      'krol_wezow_always_counter', // always counter
+      'wilkolak_melee_immune',     // melee immune
+      'utopiec_half_damage',       // half damage
+      'cmuch_no_counter_received', // no counter received
+      'baba_jaga_death_growth',    // +1/+1 per death
+    ]
+    const chosenId = ctx.metadata?.kresnikBuff as string
+      ?? aiPicks.find(id => getEffect(id)) ?? creatureEffects[0] ?? 'krol_wezow_always_counter'
 
-    const log: LogEntry[] = []
-    switch (chosen) {
-      case 'atk+3':
-        card.currentStats.attack += 3
-        log.push(addLog(newState, `${source.cardData.name}: Kapłański dar! +3 ATK (${card.currentStats.attack}).`, 'effect'))
-        break
-      case 'def+3':
-        card.currentStats.defense += 3
-        if (typeof card.currentStats.maxDefense === 'number') card.currentStats.maxDefense += 3
-        log.push(addLog(newState, `${source.cardData.name}: Kapłańska tarcza! +3 DEF (${card.currentStats.defense}).`, 'effect'))
-        break
-      case 'flying':
-        ;(card.cardData as any).isFlying = true
-        log.push(addLog(newState, `${source.cardData.name}: Unosi się w powietrze! Latający.`, 'effect'))
-        break
-      case 'no_counter':
-        card.activeEffects.push({ effectId: 'dobroochoczy_no_counter', source: 'kresnik' } as any)
-        log.push(addLog(newState, `${source.cardData.name}: Zwinność Kresnika — nie kontratakuje wrogów.`, 'effect'))
-        break
+    // Wyodrębnij effectId (format: "effectId|name|desc" lub sam effectId)
+    const effectId = chosenId.split('|')[0]!
+    const stolenEffect = getEffect(effectId)
+    if (!stolenEffect) return effectResult(newState)
+
+    // Dodaj jako permanentny activeEffect
+    card.activeEffects = card.activeEffects ?? []
+    if (!card.activeEffects.some(ae => ae.effectId === effectId)) {
+      card.activeEffects.push({
+        effectId,
+        sourceInstanceId: source.instanceId,
+        trigger: Array.isArray(stolenEffect.trigger) ? stolenEffect.trigger[0] : stolenEffect.trigger,
+        remainingTurns: null,
+        stackId: `kresnik_${effectId}`,
+        metadata: {},
+      })
     }
 
-    return effectResult(newState, log)
+    const log = addLog(newState, `${source.cardData.name}: Kapłański dar! Zyskuje zdolność "${stolenEffect.name}".`, 'effect')
+    return effectResult(newState, [log])
   },
 })
 
