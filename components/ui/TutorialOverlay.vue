@@ -27,16 +27,6 @@ const progressPct = computed(() =>
 
       <!-- Modal popup -->
       <div :class="['tut-modal', `tut-pos-${tutorial.step.value.position ?? 'center'}`]">
-        <!-- Runic border -->
-        <svg class="tut-border" viewBox="0 0 400 240" preserveAspectRatio="none">
-          <rect x="2" y="2" width="396" height="236" rx="10" fill="none"
-            stroke="rgba(200,168,78,0.2)" stroke-width="1" stroke-dasharray="6 3" />
-        </svg>
-
-        <!-- Corner runes -->
-        <span class="tut-corner tut-tl">ᚱ</span>
-        <span class="tut-corner tut-tr">ᛊ</span>
-
         <!-- Progress bar -->
         <div class="tut-progress">
           <div class="tut-progress-fill" :style="{ width: progressPct + '%' }" />
@@ -103,12 +93,14 @@ const progressPct = computed(() =>
   background:
     radial-gradient(ellipse at 50% 20%, rgba(200, 168, 78, 0.04) 0%, transparent 50%),
     linear-gradient(170deg, rgba(16, 12, 24, 0.97) 0%, rgba(10, 8, 16, 0.98) 100%);
-  border-radius: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(200, 168, 78, 0.15);
   padding: 0;
   overflow: hidden;
   box-shadow:
     0 16px 60px rgba(0, 0, 0, 0.8),
-    0 0 1px rgba(200, 168, 78, 0.15) inset;
+    0 0 30px rgba(200, 100, 30, 0.06),
+    inset 0 1px 0 rgba(200, 168, 78, 0.08);
   animation: tut-enter 0.35s cubic-bezier(0, 0.6, 0.3, 1) forwards;
 }
 
@@ -120,26 +112,6 @@ const progressPct = computed(() =>
   from { opacity: 0; transform: translateY(15px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
-/* Border SVG */
-.tut-border {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-/* Corner runes */
-.tut-corner {
-  position: absolute;
-  font-size: 12px;
-  color: rgba(200, 168, 78, 0.15);
-  pointer-events: none;
-  z-index: 1;
-}
-.tut-tl { top: 8px; left: 10px; }
-.tut-tr { top: 8px; right: 10px; }
 
 /* Progress bar */
 .tut-progress {
