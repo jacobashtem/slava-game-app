@@ -108,9 +108,9 @@ const showSettings = ref(false)
           </div>
         </div>
 
-        <!-- TWO GAME MODES -->
-        <div class="modes-row">
-          <!-- GOLD EDITION -->
+        <!-- GAME MODES -->
+        <div class="modes-col">
+          <!-- GOLD EDITION — primary -->
           <button class="mode-card mode-gold" @click="startGoldEdition">
             <div class="mode-glow" />
             <Icon icon="game-icons:crown-coin" class="mode-icon" />
@@ -121,25 +121,26 @@ const showSettings = ref(false)
             <div class="mode-badge">REKOMENDOWANE</div>
           </button>
 
-          <!-- SLAVA! -->
-          <button class="mode-card mode-slava" @click="startSlavaMode">
-            <div class="mode-glow mode-glow-red" />
-            <Icon icon="game-icons:sword-clash" class="mode-icon" />
-            <div class="mode-text">
-              <span class="mode-name">Sława!</span>
-              <span class="mode-desc">Punkty Sławy, Panteon Bogów, Święta</span>
-            </div>
-          </button>
-        </div>
+          <!-- SLAVA + TUTORIAL side by side -->
+          <div class="modes-pair">
+            <button class="mode-card mode-slava" @click="startSlavaMode">
+              <div class="mode-glow mode-glow-red" />
+              <Icon icon="game-icons:sword-clash" class="mode-icon" />
+              <div class="mode-text">
+                <span class="mode-name">Sława!</span>
+                <span class="mode-desc">Panteon Bogów</span>
+              </div>
+            </button>
 
-        <!-- TUTORIAL -->
-        <NuxtLink to="/tutorial" class="mode-card mode-tutorial">
-          <Icon icon="game-icons:book-cover" class="mode-icon" />
-          <div class="mode-text">
-            <span class="mode-name">Samouczek</span>
-            <span class="mode-desc">Żerca nauczy Cię zasad w trakcie gry</span>
+            <NuxtLink to="/tutorial" class="mode-card mode-tutorial">
+              <Icon icon="game-icons:hooded-figure" class="mode-icon" />
+              <div class="mode-text">
+                <span class="mode-name">Samouczek</span>
+                <span class="mode-desc">Naucz się grać</span>
+              </div>
+            </NuxtLink>
           </div>
-        </NuxtLink>
+        </div>
 
         <!-- SETTINGS (collapsible) -->
         <button class="settings-toggle" @click="showSettings = !showSettings">
@@ -417,12 +418,26 @@ const showSettings = ref(false)
 }
 
 /* ===== GAME MODES ===== */
-.modes-row {
+.modes-col {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 100%;
 }
+.modes-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.modes-pair .mode-card {
+  flex-direction: column;
+  text-align: center;
+  padding: 16px 10px;
+  gap: 8px;
+}
+.modes-pair .mode-text { align-items: center; }
+.modes-pair .mode-name { font-size: 16px; }
+.modes-pair .mode-desc { font-size: 10px; }
 
 .mode-card {
   position: relative;
@@ -489,27 +504,19 @@ const showSettings = ref(false)
 }
 
 .mode-tutorial {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(30, 60, 120, 0.08) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.15);
-  border-radius: 12px;
-  padding: 14px 18px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
+  background: linear-gradient(135deg, rgba(100, 160, 120, 0.06) 0%, rgba(40, 80, 60, 0.08) 100%);
+  border: 1px solid rgba(100, 160, 120, 0.15);
   text-decoration: none;
   color: #e2e8f0;
-  width: 100%;
 }
 .mode-tutorial:hover {
-  border-color: rgba(59, 130, 246, 0.35);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 60, 120, 0.12) 100%);
+  border-color: rgba(120, 180, 140, 0.35);
+  background: linear-gradient(135deg, rgba(100, 160, 120, 0.1) 0%, rgba(40, 80, 60, 0.12) 100%);
 }
 .mode-tutorial .mode-icon {
-  font-size: 24px;
-  color: #60a5fa;
-  flex-shrink: 0;
+  font-size: 26px;
+  color: rgba(140, 200, 160, 0.7);
+  filter: drop-shadow(0 0 6px rgba(100, 160, 120, 0.3));
 }
 
 @keyframes btn-glow-pulse {
@@ -559,17 +566,17 @@ const showSettings = ref(false)
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 11px 16px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.015);
-  color: #64748b;
-  font-size: 12px;
+  border: 1px solid rgba(200, 168, 78, 0.08);
+  background: rgba(200, 168, 78, 0.02);
+  color: rgba(148, 130, 100, 0.5);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition: all 0.15s;
 }
-.settings-toggle:hover { background: rgba(255, 255, 255, 0.03); color: #94a3b8; }
+.settings-toggle:hover { background: rgba(200, 168, 78, 0.05); color: rgba(200, 168, 78, 0.8); border-color: rgba(200, 168, 78, 0.15); }
 .st-icon { font-size: 14px; }
 .st-chev { margin-left: auto; font-size: 16px; opacity: 0.4; }
 
@@ -583,10 +590,10 @@ const showSettings = ref(false)
   flex-direction: column;
   gap: 14px;
   width: 100%;
-  padding: 14px;
-  background: rgba(10, 8, 16, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  padding: 16px;
+  background: rgba(14, 10, 20, 0.6);
+  border: 1px solid rgba(200, 168, 78, 0.08);
+  border-radius: 10px;
 }
 
 .sg { display: flex; flex-direction: column; gap: 7px; }
@@ -636,8 +643,8 @@ const showSettings = ref(false)
 /* ===== NAVIGATION ===== */
 .nav-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
   width: 100%;
 }
 
@@ -645,24 +652,25 @@ const showSettings = ref(false)
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 12px 6px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  background: rgba(255, 255, 255, 0.01);
-  color: #475569;
+  gap: 4px;
+  padding: 14px 6px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(200, 168, 78, 0.06);
+  background: rgba(200, 168, 78, 0.02);
+  color: rgba(148, 130, 100, 0.5);
   text-decoration: none;
-  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  transition: all 0.2s;
 }
 .nav-tile:hover {
-  background: rgba(200, 168, 78, 0.04);
-  border-color: rgba(200, 168, 78, 0.12);
-  color: #c8a84e;
+  background: rgba(200, 168, 78, 0.06);
+  border-color: rgba(200, 168, 78, 0.2);
+  color: rgba(200, 168, 78, 0.9);
+  transform: translateY(-1px);
 }
 
-.nt-icon { font-size: 20px; }
-.nt-label { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; }
-.nt-desc { font-size: 8px; opacity: 0.5; }
+.nt-icon { font-size: 22px; }
+.nt-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+.nt-desc { font-size: 9px; opacity: 0.5; }
 
 /* ===== FOOTER ===== */
 .footer {
@@ -691,6 +699,9 @@ const showSettings = ref(false)
   .mode-name { font-size: 15px; }
   .mode-gold .mode-icon { font-size: 26px; }
   .mode-slava .mode-icon { font-size: 24px; }
+  .modes-pair { gap: 8px; }
+  .modes-pair .mode-card { padding: 12px 8px; }
+  .modes-pair .mode-name { font-size: 14px; }
   .nav-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
