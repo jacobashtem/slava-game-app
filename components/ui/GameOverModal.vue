@@ -5,10 +5,16 @@ import gsap from 'gsap'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { useArenaStore } from '../../stores/arenaStore'
+import { useSlavaApi, type MatchReportResult } from '../../composables/useSlavaApi'
 
 const game = useGameStore()
 const ui = useUIStore()
 const arena = useArenaStore()
+const api = useSlavaApi()
+
+// Post-game report result
+const matchReport = ref<MatchReportResult | null>(null)
+const reportError = ref(false)
 
 const isWin = computed(() => game.winner === game.mySide)
 
@@ -60,6 +66,29 @@ const narrativeEl = ref<HTMLElement | null>(null)
 
 watch(() => game.winner, (w) => {
   if (!w) return
+
+  // Report match to backend (fire & forget, non-blocking)
+  if (api.isAuthenticated.value && !game.isArenaMode) {
+    const difficulty = game.selectedDifficulty
+    const opponentType = game.isMultiplayerMode
+      ? 'human' as const
+      : `ai_${difficulty}` as 'ai_easy' | 'ai_medium' | 'ai_hard'
+
+    api.reportMatch({
+      opponentType,
+      opponentName: game.isMultiplayerMode ? undefined : `AI (${difficulty})`,
+      gameMode: game.gameMode ?? 'gold',
+      result: isWin.value ? 'win' : 'loss',
+      rounds: game.roundNumber,
+      playerGlory: stats.value?.playerGlory,
+      opponentGlory: stats.value?.aiGlory,
+    }).then(result => {
+      matchReport.value = result
+    }).catch(() => {
+      reportError.value = true
+    })
+  }
+
   nextTick(() => {
     const tl = gsap.timeline({ defaults: { ease: 'back.out(1.7)' } })
 
@@ -236,6 +265,22 @@ function restart() {
             <span class="go-stat-rune">ᚲ</span>
             <span class="go-stat-label">Karty w talii</span>
             <span class="go-stat-val">{{ stats.playerDeck }}</span>
+          </div>
+        </div>
+
+        <!-- XP earned -->
+        <div v-if="matchReport" class="go-xp">
+          <div class="go-xp-row">
+            <Icon icon="game-icons:upgrade" class="go-xp-icon" />
+            <span>+{{ matchReport.xp.xpEarned }} XP</span>
+          </div>
+          <div v-if="matchReport.xp.leveledUp" class="go-level-up">
+            <Icon icon="game-icons:laurels" />
+            Poziom {{ matchReport.xp.newLevel }}!
+          </div>
+          <div v-for="ach in matchReport.achievements" :key="ach.id" class="go-achievement">
+            <Icon icon="game-icons:achievement" />
+            {{ ach.name }}
           </div>
         </div>
 
@@ -455,6 +500,41 @@ function restart() {
 .go-val-kill { color: rgba(74, 222, 128, 0.8); }
 .go-val-loss { color: rgba(248, 113, 113, 0.7); }
 .go-val-glory { color: rgba(200, 168, 78, 0.85); }
+
+/* ===== XP DISPLAY ===== */
+.go-xp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+}
+.go-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c8a84e;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.go-xp-icon { font-size: 16px; }
+.go-level-up {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #ffd700;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+.go-achievement {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(74, 222, 128, 0.8);
+  font-size: 11px;
+}
 
 /* ===== BUTTONS ===== */
 .go-btn-main {

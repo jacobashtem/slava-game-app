@@ -1,0 +1,11 @@
+name = "slava-game"
+compatibility_date = "2025-07-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "slava-db"
+database_id = "" # filled after `npx wrangler d1 create slava-db`
+
+[[kv_namespaces]]
+binding = "KV"
+id = "" # filled after `npx wrangler kv namespace create KV`

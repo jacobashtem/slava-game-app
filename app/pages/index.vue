@@ -1,12 +1,77 @@
 <script setup lang="ts">
 definePageMeta({ ssr: false })
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '../../stores/gameStore'
+import { useSlavaApi } from '../../composables/useSlavaApi'
 import type { AIDifficulty } from '../../game-engine/AIPlayer'
+
 import { Domain, DOMAIN_NAMES, DOMAIN_COLORS } from '../../game-engine/constants'
 
+/** Total XP required to reach a given level. */
+function xpForLevel(level: number): number {
+  return 50 * level * (level - 1)
+}
+
 const game = useGameStore()
+const api = useSlavaApi()
+
+// ===== PLAYER PROFILE =====
+const PLAYER_ICONS = [
+  'game-icons:viking-helmet',
+  'game-icons:swords-emblem',
+  'game-icons:wolf-head',
+  'game-icons:bear-head',
+  'game-icons:hawk-emblem',
+  'game-icons:raven',
+  'game-icons:crown',
+  'game-icons:war-axe',
+  'game-icons:fire-ring',
+  'game-icons:triquetra',
+  'game-icons:oak-leaf',
+  'game-icons:eye-shield',
+]
+
+const showProfile = ref(false)
+const profileName = ref(game.playerName || '')
+const profileIcon = ref(game.playerIcon || 'game-icons:viking-helmet')
+const loginLoading = ref(false)
+const loginError = ref<string | null>(null)
+
+const displayName = computed(() => api.currentPlayer.value?.displayName || game.playerName || 'Wojownik')
+const displayIcon = computed(() => game.playerIcon || 'game-icons:viking-helmet')
+const playerLevel = computed(() => api.currentPlayer.value?.level ?? 1)
+const playerXp = computed(() => api.currentPlayer.value?.xp ?? 0)
+const xpForCurrent = computed(() => xpForLevel(playerLevel.value))
+const xpForNext = computed(() => xpForLevel(playerLevel.value + 1))
+const xpProgress = computed(() => {
+  const range = xpForNext.value - xpForCurrent.value
+  if (range <= 0) return 0
+  return Math.min(100, Math.round(((playerXp.value - xpForCurrent.value) / range) * 100))
+})
+
+function selectProfileIcon(icon: string) {
+  profileIcon.value = icon
+}
+
+async function saveProfile() {
+  const name = profileName.value.trim()
+  if (!name || name.length < 2) {
+    loginError.value = 'Imię musi mieć min. 2 znaki.'
+    return
+  }
+  loginLoading.value = true
+  loginError.value = null
+  try {
+    await api.login(name, profileIcon.value)
+    game.setPlayerProfile(name, profileIcon.value)
+    showProfile.value = false
+  } catch (e: any) {
+    loginError.value = e.message || 'Nie udało się zalogować.'
+  } finally {
+    loginLoading.value = false
+  }
+}
 
 // ===== USTAWIENIA GRY =====
 const difficulty = ref<AIDifficulty>(game.selectedDifficulty)
@@ -40,8 +105,6 @@ const domains = [
 ]
 
 // ===== PREFETCH HEAVY MODULES =====
-// WebGPU + TSL are ~500KB — start loading NOW while user picks settings.
-// By the time they enter game, modules are already cached.
 if (typeof window !== 'undefined') {
   import('three/webgpu').catch(() => {})
   import('three/tsl').catch(() => {})
@@ -49,13 +112,20 @@ if (typeof window !== 'undefined') {
 
 // ===== ATMOSPHERIC PARTICLES =====
 const embers = ref<{ x: number; delay: number; dur: number; size: number }[]>([])
-onMounted(() => {
+onMounted(async () => {
   embers.value = Array.from({ length: 24 }, () => ({
     x: Math.random() * 100,
     delay: Math.random() * 15,
     dur: 10 + Math.random() * 12,
     size: 2 + Math.random() * 3,
   }))
+
+  // Restore session on mount
+  const player = await api.restoreSession()
+  if (player) {
+    // Sync gameStore profile with backend data
+    game.setPlayerProfile(player.displayName, game.playerIcon)
+  }
 })
 
 // Settings
@@ -86,6 +156,64 @@ const showSettings = ref(false)
     <!-- Content -->
     <div class="menu-scroll">
       <div class="menu-content">
+        <!-- PLAYER BAR -->
+        <div class="player-bar" @click="showProfile = !showProfile">
+          <div class="pb-avatar">
+            <Icon :icon="displayIcon" class="pb-icon" />
+          </div>
+          <div class="pb-info">
+            <span class="pb-name">{{ displayName }}</span>
+            <div v-if="api.isAuthenticated.value" class="pb-level-row">
+              <span class="pb-level">Poz. {{ playerLevel }}</span>
+              <div class="pb-xp-bar">
+                <div class="pb-xp-fill" :style="{ width: xpProgress + '%' }" />
+              </div>
+              <span class="pb-xp-text">{{ playerXp }} XP</span>
+            </div>
+            <span v-else class="pb-login-hint">Kliknij aby się zalogować</span>
+          </div>
+          <Icon :icon="showProfile ? 'mdi:chevron-up' : 'mdi:chevron-down'" class="pb-chev" />
+        </div>
+
+        <!-- PROFILE EDITOR (collapsible) -->
+        <Transition name="panel-slide">
+          <div v-if="showProfile" class="profile-panel">
+            <div class="pp-field">
+              <label class="pp-label">Imię wojownika</label>
+              <input
+                v-model="profileName"
+                class="pp-input"
+                type="text"
+                maxlength="20"
+                placeholder="Twoje imię..."
+                @keyup.enter="saveProfile"
+              />
+            </div>
+            <div class="pp-field">
+              <label class="pp-label">Herb</label>
+              <div class="pp-icons">
+                <button
+                  v-for="ic in PLAYER_ICONS" :key="ic"
+                  :class="['pp-icon-btn', { active: profileIcon === ic }]"
+                  @click="selectProfileIcon(ic)"
+                >
+                  <Icon :icon="ic" />
+                </button>
+              </div>
+            </div>
+            <div v-if="loginError" class="pp-error">{{ loginError }}</div>
+            <button class="pp-save" :disabled="loginLoading" @click="saveProfile">
+              <Icon v-if="loginLoading" icon="mdi:loading" class="spin" />
+              <Icon v-else icon="game-icons:scroll-quill" />
+              {{ api.isAuthenticated.value ? 'Zapisz profil' : 'Zaloguj się' }}
+            </button>
+            <button v-if="api.isAuthenticated.value" class="pp-logout" @click="api.logout(); showProfile = false">
+              <Icon icon="mdi:logout" />
+              Wyloguj
+            </button>
+          </div>
+        </Transition>
+
         <!-- HEADER: emblem + title -->
         <div class="logo-block">
           <!-- Slavic ornament top -->
@@ -215,6 +343,11 @@ const showSettings = ref(false)
             <Icon icon="game-icons:sparkles" class="nt-icon" />
             <span class="nt-label">Efekty</span>
             <span class="nt-desc">Pokaz VFX/SFX</span>
+          </NuxtLink>
+          <NuxtLink to="/ranking" class="nav-tile">
+            <Icon icon="game-icons:laurel-crown" class="nt-icon" />
+            <span class="nt-label">Ranking</span>
+            <span class="nt-desc">Najlepsi wojownicy</span>
           </NuxtLink>
           <NuxtLink to="/gallery" class="nav-tile">
             <Icon icon="game-icons:card-pickup" class="nt-icon" />
@@ -687,6 +820,209 @@ const showSettings = ref(false)
   color: rgba(148, 130, 100, 0.3);
   letter-spacing: 0.06em;
 }
+
+/* ===== PLAYER BAR ===== */
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(200, 168, 78, 0.12);
+  background: rgba(200, 168, 78, 0.03);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.player-bar:hover {
+  background: rgba(200, 168, 78, 0.06);
+  border-color: rgba(200, 168, 78, 0.25);
+}
+
+.pb-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(200, 168, 78, 0.3);
+  background: rgba(200, 168, 78, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pb-icon { font-size: 20px; color: #c8a84e; }
+
+.pb-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.pb-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ddd6c1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb-level-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pb-level {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(200, 168, 78, 0.7);
+  flex-shrink: 0;
+}
+.pb-xp-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(200, 168, 78, 0.08);
+  overflow: hidden;
+}
+.pb-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(200, 168, 78, 0.5), rgba(200, 100, 30, 0.6));
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.pb-xp-text {
+  font-size: 9px;
+  color: rgba(148, 130, 100, 0.4);
+  flex-shrink: 0;
+}
+
+.pb-login-hint {
+  font-size: 10px;
+  color: rgba(148, 130, 100, 0.4);
+  font-style: italic;
+}
+.pb-chev {
+  font-size: 16px;
+  color: rgba(148, 130, 100, 0.3);
+  flex-shrink: 0;
+}
+
+/* ===== PROFILE PANEL ===== */
+.profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  background: rgba(14, 10, 20, 0.7);
+  border: 1px solid rgba(200, 168, 78, 0.1);
+  border-radius: 10px;
+}
+
+.pp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pp-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(148, 130, 100, 0.5);
+}
+
+.pp-input {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(200, 168, 78, 0.15);
+  background: rgba(200, 168, 78, 0.04);
+  color: #ddd6c1;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.pp-input::placeholder { color: rgba(148, 130, 100, 0.3); }
+.pp-input:focus { border-color: rgba(200, 168, 78, 0.4); }
+
+.pp-icons {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.pp-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.015);
+  color: #475569;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pp-icon-btn:hover { background: rgba(200, 168, 78, 0.06); color: rgba(200, 168, 78, 0.7); }
+.pp-icon-btn.active {
+  border-color: rgba(200, 168, 78, 0.4);
+  background: rgba(200, 168, 78, 0.08);
+  color: #c8a84e;
+}
+
+.pp-error {
+  font-size: 11px;
+  color: #cc4444;
+  text-align: center;
+}
+
+.pp-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(200, 168, 78, 0.3);
+  background: linear-gradient(135deg, rgba(200, 100, 30, 0.15), rgba(200, 168, 78, 0.08));
+  color: rgba(200, 168, 78, 0.9);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pp-save:hover {
+  background: linear-gradient(135deg, rgba(200, 100, 30, 0.25), rgba(200, 168, 78, 0.12));
+  border-color: rgba(200, 168, 78, 0.5);
+}
+.pp-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pp-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(100, 80, 60, 0.1);
+  background: transparent;
+  color: rgba(148, 130, 100, 0.3);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pp-logout:hover {
+  color: rgba(200, 100, 80, 0.7);
+  border-color: rgba(200, 100, 80, 0.2);
+}
+
+.spin { animation: spin 1s linear infinite; }
 
 /* ===== MOBILE ===== */
 @media (max-width: 480px) {

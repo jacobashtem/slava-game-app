@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
   devtools: { enabled: true },
-  modules: ['@pinia/nuxt'],
+  modules: ['@pinia/nuxt', '@nuxthub/core'],
   alias: {
     '~': fileURLToPath(new URL('./', import.meta.url)),
     '@': fileURLToPath(new URL('./', import.meta.url)),
@@ -14,6 +14,10 @@ export default defineNuxtConfig({
   components: [
     { path: fileURLToPath(new URL('./components', import.meta.url)), pathPrefix: false },
   ],
+  hub: {
+    database: true,
+    kv: true,
+  },
   nitro: {
     experimental: {
       websocket: true,

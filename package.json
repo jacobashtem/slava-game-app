@@ -10,14 +10,18 @@
     "postinstall": "nuxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "deploy": "npx nuxthub deploy",
+    "db:migrate": "npx wrangler d1 execute slava-db --file=server/database/migrations/0001_initial.sql"
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
+    "@nuxthub/core": "^0.9.1",
     "@pinia/nuxt": "^0.11.3",
     "@tresjs/cientos": "^5.6.0",
     "@tresjs/core": "^5.6.0",
     "@types/howler": "^2.2.12",
+    "drizzle-orm": "^0.45.1",
     "gsap": "^3.14.2",
     "howler": "^2.2.4",
     "nuxt": "^4.3.1",
@@ -32,6 +36,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.4",
     "sharp": "^0.34.5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "wrangler": "^4.74.0"
   }
 }
