@@ -5,7 +5,7 @@ import PlayerField from './PlayerField.vue'
 import PlayerHand from '../ui/PlayerHand.vue'
 import TurnIndicator from '../ui/TurnIndicator.vue'
 import PhaseControls from '../ui/PhaseControls.vue'
-import ActionLog from '../ui/ActionLog.vue'
+import GameChat from '../ui/GameChat.vue'
 import DeckPile from '../ui/DeckPile.vue'
 import CardTooltip from '../ui/CardTooltip.vue'
 import GameOverModal from '../ui/GameOverModal.vue'
@@ -410,8 +410,8 @@ const onPlayDescription = computed(() => {
     <!-- ===== PODPOWIEDŹ ===== -->
     <GameHint />
 
-    <!-- ===== LOG AKCJI (jedna linia nad ręką) ===== -->
-    <ActionLog />
+    <!-- ===== CZAT Z NARRATOREM ===== -->
+    <GameChat />
 
     <!-- ===== RĘKA GRACZA (dolny pasek) ===== -->
     <PlayerHand />
