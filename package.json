@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "balance": "npx tsx game-engine/__tests__/simulate.ts",
     "deploy": "npx nuxthub deploy",
     "db:migrate": "npx wrangler d1 execute slava-db --file=server/database/migrations/0001_initial.sql"
   },
