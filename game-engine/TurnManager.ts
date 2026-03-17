@@ -182,19 +182,7 @@ export function processDrawPhase(state: GameState): { newState: GameState; log: 
     return { newState, log, drawn }
   }
 
-  // Reshuffle cmentarza do talii gdy talia jest pusta
-  if (currentPlayer.deck.length === 0 && currentPlayer.graveyard.length > 0) {
-    const reshuffled = currentPlayer.graveyard
-      .filter(c => c.cardData.cardType === 'creature')
-      .map(c => { c.isRevealed = false; c.currentStats = { ...(c.cardData as any).stats }; c.poisonRoundsLeft = null; c.isSilenced = false; c.activeEffects = []; c.hasAttackedThisTurn = false; c.position = CardPosition.DEFENSE; c.cannotAttack = false; c.metadata = {}; c.equippedArtifacts = []; c.line = null; return c })
-    for (let i = reshuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [reshuffled[i], reshuffled[j]] = [reshuffled[j]!, reshuffled[i]!]
-    }
-    currentPlayer.deck.push(...reshuffled)
-    currentPlayer.graveyard = currentPlayer.graveyard.filter(c => c.cardData.cardType !== 'creature')
-    log.push(addLog(newState, `${newState.currentTurn}: Talia pusta — cmentarz (${reshuffled.length} istot) przetasowany z powrotem.`, 'system'))
-  }
+  // Talia pusta = gracz gra do końca tym co ma na polu i w ręce (bez reshuffle)
 
   while (currentPlayer.hand.length < target) {
     const card = drawCard(currentPlayer)
