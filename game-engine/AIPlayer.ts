@@ -343,6 +343,15 @@ export class AIPlayer {
       break // limit: 1 atak na turę (symetrycznie z graczem)
     }
 
+    // PLUNDER: łup wroga gdy ma puste pole (runda ≥ 3)
+    if (currentState.roundNumber >= 3) {
+      const enemySideMed = this.side === 'player1' ? 'player2' : 'player1'
+      const enemyCreatureCount = getAllCreaturesOnField(currentState, enemySideMed).length
+      if (enemyCreatureCount === 0) {
+        decisions.push({ type: 'plunder' })
+      }
+    }
+
     decisions.push({ type: 'end_turn' })
     return decisions
   }
@@ -596,6 +605,14 @@ export class AIPlayer {
         targetInstanceId: best.target.instanceId,
       })
       break // 1 atak na turę
+    }
+
+    // PLUNDER: łup wroga gdy ma puste pole (runda ≥ 3)
+    if (currentState.roundNumber >= 3) {
+      const enemiesAfterCombat = getAllCreaturesOnField(currentState, enemySide)
+      if (enemiesAfterCombat.length === 0) {
+        decisions.push({ type: 'plunder' })
+      }
     }
 
     decisions.push({ type: 'end_turn' })

@@ -474,7 +474,7 @@ export function checkSlavaWinCondition(state: GameState): PlayerSide | null {
 
 /** Zwraca koszt ulepszenia przygody w aktualnym trybie */
 export function getEnhancedAdventureCost(state: GameState, side: PlayerSide): number {
-  if (state.gameMode !== 'slava') return -1 // nie dotyczy — użyj GOLD_EDITION_RULES
+  if (state.gameMode !== 'slava') return GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST
   // Jesień: Welesowcy mają za darmo
   if (state.slavaData?.currentSeason === Season.AUTUMN) {
     // Sprawdź czy gracz ma Welesowca na polu — nie, wg specyfikacji cała domena Weles za 0

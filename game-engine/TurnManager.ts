@@ -409,10 +409,14 @@ export function playAdventure(
     }
   }
 
-  if (adventureCost > 0 && currentPlayer.glory < adventureCost) {
-    throw new Error(`[TurnManager] Brak PS. Potrzebujesz ${adventureCost} PS na ulepszony efekt.`)
+  // Sprawdź i pobierz koszt z właściwej waluty (gold w Gold Edition, glory w Sława)
+  if (adventureCost > 0) {
+    const currency = newState.gameMode === 'slava' ? 'glory' : 'gold'
+    if (currentPlayer[currency] < adventureCost) {
+      throw new Error(`[TurnManager] Brak PS. Potrzebujesz ${adventureCost} PS na ulepszony efekt.`)
+    }
+    currentPlayer[currency] -= adventureCost
   }
-  currentPlayer.glory -= adventureCost
   currentPlayer.adventuresPlayedThisTurn += 1
 
   // Usuń z ręki

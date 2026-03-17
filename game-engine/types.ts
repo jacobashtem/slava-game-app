@@ -322,7 +322,7 @@ export interface EffectDefinition {
 // ===== AI =====
 
 export interface AIDecision {
-  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'end_turn' | 'activate_effect' | 'invoke_god'
+  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'end_turn' | 'activate_effect' | 'invoke_god' | 'plunder'
   cardInstanceId?: string
   targetInstanceId?: string
   targetLine?: BattleLine

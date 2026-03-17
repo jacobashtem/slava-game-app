@@ -17,7 +17,7 @@ import { getAllCreaturesOnField } from '../LineManager'
 
 const args = process.argv.slice(2)
 const GAME_COUNT = parseInt(args[0] || '100', 10)
-const AI_DIFFICULTY = (args[1] || 'medium') as AIDifficulty
+const AI_DIFFICULTY = (args[1] || 'hard') as AIDifficulty
 const MAX_TURNS = 150
 
 // ---------------------------------------------------------------------------
@@ -178,6 +178,7 @@ function simulateGame(): GameResult {
         d.type === 'play_creature' || d.type === 'play_adventure' ||
         d.type === 'change_position' || d.type === 'activate_effect')
       const combatActions = decisions.filter(d => d.type === 'attack')
+      const wantsPlunder = decisions.some(d => d.type === 'plunder')
 
       for (const d of playActions) {
         if (state.winner) break
@@ -219,6 +220,11 @@ function simulateGame(): GameResult {
           } catch {}
           autoResolveInteractions()
         }
+      }
+
+      // Plunder if enemy field empty
+      if (wantsPlunder && !state.winner) {
+        try { state = engine.sidePlunder(currentSide) } catch {}
       }
 
       if (!state.winner) {
@@ -464,4 +470,27 @@ console.log(`✅  Symulacja: ${GAME_COUNT} gier w ${elapsed}s | AI: ${AI_DIFFICU
 console.log(`    Zakończone: ${withWinner.length} | PS wins: ${psWins} | Elim wins: ${elimWins} | Timeouts: ${timeouts}`)
 console.log(`    Avg rund: ${avgRounds.toFixed(1)} | Avg PS zwycięzcy: ${avgPS.toFixed(1)} | Najszybsze 10PS: runda ${fastestPSround || '—'}`)
 console.log(`    Kart w rankingu: ${ranked.length}`)
+// ===========================================================================
+// 7) ANALIZA TIMEOUTÓW
+// ===========================================================================
+const timeoutGames = results.filter(r => r.winMethod === 'timeout')
+if (timeoutGames.length > 0) {
+  console.log(`⏰  ANALIZA TIMEOUTÓW (${timeoutGames.length} gier)`)
+  console.log(`${'─'.repeat(70)}`)
+  const avgTOps = timeoutGames.reduce((s, r) => s + Math.max(r.p1Gold, r.p2Gold), 0) / timeoutGames.length
+  const avgTOkills = timeoutGames.reduce((s, r) => s + r.p1Kills + r.p2Kills, 0) / timeoutGames.length
+  const avgTOharvests = timeoutGames.reduce((s, r) => s + r.p1SoulHarvests + r.p2SoulHarvests, 0) / timeoutGames.length
+  console.log(`  Avg max PS w timeout:    ${avgTOps.toFixed(1)} (cel: 10)`)
+  console.log(`  Avg zabójstw w timeout:  ${avgTOkills.toFixed(1)}`)
+  console.log(`  Avg soul harvest PS:     ${avgTOharvests.toFixed(1)}`)
+  // PS distribution in timeouts
+  const to9 = timeoutGames.filter(r => Math.max(r.p1Gold, r.p2Gold) >= 9).length
+  const to8 = timeoutGames.filter(r => Math.max(r.p1Gold, r.p2Gold) >= 8).length
+  const to7 = timeoutGames.filter(r => Math.max(r.p1Gold, r.p2Gold) >= 7).length
+  console.log(`  Bliskie (≥9 PS):         ${to9}/${timeoutGames.length}`)
+  console.log(`  Bliskie (≥8 PS):         ${to8}/${timeoutGames.length}`)
+  console.log(`  Bliskie (≥7 PS):         ${to7}/${timeoutGames.length}`)
+  console.log()
+}
+
 console.log(`${'═'.repeat(80)}\n`)
