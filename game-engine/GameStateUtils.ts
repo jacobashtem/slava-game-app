@@ -130,6 +130,7 @@ export function createInitialPlayerState(side: 'player1' | 'player2', isAI: bool
     trophies: [],
     glory: 0,
     gold: 5, // Gold Edition starting gold
+    soulPoints: 0,
     activeLocation: null,
     handLimit: 10,
     creaturesPlayedThisTurn: 0,

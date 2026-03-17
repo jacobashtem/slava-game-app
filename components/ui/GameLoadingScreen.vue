@@ -122,22 +122,22 @@ watch(() => props.ready, (isReady) => {
         <div class="ls-title">SŁAWA</div>
         <div class="ls-subtitle">Vol. 2</div>
 
-        <!-- Loading hint text -->
+        <!-- Ready flash -->
+        <div v-if="phase === 'ready' || phase === 'exit'" class="ls-ready-flash" />
+      </div>
+
+      <!-- Loading info below clock -->
+      <div class="ls-below">
         <div class="ls-hint">
           <Transition name="hint-fade" mode="out-in">
             <span :key="progressHint">{{ progressHint }}</span>
           </Transition>
         </div>
-
-        <!-- Progress dots -->
-        <div v-if="phase === 'loading'" class="ls-dots">
+        <div v-show="phase === 'loading'" class="ls-dots">
           <span class="ls-dot" />
           <span class="ls-dot" />
           <span class="ls-dot" />
         </div>
-
-        <!-- Ready flash -->
-        <div v-if="phase === 'ready' || phase === 'exit'" class="ls-ready-flash" />
       </div>
 
     </div>
@@ -403,7 +403,7 @@ watch(() => props.ready, (isReady) => {
   color: rgba(148, 130, 100, 0.5);
   font-style: italic;
   letter-spacing: 0.06em;
-  animation: fade-up 1s ease 2s forwards;
+  animation: fade-up 1s ease 0.5s forwards;
   opacity: 0;
 }
 
@@ -424,7 +424,7 @@ watch(() => props.ready, (isReady) => {
   display: flex;
   gap: 6px;
   margin-top: 16px;
-  animation: fade-up 0.6s ease 2.4s forwards;
+  animation: fade-up 0.6s ease 0.8s forwards;
   opacity: 0;
 }
 
@@ -483,6 +483,17 @@ watch(() => props.ready, (isReady) => {
   font-style: normal;
   font-weight: 600;
   letter-spacing: 0.15em;
+}
+
+/* Below-clock area — absolute so it doesn't shift the centered clock */
+.ls-below {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 160px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* ===== MOBILE ===== */

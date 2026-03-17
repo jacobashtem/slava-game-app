@@ -275,17 +275,23 @@ async function emitCombatVFX(
     }
   }
 
-  // === PHASE 3: Death (parallel if both die) ===
+  // === PHASE 3: Death (parallel if both die) — soul bird spawned inside DeathVFX ===
   const death = useDeathVFX()
   if (death.ready) {
+    // Stash soulValue on card DOM for bird label
+    const stashSoul = (instanceId: string, card: CombatResult['attacker']) => {
+      const el = document.querySelector(`[data-instance-id="${instanceId}"]`) as any
+      if (el) el.__soulValue = (card.cardData as any).stats?.soulValue ?? card.currentStats.soulValue ?? 0
+    }
     const deathPromises: Promise<void>[] = []
     if (combat.defenderDied) {
       audio.sfxDeath()
+      stashSoul(combat.defender.instanceId, combat.defender)
       deathPromises.push(death.trigger(combat.defender.instanceId))
     }
     if (combat.attackerDied) {
-      // Slight stagger if both die
       if (combat.defenderDied) await delay(200)
+      stashSoul(combat.attacker.instanceId, combat.attacker)
       deathPromises.push(death.trigger(combat.attacker.instanceId))
     }
     if (deathPromises.length > 0) await Promise.all(deathPromises)
@@ -371,6 +377,10 @@ export const useGameStore = defineStore('game', () => {
   const slavaData = computed(() => state.value?.slavaData ?? null)
   const playerGlory = computed(() => state.value?.players[mySide.value].glory ?? 0)
   const aiGlory = computed(() => state.value?.players[opponentSide.value].glory ?? 0)
+  const playerGold = computed(() => state.value?.players[mySide.value].gold ?? 0)
+  const aiGold = computed(() => state.value?.players[opponentSide.value].gold ?? 0)
+  const playerSoulPoints = computed(() => state.value?.players[mySide.value].soulPoints ?? 0)
+  const aiSoulPoints = computed(() => state.value?.players[opponentSide.value].soulPoints ?? 0)
   const isPlayerTurn = computed(() => currentTurn.value === mySide.value && !isAIThinking.value)
 
   // Field threats — cached scan for Południca/Cicha (avoids N×M iteration in each CreatureCard)
@@ -1107,7 +1117,9 @@ export const useGameStore = defineStore('game', () => {
     const AI_PACE_MS = 600 // visual pacing between AI actions
 
     try {
-    await delay(AI_PACE_MS)
+    // First AI turn of the game: wait longer so player sees cards being played
+    const isFirstTurn = state.value?.turnNumber === 1
+    await delay(isFirstTurn ? 1800 : AI_PACE_MS)
 
     if (!state.value) { isAIThinking.value = false; return }
     const logBefore = state.value.actionLog.length
@@ -1450,6 +1462,7 @@ export const useGameStore = defineStore('game', () => {
 
   // Banner patterns — important events shown as full-screen banners
   const bannerPatterns: { pattern: RegExp; text?: string; sub?: (msg: string) => string; type: 'effect' | 'steal' | 'death' | 'season'; duration?: number; delay?: number }[] = [
+    { pattern: /ŻNIWO DUSZ/i, text: 'Żniwo Dusz!', sub: (msg) => msg, type: 'effect', duration: 2800 },
     { pattern: /ukradł kartę/i, text: 'Kradzież!', sub: (msg) => msg, type: 'steal', duration: 2000 },
     { pattern: /ŁUPIENIE/i, text: 'Łupienie!', sub: (msg) => msg, type: 'steal', duration: 2000 },
     { pattern: /Wskrze(sza|szony|szenie)/i, text: 'Wskrzeszenie!', sub: (msg) => msg, type: 'effect', duration: 2000 },
@@ -1506,7 +1519,7 @@ export const useGameStore = defineStore('game', () => {
     _lastLogLen = newLen
 
     for (const entry of newEntries) {
-      if (entry.type !== 'effect') continue
+      if (entry.type !== 'effect' && entry.type !== 'glory' && entry.type !== 'gold') continue
       for (const p of infoPatterns) {
         if (p.pattern.test(entry.message)) {
           const msg = p.override ?? (entry.message.length > 80 ? entry.message.slice(0, 77) + '...' : entry.message)
@@ -1664,6 +1677,10 @@ export const useGameStore = defineStore('game', () => {
     slavaData,
     playerGlory,
     aiGlory,
+    playerGold,
+    aiGold,
+    playerSoulPoints,
+    aiSoulPoints,
     // helpers
     getCreaturesOnField,
     getHand,

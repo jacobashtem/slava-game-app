@@ -11,7 +11,7 @@ export interface RawCreatureCard {
   idDomain: number
   domain: string
   name: string
-  stats: { attack: number; defense: number }
+  stats: { attack: number; defense: number; soulValue: number }
   oldStats: string
   combat: {
     attackType: number
@@ -45,6 +45,7 @@ export interface CardStats {
   defense: number
   maxDefense: number  // bazowa wartość — do resetowania / leczenia
   maxAttack: number
+  soulValue: number   // ATK + DEF bazowe — wartość dusz (Żniwo Dusz)
 }
 
 // ===== CARD DATA (po przetworzeniu z JSON) =====
@@ -141,6 +142,7 @@ export interface PlayerState {
   trophies: CardInstance[]     // zabici wrogowie (dla trybu Slava!)
   glory: number                // Sława w trybie Slava!
   gold: number                 // Punkty Sławy (legacy: gold)
+  soulPoints: number           // Żniwo Dusz: akumulacja ATK+DEF zabitych wrogów (zeruje się co 20)
   activeLocation: CardInstance | null
   handLimit: number
   // Liczniki dla reguł Gold Edition
@@ -249,6 +251,8 @@ export interface CombatResult {
   counterattackOccurred: boolean
   softFail?: boolean          // atak chybiony/zablokowany (Odporny) — 0 DMG ale kontratak działa
   softFailReason?: string     // powód blokady (np. "Tur jest odporny na Dystans i Magię")
+  // Żniwo Dusz — info o zebranych duszach (do animacji)
+  soulHarvested?: { side: PlayerSide; soulValue: number; cardName: string; psGained: number }[]
   brzeginaPaused?: boolean    // combat paused for Brzegina decision — counterattack pending
   defenderDefBeforeHit?: number  // DEF obrońcy przed ciosem (do wznowienia kontrataku)
   effectsTriggered: string[]  // lista effectId które odpaliły

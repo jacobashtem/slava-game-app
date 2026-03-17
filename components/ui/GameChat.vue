@@ -228,12 +228,18 @@ const show = computed(() => game.gameStarted && !game.isTutorialMode)
     <Icon icon="game-icons:talk" />
   </button>
 
+  <!-- Minimized bar (desktop) — click to reopen -->
+  <div v-if="show && !panelOpen" class="chat-minimized" @click="panelOpen = true">
+    <Icon icon="game-icons:talk" class="chat-min-icon" />
+    <span class="chat-min-label">Czat</span>
+  </div>
+
   <Transition name="chat-slide">
     <div v-if="show && panelOpen" class="chat-panel">
       <!-- Header: two participants -->
       <div class="chat-header">
         <!-- AI / Opponent side -->
-        <div class="ch-participant" @click="panelOpen = false">
+        <div class="ch-participant">
           <Icon :icon="isMP ? 'game-icons:horned-helmet' : aiAvatar" class="ch-avatar ch-avatar-ai" />
           <div class="ch-info">
             <span class="ch-name">{{ isMP ? (mp.opponentName.value || 'Przeciwnik') : aiName }}</span>
@@ -336,6 +342,37 @@ const show = computed(() => game.gameStarted && !game.isTutorialMode)
 <style scoped>
 /* ===== MOBILE TOGGLE ===== */
 .chat-mobile-toggle { display: none; }
+
+/* ===== MINIMIZED BAR (desktop) ===== */
+.chat-minimized {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(14, 10, 20, 0.95);
+  border: 1px solid rgba(200, 168, 78, 0.18);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.chat-minimized:hover {
+  border-color: rgba(200, 168, 78, 0.4);
+  box-shadow: 0 0 12px rgba(200, 168, 78, 0.15);
+}
+.chat-min-icon {
+  font-size: 16px;
+  color: rgba(200, 168, 78, 0.7);
+}
+.chat-min-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(200, 168, 78, 0.5);
+  letter-spacing: 0.08em;
+}
 
 /* ===== PANEL ===== */
 .chat-panel {
@@ -638,6 +675,7 @@ const show = computed(() => game.gameStarted && !game.isTutorialMode)
 
 /* ===== MOBILE ===== */
 @media (max-width: 767px) {
+  .chat-minimized { display: none; }
   .chat-mobile-toggle {
     display: flex;
     position: fixed;

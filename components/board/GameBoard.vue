@@ -314,6 +314,8 @@ const onPlayDescription = computed(() => {
       <div class="top-bar-spacer" />
       <!-- Slava: Glory Bar -->
       <GloryBar />
+      <!-- Żniwo Dusz: Soul Harvest progress -->
+      <SoulHarvestBar />
       <!-- Slava: Panteon -->
       <PanteonPanel />
       <MusicPlayer />

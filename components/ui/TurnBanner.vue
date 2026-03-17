@@ -83,11 +83,11 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
   }
 })
 
-// Turn change announcement
+// Turn change announcement — queued so it waits for other banners (e.g. Żniwo Dusz)
 watch(() => game.currentTurn, (turn, prevTurn) => {
   if (!prevTurn || !turn) return
   if (showBanner.value && (bannerType.value === 'season' || bannerType.value === 'timeout')) return
-  showFor(turn === 'player1' ? 'Twoja tura' : 'Tura przeciwnika', turn === 'player1' ? 'player' : 'ai', 1200)
+  queueBanner(turn === 'player1' ? 'Twoja tura' : 'Tura przeciwnika', turn === 'player1' ? 'player' : 'ai', 1400)
 })
 
 // Plunder banner — detect plunder in actionLog

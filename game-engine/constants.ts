@@ -88,6 +88,7 @@ export const GOLD_EDITION_RULES = {
   ENHANCED_ADVENTURE_COST: 1, // efekt ulepszony — kosztuje 1 PS
   CARDS_DRAWN_PER_TURN: 1,
   GLORY_WIN_TARGET: 15,     // alternatywna wygrana: zgromadź 15 PS
+  SOUL_HARVEST_THRESHOLD: 20, // co 20 pkt (ATK+DEF zabitego) → +1 PS
 } as const
 
 // ===== TRYB SŁAWA! =====
@@ -108,6 +109,7 @@ export const SLAVA_RULES = {
   SEASON_LENGTH_ROUNDS: 4,    // zmiana pory co 4 rundy
   ENHANCED_ADVENTURE_COST: 1, // ulepszenie przygody w Sława = 1 PS
   MIN_AUCTION_BID: 1,
+  SOUL_HARVEST_THRESHOLD: 20, // co 20 pkt (ATK+DEF zabitego) → +1 PS
   STARTING_HAND: 5,
   DECK_SIZE: 30,
   MAX_FIELD_CREATURES: 5,

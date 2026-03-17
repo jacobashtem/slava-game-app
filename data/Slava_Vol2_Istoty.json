@@ -6,7 +6,8 @@
         "name": "Aitwar",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -41,7 +42,8 @@
         "name": "Alkonost",
         "stats": {
             "attack": 2,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 7
         },
         "oldStats": "",
         "combat": {
@@ -67,7 +69,8 @@
         "name": "Barstuk",
         "stats": {
             "attack": 1,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 5
         },
         "oldStats": "",
         "combat": {
@@ -95,7 +98,8 @@
         "name": "Bałwan",
         "stats": {
             "attack": 0,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 8
         },
         "oldStats": "0/4000",
         "combat": {
@@ -126,7 +130,8 @@
         "name": "Biali ludzie",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -152,7 +157,8 @@
         "name": "Brzegina",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -184,7 +190,8 @@
         "name": "Bugaj",
         "stats": {
             "attack": 0,
-            "defense": 10
+            "defense": 10,
+            "soulValue": 10
         },
         "oldStats": "0/5000",
         "combat": {
@@ -211,7 +218,8 @@
         "name": "Błotnik",
         "stats": {
             "attack": 3,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 7
         },
         "oldStats": "1500/2000",
         "combat": {
@@ -237,7 +245,8 @@
         "name": "Chmurnik",
         "stats": {
             "attack": 7,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 13
         },
         "oldStats": "3500/3000",
         "combat": {
@@ -263,7 +272,8 @@
         "name": "Chowaniec",
         "stats": {
             "attack": 2,
-            "defense": 1
+            "defense": 1,
+            "soulValue": 3
         },
         "oldStats": "1000/500",
         "combat": {
@@ -289,7 +299,8 @@
         "name": "Dobroochoczy",
         "stats": {
             "attack": 1,
-            "defense": 10
+            "defense": 10,
+            "soulValue": 11
         },
         "oldStats": "500/5000",
         "combat": {
@@ -315,7 +326,8 @@
         "name": "Dziewiątko",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -341,7 +353,8 @@
         "name": "Dziki Myśliwy",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -367,7 +380,8 @@
         "name": "Gryf",
         "stats": {
             "attack": 4,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 8
         },
         "oldStats": "2000/2000",
         "combat": {
@@ -395,7 +409,8 @@
         "name": "Król wężów",
         "stats": {
             "attack": 3,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 9
         },
         "oldStats": "1500/3000",
         "combat": {
@@ -424,7 +439,8 @@
         "name": "Leszy",
         "stats": {
             "attack": 5,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 13
         },
         "oldStats": "2500/4000",
         "combat": {
@@ -450,7 +466,8 @@
         "name": "Matoha",
         "stats": {
             "attack": 5,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 10
         },
         "oldStats": "2500/2500",
         "combat": {
@@ -476,7 +493,8 @@
         "name": "Mróz",
         "stats": {
             "attack": 8,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 16
         },
         "oldStats": "4000/4000",
         "combat": {
@@ -502,7 +520,8 @@
         "name": "Rodzanice",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -530,7 +549,8 @@
         "name": "Rusałka",
         "stats": {
             "attack": "->",
-            "defense": 3
+            "defense": 3,
+            "soulValue": "->3"
         },
         "oldStats": "? / 1500",
         "combat": {
@@ -557,7 +577,8 @@
         "name": "Rybi król",
         "stats": {
             "attack": 2,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 5
         },
         "oldStats": "",
         "combat": {
@@ -583,7 +604,8 @@
         "name": "Strela",
         "stats": {
             "attack": 0,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 4
         },
         "oldStats": "0/2000",
         "combat": {
@@ -609,7 +631,8 @@
         "name": "Szalińc",
         "stats": {
             "attack": 4,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 9
         },
         "oldStats": "2000/2500",
         "combat": {
@@ -635,7 +658,8 @@
         "name": "Wiła",
         "stats": {
             "attack": 2,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 6
         },
         "oldStats": "1000/2000",
         "combat": {
@@ -661,7 +685,8 @@
         "name": "Wodnik",
         "stats": {
             "attack": 4,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 6
         },
         "oldStats": "2000/1000",
         "combat": {
@@ -687,7 +712,8 @@
         "name": "korgorusze",
         "stats": {
             "attack": 1,
-            "defense": 1
+            "defense": 1,
+            "soulValue": 2
         },
         "oldStats": "500/500",
         "combat": {
@@ -714,7 +740,8 @@
         "name": "Łapiduch",
         "stats": {
             "attack": 7,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 12
         },
         "oldStats": "3500/2500",
         "combat": {
@@ -740,7 +767,8 @@
         "name": "Świetle",
         "stats": {
             "attack": 2,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 6
         },
         "oldStats": "1000/2000",
         "combat": {
@@ -766,7 +794,8 @@
         "name": "Żar-ptak",
         "stats": {
             "attack": 10,
-            "defense": 10
+            "defense": 10,
+            "soulValue": 20
         },
         "oldStats": "5000/5000",
         "combat": {
@@ -795,7 +824,8 @@
         "name": "Żmije",
         "stats": {
             "attack": 9,
-            "defense": 9
+            "defense": 9,
+            "soulValue": 18
         },
         "oldStats": "4500/4500",
         "combat": {
@@ -826,7 +856,8 @@
         "name": "Baba",
         "stats": {
             "attack": 2,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 6
         },
         "oldStats": "1000/2000",
         "combat": {
@@ -856,7 +887,8 @@
         "name": "Chały / Ały",
         "stats": {
             "attack": 6,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 12
         },
         "oldStats": "3000/3000",
         "combat": {
@@ -885,7 +917,8 @@
         "name": "Chąśnik",
         "stats": {
             "attack": 6,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 9
         },
         "oldStats": "3000/1500",
         "combat": {
@@ -911,7 +944,8 @@
         "name": "Chłop",
         "stats": {
             "attack": 1,
-            "defense": 1
+            "defense": 1,
+            "soulValue": 2
         },
         "oldStats": "500/500",
         "combat": {
@@ -937,7 +971,8 @@
         "name": "Czarnoksiężnik",
         "stats": {
             "attack": 7,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 9
         },
         "oldStats": "3500/1000",
         "combat": {
@@ -963,7 +998,8 @@
         "name": "Czarownica",
         "stats": {
             "attack": 4,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 8
         },
         "oldStats": "2000/2000",
         "combat": {
@@ -992,7 +1028,8 @@
         "name": "Dzicy ludzie",
         "stats": {
             "attack": 4,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 7
         },
         "oldStats": "2000/1500",
         "combat": {
@@ -1018,7 +1055,8 @@
         "name": "Guślarka",
         "stats": {
             "attack": 3,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 5
         },
         "oldStats": "1500/1000",
         "combat": {
@@ -1044,7 +1082,8 @@
         "name": "Julki",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -1070,7 +1109,8 @@
         "name": "Junak",
         "stats": {
             "attack": 7,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 13
         },
         "oldStats": "3500/3000",
         "combat": {
@@ -1101,7 +1141,8 @@
         "name": "Jędza",
         "stats": {
             "attack": 5,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 8
         },
         "oldStats": "2500/1500",
         "combat": {
@@ -1129,7 +1170,8 @@
         "name": "Konny",
         "stats": {
             "attack": 7,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 13
         },
         "oldStats": "3500/3000",
         "combat": {
@@ -1155,7 +1197,8 @@
         "name": "Kościej",
         "stats": {
             "attack": 6,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 11
         },
         "oldStats": "3000/2500",
         "combat": {
@@ -1184,7 +1227,8 @@
         "name": "Naczelnik Plemienia",
         "stats": {
             "attack": 6,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 11
         },
         "oldStats": "3000/2500",
         "combat": {
@@ -1210,7 +1254,8 @@
         "name": "Najemnik",
         "stats": {
             "attack": 5,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 9
         },
         "oldStats": "2500/2000",
         "combat": {
@@ -1242,7 +1287,8 @@
         "name": "Rumak",
         "stats": {
             "attack": 0,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 4
         },
         "oldStats": "0/2000",
         "combat": {
@@ -1269,7 +1315,8 @@
         "name": "Starszyzna Plemienna",
         "stats": {
             "attack": 2,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 6
         },
         "oldStats": "1000/2000",
         "combat": {
@@ -1295,7 +1342,8 @@
         "name": "Szeptunka",
         "stats": {
             "attack": 1,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 5
         },
         "oldStats": "500/2000",
         "combat": {
@@ -1321,7 +1369,8 @@
         "name": "Wielkolud",
         "stats": {
             "attack": 8,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 16
         },
         "oldStats": "4000/4000",
         "combat": {
@@ -1348,7 +1397,8 @@
         "name": "Woj",
         "stats": {
             "attack": 4,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 7
         },
         "oldStats": "2000/1500",
         "combat": {
@@ -1374,7 +1424,8 @@
         "name": "Wołch",
         "stats": {
             "attack": 3,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 7
         },
         "oldStats": "1500/2000",
         "combat": {
@@ -1401,7 +1452,8 @@
         "name": "Znachor",
         "stats": {
             "attack": 2,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 5
         },
         "oldStats": "1000/1500",
         "combat": {
@@ -1428,7 +1480,8 @@
         "name": "leśnica",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -1454,7 +1507,8 @@
         "name": "polewik",
         "stats": {
             "attack": "2",
-            "defense": "3"
+            "defense": "3",
+            "soulValue": "23"
         },
         "oldStats": "",
         "combat": {
@@ -1480,7 +1534,8 @@
         "name": "tur",
         "stats": {
             "attack": 3,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 9
         },
         "oldStats": "",
         "combat": {
@@ -1506,7 +1561,8 @@
         "name": "Łucznik",
         "stats": {
             "attack": 4,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 6
         },
         "oldStats": "2000/1000",
         "combat": {
@@ -1533,7 +1589,8 @@
         "name": "Światogor",
         "stats": {
             "attack": 5,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 10
         },
         "oldStats": "2500/2500",
         "combat": {
@@ -1559,7 +1616,8 @@
         "name": "ŻUPAN",
         "stats": {
             "attack": "4",
-            "defense": "6"
+            "defense": "6",
+            "soulValue": "46"
         },
         "oldStats": "",
         "combat": {
@@ -1585,7 +1643,8 @@
         "name": "Żerca",
         "stats": {
             "attack": 2,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 7
         },
         "oldStats": "1000/2500",
         "combat": {
@@ -1611,7 +1670,8 @@
         "name": "Żerca Welesa",
         "stats": {
             "attack": 7,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 10
         },
         "oldStats": "3500/1500",
         "combat": {
@@ -1637,7 +1697,8 @@
         "name": "Ażdacha",
         "stats": {
             "attack": 9,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 17
         },
         "oldStats": "4500/4000",
         "combat": {
@@ -1661,7 +1722,8 @@
         "name": "Bagiennik",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "",
         "combat": {
@@ -1688,7 +1750,8 @@
         "name": "Bezkost",
         "stats": {
             "attack": 7,
-            "defense": 7
+            "defense": 7,
+            "soulValue": 14
         },
         "oldStats": "3500/3500",
         "combat": {
@@ -1715,7 +1778,8 @@
         "name": "Bzionek",
         "stats": {
             "attack": 1,
-            "defense": 1
+            "defense": 1,
+            "soulValue": 2
         },
         "oldStats": "500/500",
         "combat": {
@@ -1742,7 +1806,8 @@
         "name": "Błędny ognik",
         "stats": {
             "attack": 0,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 3
         },
         "oldStats": "0/1500",
         "combat": {
@@ -1768,7 +1833,8 @@
         "name": "Cmentarna baba",
         "stats": {
             "attack": 7,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 9
         },
         "oldStats": "3500/1000",
         "combat": {
@@ -1795,7 +1861,8 @@
         "name": "Domowik",
         "stats": {
             "attack": 1,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 3
         },
         "oldStats": "500/1000",
         "combat": {
@@ -1821,7 +1888,8 @@
         "name": "Dziad",
         "stats": {
             "attack": 3,
-            "defense": 1
+            "defense": 1,
+            "soulValue": 4
         },
         "oldStats": "1500/500",
         "combat": {
@@ -1851,7 +1919,8 @@
         "name": "Homen",
         "stats": {
             "attack": 4,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 8
         },
         "oldStats": "2000/2000",
         "combat": {
@@ -1878,7 +1947,8 @@
         "name": "Jaroszek",
         "stats": {
             "attack": 3,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 5
         },
         "oldStats": "1500/1000",
         "combat": {
@@ -1904,7 +1974,8 @@
         "name": "Kikimora",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -1930,7 +2001,8 @@
         "name": "Kresnik",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -1956,7 +2028,8 @@
         "name": "Kudlak",
         "stats": {
             "attack": 7,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 13
         },
         "oldStats": "3500/3000",
         "combat": {
@@ -1982,7 +2055,8 @@
         "name": "Latawica",
         "stats": {
             "attack": 1,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 3
         },
         "oldStats": "500/1000",
         "combat": {
@@ -2010,7 +2084,8 @@
         "name": "Latawiec",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -2036,7 +2111,8 @@
         "name": "Morowa dziewica",
         "stats": {
             "attack": 3,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 11
         },
         "oldStats": "1500/4000",
         "combat": {
@@ -2062,7 +2138,8 @@
         "name": "Niedźwiedźiołak",
         "stats": {
             "attack": 8,
-            "defense": 7
+            "defense": 7,
+            "soulValue": 15
         },
         "oldStats": "4000/3500",
         "combat": {
@@ -2089,7 +2166,8 @@
         "name": "Poroniec",
         "stats": {
             "attack": 1,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 3
         },
         "oldStats": "",
         "combat": {
@@ -2116,7 +2194,8 @@
         "name": "Południca",
         "stats": {
             "attack": 4,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 7
         },
         "oldStats": "2000/1500",
         "combat": {
@@ -2142,7 +2221,8 @@
         "name": "Północnica",
         "stats": {
             "attack": 3,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 8
         },
         "oldStats": "1500/2500",
         "combat": {
@@ -2170,7 +2250,8 @@
         "name": "Siemiargł",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -2196,7 +2277,8 @@
         "name": "Strzyga",
         "stats": {
             "attack": 2,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 10
         },
         "oldStats": "1000/4000",
         "combat": {
@@ -2223,7 +2305,8 @@
         "name": "Stukacz",
         "stats": {
             "attack": 2,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 5
         },
         "oldStats": "1000/1500",
         "combat": {
@@ -2249,7 +2332,8 @@
         "name": "Tęsknica",
         "stats": {
             "attack": 1,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 5
         },
         "oldStats": "500/2000",
         "combat": {
@@ -2275,7 +2359,8 @@
         "name": "Utopiec",
         "stats": {
             "attack": 4,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 8
         },
         "oldStats": "2000/2000",
         "combat": {
@@ -2301,7 +2386,8 @@
         "name": "Wieszczy",
         "stats": {
             "attack": 4,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 8
         },
         "oldStats": "2000/2000",
         "combat": {
@@ -2331,7 +2417,8 @@
         "name": "Wilkołak",
         "stats": {
             "attack": 7,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 11
         },
         "oldStats": "3500./2000",
         "combat": {
@@ -2357,7 +2444,8 @@
         "name": "Wisielec",
         "stats": {
             "attack": 3,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 7
         },
         "oldStats": "1500/2000",
         "combat": {
@@ -2384,7 +2472,8 @@
         "name": "Wąpierz",
         "stats": {
             "attack": 4,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 8
         },
         "oldStats": "2000/2000",
         "combat": {
@@ -2414,7 +2503,8 @@
         "name": "Zmora",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -2446,7 +2536,8 @@
         "name": "Baba Jaga",
         "stats": {
             "attack": 1,
-            "defense": 1
+            "defense": 1,
+            "soulValue": 2
         },
         "oldStats": "500/500",
         "combat": {
@@ -2472,7 +2563,8 @@
         "name": "Bazyliszek",
         "stats": {
             "attack": 2,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 6
         },
         "oldStats": "1000/2000",
         "combat": {
@@ -2499,7 +2591,8 @@
         "name": "Bełt",
         "stats": {
             "attack": 3,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 5
         },
         "oldStats": "1500/1000",
         "combat": {
@@ -2527,7 +2620,8 @@
         "name": "Bieda",
         "stats": {
             "attack": 0,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 8
         },
         "oldStats": "0/4000",
         "combat": {
@@ -2557,7 +2651,8 @@
         "name": "Bies",
         "stats": {
             "attack": 8,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 10
         },
         "oldStats": "4000/1000",
         "combat": {
@@ -2583,7 +2678,8 @@
         "name": "Bogunka",
         "stats": {
             "attack": 4,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 8
         },
         "oldStats": "2000/2000",
         "combat": {
@@ -2610,7 +2706,8 @@
         "name": "Buka",
         "stats": {
             "attack": 5,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 10
         },
         "oldStats": "2500/2500",
         "combat": {
@@ -2636,7 +2733,8 @@
         "name": "Cicha",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -2662,7 +2760,8 @@
         "name": "Czart",
         "stats": {
             "attack": 6,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 12
         },
         "oldStats": "3000/3000",
         "combat": {
@@ -2694,7 +2793,8 @@
         "name": "Darmopych",
         "stats": {
             "attack": 5,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 9
         },
         "oldStats": "2500/2000",
         "combat": {
@@ -2720,7 +2820,8 @@
         "name": "Dydko",
         "stats": {
             "attack": 3,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 6
         },
         "oldStats": "1500/1500",
         "combat": {
@@ -2746,7 +2847,8 @@
         "name": "Dziwożona",
         "stats": {
             "attack": 5,
-            "defense": 3
+            "defense": 3,
+            "soulValue": 8
         },
         "oldStats": "2500/1500",
         "combat": {
@@ -2772,7 +2874,8 @@
         "name": "Gorynych",
         "stats": {
             "attack": 10,
-            "defense": 10
+            "defense": 10,
+            "soulValue": 20
         },
         "oldStats": "5000/5000",
         "combat": {
@@ -2801,7 +2904,8 @@
         "name": "Grad",
         "stats": {
             "attack": 1,
-            "defense": 1
+            "defense": 1,
+            "soulValue": 2
         },
         "oldStats": "500/500",
         "combat": {
@@ -2827,7 +2931,8 @@
         "name": "Inkluz",
         "stats": {
             "attack": 4,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 9
         },
         "oldStats": "2000/2500",
         "combat": {
@@ -2854,7 +2959,8 @@
         "name": "Kania",
         "stats": {
             "attack": 5,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 10
         },
         "oldStats": "2500/2500",
         "combat": {
@@ -2880,7 +2986,8 @@
         "name": "Lamia",
         "stats": {
             "attack": 5,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 9
         },
         "oldStats": "2500/2000",
         "combat": {
@@ -2909,7 +3016,8 @@
         "name": "Licho",
         "stats": {
             "attack": 2,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 4
         },
         "oldStats": "1000/1000",
         "combat": {
@@ -2935,7 +3043,8 @@
         "name": "Liczyrzepa",
         "stats": {
             "attack": 3,
-            "defense": 5
+            "defense": 5,
+            "soulValue": 8
         },
         "oldStats": "",
         "combat": {
@@ -2962,7 +3071,8 @@
         "name": "Mara",
         "stats": {
             "attack": 3,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 5
         },
         "oldStats": "1500/1000",
         "combat": {
@@ -2989,7 +3099,8 @@
         "name": "Mavka",
         "stats": {
             "attack": "2",
-            "defense": "3"
+            "defense": "3",
+            "soulValue": "23"
         },
         "oldStats": "",
         "combat": {
@@ -3015,7 +3126,8 @@
         "name": "Przyłóżnik",
         "stats": {
             "attack": 4,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 10
         },
         "oldStats": "2000/3000",
         "combat": {
@@ -3042,7 +3154,8 @@
         "name": "Smocze jajo",
         "stats": {
             "attack": 0,
-            "defense": 10
+            "defense": 10,
+            "soulValue": 10
         },
         "oldStats": "0/5000",
         "combat": {
@@ -3076,7 +3189,8 @@
         "name": "Szątopierz",
         "stats": {
             "attack": 3,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 7
         },
         "oldStats": "1500/2000",
         "combat": {
@@ -3103,7 +3217,8 @@
         "name": "Wietrzyca",
         "stats": {
             "attack": 6,
-            "defense": 6
+            "defense": 6,
+            "soulValue": 12
         },
         "oldStats": "3000/3000",
         "combat": {
@@ -3131,7 +3246,8 @@
         "name": "Wij",
         "stats": {
             "attack": 9,
-            "defense": 9
+            "defense": 9,
+            "soulValue": 18
         },
         "oldStats": "4500/4500",
         "combat": {
@@ -3162,7 +3278,8 @@
         "name": "Wąż Tugaryn",
         "stats": {
             "attack": 8,
-            "defense": 8
+            "defense": 8,
+            "soulValue": 16
         },
         "oldStats": "4000/4000",
         "combat": {
@@ -3191,7 +3308,8 @@
         "name": "Zagorkinia",
         "stats": {
             "attack": 3,
-            "defense": 2
+            "defense": 2,
+            "soulValue": 5
         },
         "oldStats": "1500/1000",
         "combat": {
@@ -3218,7 +3336,8 @@
         "name": "Ćmuch",
         "stats": {
             "attack": 3,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 7
         },
         "oldStats": "1500/2000",
         "combat": {
@@ -3244,7 +3363,8 @@
         "name": "Śmierć",
         "stats": {
             "attack": 6,
-            "defense": 4
+            "defense": 4,
+            "soulValue": 10
         },
         "oldStats": "3000/2000",
         "combat": {

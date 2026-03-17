@@ -376,26 +376,43 @@ function play(targetEl: HTMLElement): Promise<void> {
     }
   }, undefined, '-=0.05')
 
-  // ── Phase 3: Soul rises ──
-  const soulRiseTarget = s2t(tcx, tcy - th * 1.5, W, H)
-  tl.to(soul.mesh.position, { y: soulRiseTarget.y, duration: 0.8, ease: 'power1.out' })
-  tl.to(soul.uIntensity, { value: 0, duration: 0.6, ease: 'power2.in' }, '-=0.3')
+  // ── Phase 3: Soul orb pulses briefly in place, then fades into bird ──
+  // No rising — orb stays at card center, brightens, then dissolves into songbird
+  tl.to(soul.uIntensity, { value: 2, duration: 0.3, ease: 'power2.out' })
+  tl.to(soul.uIntensity, { value: 0, duration: 0.4, ease: 'power2.in' })
 
-  // Trail motes
-  const trailObj = { progress: 0 }
-  tl.to(trailObj, {
-    progress: 1, duration: 0.5,
-    onUpdate: () => {
-      if (Math.random() > 0.6) {
-        const cy = tcy - trailObj.progress * th * 1.2
-        sparks.push(acquireSpark(tcx + (Math.random() - 0.5) * 8, cy, {
-          vx: (Math.random() - 0.5) * 0.5, vy: 0.1 + Math.random() * 0.3,
-          life: 0.4, decay: 0.025, size: 1 + Math.random(),
-          color: '255,210,130', type: 'soul', gravity: 0.01, friction: 0.99, alpha: 0.6,
-        }))
-      }
-    },
-  }, '<')
+  // Spawn songbird at card center — GSAP-driven smooth flight
+  tl.call(() => {
+    if (typeof document === 'undefined') return
+    const bird = document.createElement('div')
+    bird.className = 'soul-bird-vfx'
+    bird.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="m5.7 21l4.082-7.426l-.743 6.414zm3.94-3.573l.505-4.417l5.41.71zm3.891-8.853l2.21 4.866l-5.447-.714zm1.155 1.826l2.738-1.37l-1.454 4.195zm-4.615 2.128L7.016 3l6.343 5.312zm6.909-1.312l.668-1.928l.652 3.144z"/></svg>'
+    // Position centered on card, ready for GSAP
+    gsap.set(bird, { left: tcx, top: tcy, xPercent: -50, yPercent: -50, scale: 0.3, opacity: 0 })
+    document.body.appendChild(bird)
+
+    // Soul value label
+    const label = document.createElement('div')
+    label.className = 'soul-bird-value'
+    label.textContent = `+${(targetEl as any)?.__soulValue ?? ''}`
+    gsap.set(label, { left: tcx, top: tcy + 28, xPercent: -50, opacity: 0, scale: 0.5 })
+    document.body.appendChild(label)
+
+    // GSAP timeline — smooth GPU-composited flight
+    const birdTl = gsap.timeline({ onComplete: () => { bird.remove(); label.remove() } })
+    // Appear
+    birdTl.to(bird, { opacity: 1, scale: 1.1, duration: 0.2, ease: 'power2.out' })
+    // Show value label
+    birdTl.to(label, { opacity: 1, scale: 1, duration: 0.25, ease: 'back.out(2)' }, '<')
+    // Fly up — single smooth tween, no intermediate stops
+    birdTl.to(bird, { top: tcy - 220, scale: 0.3, opacity: 0, duration: 1.6,
+      ease: 'none' }, '+=0.1')
+    // Label fades alongside
+    birdTl.to(label, { top: tcy - 180, opacity: 0, scale: 0.6, duration: 1.4,
+      ease: 'none' }, '<')
+
+    pendingTimeouts.push(setTimeout(() => { bird.remove(); label.remove() }, 2500) as unknown as number)
+  }, undefined, '-=0.25')
 
   // ── Phase 4: Smoke fades + ash ──
   tl.to(smoke.uIntensity, { value: 0, duration: 0.4, ease: 'power2.in' }, '-=0.2')

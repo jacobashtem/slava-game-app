@@ -9,7 +9,7 @@ import type { PlayerSide } from './types'
 import { cloneGameState, addLog, moveToGraveyard } from './GameStateUtils'
 import { canAttack, removeFromField, getEnemyFrontLine, getOwnFrontLine } from './LineManager'
 import { getEffect } from './EffectRegistry'
-import { trackKill, trackDamageDealt } from './GloryManager'
+import { trackKill, trackDamageDealt, harvestSoul } from './GloryManager'
 
 // ===================================================================
 // GŁÓWNA FUNKCJA ATAKU
@@ -552,6 +552,10 @@ export function resolveAttack(
         // Sława: track kill for trophy bonus calculation
         trackKill(newState, killerSide, defenderCardRemoved)
 
+        // Żniwo Dusz: zbierz punkty dusz za zabitego wroga
+        const soulResult = harvestSoul(newState, killerSide, defenderCardRemoved)
+        log.push(...soulResult.log)
+
         // Kościej (#43): wskrzesza się po śmierci od Wręcz (1. raz gratis)
         if (defenderCardRemoved.metadata.kosciejResurrected) {
           delete defenderCardRemoved.metadata.kosciejResurrected
@@ -615,6 +619,11 @@ export function resolveAttack(
     if (atkCardRemoved) {
       atkCardRemoved.line = null
       newState.players[atkCardRemoved.owner].graveyard.push(atkCardRemoved)
+
+      // Żniwo Dusz: obrońca zbiera duszę atakującego
+      const defenderSide = (defender.owner) as PlayerSide
+      const atkSoulResult = harvestSoul(newState, defenderSide, atkCardRemoved)
+      log.push(...atkSoulResult.log)
     }
   }
 
@@ -669,6 +678,10 @@ export function resolveAttack(
             newState = killResult2.newState
             log.push(...killResult2.log)
           }
+
+          // Żniwo Dusz: zbierz duszę drugiego celu Miecza Kladeneta
+          const mKSoulResult = harvestSoul(newState, currentAttacker.owner as PlayerSide, removed)
+          log.push(...mKSoulResult.log)
 
           // ON_ANY_DEATH watchers
           const allAfter2 = getAllCreaturesForPlayer(newState, 'player1').concat(getAllCreaturesForPlayer(newState, 'player2'))
@@ -725,6 +738,11 @@ export function resolveAttack(
       atkCardRemoved.line = null
       newState.players[atkCardRemoved.owner].graveyard.push(atkCardRemoved)
       log.push(addLog(newState, `${atkCardRemoved.cardData.name}: Szał Swaroga pochłonął go całkowicie!`, 'death'))
+
+      // Żniwo Dusz: obrońca zbiera duszę atakującego (Młot Swaroga)
+      const mlotDefSide = (defender.owner) as PlayerSide
+      const mlotSoulResult = harvestSoul(newState, mlotDefSide, atkCardRemoved)
+      log.push(...mlotSoulResult.log)
     }
     attackerDied = true
   }
@@ -906,6 +924,10 @@ export function resumeCombatCounterattack(
       const killerSide = (currentAttacker?.owner ?? attackerInstanceId) as PlayerSide
       newState.players[killerSide]?.trophies?.push(defenderRemoved)
       trackKill(newState, killerSide, defenderRemoved)
+
+      // Żniwo Dusz
+      const soulR2 = harvestSoul(newState, killerSide, defenderRemoved)
+      log.push(...soulR2.log)
     }
   }
 
@@ -932,6 +954,11 @@ export function resumeCombatCounterattack(
     if (atkRemoved) {
       atkRemoved.line = null
       newState.players[atkRemoved.owner].graveyard.push(atkRemoved)
+
+      // Żniwo Dusz: obrońca zbiera duszę atakującego
+      const defSideResume = (atkRemoved.owner === 'player1' ? 'player2' : 'player1') as PlayerSide
+      const atkSoulR = harvestSoul(newState, defSideResume, atkRemoved)
+      log.push(...atkSoulR.log)
     }
   }
 

@@ -5,7 +5,7 @@
  */
 
 import type { GameState, LogEntry, PlayerSide, SlavaState, GodData, HolidayMission, AuctionState, CardInstance, PendingFavor } from './types'
-import { Season, Domain, BattleLine, SLAVA_RULES, SEASON_BONUS_DOMAIN, SEASON_PARALYSIS_DOMAIN, SEASON_NAMES, DOMAIN_NAMES } from './constants'
+import { Season, Domain, BattleLine, SLAVA_RULES, GOLD_EDITION_RULES, SEASON_BONUS_DOMAIN, SEASON_PARALYSIS_DOMAIN, SEASON_NAMES, DOMAIN_NAMES } from './constants'
 import { cloneGameState, addLog, getAllCreaturesOnField } from './GameStateUtils'
 
 import panteonData from '../data/Slava_Vol2_Panteon_Normalized.json'
@@ -214,6 +214,60 @@ export function trackKill(state: GameState, killerSide: PlayerSide, killedCard: 
 export function trackDamageDealt(state: GameState, side: PlayerSide, amount: number): void {
   if (state.gameMode !== 'slava' || !state.slavaData) return
   state.slavaData.damageDealtThisTurn[side] += amount
+}
+
+// ===== ŻNIWO DUSZ (Soul Harvest) =====
+
+/**
+ * Żniwo Dusz: po śmierci wroga, zabójca zbiera punkty dusz (ATK + DEF bazowe).
+ * Co 20 punktów → +1 PS. Działa w OBU trybach (Gold & Sława).
+ * Zwraca log entries + info o zdobytych PS (do animacji).
+ */
+export interface SoulHarvestResult {
+  log: LogEntry[]
+  soulValue: number       // ATK + DEF zabitego
+  oldSoulPoints: number   // stan przed harvest
+  newSoulPoints: number   // stan po harvest (po modulo)
+  psGained: number        // ile PS przyznano (0 lub więcej)
+}
+
+export function harvestSoul(state: GameState, killerSide: PlayerSide, killedCard: CardInstance): SoulHarvestResult {
+  const player = state.players[killerSide]
+  const label = killerSide === 'player1' ? 'Ty' : 'AI'
+  const log: LogEntry[] = []
+
+  // Bazowe statystyki zabitego — soulValue z JSON (ATK + DEF)
+  const soulValue = (killedCard.cardData as any).stats?.soulValue
+    ?? killedCard.currentStats.soulValue
+    ?? (killedCard.currentStats.maxAttack + killedCard.currentStats.maxDefense)
+
+  const oldSoulPoints = player.soulPoints
+  player.soulPoints += soulValue
+
+  const threshold = state.gameMode === 'slava'
+    ? SLAVA_RULES.SOUL_HARVEST_THRESHOLD
+    : GOLD_EDITION_RULES.SOUL_HARVEST_THRESHOLD
+
+  // Ile PS zdobyto?
+  const psGained = Math.floor(player.soulPoints / threshold)
+  const newSoulPoints = player.soulPoints % threshold
+
+  if (psGained > 0) {
+    player.soulPoints = newSoulPoints
+    if (state.gameMode === 'slava') {
+      player.glory += psGained
+    } else {
+      player.gold += psGained
+    }
+    const currencyLabel = state.gameMode === 'slava' ? 'Sława' : 'PS'
+    // Osobny log o zdobyciu PS (dla banneru)
+    log.push(addLog(state,
+      `${label}: ŻNIWO DUSZ! +${psGained} ${currencyLabel}! (zebrano ${threshold} dusz)`,
+      state.gameMode === 'slava' ? 'glory' : 'gold'
+    ))
+  }
+
+  return { log, soulValue, oldSoulPoints, newSoulPoints: player.soulPoints, psGained }
 }
 
 // ===== SEASON MANAGEMENT =====

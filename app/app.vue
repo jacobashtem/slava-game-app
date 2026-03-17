@@ -186,4 +186,38 @@ html, body {
   80%  { opacity: 0.6; }
   100% { opacity: 0; transform: translateY(-40px) scale(0); }
 }
+
+/* ===== ŻNIWO DUSZ: Soul Bird VFX (Nawia songbird) ===== */
+/* Animated via GSAP in DeathVFX.vue — CSS is only base styling */
+.soul-bird-vfx {
+  position: fixed;
+  z-index: 500;
+  pointer-events: none;
+  width: 54px;
+  height: 54px;
+  color: #a78bfa;
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.9)) drop-shadow(0 0 22px rgba(168, 139, 250, 0.5));
+}
+
+.soul-bird-vfx svg {
+  width: 100%;
+  height: 100%;
+}
+
+.soul-bird-value {
+  position: fixed;
+  z-index: 501;
+  pointer-events: none;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 28px;
+  font-weight: 500;
+  color: #c4b5fd;
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.8), 0 2px 6px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .soul-bird-vfx { width: 40px; height: 40px; }
+  .soul-bird-value { font-size: 20px; }
+}
 </style>
