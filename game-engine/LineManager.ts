@@ -501,13 +501,21 @@ export function checkWinCondition(state: GameState): PlayerSide | null {
   if (state.turnNumber <= 1 && state.roundNumber <= 1) return null
 
   for (const side of ['player1', 'player2'] as PlayerSide[]) {
+    const opponent: PlayerSide = side === 'player1' ? 'player2' : 'player1'
+    const opp = state.players[opponent]
+
     // Wygrana via PS (Gold Edition: .gold, Sława: .glory — checked in GloryManager)
     if (state.gameMode === 'gold' && state.players[side].gold >= GOLD_EDITION_RULES.GLORY_WIN_TARGET) {
       return side
     }
 
-    const opponent: PlayerSide = side === 'player1' ? 'player2' : 'player1'
-    const opp = state.players[opponent]
+    // Przegrana via PS = 0 (po rundzie 5 — daj czas na start)
+    if (state.roundNumber > 5) {
+      const oppCurrency = state.gameMode === 'slava' ? opp.glory : opp.gold
+      if (oppCurrency <= 0) {
+        return side // opponent has 0 PS → current side wins
+      }
+    }
 
     const deckEmpty = opp.deck.length === 0
     const noCreaturesOnField = getTotalCreatureCount(state, opponent) === 0

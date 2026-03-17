@@ -148,6 +148,7 @@ export interface PlayerState {
   // Liczniki dla reguł Gold Edition
   creaturesPlayedThisTurn: number
   adventuresPlayedThisTurn: number
+  consecutivePasses: number      // ile tur z rzędu gracz pasował (nie zaatakował mając istoty)
 }
 
 export interface FieldState {

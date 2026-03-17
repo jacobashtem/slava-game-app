@@ -870,6 +870,26 @@ export function processEndPhase(state: GameState): { newState: GameState; log: L
 
   log.push(addLog(newState, `${newState.currentTurn} kończy turę.`, 'system'))
 
+  // Kara za pasowanie: sprawdź czy gracz atakował w tej turze
+  const currentSide = newState.currentTurn
+  const currentPlayer = newState.players[currentSide]
+  const hasCreaturesOnField = getAllCreaturesForPlayer(newState, currentSide).length > 0
+  const anyCreatureAttacked = getAllCreaturesForPlayer(newState, currentSide).some(c => c.hasAttackedThisTurn)
+
+  if (hasCreaturesOnField && !anyCreatureAttacked) {
+    currentPlayer.consecutivePasses++
+    if (currentPlayer.consecutivePasses >= 3) {
+      // -1 PS za pasowanie 3x z rzędu
+      const currency = newState.gameMode === 'slava' ? 'glory' : 'gold'
+      if (currentPlayer[currency] > 0) {
+        currentPlayer[currency]--
+        log.push(addLog(newState, `${currentSide === 'player1' ? 'Ty' : 'AI'}: -1 PS — kara za bierność! (${currentPlayer.consecutivePasses} tur bez ataku)`, 'gold'))
+      }
+    }
+  } else {
+    currentPlayer.consecutivePasses = 0
+  }
+
   // Trigger ON_TURN_END dla kart aktualnego gracza
   newState = processTurnEndEffects(newState, log)
 

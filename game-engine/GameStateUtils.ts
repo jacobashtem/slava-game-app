@@ -135,6 +135,7 @@ export function createInitialPlayerState(side: 'player1' | 'player2', isAI: bool
     handLimit: 10,
     creaturesPlayedThisTurn: 0,
     adventuresPlayedThisTurn: 0,
+    consecutivePasses: 0,
   }
 }
 
