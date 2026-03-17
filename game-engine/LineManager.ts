@@ -509,14 +509,6 @@ export function checkWinCondition(state: GameState): PlayerSide | null {
       return side
     }
 
-    // Przegrana via PS = 0 (po rundzie 5 — daj czas na start)
-    if (state.roundNumber > 5) {
-      const oppCurrency = state.gameMode === 'slava' ? opp.glory : opp.gold
-      if (oppCurrency <= 0) {
-        return side // opponent has 0 PS → current side wins
-      }
-    }
-
     const deckEmpty = opp.deck.length === 0
     const noCreaturesOnField = getTotalCreatureCount(state, opponent) === 0
     const noCreaturesInHand = opp.hand.filter(c => c.cardData.cardType === 'creature').length === 0

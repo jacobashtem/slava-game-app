@@ -223,8 +223,11 @@ export class AIPlayer {
       const myPS = getPS(currentState, this.side)
       const psTarget = getPSTarget(currentState)
       const closeToWin = myPS >= psTarget - 2
-      const canEnhance = myPS >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && !closeToWin
-      const useEnhanced = canEnhance && Math.random() > 0.4 // 60% szans na enhanced
+      const enemySideMedAdv = this.side === 'player1' ? 'player2' : 'player1'
+      const enemyPS = getPS(currentState, enemySideMedAdv)
+      // Ulepszaj tylko gdy masz przewagę PS lub dużo zapasu (≥4 PS i więcej niż wróg)
+      const canEnhance = myPS >= 4 && myPS > enemyPS && advData.enhancedEffectId && !closeToWin
+      const useEnhanced = canEnhance && Math.random() > 0.5
 
       if (advData.adventureType === 1 && myField.length > 0) {
         // Artefakt — cel: najsilniejszy sojusznik (który jest na polu)
@@ -415,8 +418,12 @@ export class AIPlayer {
       const hardPS = getPS(currentState, this.side)
       const hardTarget = getPSTarget(currentState)
       const hardCloseToWin = hardPS >= hardTarget - 2
-      const canEnhance = hardPS >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST + 1 && advData.enhancedEffectId && !hardCloseToWin
-      const useEnhanced = canEnhance ? true : (hardPS >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && isLosing && !hardCloseToWin)
+      const enemyHardPS = getPS(currentState, enemySide)
+      // Ulepszaj TYLKO gdy: masz przewagę PS nad wrogiem ALBO desperacko przegrywasz na polu
+      const canAffordEnhance = hardPS >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST + 2 && !hardCloseToWin
+      const hasAdvantage = hardPS > enemyHardPS + 1
+      const canEnhance = canAffordEnhance && advData.enhancedEffectId && (hasAdvantage || (isLosing && hardPS >= 4))
+      const useEnhanced = canEnhance
 
       if (advData.adventureType === 1 && myFieldNow.length > 0) {
         // Artefakt → najcenniejsza istota (wysoki ATK + ma efekt)
