@@ -40,6 +40,7 @@ let sparks: Spark[] = []
 let sCtx: CanvasRenderingContext2D | null = null
 let mounted = false
 let loopActive = false
+let resurrectRafHandle = -1
 const pendingTimeouts: number[] = []
 
 // ===== WEBGPU + TSL MATERIALS =====
@@ -373,7 +374,7 @@ async function play(targetEl: HTMLElement): Promise<void> {
     // Start render loop
     if (!loopActive) {
       loopActive = true
-      rafLoop.add('resurrect-vfx', () => {
+      resurrectRafHandle = rafLoop.register(() => {
         if (renderer && scene && camera) renderer.renderAsync(scene, camera)
         if (sCtx && sparkCanvasRef.value) {
           sCtx.clearRect(0, 0, sparkCanvasRef.value.width, sparkCanvasRef.value.height)
@@ -440,7 +441,7 @@ async function play(targetEl: HTMLElement): Promise<void> {
 
 function cleanup() {
   loopActive = false
-  rafLoop.remove('resurrect-vfx')
+  if (resurrectRafHandle >= 0) { rafLoop.unregister(resurrectRafHandle); resurrectRafHandle = -1 }
   sparks.length = 0
   if (portalObj) portalObj.mesh.visible = false
   if (burstObj) burstObj.mesh.visible = false
