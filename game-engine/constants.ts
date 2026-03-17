@@ -87,7 +87,7 @@ export const GOLD_EDITION_RULES = {
   ADVENTURE_COST: 0,        // efekt podstawowy — DARMOWY
   ENHANCED_ADVENTURE_COST: 1, // efekt ulepszony — kosztuje 1 PS
   CARDS_DRAWN_PER_TURN: 1,
-  GLORY_WIN_TARGET: 15,     // alternatywna wygrana: zgromadź 15 PS
+  GLORY_WIN_TARGET: 10,     // wygrana: zgromadź 10 PS (jak w Sława)
   SOUL_HARVEST_THRESHOLD: 20, // co 20 pkt (ATK+DEF zabitego) → +1 PS
 } as const
 

@@ -501,8 +501,8 @@ export function checkWinCondition(state: GameState): PlayerSide | null {
   if (state.turnNumber <= 1 && state.roundNumber <= 1) return null
 
   for (const side of ['player1', 'player2'] as PlayerSide[]) {
-    // Alternatywna wygrana: 15 PS
-    if (state.players[side].glory >= GOLD_EDITION_RULES.GLORY_WIN_TARGET) {
+    // Wygrana via PS (Gold Edition: .gold, Sława: .glory — checked in GloryManager)
+    if (state.gameMode === 'gold' && state.players[side].gold >= GOLD_EDITION_RULES.GLORY_WIN_TARGET) {
       return side
     }
 

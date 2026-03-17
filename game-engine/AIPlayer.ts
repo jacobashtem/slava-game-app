@@ -15,6 +15,16 @@ import { canActivateEffect, getEffect } from './EffectRegistry'
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard'
 
+/** Get PS currency for the current game mode (gold in Gold Edition, glory in Sława) */
+function getPS(state: GameState, side: PlayerSide): number {
+  return state.gameMode === 'slava' ? state.players[side].glory : state.players[side].gold
+}
+
+/** PS win target for the current game mode */
+function getPSTarget(state: GameState): number {
+  return state.gameMode === 'slava' ? 10 : GOLD_EDITION_RULES.GLORY_WIN_TARGET
+}
+
 // Efekty o wysokim zagrożeniu — priorytetowe cele do zabicia
 const DANGEROUS_EFFECTS = new Set([
   // Aury tempo/ofensywne
@@ -209,7 +219,11 @@ export class AIPlayer {
       if (!adventure) return decisions
       const advData = adventure.cardData as any
       // Enhanced: zagraj wzmocnioną wersję jeśli AI stać (1 PS) i ma sens
-      const canEnhance = player.glory >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId
+      // NIE wydawaj PS jeśli blisko wygranej (oszczędzaj na 10 PS win)
+      const myPS = getPS(currentState, this.side)
+      const psTarget = getPSTarget(currentState)
+      const closeToWin = myPS >= psTarget - 2
+      const canEnhance = myPS >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && !closeToWin
       const useEnhanced = canEnhance && Math.random() > 0.4 // 60% szans na enhanced
 
       if (advData.adventureType === 1 && myField.length > 0) {
@@ -247,8 +261,8 @@ export class AIPlayer {
       const effect = getEffect((creature.cardData as any).effectId)
       if (!effect) continue
       const cost = effect.activationCost ?? 0
-      // Sprawdź czy AI stać na aktywację
-      if (cost > aiPlayer.glory) continue
+      // Sprawdź czy AI stać na aktywację (PS w odpowiedniej walucie)
+      if (cost > getPS(currentState, this.side)) continue
       // Pomiń efekty samobójcze (np. Mara) gdy AI ma mało istot
       if (effect.activationCooldown === 'once') {
         const myCount = getAllCreaturesOnField(currentState, this.side).length
@@ -348,8 +362,12 @@ export class AIPlayer {
     const enemyField = getAllCreaturesOnField(currentState, enemySide)
     const myPower = myField.reduce((s, c) => s + c.currentStats.attack + c.currentStats.defense, 0)
     const enemyPower = enemyField.reduce((s, c) => s + c.currentStats.attack + c.currentStats.defense, 0)
-    const isLosing = enemyPower > myPower * 1.3
-    const isWinning = myPower > enemyPower * 1.5
+    const myPS = getPS(currentState, this.side)
+    const enemyPS = getPS(currentState, enemySide)
+    const psTarget = getPSTarget(currentState)
+    // Uwzględnij PS w ocenie — kto jest bliżej wygranej?
+    const isLosing = enemyPower > myPower * 1.3 || enemyPS > myPS + 3
+    const isWinning = myPower > enemyPower * 1.5 || myPS > enemyPS + 3
 
     // === PLAY: wybierz najlepszą istotę (scoring) ===
     if (canPlayCreature(currentState, this.side)) {
@@ -384,9 +402,12 @@ export class AIPlayer {
       const myFieldNow = getAllCreaturesOnField(currentState, this.side)
       const enemiesNow = getAllCreaturesOnField(currentState, enemySide)
 
-      // Enhanced: używaj gdy PS ≥ 2 (zachowaj 1 PS w rezerwie na zdolności)
-      const canEnhance = player.glory >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST + 1 && advData.enhancedEffectId
-      const useEnhanced = canEnhance ? true : (player.glory >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && isLosing)
+      // Enhanced: używaj gdy PS ≥ 2, ale NIE gdy blisko wygranej (oszczędzaj PS)
+      const hardPS = getPS(currentState, this.side)
+      const hardTarget = getPSTarget(currentState)
+      const hardCloseToWin = hardPS >= hardTarget - 2
+      const canEnhance = hardPS >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST + 1 && advData.enhancedEffectId && !hardCloseToWin
+      const useEnhanced = canEnhance ? true : (hardPS >= GOLD_EDITION_RULES.ENHANCED_ADVENTURE_COST && advData.enhancedEffectId && isLosing && !hardCloseToWin)
 
       if (advData.adventureType === 1 && myFieldNow.length > 0) {
         // Artefakt → najcenniejsza istota (wysoki ATK + ma efekt)
@@ -408,7 +429,7 @@ export class AIPlayer {
       const effect = getEffect((creature.cardData as any).effectId)
       if (!effect) continue
       const cost = effect.activationCost ?? 0
-      if (cost > currentState.players[this.side].glory) continue
+      if (cost > getPS(currentState, this.side)) continue
       // Samobójcze efekty: aktywuj tylko gdy warto (dużo istot + silny cel)
       if (effect.activationCooldown === 'once') {
         const myCount = getAllCreaturesOnField(currentState, this.side).length
@@ -443,7 +464,7 @@ export class AIPlayer {
 
     // === SLAVA: AI proaktywnie invokuje boga ===
     if (currentState.gameMode === 'slava' && currentState.slavaData && !currentState.slavaData.pendingFavor) {
-      const aiGlory = currentState.players[this.side].glory
+      const aiGlory = getPS(currentState, this.side)
       const availableGods = currentState.slavaData.gods.filter(g => !g.usedThisCycle)
       if (availableGods.length > 0 && aiGlory >= 2) {
         // Proste heurystyki: invoke gdy jest sens
@@ -538,6 +559,9 @@ export class AIPlayer {
       if (validTargets.length === 0) continue
 
       // Cel scoring:
+      const combatPS = getPS(currentState, this.side)
+      const combatTarget = getPSTarget(currentState)
+      const soulPointsNow = currentState.players[this.side].soulPoints
       const scoredTargets = validTargets.map(t => {
         let score = 0
         const canKill = t.currentStats.defense <= attacker.currentStats.attack
@@ -549,6 +573,14 @@ export class AIPlayer {
         if (!willSurvive && !canKill) score -= 80  // zginę bez zabicia = zła wymiana
         score += threatScore * 2                    // groźne cele = priorytet
         if (canKill) score += threatScore * 3       // zabij groźnego = mega priorytet
+
+        // PS strategy: prioritize kills that push us toward soul harvest threshold
+        if (canKill) {
+          const sv = (t.cardData as any).stats?.soulValue ?? (t.currentStats.attack + t.currentStats.defense)
+          const afterHarvest = soulPointsNow + sv
+          if (afterHarvest >= 20) score += 40      // kill triggers PS gain
+          if (combatPS + Math.floor(afterHarvest / 20) >= combatTarget) score += 200 // this kill WINS the game!
+        }
         return { target: t, score }
       })
 
