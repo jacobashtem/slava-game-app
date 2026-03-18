@@ -57,7 +57,7 @@ const EXPERIENCE_PATH = path.join(__dirname, '..', 'mcts', 'experience.json')
 
 interface GameResult {
   winner: PlayerSide | null
-  winMethod: 'ps' | 'elimination' | 'timeout' | 'error'
+  winMethod: 'ps' | 'elimination' | 'ps_zero' | 'timeout' | 'error'
   rounds: number
   p1Gold: number
   p2Gold: number
@@ -71,6 +71,13 @@ interface GameResult {
   earlyTerminations: number
   // Game trace (Faza 4)
   trace: GameTrace | null
+  // End-game details
+  plunderCount: number
+  winnerCardsLeft: number   // deck + hand + field
+  loserCardsLeft: number
+  loserFieldCount: number
+  loserDeckCount: number
+  loserHandCount: number
 }
 
 interface BenchmarkResult {
@@ -96,6 +103,11 @@ interface BenchmarkResult {
     avgPSLoser: number
     psWinCount: number
     elimWinCount: number
+    psZeroCount: number
+    totalPlunders: number
+    avgWinnerCardsLeft: number
+    avgLoserCardsLeft: number
+    loserTrueEliminated: number  // loser had 0 cards left
   }
   mcts: {
     avgIterationsPerDecision: number
@@ -144,6 +156,7 @@ function simulateGame(): GameResult {
   let totalBestMoveWR = 0
   let earlyTerminations = 0
   let winMethod: GameResult['winMethod'] = 'timeout'
+  let plunderCount = 0
 
   // Game trace collection (Faza 4)
   const traceMoves: GameTraceMove[] = []
@@ -259,7 +272,12 @@ function simulateGame(): GameResult {
     }
 
     if (wantsPlunder && !state.winner) {
-      try { state = engine.sidePlunder(side) } catch {}
+      try {
+        const psBefore = state.players[side === 'player1' ? 'player2' : 'player1'].gold
+        state = engine.sidePlunder(side)
+        const psAfter = state.players[side === 'player1' ? 'player2' : 'player1'].gold
+        if (psAfter < psBefore) plunderCount++
+      } catch {}
     }
 
     if (!state.winner) {
@@ -294,7 +312,15 @@ function simulateGame(): GameResult {
       executeTurn(state.currentTurn === 'player1' ? mctsAI : oppAI, state.currentTurn)
       if (state.winner) {
         const w = state.players[state.winner]
-        winMethod = w.gold >= GOLD_EDITION_RULES.GLORY_WIN_TARGET ? 'ps' : 'elimination'
+        const loserSide = state.winner === 'player1' ? 'player2' : 'player1'
+        const loser = state.players[loserSide]
+        if (w.gold >= GOLD_EDITION_RULES.GLORY_WIN_TARGET) {
+          winMethod = 'ps'
+        } else if (loser.gold <= 0) {
+          winMethod = 'ps_zero'
+        } else {
+          winMethod = 'elimination'
+        }
       }
     }
   } catch { winMethod = 'error' }
@@ -306,16 +332,28 @@ function simulateGame(): GameResult {
       winner: state.winner === 'player1' ? 0 : 1,
       rounds: state.roundNumber,
       moves: traceMoves,
-      winMethod: winMethod as 'ps' | 'elimination' | 'gold_loss',
+      winMethod: winMethod as 'ps' | 'elimination' | 'ps_zero' | 'gold_loss',
       finalPS: [state.players.player1.gold, state.players.player2.gold],
     }
   }
+
+  // End-game card counts
+  const winnerSide = state.winner ?? 'player1'
+  const loserSide = state.winner === 'player1' ? 'player2' : 'player1'
+  const wp = state.players[winnerSide]
+  const lp = state.players[loserSide]
+  const loserFieldCount = getAllCreaturesOnField(state, loserSide).length
+  const loserDeckCount = lp.deck.length
+  const loserHandCount = lp.hand.filter(c => c.cardData.cardType === 'creature').length
+  const winnerCardsLeft = wp.deck.length + wp.hand.filter(c => c.cardData.cardType === 'creature').length + getAllCreaturesOnField(state, winnerSide).length
+  const loserCardsLeft = loserDeckCount + loserHandCount + loserFieldCount
 
   return {
     winner: state.winner, winMethod, rounds: state.roundNumber,
     p1Gold: state.players.player1.gold, p2Gold: state.players.player2.gold,
     mctsTimeMs, mctsDecisions, totalIterations, totalTreeNodes,
     totalRolloutDepth, totalBestMoveWR, earlyTerminations, trace,
+    plunderCount, winnerCardsLeft, loserCardsLeft, loserFieldCount, loserDeckCount, loserHandCount,
   }
 }
 
@@ -329,6 +367,11 @@ function aggregate(results: GameResult[]): BenchmarkResult {
   const errors = results.filter(r => r.winMethod === 'error').length
   const psWins = withWinner.filter(r => r.winMethod === 'ps').length
   const elimWins = withWinner.filter(r => r.winMethod === 'elimination').length
+  const psZeroWins = withWinner.filter(r => r.winMethod === 'ps_zero').length
+  const totalPlunders = results.reduce((s, r) => s + r.plunderCount, 0)
+  const avgWinnerCards = withWinner.length > 0 ? withWinner.reduce((s, r) => s + r.winnerCardsLeft, 0) / withWinner.length : 0
+  const avgLoserCards = withWinner.length > 0 ? withWinner.reduce((s, r) => s + r.loserCardsLeft, 0) / withWinner.length : 0
+  const loserZeroCards = withWinner.filter(r => r.loserCardsLeft === 0).length
 
   const winnerPS = withWinner.map(r => r.winner === 'player1' ? r.p1Gold : r.p2Gold)
   const loserPS = withWinner.map(r => r.winner === 'player1' ? r.p2Gold : r.p1Gold)
@@ -364,6 +407,11 @@ function aggregate(results: GameResult[]): BenchmarkResult {
       avgPSLoser: loserPS.length > 0 ? loserPS.reduce((a, b) => a + b, 0) / loserPS.length : 0,
       psWinCount: psWins,
       elimWinCount: elimWins,
+      psZeroCount: psZeroWins,
+      totalPlunders,
+      avgWinnerCardsLeft: Math.round(avgWinnerCards * 10) / 10,
+      avgLoserCardsLeft: Math.round(avgLoserCards * 10) / 10,
+      loserTrueEliminated: loserZeroCards,
     },
     mcts: {
       avgIterationsPerDecision: totalDecisions > 0 ? totalIter / totalDecisions : 0,
@@ -419,8 +467,10 @@ for (let i = 0; i < GAME_COUNT; i++) {
   const result = simulateGame()
   const dt = ((Date.now() - t0) / 1000).toFixed(1)
   const winStr = result.winner === 'player1' ? 'MCTS ✓' : result.winner === 'player2' ? `${OPPONENT} ✓` : 'timeout'
+  const methodStr = result.winMethod === 'ps' ? 'PS' : result.winMethod === 'ps_zero' ? 'PS0' : result.winMethod === 'elimination' ? 'ELIM' : result.winMethod
   const avgIter = result.mctsDecisions > 0 ? Math.round(result.totalIterations / result.mctsDecisions) : 0
-  process.stderr.write(`  [${i + 1}/${GAME_COUNT}] ${winStr.padEnd(10)} ${result.rounds}r ${result.p1Gold}/${result.p2Gold}PS ${avgIter}iter/dec ${dt}s\n`)
+  const plunderStr = result.plunderCount > 0 ? ` ${result.plunderCount}plr` : ''
+  process.stderr.write(`  [${i + 1}/${GAME_COUNT}] ${winStr.padEnd(10)} ${result.rounds}r ${result.p1Gold}/${result.p2Gold}PS ${methodStr} L:${result.loserCardsLeft}cards${plunderStr} ${avgIter}iter/dec ${dt}s\n`)
   results.push(result)
 
   // Always record game trace to ExperienceDB
@@ -439,8 +489,10 @@ process.stderr.write('─'.repeat(70) + '\n')
 process.stderr.write(`  Win Rate:          ${(benchmark.results.winRate * 100).toFixed(1)}% (${benchmark.results.mctsWins}W/${benchmark.results.oppWins}L)\n`)
 process.stderr.write(`  Timeouts:          ${benchmark.results.timeouts} (${(benchmark.results.timeoutRate * 100).toFixed(0)}%)\n`)
 process.stderr.write(`  Avg Rounds:        ${benchmark.results.avgRounds.toFixed(1)}\n`)
-process.stderr.write(`  PS Wins:           ${benchmark.results.psWinCount} | Elim Wins: ${benchmark.results.elimWinCount}\n`)
+process.stderr.write(`  Win Methods:       PS≥10: ${benchmark.results.psWinCount} | Elimination: ${benchmark.results.elimWinCount} | PS→0: ${benchmark.results.psZeroCount}\n`)
 process.stderr.write(`  Avg PS Winner:     ${benchmark.results.avgPSWinner.toFixed(1)} | Loser: ${benchmark.results.avgPSLoser.toFixed(1)}\n`)
+process.stderr.write(`  Cards Left:        Winner avg ${benchmark.results.avgWinnerCardsLeft} | Loser avg ${benchmark.results.avgLoserCardsLeft} | Loser 0 cards: ${benchmark.results.loserTrueEliminated}/${benchmark.results.gamesWithWinner}\n`)
+process.stderr.write(`  Plunders:          ${benchmark.results.totalPlunders} total (${(benchmark.results.totalPlunders / (benchmark.results.gamesPlayed || 1)).toFixed(1)}/game)\n`)
 process.stderr.write('─'.repeat(70) + '\n')
 process.stderr.write(`  Iter/Decision:     ${benchmark.mcts.avgIterationsPerDecision.toFixed(0)}\n`)
 process.stderr.write(`  Tree Nodes:        ${benchmark.mcts.avgTreeNodes.toFixed(1)}\n`)
