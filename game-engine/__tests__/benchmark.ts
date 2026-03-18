@@ -26,6 +26,8 @@ import { AIPlayer } from '../AIPlayer'
 import type { AIDifficulty } from '../AIPlayer'
 import type { GameState, PlayerSide } from '../types'
 import { GamePhase, GOLD_EDITION_RULES } from '../constants'
+import { getAllCreaturesOnField } from '../LineManager'
+import { getOpponentSide } from '../GameStateUtils'
 import type { MCTSStats } from '../mcts/types'
 import { ExperienceDB } from '../mcts/ExperienceDB'
 import type { GameTrace, GameTraceMove } from '../mcts/ExperienceDB'
@@ -233,7 +235,9 @@ function simulateGame(): GameResult {
       try {
         if (engine.getCurrentPhase() === GamePhase.PLAY)
           state = engine.sideAdvancePhase(side)
-      } catch {}
+      } catch (e: any) {
+        if (turnCount > MAX_TURNS - 10) process.stderr.write(`    [WARN] advancePhase failed: ${e?.message}\n`)
+      }
       for (const d of combatActions) {
         if (state.winner) break
         try {
@@ -241,9 +245,16 @@ function simulateGame(): GameResult {
             state = engine.sideAttack(side, d.cardInstanceId, d.targetInstanceId)
             engine.lastCombatResult = null
           }
-        } catch {}
+        } catch (e: any) {
+          if (turnCount > MAX_TURNS - 10) process.stderr.write(`    [WARN] attack failed: ${e?.message}\n`)
+        }
         autoResolve()
       }
+    } else if (turnCount > MAX_TURNS - 5 && !state.winner) {
+      // Near timeout — log why no combat actions
+      const myField = getAllCreaturesOnField(state, side)
+      const oppField = getAllCreaturesOnField(state, getOpponentSide(side))
+      process.stderr.write(`    [STALL R${state.roundNumber}] ${side}: field=${myField.length}v${oppField.length} combatActions=${combatActions.length} playActions=${playActions.length} decisions=${decisions.map(d=>d.type).join(',')}\n`)
     }
 
     if (wantsPlunder && !state.winner) {

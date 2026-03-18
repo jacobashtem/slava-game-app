@@ -75,10 +75,17 @@ export function generateMacroMoves(
   side: PlayerSide,
   maxMacros: number,
 ): MacroMoveResult {
+  const genStart = Date.now()
   const allMacros: MacroMove[] = []
   const stateCache = new Map<string, GameState>()
   const oppSide = getOpponentSide(side)
   const player = state.players[side]
+
+  // V5: Budget-aware generation — cap prefix groups based on maxMacros
+  // novice=8 macros → max 3 creature options, veteran=30 → max 6
+  const maxPrefixGroups = maxMacros <= 8 ? 3 : maxMacros <= 16 ? 4 : 6
+  const maxAdvPerGroup = maxMacros <= 8 ? 2 : 3
+  const maxActPerAdv = maxMacros <= 16 ? 1 : 2
 
   // V5: Game situation for context-aware scoring
   const lightState = gameStateToLight(state)
@@ -152,6 +159,9 @@ export function generateMacroMoves(
   const prefixGroups = new Map<string, PrefixGroup>()
 
   for (const opt of creatureOptions) {
+    // Budget-aware: cap prefix groups to avoid eating entire time budget
+    if (prefixGroups.size >= maxPrefixGroups + 1) break // +1 for 'skip' group
+
     const groupKey = opt.creature ? `${opt.creature.instanceId}:L${opt.line}` : 'skip'
     if (prefixGroups.has(groupKey)) continue
 
@@ -271,9 +281,9 @@ export function generateMacroMoves(
         }
       }
 
-      // Top-3 adventures (was top-2)
+      // Top adventures (budget-aware: novice=2, veteran=3)
       advCandidates.sort((a, b) => b.score - a.score)
-      for (const cand of advCandidates.slice(0, 3)) {
+      for (const cand of advCandidates.slice(0, maxAdvPerGroup)) {
         const applied = applyMove(engine, stateAfterCreature, cand.step, side)
         advOptions.push({
           step: cand.step,
@@ -295,8 +305,8 @@ export function generateMacroMoves(
       const activatable = getAllCreaturesOnField(advOpt.stateAfterAdv, side)
         .filter(c => canActivateEffect(advOpt.stateAfterAdv, c))
 
-      // Top-2 activations (was only first)
-      const activatableSlice = activatable.slice(0, 2)
+      // Top activations (budget-aware: novice=1, veteran=2)
+      const activatableSlice = activatable.slice(0, maxActPerAdv)
       for (const creature of activatableSlice) {
         const effect = getEffect((creature.cardData as any).effectId)
         if (!effect) continue

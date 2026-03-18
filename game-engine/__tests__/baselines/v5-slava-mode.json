@@ -1,0 +1,34 @@
+{
+  "name": "v5-slava-mode",
+  "timestamp": "2026-03-18T13:58:04.640Z",
+  "config": {
+    "games": 20,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 20,
+    "gamesWithWinner": 19,
+    "mctsWins": 10,
+    "oppWins": 9,
+    "timeouts": 1,
+    "errors": 0,
+    "winRate": 0.5263157894736842,
+    "timeoutRate": 0.05,
+    "avgRounds": 7.8,
+    "avgPSWinner": 5,
+    "avgPSLoser": 5,
+    "psWinCount": 0,
+    "elimWinCount": 19
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 7505.569343065694,
+    "avgTreeNodes": 8.64963503649635,
+    "avgRolloutDepth": 6.740878465103446,
+    "avgTimePerDecisionMs": 100.03649635036497,
+    "avgBestMoveWR": 0.8376744655001727,
+    "earlyTerminationRate": 0.08759124087591241,
+    "totalDecisions": 137
+  }
+}

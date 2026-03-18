@@ -75,7 +75,7 @@ export class GameEngine {
 
   startAlphaGame(playerDomainFilter?: number[]): GameState {
     this.arenaMode = false
-    this.state = createInitialGameState('gold')
+    this.state = createInitialGameState('slava')
 
     // Losowa pora roku startowa (offset 0–3 przesuwa sezon, runda zawsze = 1)
     this.state.seasonOffset = Math.floor(Math.random() * 4)
