@@ -17,6 +17,8 @@ export class MCTSNode {
   parent: MCTSNode | null
   children: Map<string, MCTSNode> = new Map() // moveKey → child
   move: MCTSMove | null // akcja prowadząca do tego węzła (null dla root)
+  /** Depth in tree: 0=root, 1=L1 (our moves), 2=L2 (opponent responses) */
+  depth: number
 
   // ----- Stan gry -----
   state: GameState
@@ -47,6 +49,7 @@ export class MCTSNode {
     this.parent = parent
     this.move = move
     this.untriedMoves = availableMoves
+    this.depth = parent ? parent.depth + 1 : 0
   }
 
   // ===== PROPERTIES =====

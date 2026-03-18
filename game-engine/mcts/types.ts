@@ -113,6 +113,14 @@ export interface MCTSConfig {
   // === Faza 4: Experience ===
   /** Waga prioru z experience DB (virtual visits) (default: 10) */
   experiencePriorWeight: number
+
+  // === Faza 5: 2-Level Tree (Opponent Response) ===
+  /** Enable 2-level tree with opponent response nodes (warrior+ only) */
+  useL2: boolean
+  /** Max L2 children per L1 node */
+  maxL2Children: number
+  /** Min visits on L1 before expanding L2 */
+  l2ExpansionThreshold: number
 }
 
 /** Domyślna konfiguracja MCTS */
@@ -133,6 +141,9 @@ export const DEFAULT_MCTS_CONFIG: MCTSConfig = {
   ttMinVisits: 50,
   useTreeReuse: true,
   experiencePriorWeight: 10,
+  useL2: false,
+  maxL2Children: 3,
+  l2ExpansionThreshold: 5,
 }
 
 // ===== STATISTICS =====
@@ -146,4 +157,6 @@ export interface MCTSStats {
   bestMoveVisits: number
   bestMoveWinRate: number
   movesConsidered: number
+  /** Number of L2 opponent-response nodes expanded (0 if L2 disabled) */
+  l2NodesExpanded: number
 }

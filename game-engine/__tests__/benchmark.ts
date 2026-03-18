@@ -46,6 +46,7 @@ const FLAG_COMPARE = args.includes('--compare') ? (args[args.indexOf('--compare'
 const FLAG_BUDGET = args.includes('--budget') ? parseInt(args[args.indexOf('--budget') + 1] || '2000', 10) : 2000
 const FLAG_SAVE = FLAG_NAME !== null || (!FLAG_COMPARE && !args.includes('--no-save'))
 const FLAG_TRAIN = args.includes('--train')
+const FLAG_NO_L2 = args.includes('--no-l2')
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -126,7 +127,7 @@ if (fs.existsSync(EXPERIENCE_PATH)) {
 
 function simulateGame(): GameResult {
   const engine = new GameEngine()
-  const mctsAI = new AIPlayer('player1', 'legend', FLAG_BUDGET)
+  const mctsAI = new AIPlayer('player1', 'legend', FLAG_BUDGET, FLAG_NO_L2)
   const oppAI = new AIPlayer('player2', OPPONENT)
 
   // Reset per-game state (TT, tree reuse)
@@ -409,6 +410,7 @@ const startTime = Date.now()
 const results: GameResult[] = []
 
 process.stderr.write(`\n⚔  MCTS V4 Benchmark — ${GAME_COUNT} games | MCTS vs ${OPPONENT.toUpperCase()} | ${FLAG_BUDGET}ms budget`)
+if (FLAG_NO_L2) process.stderr.write(' | L2 DISABLED')
 if (FLAG_TRAIN) process.stderr.write(' | TRAINING')
 process.stderr.write('\n' + '─'.repeat(70) + '\n')
 

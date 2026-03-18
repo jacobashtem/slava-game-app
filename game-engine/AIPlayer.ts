@@ -48,9 +48,13 @@ export class AIPlayer {
     private side: PlayerSide,
     private difficulty: AIDifficulty = 'warrior',
     budgetOverrideMs?: number,
+    disableL2?: boolean,
   ) {
     const budget = budgetOverrideMs ?? DIFFICULTY_BUDGETS[difficulty]
-    this.mcts = new MCTSPlayer(side, { timeBudgetMs: budget })
+    // L2 opponent response: enabled for warrior+ (budget > 200ms) unless explicitly disabled
+    const useL2 = !disableL2 && budget > 200
+    const maxL2Children = budget <= 800 ? 2 : budget <= 2000 ? 3 : 4
+    this.mcts = new MCTSPlayer(side, { timeBudgetMs: budget, useL2, maxL2Children })
   }
 
   planTurn(state: GameState): AIDecision[] {

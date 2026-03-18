@@ -19,7 +19,8 @@ import { DEFAULT_MCTS_CONFIG, moveKey } from './types'
 import { MCTSNode } from './MCTSNode'
 import { GameEngine } from '../GameEngine'
 import { gameStateToLight, cloneLightState } from './LightweightState'
-import { rolloutLight, applyCombatPlanToLight } from './LightweightSimulator'
+import type { LightState } from './LightweightState'
+import { rolloutLight, applyCombatPlanToLight, simulateOneTurn } from './LightweightSimulator'
 import type { AIDecision } from '../AIPlayer'
 import { getAllCreaturesOnField } from '../LineManager'
 import { generateMacroMoves } from './MacroMoveGenerator'
@@ -114,12 +115,18 @@ export class MCTSPlayer {
     let ttHits = 0
     const ourSideNum = this.side === 'player1' ? 0 : 1
 
-    // Compute macro-move cap based on time budget
+    // Determine L2 config from budget tier
+    const budget = this.config.timeBudgetMs
+    const useL2 = this.config.useL2 && budget > 200
+    const maxL2 = this.config.maxL2Children
+    const l2Threshold = this.config.l2ExpansionThreshold
+
+    // Compute macro-move cap based on time budget (reduced when L2 active)
     const maxMacros = Math.min(
       this.config.maxMacroMoves,
-      this.config.timeBudgetMs <= 200 ? 8 :
-      this.config.timeBudgetMs <= 800 ? 16 :
-      this.config.timeBudgetMs <= 2000 ? 30 : 40,
+      useL2
+        ? (budget <= 800 ? 12 : budget <= 2000 ? 24 : 32)
+        : (budget <= 200 ? 8 : budget <= 800 ? 16 : budget <= 2000 ? 30 : 40),
     )
 
     // Generate macro-moves (with pre-computed final states)
@@ -188,16 +195,28 @@ export class MCTSPlayer {
     }
 
     // === MCTS LOOP ===
+    let l2NodesExpanded = 0
+
     while (iterations < this.config.maxIterations) {
       if (Date.now() - startTime >= this.config.timeBudgetMs) break
       if (iterations > 200 && this.shouldTerminateEarly(root)) break
 
-      // 1. Selection (1 level: root → child)
-      const node = root.selectChild(this.config, experiencePriors)
+      // 1. Selection L1 (root → child)
+      const l1Node = root.selectChild(this.config, experiencePriors)
 
-      // 2. LightState for rollout
-      const cachedLight = (node as any)._lightState as ReturnType<typeof gameStateToLight> | undefined
-      const lightBase = cachedLight ?? gameStateToLight(node.state)
+      // 2. L2: If enabled + L1 has enough visits → expand/select opponent response
+      let leaf = l1Node
+      if (useL2 && l1Node.visits >= l2Threshold) {
+        const l2Node = this.selectOrExpandL2(l1Node, ourSideNum, maxL2)
+        if (l2Node) {
+          leaf = l2Node
+          if (l2Node.visits === 0) l2NodesExpanded++
+        }
+      }
+
+      // 3. LightState for rollout
+      const cachedLight = (leaf as any)._lightState as LightState | undefined
+      const lightBase = cachedLight ?? gameStateToLight(leaf.state)
 
       // Faza 2: TT lookup (before determinization — hashes observable state)
       let value = 0.5
@@ -241,11 +260,19 @@ export class MCTSPlayer {
         }
       }
 
-      // 3. Backpropagation
-      const moveKeys = node.macroSteps
-        ? node.macroSteps.filter(s => s.type !== 'advance_to_combat').map(s => moveKey(s))
-        : (node.move ? [moveKey(node.move)] : [])
-      node.backpropagate(value, moveKeys, this.config)
+      // 4. Backpropagation with RAVE filtering (skip L2 opponent moves)
+      let raveKeys: string[]
+      if (leaf.depth === 2 && leaf.parent?.macroSteps) {
+        // L2 node: use parent's (L1) macro steps for RAVE — opponent moves are noise
+        raveKeys = leaf.parent.macroSteps
+          .filter(s => s.type !== 'advance_to_combat')
+          .map(s => moveKey(s))
+      } else {
+        raveKeys = leaf.macroSteps
+          ? leaf.macroSteps.filter(s => s.type !== 'advance_to_combat').map(s => moveKey(s))
+          : (leaf.move ? [moveKey(leaf.move)] : [])
+      }
+      leaf.backpropagate(value, raveKeys, this.config)
       iterations++
     }
 
@@ -269,6 +296,7 @@ export class MCTSPlayer {
       bestMoveVisits: bestChild?.visits ?? 0,
       bestMoveWinRate: bestChild ? bestChild.wins / Math.max(bestChild.visits, 1) : 0,
       movesConsidered: macros.length,
+      l2NodesExpanded,
     }
 
     // Faza 3: Save root for reuse
@@ -308,9 +336,10 @@ export class MCTSPlayer {
           prevStats.set(hash, { visits: prevChild.visits, wins: prevChild.wins })
         }
       }
-      // Also check grandchildren (depth 2)
+      // Also check grandchildren (depth 2) — use _lightState for L2 nodes
       for (const grandchild of prevChild.children.values()) {
-        const gcLight = gameStateToLight(grandchild.state)
+        const gcLight = (grandchild as any)._lightState as LightState | undefined
+          ?? gameStateToLight(grandchild.state)
         if (grandchild.visits > 0) {
           const hash = computeHash(gcLight)
           const existing = prevStats.get(hash)
@@ -386,6 +415,54 @@ export class MCTSPlayer {
     return count > 0 ? totalWR / count : 0.5
   }
 
+  // ===== L2: OPPONENT RESPONSE =====
+
+  /**
+   * Select or expand an L2 (opponent response) child of an L1 node.
+   * Uses progressive widening to lazily add opponent responses.
+   * Each L2 child is a determinized opponent turn via simulateOneTurn().
+   */
+  private selectOrExpandL2(
+    l1Node: MCTSNode,
+    ourSideNum: number,
+    maxL2: number,
+  ): MCTSNode | null {
+    const cachedLight = (l1Node as any)._lightState as LightState | undefined
+    if (!cachedLight) return null
+
+    // Progressive widening: should we add a new L2 child?
+    const currentL2Count = l1Node.children.size
+    const shouldExpand = currentL2Count < maxL2 &&
+      (currentL2Count === 0 ||
+       currentL2Count < Math.ceil(1.5 * Math.pow(l1Node.visits, 0.35)))
+
+    if (shouldExpand) {
+      // Clone L1's post-combat LightState
+      const oppLight = cloneLightState(cachedLight)
+
+      // Determinize opponent's hand/deck (different shuffle per expansion → diverse responses)
+      const oppSide = 1 - ourSideNum
+      for (const arr of [oppLight.hands[oppSide]!, oppLight.decks[oppSide]!]) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[arr[i], arr[j]] = [arr[j]!, arr[i]!]
+        }
+      }
+
+      // Simulate opponent's full turn (creature play + adventure + combat)
+      simulateOneTurn(oppLight)
+
+      // Create L2 node (uses l1Node.state as placeholder — rollout uses _lightState)
+      const l2Node = new MCTSNode(l1Node.state, l1Node, { type: 'end_turn' }, [])
+      ;(l2Node as any)._lightState = oppLight
+      l1Node.children.set(`opp_${currentL2Count}`, l2Node)
+      return l2Node
+    }
+
+    // Select existing L2 child via UCB1 (no experience priors at L2)
+    return currentL2Count > 0 ? l1Node.selectChild(this.config) : null
+  }
+
   // ===== HELPERS =====
 
   private shouldTerminateEarly(root: MCTSNode): boolean {
@@ -400,6 +477,6 @@ export class MCTSPlayer {
 
   private buildStats(iter: number, nodes: number, depth: number, start: number, moves: number): MCTSStats {
     return { iterations: iter, treeNodes: nodes, avgRolloutDepth: iter > 0 ? depth / iter : 0,
-      timeElapsedMs: Date.now() - start, bestMoveVisits: 0, bestMoveWinRate: 0, movesConsidered: moves }
+      timeElapsedMs: Date.now() - start, bestMoveVisits: 0, bestMoveWinRate: 0, movesConsidered: moves, l2NodesExpanded: 0 }
   }
 }
