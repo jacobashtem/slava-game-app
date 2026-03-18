@@ -252,28 +252,43 @@ export function forEachFieldCard(s: LightState, side: number, fn: (c: LightCard)
  *   handScore    * 0.05
  *   soulScore    * 0.08
  */
+/**
+ * evaluateLight V6 — multi-turn strategic awareness.
+ *
+ * V5 signals: threatPower, tempo, synergy, threatPenalty
+ * V6 NEW: raceScore, depletionRisk, wallPenalty, harvestProximity, goldZeroRisk
+ */
 export function evaluateLight(s: LightState, side: number): number {
   if (s.winner === side) return 1.0
   if (s.winner !== -1) return 0.0
 
   const opp = 1 - side
   const psTarget = GOLD_EDITION_RULES.GLORY_WIN_TARGET
+  const threshold = GOLD_EDITION_RULES.SOUL_HARVEST_THRESHOLD
 
-  // PS
-  const psScore = (s.ps[side]! - s.ps[opp]!) / (psTarget * 2)
-  const psProximity = s.ps[side]! >= psTarget - 1 ? 0.15 : s.ps[side]! >= psTarget - 2 ? 0.05 : 0
-  const oppProximity = s.ps[opp]! >= psTarget - 1 ? -0.15 : s.ps[opp]! >= psTarget - 2 ? -0.05 : 0
+  // === PS ===
+  const myPS = s.ps[side]!
+  const oppPS = s.ps[opp]!
+  const psScore = (myPS - oppPS) / (psTarget * 2)
+  const psProximity = myPS >= psTarget - 1 ? 0.15 : myPS >= psTarget - 2 ? 0.05 : 0
+  const oppProximity = oppPS >= psTarget - 1 ? -0.15 : oppPS >= psTarget - 2 ? -0.05 : 0
 
-  // Threat-weighted field power (effectThreatTier instead of raw ATK+DEF)
+  // === Field analysis (single pass over both sides) ===
   const myCards = lightFieldCards(s, side)
   const oppCards = lightFieldCards(s, opp)
   let myThreat = 0, oppThreat = 0
   let myActiveAtk = 0, myActiveCount = 0
   let oppActiveAtk = 0, oppActiveCount = 0
   let oppUnansweredThreats = 0
+  let myTotalSoulValue = 0   // V6: soul value of my creatures (what opp gains killing them)
+  let oppTotalSoulValue = 0  // V6: soul value of opp creatures (what I gain killing them)
+  let myMaxAtk = 0           // V6: for wall detection
+  let oppMaxDef = 0          // V6: for wall detection
 
   for (const c of myCards) {
     myThreat += c.atk * 1.5 + c.def * 0.7 + effectThreatTier(c.effectId) * 3
+    myTotalSoulValue += c.soulValue
+    if (c.atk > myMaxAtk) myMaxAtk = c.atk
     if (c.position === 1 && !c.cannotAttack && c.paralyzeRounds < 0) {
       myActiveAtk += c.atk
       myActiveCount++
@@ -282,46 +297,47 @@ export function evaluateLight(s: LightState, side: number): number {
   for (const c of oppCards) {
     const tier = effectThreatTier(c.effectId)
     oppThreat += c.atk * 1.5 + c.def * 0.7 + tier * 3
+    oppTotalSoulValue += c.soulValue
+    if (c.def > oppMaxDef) oppMaxDef = c.def
     if (c.position === 1 && !c.cannotAttack && c.paralyzeRounds < 0) {
       oppActiveAtk += c.atk
       oppActiveCount++
     }
-    // Unanswered high-threat creatures (tier >= 5)
     if (tier >= 5 && !c.isSilenced) oppUnansweredThreats++
   }
+
   const totalThreat = myThreat + oppThreat || 1
   const threatPowerScore = (myThreat - oppThreat) / totalThreat
 
-  // Tempo: who has the attack initiative
+  // === Tempo ===
   const myAvgAtk = myActiveCount > 0 ? myActiveAtk / myActiveCount : 0
   const oppAvgAtk = oppActiveCount > 0 ? oppActiveAtk / oppActiveCount : 0
   const tempoScore = (myActiveCount * myAvgAtk - oppActiveCount * oppAvgAtk) / 20
 
-  // Synergy bonus
+  // === Synergy ===
   const mySynergies = countFieldSynergies(s, side)
   const oppSynergies = countFieldSynergies(s, opp)
   const synergyScore = (mySynergies - oppSynergies) * 0.02
 
-  // Threat penalty: unanswered dangerous opponents
+  // === Threat penalty ===
   const threatPenalty = -oppUnansweredThreats * 0.03
 
-  // Creature count
+  // === Creature count ===
   const creatureScore = (myCards.length - oppCards.length) / 10
 
-  // Hand (quality-aware: count creatures with good effects)
+  // === Hand quality ===
   const myHandQuality = s.hands[side]!.reduce((sum, c) => sum + 1 + effectThreatTier(c.effectId) * 0.1, 0)
   const oppHandQuality = s.hands[opp]!.reduce((sum, c) => sum + 1 + effectThreatTier(c.effectId) * 0.1, 0)
   const handScore = (myHandQuality - oppHandQuality) / 20
 
-  // Soul harvest (nonlinear)
-  const threshold = GOLD_EDITION_RULES.SOUL_HARVEST_THRESHOLD
+  // === Soul harvest ===
   const myHarvest = Math.floor(s.soulPoints[side]! / threshold)
   const oppHarvest = Math.floor(s.soulPoints[opp]! / threshold)
   const myPartial = (s.soulPoints[side]! % threshold) / threshold
   const oppPartial = (s.soulPoints[opp]! % threshold) / threshold
   const soulScore = ((myHarvest + myPartial * 0.3) - (oppHarvest + oppPartial * 0.3)) / 5
 
-  // Elimination
+  // === Elimination ===
   const myTotal = s.deckCount[side]! + s.hands[side]!.length + myCards.length
   const oppTotal = s.deckCount[opp]! + s.hands[opp]!.length + oppCards.length
   let elimScore = 0
@@ -330,28 +346,70 @@ export function evaluateLight(s: LightState, side: number): number {
   if (s.deckCount[opp]! === 0 && oppCards.length === 0) elimScore += 0.30
   else if (oppTotal <= 3) elimScore += 0.10
 
-  // Anti-stall: kara za consecutive passes
+  // === Anti-stall ===
   const passPenalty = s.consecutivePasses[side]! >= 3 ? -0.10
     : s.consecutivePasses[side]! >= 2 ? -0.03 : 0
   const oppPassBonus = s.consecutivePasses[opp]! >= 3 ? 0.10
     : s.consecutivePasses[opp]! >= 2 ? 0.03 : 0
 
-  // Staleness: im dłuższa gra, tym ewaluacja ciągnie ku 0.5 (preferuj szybkie zakończenia)
+  // =====================================================
+  // V6 NEW SIGNALS — multi-turn strategic awareness
+  // =====================================================
+
+  // 1. TIME-TO-WIN RACE: who wins the PS race?
+  //    harvestRate = how much PS I gain per "clearing opponent's field"
+  const myHarvestRate = oppTotalSoulValue > 0 ? oppTotalSoulValue / threshold : 0
+  const oppHarvestRate = myTotalSoulValue > 0 ? myTotalSoulValue / threshold : 0
+  const myTurnsToWin = myHarvestRate > 0.01 ? (psTarget - myPS) / myHarvestRate : 99
+  const oppTurnsToWin = oppHarvestRate > 0.01 ? (psTarget - oppPS) / oppHarvestRate : 99
+  const raceScore = Math.max(-0.15, Math.min(0.15, (oppTurnsToWin - myTurnsToWin) / 20))
+
+  // 2. DECK DEPLETION RISK: who runs out of creatures first?
+  const myRunway = s.deckCount[side]! + s.hands[side]!.filter(c => c.cardType === 0).length
+  const oppRunway = s.deckCount[opp]! + s.hands[opp]!.filter(c => c.cardType === 0).length
+  let depletionScore = (myRunway - oppRunway) / 30
+  if (myRunway <= 3 && myCards.length <= 2) depletionScore -= 0.05 // urgency: almost out
+
+  // 3. BOARD WALL DETECTION: can I break through opponent's defense?
+  let wallPenalty = 0
+  if (oppCards.length > 0 && myMaxAtk > 0 && oppMaxDef > myMaxAtk * 3) {
+    wallPenalty = -0.05 // opponent has unbreakable wall
+  }
+
+  // 4. SOUL HARVEST PROXIMITY: how close am I to next harvest?
+  const mySoulGap = threshold - (s.soulPoints[side]! % threshold)
+  const oppSoulGap = threshold - (s.soulPoints[opp]! % threshold)
+  const harvestProximity = (oppSoulGap - mySoulGap) / threshold * 0.04
+  // Extra: almost harvesting (< 5 points away)
+  const nearHarvestBonus = mySoulGap <= 5 ? 0.03 : 0
+  const oppNearHarvestPenalty = oppSoulGap <= 5 ? -0.02 : 0
+
+  // 5. GOLD ZERO RISK: danger of instant loss from 0 gold
+  const goldZeroRisk = myPS <= 1 ? -0.08 : myPS <= 2 ? -0.03 : 0
+  const oppGoldZeroBonus = oppPS <= 1 ? 0.06 : oppPS <= 2 ? 0.02 : 0
+
+  // === Staleness ===
   const staleFactor = Math.max(0.3, 1 - Math.max(0, s.round - 15) * 0.03)
 
+  // === FINAL SCORE (V6 weights) ===
   const raw = 0.5
-    + psScore * 0.30
-    + threatPowerScore * 0.22
-    + tempoScore * 0.07
-    + synergyScore * 0.05
-    + threatPenalty * 0.08
-    + creatureScore * 0.08
-    + handScore * 0.05
-    + soulScore * 0.08
+    + psScore * 0.25
+    + threatPowerScore * 0.18
+    + raceScore * 0.08           // V6 NEW
+    + tempoScore * 0.06
+    + synergyScore * 0.04
+    + threatPenalty * 0.06
+    + depletionScore * 0.05      // V6 NEW
+    + creatureScore * 0.06
+    + handScore * 0.04
+    + soulScore * 0.06
+    + harvestProximity            // V6 NEW (pre-scaled)
     + psProximity + oppProximity
     + elimScore
+    + wallPenalty                 // V6 NEW (additive)
+    + goldZeroRisk + oppGoldZeroBonus  // V6 NEW (additive)
+    + nearHarvestBonus + oppNearHarvestPenalty  // V6 NEW (additive)
     + passPenalty + oppPassBonus
 
-  // Staleness kompresuje odchylenie od 0.5
   return Math.max(0, Math.min(1, 0.5 + (raw - 0.5) * staleFactor))
 }

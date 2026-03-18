@@ -489,18 +489,29 @@ export function evaluate(state: GameState, side: PlayerSide): number {
   if (opp.deck.length === 0 && oppCreatures.length === 0) elimScore += 0.30
   else if (oppTotal <= 3) elimScore += 0.10
 
+  // V6: Gold zero risk
+  const goldZeroRisk = myPS <= 1 ? -0.08 : myPS <= 2 ? -0.03 : 0
+  const oppGoldZeroBonus = oppPS <= 1 ? 0.06 : oppPS <= 2 ? 0.02 : 0
+
+  // V6: Deck depletion
+  const myRunway = me.deck.length + me.hand.filter(c => c.cardData.cardType === 'creature').length
+  const oppRunway = opp.deck.length + opp.hand.filter(c => c.cardData.cardType === 'creature').length
+  const depletionScore = (myRunway - oppRunway) / 30
+
   const raw = 0.5
-    + psScore * 0.30
-    + threatPowerScore * 0.22
-    + tempoScore * 0.07
-    + synergyScore * 0.05
-    + threatPenalty * 0.08
-    + creatureScore * 0.08
-    + handScore * 0.05
-    + soulScore * 0.08
+    + psScore * 0.25
+    + threatPowerScore * 0.18
+    + tempoScore * 0.06
+    + synergyScore * 0.04
+    + threatPenalty * 0.06
+    + depletionScore * 0.05
+    + creatureScore * 0.06
+    + handScore * 0.04
+    + soulScore * 0.06
     + psProximityBonus
     + oppPsProximityPenalty
     + elimScore
+    + goldZeroRisk + oppGoldZeroBonus
 
   return Math.max(0, Math.min(1, raw))
 }
