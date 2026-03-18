@@ -502,6 +502,13 @@ export class GameEngine {
     this.assertTurnOf(side)
     this.assertPhase(GamePhase.COMBAT)
 
+    // Guard: skip if attacker or defender no longer on field (killed by earlier attack/intercept)
+    const opponent = side === 'player1' ? 'player2' : 'player1'
+    if (!getAllCreaturesOnField(this.state, side).some(c => c.instanceId === attackerInstanceId) ||
+        !getAllCreaturesOnField(this.state, opponent).some(c => c.instanceId === defenderInstanceId)) {
+      return cloneGameState(this.state)
+    }
+
     const sideCreatures = getAllCreaturesOnField(this.state, side)
 
     // Przyjaźń+: free attack check
