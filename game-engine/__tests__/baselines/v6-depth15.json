@@ -1,0 +1,34 @@
+{
+  "name": "v6-depth15",
+  "timestamp": "2026-03-18T15:11:56.502Z",
+  "config": {
+    "games": 20,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 20,
+    "gamesWithWinner": 20,
+    "mctsWins": 14,
+    "oppWins": 6,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.7,
+    "timeoutRate": 0,
+    "avgRounds": 16.45,
+    "avgPSWinner": 7.4,
+    "avgPSLoser": 1.5,
+    "psWinCount": 8,
+    "elimWinCount": 12
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 8575.805732484076,
+    "avgTreeNodes": 7.442675159235669,
+    "avgRolloutDepth": 6.950655205194206,
+    "avgTimePerDecisionMs": 185.46815286624204,
+    "avgBestMoveWR": 0.643752140123948,
+    "earlyTerminationRate": 0.18152866242038215,
+    "totalDecisions": 314
+  }
+}

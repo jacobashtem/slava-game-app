@@ -1,626 +1,626 @@
 {
   "version": 1,
-  "gamesPlayed": 152,
+  "gamesPlayed": 172,
   "cardStats": {
     "strzyga_lifesteal": {
-      "played": 29,
-      "wins": 13,
-      "earlyPlayed": 6,
-      "earlyWins": 2,
-      "midPlayed": 9,
+      "played": 33,
+      "wins": 15,
+      "earlyPlayed": 7,
+      "earlyWins": 3,
+      "midPlayed": 11,
       "midWins": 7,
-      "latePlayed": 14,
-      "lateWins": 4
+      "latePlayed": 15,
+      "lateWins": 5
     },
     "adventure_misjonarze": {
-      "played": 31,
-      "wins": 14,
-      "earlyPlayed": 5,
+      "played": 37,
+      "wins": 16,
+      "earlyPlayed": 6,
       "earlyWins": 3,
       "midPlayed": 7,
       "midWins": 5,
-      "latePlayed": 19,
-      "lateWins": 6
+      "latePlayed": 24,
+      "lateWins": 8
     },
     "gryf_double_dmg_on_play_turn": {
-      "played": 26,
-      "wins": 12,
-      "earlyPlayed": 4,
+      "played": 30,
+      "wins": 14,
+      "earlyPlayed": 5,
       "earlyWins": 1,
       "midPlayed": 6,
       "midWins": 2,
-      "latePlayed": 16,
-      "lateWins": 9
+      "latePlayed": 19,
+      "lateWins": 11
     },
     "adventure_mlot_swaroga": {
-      "played": 23,
+      "played": 24,
       "wins": 8,
       "earlyPlayed": 3,
       "earlyWins": 2,
-      "midPlayed": 7,
+      "midPlayed": 8,
       "midWins": 1,
       "latePlayed": 13,
       "lateWins": 5
     },
     "adventure_nekromancja": {
-      "played": 32,
-      "wins": 18,
-      "earlyPlayed": 10,
+      "played": 36,
+      "wins": 20,
+      "earlyPlayed": 11,
       "earlyWins": 4,
-      "midPlayed": 4,
-      "midWins": 3,
-      "latePlayed": 18,
+      "midPlayed": 6,
+      "midWins": 5,
+      "latePlayed": 19,
       "lateWins": 11
     },
     "waz_tugaryn_cleave": {
-      "played": 27,
-      "wins": 15,
-      "earlyPlayed": 6,
+      "played": 33,
+      "wins": 17,
+      "earlyPlayed": 7,
       "earlyWins": 2,
-      "midPlayed": 5,
-      "midWins": 3,
-      "latePlayed": 16,
-      "lateWins": 10
+      "midPlayed": 8,
+      "midWins": 4,
+      "latePlayed": 18,
+      "lateWins": 11
     },
     "adventure_miecz_kladenet": {
-      "played": 29,
-      "wins": 10,
+      "played": 31,
+      "wins": 12,
       "earlyPlayed": 7,
       "earlyWins": 3,
-      "midPlayed": 4,
-      "midWins": 2,
-      "latePlayed": 18,
-      "lateWins": 5
+      "midPlayed": 5,
+      "midWins": 3,
+      "latePlayed": 19,
+      "lateWins": 6
     },
     "krol_wezow_always_counter": {
-      "played": 30,
-      "wins": 14,
-      "earlyPlayed": 11,
-      "earlyWins": 9,
-      "midPlayed": 9,
+      "played": 33,
+      "wins": 15,
+      "earlyPlayed": 12,
+      "earlyWins": 10,
+      "midPlayed": 11,
       "midWins": 3,
       "latePlayed": 10,
       "lateWins": 2
     },
     "dzicy_ludzie_steal_killed": {
-      "played": 38,
-      "wins": 17,
-      "earlyPlayed": 5,
-      "earlyWins": 2,
-      "midPlayed": 9,
+      "played": 44,
+      "wins": 18,
+      "earlyPlayed": 6,
+      "earlyWins": 3,
+      "midPlayed": 10,
       "midWins": 3,
-      "latePlayed": 24,
+      "latePlayed": 28,
       "lateWins": 12
     },
     "adventure_aska_ady": {
-      "played": 31,
-      "wins": 16,
+      "played": 37,
+      "wins": 18,
       "earlyPlayed": 5,
       "earlyWins": 3,
-      "midPlayed": 14,
-      "midWins": 6,
-      "latePlayed": 12,
-      "lateWins": 7
+      "midPlayed": 17,
+      "midWins": 7,
+      "latePlayed": 15,
+      "lateWins": 8
     },
     "niedzwiedzioak_guardian": {
-      "played": 29,
-      "wins": 14,
-      "earlyPlayed": 3,
+      "played": 32,
+      "wins": 16,
+      "earlyPlayed": 4,
       "earlyWins": 1,
-      "midPlayed": 10,
-      "midWins": 7,
-      "latePlayed": 16,
-      "lateWins": 6
+      "midPlayed": 11,
+      "midWins": 8,
+      "latePlayed": 17,
+      "lateWins": 7
     },
     "darmopych_friendly_fire": {
-      "played": 29,
-      "wins": 16,
+      "played": 32,
+      "wins": 18,
       "earlyPlayed": 12,
       "earlyWins": 5,
       "midPlayed": 6,
       "midWins": 4,
-      "latePlayed": 11,
-      "lateWins": 7
+      "latePlayed": 14,
+      "lateWins": 9
     },
     "chasnik_gold_on_kill": {
-      "played": 41,
-      "wins": 22,
+      "played": 43,
+      "wins": 23,
       "earlyPlayed": 9,
       "earlyWins": 5,
-      "midPlayed": 9,
+      "midPlayed": 10,
       "midWins": 5,
-      "latePlayed": 23,
-      "lateWins": 12
+      "latePlayed": 24,
+      "lateWins": 13
     },
     "adventure_topor_peruna_amulet": {
-      "played": 22,
-      "wins": 9,
-      "earlyPlayed": 5,
-      "earlyWins": 2,
-      "midPlayed": 8,
-      "midWins": 2,
-      "latePlayed": 9,
-      "lateWins": 5
+      "played": 26,
+      "wins": 12,
+      "earlyPlayed": 6,
+      "earlyWins": 3,
+      "midPlayed": 9,
+      "midWins": 3,
+      "latePlayed": 11,
+      "lateWins": 6
     },
     "siemiargl_cleanse": {
-      "played": 35,
-      "wins": 18,
-      "earlyPlayed": 7,
-      "earlyWins": 4,
-      "midPlayed": 11,
+      "played": 39,
+      "wins": 19,
+      "earlyPlayed": 9,
+      "earlyWins": 5,
+      "midPlayed": 12,
       "midWins": 4,
-      "latePlayed": 17,
+      "latePlayed": 18,
       "lateWins": 10
     },
     "adventure_aska_perena": {
-      "played": 17,
-      "wins": 8,
+      "played": 18,
+      "wins": 9,
       "earlyPlayed": 3,
       "earlyWins": 2,
       "midPlayed": 4,
       "midWins": 1,
-      "latePlayed": 10,
-      "lateWins": 5
+      "latePlayed": 11,
+      "lateWins": 6
     },
     "cmentarna_baba_resurrect": {
-      "played": 37,
-      "wins": 13,
+      "played": 44,
+      "wins": 17,
       "earlyPlayed": 6,
       "earlyWins": 4,
-      "midPlayed": 7,
-      "midWins": 3,
-      "latePlayed": 24,
-      "lateWins": 6
-    },
-    "adventure_przyjazn": {
-      "played": 31,
-      "wins": 15,
-      "earlyPlayed": 2,
-      "earlyWins": 1,
-      "midPlayed": 8,
+      "midPlayed": 10,
       "midWins": 5,
-      "latePlayed": 21,
-      "lateWins": 9
-    },
-    "bazyliszek_paralyze": {
-      "played": 30,
-      "wins": 12,
-      "earlyPlayed": 1,
-      "earlyWins": 1,
-      "midPlayed": 8,
-      "midWins": 2,
-      "latePlayed": 21,
-      "lateWins": 9
-    },
-    "dobroochoczy_no_counter": {
-      "played": 35,
-      "wins": 19,
-      "earlyPlayed": 4,
-      "earlyWins": 3,
-      "midPlayed": 13,
-      "midWins": 7,
-      "latePlayed": 18,
-      "lateWins": 9
-    },
-    "adventure_sza_bitewny": {
-      "played": 28,
-      "wins": 18,
-      "earlyPlayed": 10,
-      "earlyWins": 5,
-      "midPlayed": 7,
-      "midWins": 5,
-      "latePlayed": 11,
+      "latePlayed": 28,
       "lateWins": 8
     },
-    "zerca_welesa_demon_buff": {
+    "adventure_przyjazn": {
       "played": 34,
       "wins": 16,
-      "earlyPlayed": 8,
-      "earlyWins": 4,
-      "midPlayed": 8,
-      "midWins": 5,
-      "latePlayed": 18,
-      "lateWins": 7
-    },
-    "konny_cleave": {
-      "played": 28,
-      "wins": 18,
-      "earlyPlayed": 8,
-      "earlyWins": 4,
+      "earlyPlayed": 2,
+      "earlyWins": 1,
       "midPlayed": 9,
-      "midWins": 8,
-      "latePlayed": 11,
-      "lateWins": 6
-    },
-    "poludnica_kill_weakest": {
-      "played": 34,
-      "wins": 15,
-      "earlyPlayed": 14,
-      "earlyWins": 5,
-      "midPlayed": 2,
-      "midWins": 0,
-      "latePlayed": 18,
-      "lateWins": 10
-    },
-    "adventure_trucizna": {
-      "played": 28,
-      "wins": 10,
-      "earlyPlayed": 6,
-      "earlyWins": 5,
-      "midPlayed": 6,
-      "midWins": 2,
-      "latePlayed": 16,
-      "lateWins": 3
-    },
-    "buka_force_defense": {
-      "played": 43,
-      "wins": 24,
-      "earlyPlayed": 6,
-      "earlyWins": 5,
-      "midPlayed": 8,
-      "midWins": 4,
-      "latePlayed": 29,
-      "lateWins": 15
-    },
-    "belt_rearrange": {
-      "played": 33,
-      "wins": 14,
-      "earlyPlayed": 4,
-      "earlyWins": 0,
-      "midPlayed": 4,
-      "midWins": 1,
-      "latePlayed": 25,
-      "lateWins": 13
-    },
-    "morowa_dziewica_aoe_all": {
-      "played": 43,
-      "wins": 24,
-      "earlyPlayed": 9,
-      "earlyWins": 7,
-      "midPlayed": 7,
-      "midWins": 3,
-      "latePlayed": 27,
-      "lateWins": 14
-    },
-    "dziki_mysliwy_return_on_kill": {
-      "played": 37,
-      "wins": 16,
-      "earlyPlayed": 4,
-      "earlyWins": 1,
-      "midPlayed": 7,
-      "midWins": 1,
-      "latePlayed": 26,
-      "lateWins": 14
-    },
-    "tesknica_block_enhance": {
-      "played": 17,
-      "wins": 9,
-      "earlyPlayed": 1,
-      "earlyWins": 0,
-      "midPlayed": 3,
-      "midWins": 3,
-      "latePlayed": 13,
-      "lateWins": 6
-    },
-    "czarnoksieznik_steal_abilities": {
-      "played": 39,
-      "wins": 16,
-      "earlyPlayed": 6,
-      "earlyWins": 1,
-      "midPlayed": 10,
       "midWins": 5,
       "latePlayed": 23,
       "lateWins": 10
     },
-    "adventure_zota_baba": {
-      "played": 33,
-      "wins": 15,
-      "earlyPlayed": 11,
-      "earlyWins": 3,
-      "midPlayed": 7,
-      "midWins": 5,
-      "latePlayed": 15,
-      "lateWins": 7
-    },
-    "rusalka_mirror_attack": {
-      "played": 36,
-      "wins": 15,
-      "earlyPlayed": 4,
+    "bazyliszek_paralyze": {
+      "played": 34,
+      "wins": 13,
+      "earlyPlayed": 2,
       "earlyWins": 1,
-      "midPlayed": 12,
-      "midWins": 5,
+      "midPlayed": 8,
+      "midWins": 2,
+      "latePlayed": 24,
+      "lateWins": 10
+    },
+    "dobroochoczy_no_counter": {
+      "played": 39,
+      "wins": 20,
+      "earlyPlayed": 5,
+      "earlyWins": 3,
+      "midPlayed": 14,
+      "midWins": 7,
+      "latePlayed": 20,
+      "lateWins": 10
+    },
+    "adventure_sza_bitewny": {
+      "played": 31,
+      "wins": 21,
+      "earlyPlayed": 10,
+      "earlyWins": 5,
+      "midPlayed": 8,
+      "midWins": 6,
+      "latePlayed": 13,
+      "lateWins": 10
+    },
+    "zerca_welesa_demon_buff": {
+      "played": 43,
+      "wins": 24,
+      "earlyPlayed": 12,
+      "earlyWins": 7,
+      "midPlayed": 11,
+      "midWins": 8,
       "latePlayed": 20,
       "lateWins": 9
     },
-    "dziwolzona_swap_cards": {
+    "konny_cleave": {
       "played": 31,
+      "wins": 19,
+      "earlyPlayed": 8,
+      "earlyWins": 4,
+      "midPlayed": 11,
+      "midWins": 9,
+      "latePlayed": 12,
+      "lateWins": 6
+    },
+    "poludnica_kill_weakest": {
+      "played": 40,
+      "wins": 18,
+      "earlyPlayed": 15,
+      "earlyWins": 5,
+      "midPlayed": 3,
+      "midWins": 1,
+      "latePlayed": 22,
+      "lateWins": 12
+    },
+    "adventure_trucizna": {
+      "played": 33,
+      "wins": 13,
+      "earlyPlayed": 8,
+      "earlyWins": 6,
+      "midPlayed": 8,
+      "midWins": 3,
+      "latePlayed": 17,
+      "lateWins": 4
+    },
+    "buka_force_defense": {
+      "played": 47,
+      "wins": 26,
+      "earlyPlayed": 6,
+      "earlyWins": 5,
+      "midPlayed": 9,
+      "midWins": 4,
+      "latePlayed": 32,
+      "lateWins": 17
+    },
+    "belt_rearrange": {
+      "played": 38,
+      "wins": 18,
+      "earlyPlayed": 6,
+      "earlyWins": 1,
+      "midPlayed": 6,
+      "midWins": 3,
+      "latePlayed": 26,
+      "lateWins": 14
+    },
+    "morowa_dziewica_aoe_all": {
+      "played": 46,
+      "wins": 26,
+      "earlyPlayed": 9,
+      "earlyWins": 7,
+      "midPlayed": 7,
+      "midWins": 3,
+      "latePlayed": 30,
+      "lateWins": 16
+    },
+    "dziki_mysliwy_return_on_kill": {
+      "played": 39,
+      "wins": 17,
+      "earlyPlayed": 4,
+      "earlyWins": 1,
+      "midPlayed": 7,
+      "midWins": 1,
+      "latePlayed": 28,
+      "lateWins": 15
+    },
+    "tesknica_block_enhance": {
+      "played": 21,
+      "wins": 12,
+      "earlyPlayed": 1,
+      "earlyWins": 0,
+      "midPlayed": 3,
+      "midWins": 3,
+      "latePlayed": 17,
+      "lateWins": 9
+    },
+    "czarnoksieznik_steal_abilities": {
+      "played": 42,
+      "wins": 17,
+      "earlyPlayed": 6,
+      "earlyWins": 1,
+      "midPlayed": 11,
+      "midWins": 6,
+      "latePlayed": 25,
+      "lateWins": 10
+    },
+    "adventure_zota_baba": {
+      "played": 37,
+      "wins": 16,
+      "earlyPlayed": 11,
+      "earlyWins": 3,
+      "midPlayed": 8,
+      "midWins": 5,
+      "latePlayed": 18,
+      "lateWins": 8
+    },
+    "rusalka_mirror_attack": {
+      "played": 40,
+      "wins": 16,
+      "earlyPlayed": 5,
+      "earlyWins": 1,
+      "midPlayed": 12,
+      "midWins": 5,
+      "latePlayed": 23,
+      "lateWins": 10
+    },
+    "dziwolzona_swap_cards": {
+      "played": 33,
       "wins": 15,
       "earlyPlayed": 2,
       "earlyWins": 2,
       "midPlayed": 6,
       "midWins": 3,
-      "latePlayed": 23,
+      "latePlayed": 25,
       "lateWins": 10
     },
     "woj_mass_deploy": {
-      "played": 32,
-      "wins": 14,
+      "played": 35,
+      "wins": 16,
       "earlyPlayed": 2,
       "earlyWins": 0,
       "midPlayed": 7,
       "midWins": 2,
-      "latePlayed": 23,
-      "lateWins": 12
+      "latePlayed": 26,
+      "lateWins": 14
     },
     "wapierz_invincible_hunger": {
-      "played": 41,
+      "played": 44,
       "wins": 17,
-      "earlyPlayed": 8,
+      "earlyPlayed": 9,
       "earlyWins": 3,
       "midPlayed": 10,
       "midWins": 6,
-      "latePlayed": 23,
+      "latePlayed": 25,
       "lateWins": 8
     },
     "poroniec_copy_ability": {
-      "played": 15,
+      "played": 16,
       "wins": 6,
       "earlyPlayed": 0,
       "earlyWins": 0,
-      "midPlayed": 3,
+      "midPlayed": 4,
       "midWins": 1,
       "latePlayed": 12,
       "lateWins": 5
     },
     "smierc_death_growth_save": {
-      "played": 38,
-      "wins": 27,
-      "earlyPlayed": 7,
-      "earlyWins": 4,
-      "midPlayed": 7,
-      "midWins": 6,
-      "latePlayed": 24,
-      "lateWins": 17
-    },
-    "guslarka_bonus_vs_demon": {
-      "played": 22,
-      "wins": 9,
-      "earlyPlayed": 0,
-      "earlyWins": 0,
-      "midPlayed": 5,
-      "midWins": 1,
-      "latePlayed": 17,
-      "lateWins": 8
-    },
-    "mara_sacrifice_takeover": {
-      "played": 23,
-      "wins": 13,
-      "earlyPlayed": 3,
-      "earlyWins": 1,
-      "midPlayed": 5,
-      "midWins": 3,
-      "latePlayed": 15,
-      "lateWins": 9
-    },
-    "bies_reverse_damage": {
-      "played": 36,
-      "wins": 19,
+      "played": 42,
+      "wins": 30,
       "earlyPlayed": 8,
       "earlyWins": 5,
-      "midPlayed": 11,
-      "midWins": 6,
-      "latePlayed": 17,
-      "lateWins": 8
+      "midPlayed": 8,
+      "midWins": 7,
+      "latePlayed": 26,
+      "lateWins": 18
     },
-    "lapiduch_demon_hunter": {
-      "played": 39,
-      "wins": 15,
-      "earlyPlayed": 5,
+    "guslarka_bonus_vs_demon": {
+      "played": 24,
+      "wins": 11,
+      "earlyPlayed": 1,
       "earlyWins": 1,
-      "midPlayed": 11,
-      "midWins": 5,
-      "latePlayed": 23,
+      "midPlayed": 5,
+      "midWins": 1,
+      "latePlayed": 18,
       "lateWins": 9
     },
-    "mroz_immunity_buffs": {
-      "played": 28,
-      "wins": 16,
-      "earlyPlayed": 5,
-      "earlyWins": 3,
-      "midPlayed": 7,
-      "midWins": 7,
+    "mara_sacrifice_takeover": {
+      "played": 25,
+      "wins": 15,
+      "earlyPlayed": 4,
+      "earlyWins": 2,
+      "midPlayed": 5,
+      "midWins": 3,
       "latePlayed": 16,
-      "lateWins": 6
+      "lateWins": 10
     },
-    "leszy_post_attack_defend": {
-      "played": 45,
-      "wins": 24,
-      "earlyPlayed": 16,
-      "earlyWins": 10,
-      "midPlayed": 10,
-      "midWins": 6,
+    "bies_reverse_damage": {
+      "played": 42,
+      "wins": 21,
+      "earlyPlayed": 10,
+      "earlyWins": 6,
+      "midPlayed": 13,
+      "midWins": 7,
       "latePlayed": 19,
       "lateWins": 8
     },
+    "lapiduch_demon_hunter": {
+      "played": 44,
+      "wins": 17,
+      "earlyPlayed": 5,
+      "earlyWins": 1,
+      "midPlayed": 14,
+      "midWins": 7,
+      "latePlayed": 25,
+      "lateWins": 9
+    },
+    "mroz_immunity_buffs": {
+      "played": 33,
+      "wins": 19,
+      "earlyPlayed": 5,
+      "earlyWins": 3,
+      "midPlayed": 9,
+      "midWins": 9,
+      "latePlayed": 19,
+      "lateWins": 7
+    },
+    "leszy_post_attack_defend": {
+      "played": 48,
+      "wins": 27,
+      "earlyPlayed": 16,
+      "earlyWins": 10,
+      "midPlayed": 11,
+      "midWins": 7,
+      "latePlayed": 21,
+      "lateWins": 10
+    },
     "cmuch_no_counter_received": {
-      "played": 30,
-      "wins": 14,
-      "earlyPlayed": 4,
+      "played": 35,
+      "wins": 15,
+      "earlyPlayed": 6,
       "earlyWins": 2,
-      "midPlayed": 6,
-      "midWins": 1,
-      "latePlayed": 20,
+      "midPlayed": 7,
+      "midWins": 2,
+      "latePlayed": 22,
       "lateWins": 11
     },
     "wodnik_return_on_round_end": {
-      "played": 27,
-      "wins": 14,
-      "earlyPlayed": 3,
+      "played": 32,
+      "wins": 16,
+      "earlyPlayed": 4,
       "earlyWins": 1,
-      "midPlayed": 3,
-      "midWins": 1,
-      "latePlayed": 21,
-      "lateWins": 12
+      "midPlayed": 4,
+      "midWins": 2,
+      "latePlayed": 24,
+      "lateWins": 13
     },
     "adventure_srebrna_gaaz": {
-      "played": 30,
-      "wins": 16,
-      "earlyPlayed": 7,
-      "earlyWins": 3,
-      "midPlayed": 9,
-      "midWins": 6,
-      "latePlayed": 14,
+      "played": 35,
+      "wins": 19,
+      "earlyPlayed": 8,
+      "earlyWins": 4,
+      "midPlayed": 11,
+      "midWins": 8,
+      "latePlayed": 16,
       "lateWins": 7
     },
     "stukacz_strong_immune": {
-      "played": 18,
+      "played": 20,
       "wins": 8,
       "earlyPlayed": 3,
       "earlyWins": 0,
       "midPlayed": 3,
       "midWins": 3,
-      "latePlayed": 12,
+      "latePlayed": 14,
       "lateWins": 5
     },
     "adventure_obled": {
-      "played": 31,
-      "wins": 17,
-      "earlyPlayed": 10,
-      "earlyWins": 5,
-      "midPlayed": 9,
-      "midWins": 7,
+      "played": 33,
+      "wins": 19,
+      "earlyPlayed": 11,
+      "earlyWins": 6,
+      "midPlayed": 10,
+      "midWins": 8,
       "latePlayed": 12,
       "lateWins": 5
     },
     "wieszczy_spy_burn": {
-      "played": 36,
-      "wins": 15,
-      "earlyPlayed": 5,
-      "earlyWins": 3,
-      "midPlayed": 8,
-      "midWins": 3,
-      "latePlayed": 23,
+      "played": 41,
+      "wins": 17,
+      "earlyPlayed": 6,
+      "earlyWins": 4,
+      "midPlayed": 9,
+      "midWins": 4,
+      "latePlayed": 26,
       "lateWins": 9
     },
     "adventure_rehtra": {
-      "played": 30,
-      "wins": 15,
-      "earlyPlayed": 8,
-      "earlyWins": 5,
+      "played": 32,
+      "wins": 16,
+      "earlyPlayed": 10,
+      "earlyWins": 6,
       "midPlayed": 6,
       "midWins": 4,
       "latePlayed": 16,
       "lateWins": 6
     },
     "adventure_sztandar": {
-      "played": 28,
-      "wins": 14,
-      "earlyPlayed": 5,
-      "earlyWins": 2,
-      "midPlayed": 3,
-      "midWins": 3,
-      "latePlayed": 20,
+      "played": 32,
+      "wins": 16,
+      "earlyPlayed": 6,
+      "earlyWins": 3,
+      "midPlayed": 5,
+      "midWins": 4,
+      "latePlayed": 21,
       "lateWins": 9
     },
     "gorynych_merge_dragons": {
-      "played": 21,
-      "wins": 15,
+      "played": 27,
+      "wins": 20,
       "earlyPlayed": 6,
       "earlyWins": 5,
-      "midPlayed": 3,
-      "midWins": 3,
-      "latePlayed": 12,
-      "lateWins": 7
+      "midPlayed": 6,
+      "midWins": 5,
+      "latePlayed": 15,
+      "lateWins": 10
     },
     "adventure_kuka_marzanny": {
-      "played": 33,
-      "wins": 15,
-      "earlyPlayed": 5,
-      "earlyWins": 2,
-      "midPlayed": 12,
-      "midWins": 6,
-      "latePlayed": 16,
-      "lateWins": 7
+      "played": 39,
+      "wins": 19,
+      "earlyPlayed": 7,
+      "earlyWins": 3,
+      "midPlayed": 14,
+      "midWins": 8,
+      "latePlayed": 18,
+      "lateWins": 8
     },
     "domowik_hand_size": {
-      "played": 38,
-      "wins": 25,
+      "played": 40,
+      "wins": 26,
       "earlyPlayed": 8,
       "earlyWins": 5,
       "midPlayed": 7,
       "midWins": 5,
-      "latePlayed": 23,
-      "lateWins": 15
+      "latePlayed": 25,
+      "lateWins": 16
     },
     "wij_revive_once": {
-      "played": 28,
-      "wins": 16,
-      "earlyPlayed": 4,
-      "earlyWins": 2,
-      "midPlayed": 7,
-      "midWins": 3,
-      "latePlayed": 17,
-      "lateWins": 11
+      "played": 32,
+      "wins": 19,
+      "earlyPlayed": 5,
+      "earlyWins": 3,
+      "midPlayed": 8,
+      "midWins": 4,
+      "latePlayed": 19,
+      "lateWins": 12
     },
     "adventure_moc_swiatogora": {
-      "played": 21,
-      "wins": 9,
+      "played": 25,
+      "wins": 13,
       "earlyPlayed": 2,
       "earlyWins": 1,
-      "midPlayed": 2,
-      "midWins": 1,
-      "latePlayed": 17,
-      "lateWins": 7
-    },
-    "baba_bonus_vs_type": {
-      "played": 32,
-      "wins": 14,
-      "earlyPlayed": 4,
-      "earlyWins": 2,
       "midPlayed": 4,
-      "midWins": 2,
-      "latePlayed": 24,
-      "lateWins": 10
-    },
-    "adventure_zdrada_popiela": {
-      "played": 32,
-      "wins": 18,
-      "earlyPlayed": 11,
-      "earlyWins": 7,
-      "midPlayed": 5,
-      "midWins": 2,
-      "latePlayed": 16,
+      "midWins": 3,
+      "latePlayed": 19,
       "lateWins": 9
     },
-    "adventure_kwiat_paproci": {
-      "played": 27,
-      "wins": 18,
+    "baba_bonus_vs_type": {
+      "played": 36,
+      "wins": 17,
+      "earlyPlayed": 5,
+      "earlyWins": 3,
+      "midPlayed": 6,
+      "midWins": 3,
+      "latePlayed": 25,
+      "lateWins": 11
+    },
+    "adventure_zdrada_popiela": {
+      "played": 39,
+      "wins": 21,
       "earlyPlayed": 11,
+      "earlyWins": 7,
+      "midPlayed": 7,
+      "midWins": 4,
+      "latePlayed": 21,
+      "lateWins": 10
+    },
+    "adventure_kwiat_paproci": {
+      "played": 31,
+      "wins": 19,
+      "earlyPlayed": 12,
       "earlyWins": 9,
       "midPlayed": 3,
       "midWins": 2,
-      "latePlayed": 13,
-      "lateWins": 7
+      "latePlayed": 16,
+      "lateWins": 8
     },
     "kosciej_melee_resurrection": {
-      "played": 30,
-      "wins": 18,
+      "played": 34,
+      "wins": 19,
       "earlyPlayed": 5,
       "earlyWins": 3,
-      "midPlayed": 4,
-      "midWins": 2,
-      "latePlayed": 21,
+      "midPlayed": 5,
+      "midWins": 3,
+      "latePlayed": 24,
       "lateWins": 13
     },
     "bezkost_atk_drain": {
-      "played": 33,
-      "wins": 19,
-      "earlyPlayed": 6,
-      "earlyWins": 3,
+      "played": 37,
+      "wins": 21,
+      "earlyPlayed": 8,
+      "earlyWins": 4,
       "midPlayed": 7,
       "midWins": 4,
-      "latePlayed": 20,
-      "lateWins": 12
+      "latePlayed": 22,
+      "lateWins": 13
     },
     "rumak_mount": {
       "played": 28,
@@ -633,19 +633,19 @@
       "lateWins": 8
     },
     "zupan_no_field_limit": {
-      "played": 24,
+      "played": 25,
       "wins": 11,
       "earlyPlayed": 2,
       "earlyWins": 0,
       "midPlayed": 6,
       "midWins": 4,
-      "latePlayed": 16,
+      "latePlayed": 17,
       "lateWins": 7
     },
     "znachor_absorb": {
-      "played": 25,
+      "played": 26,
       "wins": 11,
-      "earlyPlayed": 3,
+      "earlyPlayed": 4,
       "earlyWins": 2,
       "midPlayed": 4,
       "midWins": 2,
@@ -653,91 +653,91 @@
       "lateWins": 7
     },
     "lucznik_pin": {
-      "played": 26,
-      "wins": 14,
+      "played": 27,
+      "wins": 15,
       "earlyPlayed": 3,
       "earlyWins": 2,
       "midPlayed": 4,
       "midWins": 4,
-      "latePlayed": 19,
-      "lateWins": 8
+      "latePlayed": 20,
+      "lateWins": 9
     },
     "adventure_laska_welesa": {
-      "played": 21,
-      "wins": 10,
+      "played": 25,
+      "wins": 13,
       "earlyPlayed": 1,
       "earlyWins": 0,
       "midPlayed": 5,
       "midWins": 1,
-      "latePlayed": 15,
-      "lateWins": 9
+      "latePlayed": 19,
+      "lateWins": 12
     },
     "naczelnik_human_rally": {
-      "played": 38,
-      "wins": 24,
-      "earlyPlayed": 4,
+      "played": 40,
+      "wins": 25,
+      "earlyPlayed": 5,
       "earlyWins": 2,
       "midPlayed": 12,
       "midWins": 9,
-      "latePlayed": 22,
-      "lateWins": 13
+      "latePlayed": 23,
+      "lateWins": 14
     },
     "szeptunka_damage_reduction": {
-      "played": 43,
-      "wins": 19,
-      "earlyPlayed": 1,
-      "earlyWins": 0,
-      "midPlayed": 14,
+      "played": 46,
+      "wins": 20,
+      "earlyPlayed": 2,
+      "earlyWins": 1,
+      "midPlayed": 15,
       "midWins": 7,
-      "latePlayed": 28,
+      "latePlayed": 29,
       "lateWins": 12
     },
     "azdacha_vanilia": {
-      "played": 29,
-      "wins": 12,
+      "played": 34,
+      "wins": 15,
       "earlyPlayed": 4,
       "earlyWins": 1,
-      "midPlayed": 7,
-      "midWins": 2,
-      "latePlayed": 18,
-      "lateWins": 9
+      "midPlayed": 8,
+      "midWins": 3,
+      "latePlayed": 22,
+      "lateWins": 11
     },
     "dziewiatko_deathmark": {
-      "played": 29,
-      "wins": 18,
+      "played": 32,
+      "wins": 19,
       "earlyPlayed": 4,
       "earlyWins": 2,
-      "midPlayed": 8,
+      "midPlayed": 9,
       "midWins": 6,
-      "latePlayed": 17,
-      "lateWins": 10
+      "latePlayed": 19,
+      "lateWins": 11
     },
     "adventure_zacmienie_sonca": {
-      "played": 28,
-      "wins": 15,
-      "earlyPlayed": 8,
-      "earlyWins": 4,
-      "midPlayed": 5,
-      "midWins": 4,
+      "played": 30,
+      "wins": 17,
+      "earlyPlayed": 9,
+      "earlyWins": 5,
+      "midPlayed": 6,
+      "midWins": 5,
       "latePlayed": 15,
       "lateWins": 7
     },
     "polnocnica_mass_paralyze": {
-      "played": 24,
-      "wins": 11,
+      "played": 31,
+      "wins": 16,
       "earlyPlayed": 6,
       "earlyWins": 2,
-      "midPlayed": 4,
-      "midWins": 2,
-      "latePlayed": 14,
-      "lateWins": 7
+      "midPlayed": 7,
+      "midWins": 3,
+      "latePlayed": 18,
+      "lateWins": 11
     },
     "adventure_gusa": {
-      "played": 27,
+      "played": 28,
       "wins": 16,
       "earlyPlayed": 7,
       "earlyWins": 4,
-      "midPlayed": 6,
+      "midPlayed": 7,
       "midWins": 3,
       "latePlayed": 14,
       "lateWins": 9
@@ -753,309 +753,309 @@
       "lateWins": 6
     },
     "adventure_handel": {
-      "played": 31,
-      "wins": 13,
-      "earlyPlayed": 13,
-      "earlyWins": 5,
-      "midPlayed": 7,
-      "midWins": 5,
-      "latePlayed": 11,
-      "lateWins": 3
-    },
-    "adventure_wygnanie": {
-      "played": 30,
-      "wins": 15,
-      "earlyPlayed": 7,
-      "earlyWins": 2,
+      "played": 36,
+      "wins": 16,
+      "earlyPlayed": 16,
+      "earlyWins": 7,
       "midPlayed": 8,
       "midWins": 5,
-      "latePlayed": 15,
+      "latePlayed": 12,
+      "lateWins": 4
+    },
+    "adventure_wygnanie": {
+      "played": 33,
+      "wins": 16,
+      "earlyPlayed": 8,
+      "earlyWins": 2,
+      "midPlayed": 9,
+      "midWins": 6,
+      "latePlayed": 16,
       "lateWins": 8
     },
     "adventure_braterstwo_bogatyrow": {
-      "played": 37,
-      "wins": 18,
-      "earlyPlayed": 12,
+      "played": 40,
+      "wins": 19,
+      "earlyPlayed": 14,
       "earlyWins": 8,
       "midPlayed": 11,
       "midWins": 5,
-      "latePlayed": 14,
-      "lateWins": 5
+      "latePlayed": 15,
+      "lateWins": 6
     },
     "zagorkinia_curse_drain": {
-      "played": 22,
-      "wins": 10,
+      "played": 24,
+      "wins": 11,
       "earlyPlayed": 4,
       "earlyWins": 1,
       "midPlayed": 2,
       "midWins": 2,
-      "latePlayed": 16,
-      "lateWins": 7
+      "latePlayed": 18,
+      "lateWins": 8
     },
     "czart_shift_stats": {
-      "played": 33,
-      "wins": 18,
-      "earlyPlayed": 9,
-      "earlyWins": 6,
-      "midPlayed": 6,
-      "midWins": 5,
-      "latePlayed": 18,
-      "lateWins": 7
+      "played": 41,
+      "wins": 23,
+      "earlyPlayed": 11,
+      "earlyWins": 7,
+      "midPlayed": 9,
+      "midWins": 7,
+      "latePlayed": 21,
+      "lateWins": 9
     },
     "kresnik_choose_buff": {
-      "played": 29,
-      "wins": 12,
-      "earlyPlayed": 4,
-      "earlyWins": 2,
+      "played": 31,
+      "wins": 14,
+      "earlyPlayed": 6,
+      "earlyWins": 4,
       "midPlayed": 6,
       "midWins": 2,
       "latePlayed": 19,
       "lateWins": 8
     },
     "adventure_aska_zorzy": {
-      "played": 20,
-      "wins": 15,
-      "earlyPlayed": 6,
-      "earlyWins": 4,
-      "midPlayed": 4,
-      "midWins": 3,
-      "latePlayed": 10,
+      "played": 23,
+      "wins": 17,
+      "earlyPlayed": 7,
+      "earlyWins": 5,
+      "midPlayed": 5,
+      "midWins": 4,
+      "latePlayed": 11,
       "lateWins": 8
     },
     "dydko_strong_immune": {
-      "played": 26,
-      "wins": 13,
+      "played": 30,
+      "wins": 16,
       "earlyPlayed": 5,
       "earlyWins": 3,
-      "midPlayed": 4,
-      "midWins": 2,
-      "latePlayed": 17,
-      "lateWins": 8
+      "midPlayed": 6,
+      "midWins": 4,
+      "latePlayed": 19,
+      "lateWins": 9
     },
     "matoha_anti_magic": {
-      "played": 33,
-      "wins": 13,
-      "earlyPlayed": 5,
-      "earlyWins": 0,
+      "played": 37,
+      "wins": 16,
+      "earlyPlayed": 7,
+      "earlyWins": 2,
       "midPlayed": 5,
       "midWins": 2,
-      "latePlayed": 23,
-      "lateWins": 11
-    },
-    "cicha_kill_weak": {
-      "played": 35,
-      "wins": 18,
-      "earlyPlayed": 6,
-      "earlyWins": 3,
-      "midPlayed": 5,
-      "midWins": 3,
-      "latePlayed": 24,
+      "latePlayed": 25,
       "lateWins": 12
     },
+    "cicha_kill_weak": {
+      "played": 38,
+      "wins": 20,
+      "earlyPlayed": 7,
+      "earlyWins": 4,
+      "midPlayed": 5,
+      "midWins": 3,
+      "latePlayed": 26,
+      "lateWins": 13
+    },
     "adventure_arena": {
-      "played": 23,
-      "wins": 10,
+      "played": 25,
+      "wins": 12,
       "earlyPlayed": 8,
       "earlyWins": 3,
-      "midPlayed": 4,
-      "midWins": 1,
-      "latePlayed": 11,
-      "lateWins": 6
+      "midPlayed": 5,
+      "midWins": 2,
+      "latePlayed": 12,
+      "lateWins": 7
     },
     "adventure_aska_swietowida": {
-      "played": 29,
-      "wins": 9,
-      "earlyPlayed": 9,
-      "earlyWins": 4,
-      "midPlayed": 8,
-      "midWins": 3,
-      "latePlayed": 12,
+      "played": 33,
+      "wins": 11,
+      "earlyPlayed": 11,
+      "earlyWins": 5,
+      "midPlayed": 9,
+      "midWins": 4,
+      "latePlayed": 13,
       "lateWins": 2
     },
     "kudlak_conditional_immunity": {
-      "played": 41,
-      "wins": 23,
-      "earlyPlayed": 8,
-      "earlyWins": 3,
+      "played": 49,
+      "wins": 25,
+      "earlyPlayed": 10,
+      "earlyWins": 4,
       "midPlayed": 15,
       "midWins": 8,
-      "latePlayed": 18,
-      "lateWins": 12
+      "latePlayed": 24,
+      "lateWins": 13
     },
     "adventure_matecznik": {
-      "played": 36,
+      "played": 37,
       "wins": 14,
       "earlyPlayed": 10,
       "earlyWins": 3,
       "midPlayed": 9,
       "midWins": 4,
-      "latePlayed": 17,
+      "latePlayed": 18,
       "lateWins": 7
     },
     "strela_flash_counter": {
-      "played": 30,
-      "wins": 12,
+      "played": 31,
+      "wins": 13,
       "earlyPlayed": 6,
       "earlyWins": 3,
       "midPlayed": 11,
       "midWins": 4,
-      "latePlayed": 13,
-      "lateWins": 5
-    },
-    "adventure_tarcza_dobryni_nikiticza": {
-      "played": 39,
-      "wins": 23,
-      "earlyPlayed": 11,
-      "earlyWins": 7,
-      "midPlayed": 6,
-      "midWins": 3,
-      "latePlayed": 22,
-      "lateWins": 13
-    },
-    "tur_ranged_magic_immune": {
-      "played": 30,
-      "wins": 14,
-      "earlyPlayed": 6,
-      "earlyWins": 3,
-      "midPlayed": 9,
-      "midWins": 5,
-      "latePlayed": 15,
+      "latePlayed": 14,
       "lateWins": 6
     },
-    "adventure_kradzież": {
-      "played": 20,
-      "wins": 10,
-      "earlyPlayed": 5,
-      "earlyWins": 2,
-      "midPlayed": 6,
-      "midWins": 3,
-      "latePlayed": 9,
-      "lateWins": 5
+    "adventure_tarcza_dobryni_nikiticza": {
+      "played": 44,
+      "wins": 27,
+      "earlyPlayed": 11,
+      "earlyWins": 7,
+      "midPlayed": 9,
+      "midWins": 5,
+      "latePlayed": 24,
+      "lateWins": 15
     },
-    "adventure_okaleczenie": {
-      "played": 30,
-      "wins": 12,
-      "earlyPlayed": 5,
-      "earlyWins": 1,
+    "tur_ranged_magic_immune": {
+      "played": 33,
+      "wins": 17,
+      "earlyPlayed": 6,
+      "earlyWins": 3,
+      "midPlayed": 11,
+      "midWins": 7,
+      "latePlayed": 16,
+      "lateWins": 7
+    },
+    "adventure_kradzież": {
+      "played": 26,
+      "wins": 13,
+      "earlyPlayed": 7,
+      "earlyWins": 3,
       "midPlayed": 8,
       "midWins": 4,
-      "latePlayed": 17,
+      "latePlayed": 11,
+      "lateWins": 6
+    },
+    "adventure_okaleczenie": {
+      "played": 32,
+      "wins": 13,
+      "earlyPlayed": 6,
+      "earlyWins": 2,
+      "midPlayed": 8,
+      "midWins": 4,
+      "latePlayed": 18,
       "lateWins": 7
     },
     "bogunka_instant_kill_human": {
-      "played": 29,
-      "wins": 13,
-      "earlyPlayed": 9,
-      "earlyWins": 5,
-      "midPlayed": 5,
-      "midWins": 1,
-      "latePlayed": 15,
-      "lateWins": 7
+      "played": 37,
+      "wins": 20,
+      "earlyPlayed": 10,
+      "earlyWins": 6,
+      "midPlayed": 9,
+      "midWins": 4,
+      "latePlayed": 18,
+      "lateWins": 10
     },
     "homen_convert_on_death": {
-      "played": 27,
-      "wins": 11,
-      "earlyPlayed": 4,
-      "earlyWins": 1,
-      "midPlayed": 7,
-      "midWins": 3,
-      "latePlayed": 16,
+      "played": 33,
+      "wins": 13,
+      "earlyPlayed": 7,
+      "earlyWins": 2,
+      "midPlayed": 8,
+      "midWins": 4,
+      "latePlayed": 18,
       "lateWins": 7
     },
     "przyloznik_heal_on_zyvi_kill": {
-      "played": 34,
-      "wins": 18,
-      "earlyPlayed": 10,
+      "played": 39,
+      "wins": 19,
+      "earlyPlayed": 11,
       "earlyWins": 7,
-      "midPlayed": 5,
-      "midWins": 2,
-      "latePlayed": 19,
+      "midPlayed": 7,
+      "midWins": 3,
+      "latePlayed": 21,
       "lateWins": 9
     },
     "swiatogor_line_cleave": {
-      "played": 35,
-      "wins": 17,
+      "played": 38,
+      "wins": 19,
       "earlyPlayed": 9,
       "earlyWins": 6,
-      "midPlayed": 8,
-      "midWins": 5,
-      "latePlayed": 18,
+      "midPlayed": 10,
+      "midWins": 7,
+      "latePlayed": 19,
       "lateWins": 6
     },
     "wolch_heal": {
-      "played": 24,
+      "played": 29,
+      "wins": 14,
+      "earlyPlayed": 2,
+      "earlyWins": 1,
+      "midPlayed": 8,
+      "midWins": 5,
+      "latePlayed": 19,
+      "lateWins": 8
+    },
+    "adventure_aska_morany": {
+      "played": 27,
       "wins": 11,
       "earlyPlayed": 2,
       "earlyWins": 1,
-      "midPlayed": 6,
-      "midWins": 4,
-      "latePlayed": 16,
-      "lateWins": 6
-    },
-    "adventure_aska_morany": {
-      "played": 26,
-      "wins": 10,
-      "earlyPlayed": 1,
-      "earlyWins": 0,
       "midPlayed": 4,
       "midWins": 2,
       "latePlayed": 21,
       "lateWins": 8
     },
     "rybi_krol_pierce_immunity": {
-      "played": 23,
-      "wins": 10,
+      "played": 25,
+      "wins": 11,
       "earlyPlayed": 3,
       "earlyWins": 1,
-      "midPlayed": 4,
-      "midWins": 2,
-      "latePlayed": 16,
+      "midPlayed": 5,
+      "midWins": 3,
+      "latePlayed": 17,
       "lateWins": 7
     },
     "adventure_twierdza": {
-      "played": 25,
-      "wins": 18,
-      "earlyPlayed": 5,
-      "earlyWins": 4,
-      "midPlayed": 4,
+      "played": 31,
+      "wins": 22,
+      "earlyPlayed": 7,
+      "earlyWins": 5,
+      "midPlayed": 5,
       "midWins": 2,
-      "latePlayed": 16,
-      "lateWins": 12
+      "latePlayed": 19,
+      "lateWins": 15
     },
     "adventure_sledovik": {
-      "played": 48,
-      "wins": 27,
-      "earlyPlayed": 14,
-      "earlyWins": 7,
-      "midPlayed": 17,
-      "midWins": 9,
-      "latePlayed": 17,
-      "lateWins": 11
+      "played": 56,
+      "wins": 31,
+      "earlyPlayed": 16,
+      "earlyWins": 8,
+      "midPlayed": 19,
+      "midWins": 11,
+      "latePlayed": 21,
+      "lateWins": 12
     },
     "smocze_jajo_hatch": {
-      "played": 29,
-      "wins": 13,
-      "earlyPlayed": 5,
+      "played": 35,
+      "wins": 15,
+      "earlyPlayed": 6,
       "earlyWins": 2,
-      "midPlayed": 7,
-      "midWins": 2,
-      "latePlayed": 17,
-      "lateWins": 9
+      "midPlayed": 8,
+      "midWins": 3,
+      "latePlayed": 21,
+      "lateWins": 10
     },
     "jedza_remove_buff": {
-      "played": 37,
+      "played": 41,
       "wins": 16,
-      "earlyPlayed": 4,
+      "earlyPlayed": 5,
       "earlyWins": 1,
       "midPlayed": 13,
       "midWins": 4,
-      "latePlayed": 20,
+      "latePlayed": 23,
       "lateWins": 11
     },
     "adventure_wyspa_bujan": {
-      "played": 29,
+      "played": 32,
       "wins": 13,
-      "earlyPlayed": 5,
+      "earlyPlayed": 8,
       "earlyWins": 2,
       "midPlayed": 5,
       "midWins": 2,
@@ -1063,53 +1063,53 @@
       "lateWins": 9
     },
     "biali_ludzie_wound_disarm": {
-      "played": 27,
+      "played": 28,
       "wins": 12,
       "earlyPlayed": 6,
       "earlyWins": 5,
-      "midPlayed": 3,
+      "midPlayed": 4,
       "midWins": 0,
       "latePlayed": 18,
       "lateWins": 7
     },
     "zar_ptak_death_explosion": {
-      "played": 30,
-      "wins": 19,
-      "earlyPlayed": 5,
-      "earlyWins": 4,
-      "midPlayed": 9,
+      "played": 32,
+      "wins": 20,
+      "earlyPlayed": 6,
+      "earlyWins": 5,
+      "midPlayed": 10,
       "midWins": 4,
       "latePlayed": 16,
       "lateWins": 11
     },
     "adventure_rusalczy_taniec": {
-      "played": 25,
-      "wins": 13,
+      "played": 28,
+      "wins": 16,
       "earlyPlayed": 7,
       "earlyWins": 4,
-      "midPlayed": 6,
-      "midWins": 3,
-      "latePlayed": 12,
-      "lateWins": 6
+      "midPlayed": 7,
+      "midWins": 4,
+      "latePlayed": 14,
+      "lateWins": 8
     },
     "chmurnik_ground_flying": {
-      "played": 37,
-      "wins": 23,
+      "played": 45,
+      "wins": 27,
       "earlyPlayed": 6,
       "earlyWins": 5,
-      "midPlayed": 9,
-      "midWins": 8,
-      "latePlayed": 22,
-      "lateWins": 10
+      "midPlayed": 12,
+      "midWins": 9,
+      "latePlayed": 27,
+      "lateWins": 13
     },
     "alkonost_redirect_counterattack": {
-      "played": 31,
+      "played": 32,
       "wins": 17,
       "earlyPlayed": 2,
       "earlyWins": 1,
       "midPlayed": 4,
       "midWins": 3,
-      "latePlayed": 25,
+      "latePlayed": 26,
       "lateWins": 13
     },
     "grad_magic_element_only": {
@@ -1123,652 +1123,652 @@
       "lateWins": 8
     },
     "adventure_paszcz_strzyboga": {
-      "played": 28,
-      "wins": 13,
+      "played": 29,
+      "wins": 14,
       "earlyPlayed": 8,
       "earlyWins": 3,
       "midPlayed": 6,
       "midWins": 4,
-      "latePlayed": 14,
-      "lateWins": 6
+      "latePlayed": 15,
+      "lateWins": 7
     },
     "czarownica_redirect_spell": {
-      "played": 38,
-      "wins": 18,
+      "played": 39,
+      "wins": 19,
       "earlyPlayed": 7,
       "earlyWins": 3,
       "midPlayed": 7,
       "midWins": 3,
-      "latePlayed": 24,
-      "lateWins": 12
+      "latePlayed": 25,
+      "lateWins": 13
     },
     "aitwar_steal_hand": {
-      "played": 44,
-      "wins": 18,
-      "earlyPlayed": 10,
-      "earlyWins": 4,
-      "midPlayed": 12,
-      "midWins": 5,
-      "latePlayed": 22,
-      "lateWins": 9
+      "played": 53,
+      "wins": 25,
+      "earlyPlayed": 12,
+      "earlyWins": 6,
+      "midPlayed": 14,
+      "midWins": 6,
+      "latePlayed": 27,
+      "lateWins": 13
     },
     "adventure_ruslan_helmet": {
-      "played": 23,
-      "wins": 11,
-      "earlyPlayed": 9,
+      "played": 27,
+      "wins": 12,
+      "earlyPlayed": 10,
       "earlyWins": 3,
-      "midPlayed": 5,
+      "midPlayed": 6,
       "midWins": 4,
-      "latePlayed": 9,
-      "lateWins": 4
+      "latePlayed": 11,
+      "lateWins": 5
     },
     "utopiec_half_damage": {
-      "played": 33,
-      "wins": 14,
+      "played": 35,
+      "wins": 16,
       "earlyPlayed": 7,
       "earlyWins": 4,
-      "midPlayed": 4,
-      "midWins": 1,
-      "latePlayed": 22,
-      "lateWins": 9
+      "midPlayed": 5,
+      "midWins": 2,
+      "latePlayed": 23,
+      "lateWins": 10
     },
     "adventure_zlot_czarownic": {
-      "played": 28,
-      "wins": 15,
+      "played": 29,
+      "wins": 16,
       "earlyPlayed": 7,
       "earlyWins": 5,
       "midPlayed": 1,
       "midWins": 1,
-      "latePlayed": 20,
-      "lateWins": 9
-    },
-    "adventure_pakt_z_inkluzem": {
-      "played": 28,
-      "wins": 16,
-      "earlyPlayed": 2,
-      "earlyWins": 1,
-      "midPlayed": 9,
-      "midWins": 5,
-      "latePlayed": 17,
+      "latePlayed": 21,
       "lateWins": 10
     },
-    "adventure_aska_swaroga": {
-      "played": 27,
-      "wins": 14,
-      "earlyPlayed": 6,
-      "earlyWins": 3,
+    "adventure_pakt_z_inkluzem": {
+      "played": 30,
+      "wins": 18,
+      "earlyPlayed": 3,
+      "earlyWins": 2,
       "midPlayed": 9,
-      "midWins": 4,
-      "latePlayed": 12,
-      "lateWins": 7
+      "midWins": 5,
+      "latePlayed": 18,
+      "lateWins": 11
+    },
+    "adventure_aska_swaroga": {
+      "played": 36,
+      "wins": 19,
+      "earlyPlayed": 9,
+      "earlyWins": 4,
+      "midPlayed": 11,
+      "midWins": 5,
+      "latePlayed": 16,
+      "lateWins": 10
     },
     "bieda_spy_block_draw": {
-      "played": 15,
-      "wins": 7,
+      "played": 16,
+      "wins": 8,
       "earlyPlayed": 0,
       "earlyWins": 0,
       "midPlayed": 2,
       "midWins": 0,
-      "latePlayed": 13,
-      "lateWins": 7
+      "latePlayed": 14,
+      "lateWins": 8
     },
     "adventure_bitwa_nad_tollense": {
-      "played": 37,
+      "played": 40,
       "wins": 17,
-      "earlyPlayed": 8,
+      "earlyPlayed": 9,
       "earlyWins": 4,
-      "midPlayed": 7,
+      "midPlayed": 8,
       "midWins": 2,
-      "latePlayed": 22,
+      "latePlayed": 23,
       "lateWins": 11
     },
     "inkluz_steal_buff": {
-      "played": 27,
+      "played": 28,
       "wins": 12,
       "earlyPlayed": 6,
       "earlyWins": 2,
       "midPlayed": 9,
       "midWins": 5,
-      "latePlayed": 12,
+      "latePlayed": 13,
       "lateWins": 5
     },
     "blotnik_taunt": {
-      "played": 23,
-      "wins": 9,
+      "played": 24,
+      "wins": 10,
       "earlyPlayed": 2,
       "earlyWins": 1,
-      "midPlayed": 5,
-      "midWins": 2,
+      "midPlayed": 6,
+      "midWins": 3,
       "latePlayed": 16,
       "lateWins": 6
     },
     "licho_block_draw": {
-      "played": 18,
-      "wins": 8,
+      "played": 19,
+      "wins": 9,
       "earlyPlayed": 4,
       "earlyWins": 3,
-      "midPlayed": 6,
-      "midWins": 3,
+      "midPlayed": 7,
+      "midWins": 4,
       "latePlayed": 8,
       "lateWins": 2
     },
     "zmora_grow_sacrifice": {
-      "played": 40,
-      "wins": 22,
-      "earlyPlayed": 6,
-      "earlyWins": 4,
-      "midPlayed": 8,
-      "midWins": 2,
-      "latePlayed": 26,
-      "lateWins": 16
+      "played": 46,
+      "wins": 25,
+      "earlyPlayed": 7,
+      "earlyWins": 5,
+      "midPlayed": 11,
+      "midWins": 3,
+      "latePlayed": 28,
+      "lateWins": 17
     },
     "polewik_buff_neighbors": {
-      "played": 28,
-      "wins": 12,
+      "played": 31,
+      "wins": 14,
       "earlyPlayed": 3,
       "earlyWins": 1,
       "midPlayed": 9,
       "midWins": 6,
-      "latePlayed": 16,
-      "lateWins": 5
+      "latePlayed": 19,
+      "lateWins": 7
     },
     "barstuk_ally_regen": {
-      "played": 25,
-      "wins": 16,
-      "earlyPlayed": 7,
+      "played": 29,
+      "wins": 17,
+      "earlyPlayed": 8,
       "earlyWins": 4,
       "midPlayed": 7,
       "midWins": 5,
-      "latePlayed": 11,
-      "lateWins": 7
+      "latePlayed": 14,
+      "lateWins": 8
     },
     "dziad_reveal_all": {
-      "played": 21,
-      "wins": 12,
+      "played": 26,
+      "wins": 13,
       "earlyPlayed": 0,
       "earlyWins": 0,
-      "midPlayed": 8,
+      "midPlayed": 10,
       "midWins": 6,
-      "latePlayed": 13,
-      "lateWins": 6
+      "latePlayed": 16,
+      "lateWins": 7
     },
     "chlop_extra_attack": {
-      "played": 29,
-      "wins": 12,
+      "played": 32,
+      "wins": 13,
       "earlyPlayed": 5,
       "earlyWins": 3,
-      "midPlayed": 7,
+      "midPlayed": 8,
       "midWins": 4,
-      "latePlayed": 17,
-      "lateWins": 5
+      "latePlayed": 19,
+      "lateWins": 6
     },
     "latawiec_mutual_death": {
-      "played": 36,
-      "wins": 23,
+      "played": 39,
+      "wins": 25,
       "earlyPlayed": 7,
       "earlyWins": 4,
-      "midPlayed": 8,
+      "midPlayed": 9,
       "midWins": 6,
-      "latePlayed": 21,
-      "lateWins": 13
+      "latePlayed": 23,
+      "lateWins": 15
     },
     "latawica_drain_ally": {
-      "played": 24,
+      "played": 26,
       "wins": 13,
-      "earlyPlayed": 4,
+      "earlyPlayed": 5,
       "earlyWins": 1,
-      "midPlayed": 6,
+      "midPlayed": 7,
       "midWins": 3,
       "latePlayed": 14,
       "lateWins": 9
     },
     "zerca_spell_shield": {
-      "played": 33,
-      "wins": 17,
-      "earlyPlayed": 8,
-      "earlyWins": 5,
-      "midPlayed": 5,
-      "midWins": 1,
+      "played": 37,
+      "wins": 20,
+      "earlyPlayed": 9,
+      "earlyWins": 6,
+      "midPlayed": 8,
+      "midWins": 3,
       "latePlayed": 20,
       "lateWins": 11
     },
     "adventure_swacba": {
-      "played": 32,
+      "played": 35,
       "wins": 16,
-      "earlyPlayed": 8,
+      "earlyPlayed": 9,
       "earlyWins": 5,
-      "midPlayed": 6,
+      "midPlayed": 7,
       "midWins": 4,
-      "latePlayed": 18,
+      "latePlayed": 19,
       "lateWins": 7
     },
     "wielkolud_choose_counter": {
-      "played": 36,
-      "wins": 20,
+      "played": 40,
+      "wins": 22,
       "earlyPlayed": 6,
       "earlyWins": 4,
-      "midPlayed": 9,
+      "midPlayed": 11,
       "midWins": 6,
-      "latePlayed": 21,
-      "lateWins": 10
+      "latePlayed": 23,
+      "lateWins": 12
     },
     "julki_adventure_immunity": {
-      "played": 21,
-      "wins": 10,
-      "earlyPlayed": 2,
-      "earlyWins": 2,
-      "midPlayed": 2,
+      "played": 25,
+      "wins": 13,
+      "earlyPlayed": 3,
+      "earlyWins": 3,
+      "midPlayed": 3,
       "midWins": 0,
-      "latePlayed": 17,
-      "lateWins": 8
+      "latePlayed": 19,
+      "lateWins": 10
     },
     "wietrzyca_rearrange_enemy": {
-      "played": 23,
-      "wins": 11,
-      "earlyPlayed": 6,
-      "earlyWins": 6,
-      "midPlayed": 7,
-      "midWins": 1,
+      "played": 27,
+      "wins": 13,
+      "earlyPlayed": 7,
+      "earlyWins": 7,
+      "midPlayed": 10,
+      "midWins": 2,
       "latePlayed": 10,
       "lateWins": 4
     },
     "kikimora_free_attack": {
-      "played": 24,
-      "wins": 8,
-      "earlyPlayed": 7,
-      "earlyWins": 4,
-      "midPlayed": 6,
+      "played": 29,
+      "wins": 9,
+      "earlyPlayed": 9,
+      "earlyWins": 5,
+      "midPlayed": 7,
       "midWins": 1,
-      "latePlayed": 11,
+      "latePlayed": 13,
       "lateWins": 3
     },
     "adventure_poswiecenie_wandy": {
-      "played": 27,
-      "wins": 13,
+      "played": 32,
+      "wins": 17,
       "earlyPlayed": 6,
       "earlyWins": 3,
-      "midPlayed": 6,
-      "midWins": 4,
-      "latePlayed": 15,
-      "lateWins": 6
+      "midPlayed": 9,
+      "midWins": 6,
+      "latePlayed": 17,
+      "lateWins": 8
     },
     "adventure_zertwa": {
-      "played": 26,
+      "played": 28,
       "wins": 18,
-      "earlyPlayed": 9,
+      "earlyPlayed": 10,
       "earlyWins": 6,
-      "midPlayed": 7,
+      "midPlayed": 8,
       "midWins": 6,
       "latePlayed": 10,
       "lateWins": 6
     },
     "chowaniec_intercept": {
-      "played": 29,
-      "wins": 12,
-      "earlyPlayed": 2,
-      "earlyWins": 0,
-      "midPlayed": 6,
-      "midWins": 2,
-      "latePlayed": 21,
+      "played": 32,
+      "wins": 14,
+      "earlyPlayed": 3,
+      "earlyWins": 1,
+      "midPlayed": 7,
+      "midWins": 3,
+      "latePlayed": 22,
       "lateWins": 10
     },
     "adventure_sobowtór": {
-      "played": 23,
-      "wins": 9,
+      "played": 28,
+      "wins": 12,
       "earlyPlayed": 3,
       "earlyWins": 3,
-      "midPlayed": 4,
-      "midWins": 1,
-      "latePlayed": 16,
-      "lateWins": 5
+      "midPlayed": 7,
+      "midWins": 3,
+      "latePlayed": 18,
+      "lateWins": 6
     },
     "wila_convert_weak_enemies": {
-      "played": 30,
+      "played": 31,
       "wins": 16,
       "earlyPlayed": 5,
       "earlyWins": 3,
       "midPlayed": 8,
       "midWins": 4,
-      "latePlayed": 17,
+      "latePlayed": 18,
       "lateWins": 9
     },
     "baba_jaga_death_growth": {
-      "played": 32,
-      "wins": 15,
-      "earlyPlayed": 4,
+      "played": 34,
+      "wins": 16,
+      "earlyPlayed": 5,
       "earlyWins": 3,
-      "midPlayed": 10,
-      "midWins": 4,
+      "midPlayed": 11,
+      "midWins": 5,
       "latePlayed": 18,
       "lateWins": 8
     },
     "mavka_line_shield": {
-      "played": 37,
+      "played": 38,
       "wins": 13,
       "earlyPlayed": 5,
       "earlyWins": 2,
-      "midPlayed": 13,
+      "midPlayed": 14,
       "midWins": 5,
       "latePlayed": 19,
       "lateWins": 6
     },
     "adventure_alatyr": {
-      "played": 23,
-      "wins": 15,
-      "earlyPlayed": 8,
-      "earlyWins": 5,
-      "midPlayed": 4,
+      "played": 25,
+      "wins": 16,
+      "earlyPlayed": 9,
+      "earlyWins": 6,
+      "midPlayed": 5,
       "midWins": 2,
       "latePlayed": 11,
       "lateWins": 8
     },
     "adventure_gwizd_soowieja": {
-      "played": 29,
-      "wins": 14,
-      "earlyPlayed": 8,
-      "earlyWins": 3,
+      "played": 32,
+      "wins": 17,
+      "earlyPlayed": 9,
+      "earlyWins": 4,
       "midPlayed": 11,
       "midWins": 5,
-      "latePlayed": 10,
-      "lateWins": 6
+      "latePlayed": 12,
+      "lateWins": 8
     },
     "junak_double_hit_kill": {
-      "played": 40,
-      "wins": 16,
-      "earlyPlayed": 10,
-      "earlyWins": 4,
+      "played": 46,
+      "wins": 19,
+      "earlyPlayed": 12,
+      "earlyWins": 5,
       "midPlayed": 12,
       "midWins": 6,
-      "latePlayed": 18,
-      "lateWins": 6
+      "latePlayed": 22,
+      "lateWins": 8
     },
     "adventure_kataklizm": {
-      "played": 29,
-      "wins": 11,
-      "earlyPlayed": 9,
-      "earlyWins": 3,
-      "midPlayed": 9,
-      "midWins": 3,
-      "latePlayed": 11,
+      "played": 33,
+      "wins": 13,
+      "earlyPlayed": 11,
+      "earlyWins": 4,
+      "midPlayed": 10,
+      "midWins": 4,
+      "latePlayed": 12,
       "lateWins": 5
     },
     "lesnica_double_attack": {
-      "played": 39,
-      "wins": 23,
-      "earlyPlayed": 2,
-      "earlyWins": 1,
+      "played": 42,
+      "wins": 25,
+      "earlyPlayed": 4,
+      "earlyWins": 2,
       "midPlayed": 18,
       "midWins": 11,
-      "latePlayed": 19,
-      "lateWins": 11
+      "latePlayed": 20,
+      "lateWins": 12
     },
     "liczyrzepa_choose_type": {
-      "played": 28,
-      "wins": 15,
+      "played": 31,
+      "wins": 16,
       "earlyPlayed": 2,
       "earlyWins": 0,
       "midPlayed": 8,
       "midWins": 4,
-      "latePlayed": 18,
-      "lateWins": 11
+      "latePlayed": 21,
+      "lateWins": 12
     },
     "starszyzna_scry_deck": {
-      "played": 18,
-      "wins": 8,
-      "earlyPlayed": 2,
+      "played": 20,
+      "wins": 9,
+      "earlyPlayed": 3,
       "earlyWins": 1,
       "midPlayed": 4,
       "midWins": 3,
-      "latePlayed": 12,
-      "lateWins": 4
-    },
-    "bagiennik_cleanse_buff": {
-      "played": 25,
-      "wins": 10,
-      "earlyPlayed": 4,
-      "earlyWins": 2,
-      "midPlayed": 1,
-      "midWins": 1,
-      "latePlayed": 20,
-      "lateWins": 7
-    },
-    "kania_chain_kill": {
-      "played": 29,
-      "wins": 13,
-      "earlyPlayed": 7,
-      "earlyWins": 3,
-      "midPlayed": 5,
-      "midWins": 2,
-      "latePlayed": 17,
-      "lateWins": 8
-    },
-    "bledny_ognik_bounce": {
-      "played": 31,
-      "wins": 12,
-      "earlyPlayed": 5,
-      "earlyWins": 1,
-      "midPlayed": 13,
-      "midWins": 6,
       "latePlayed": 13,
       "lateWins": 5
     },
-    "swietle_reveal_card": {
-      "played": 20,
-      "wins": 8,
+    "bagiennik_cleanse_buff": {
+      "played": 27,
+      "wins": 12,
       "earlyPlayed": 5,
-      "earlyWins": 2,
+      "earlyWins": 3,
+      "midPlayed": 1,
+      "midWins": 1,
+      "latePlayed": 21,
+      "lateWins": 8
+    },
+    "kania_chain_kill": {
+      "played": 32,
+      "wins": 16,
+      "earlyPlayed": 7,
+      "earlyWins": 3,
+      "midPlayed": 6,
+      "midWins": 3,
+      "latePlayed": 19,
+      "lateWins": 10
+    },
+    "bledny_ognik_bounce": {
+      "played": 35,
+      "wins": 16,
+      "earlyPlayed": 5,
+      "earlyWins": 1,
+      "midPlayed": 14,
+      "midWins": 7,
+      "latePlayed": 16,
+      "lateWins": 8
+    },
+    "swietle_reveal_card": {
+      "played": 21,
+      "wins": 9,
+      "earlyPlayed": 6,
+      "earlyWins": 3,
       "midPlayed": 2,
       "midWins": 1,
       "latePlayed": 13,
       "lateWins": 5
     },
     "adventure_przebudzenie_stolemow": {
-      "played": 26,
-      "wins": 8,
-      "earlyPlayed": 4,
-      "earlyWins": 1,
+      "played": 32,
+      "wins": 13,
+      "earlyPlayed": 8,
+      "earlyWins": 4,
       "midPlayed": 6,
       "midWins": 4,
-      "latePlayed": 16,
-      "lateWins": 3
+      "latePlayed": 18,
+      "lateWins": 5
     },
     "zmije_glory_on_empty_field": {
-      "played": 32,
-      "wins": 20,
-      "earlyPlayed": 4,
-      "earlyWins": 3,
-      "midPlayed": 9,
-      "midWins": 4,
-      "latePlayed": 19,
-      "lateWins": 13
+      "played": 40,
+      "wins": 23,
+      "earlyPlayed": 6,
+      "earlyWins": 4,
+      "midPlayed": 11,
+      "midWins": 5,
+      "latePlayed": 23,
+      "lateWins": 14
     },
     "adventure_boskie_wsparcie": {
-      "played": 30,
-      "wins": 15,
+      "played": 32,
+      "wins": 16,
       "earlyPlayed": 2,
       "earlyWins": 2,
       "midPlayed": 7,
       "midWins": 3,
-      "latePlayed": 21,
-      "lateWins": 10
+      "latePlayed": 23,
+      "lateWins": 11
     },
     "adventure_likantropia": {
-      "played": 28,
-      "wins": 14,
+      "played": 30,
+      "wins": 15,
       "earlyPlayed": 3,
       "earlyWins": 2,
-      "midPlayed": 9,
-      "midWins": 5,
+      "midPlayed": 11,
+      "midWins": 6,
       "latePlayed": 16,
       "lateWins": 7
     },
     "adventure_bezsilnosc": {
-      "played": 26,
-      "wins": 14,
-      "earlyPlayed": 11,
-      "earlyWins": 7,
-      "midPlayed": 8,
-      "midWins": 4,
-      "latePlayed": 7,
-      "lateWins": 3
+      "played": 30,
+      "wins": 17,
+      "earlyPlayed": 12,
+      "earlyWins": 8,
+      "midPlayed": 9,
+      "midWins": 5,
+      "latePlayed": 9,
+      "lateWins": 4
     },
     "bugaj_def_to_atk": {
-      "played": 28,
-      "wins": 18,
-      "earlyPlayed": 5,
-      "earlyWins": 5,
-      "midPlayed": 8,
-      "midWins": 5,
-      "latePlayed": 15,
+      "played": 33,
+      "wins": 21,
+      "earlyPlayed": 6,
+      "earlyWins": 6,
+      "midPlayed": 10,
+      "midWins": 7,
+      "latePlayed": 17,
       "lateWins": 8
     },
     "rodzanice_scry": {
-      "played": 28,
+      "played": 30,
       "wins": 11,
       "earlyPlayed": 2,
       "earlyWins": 1,
       "midPlayed": 7,
       "midWins": 3,
-      "latePlayed": 19,
+      "latePlayed": 21,
       "lateWins": 7
     },
     "bzionek_spell_intercept": {
-      "played": 13,
+      "played": 14,
       "wins": 5,
       "earlyPlayed": 0,
       "earlyWins": 0,
       "midPlayed": 1,
       "midWins": 1,
-      "latePlayed": 12,
+      "latePlayed": 13,
       "lateWins": 4
     },
     "adventure_topor_peruna": {
-      "played": 24,
+      "played": 25,
       "wins": 9,
       "earlyPlayed": 4,
       "earlyWins": 2,
-      "midPlayed": 12,
+      "midPlayed": 13,
       "midWins": 6,
       "latePlayed": 8,
       "lateWins": 1
     },
     "adventure_arkona": {
-      "played": 31,
-      "wins": 17,
-      "earlyPlayed": 7,
-      "earlyWins": 2,
+      "played": 35,
+      "wins": 19,
+      "earlyPlayed": 8,
+      "earlyWins": 3,
       "midPlayed": 7,
       "midWins": 2,
-      "latePlayed": 17,
-      "lateWins": 13
+      "latePlayed": 20,
+      "lateWins": 14
     },
     "wilkolak_melee_immune": {
-      "played": 20,
-      "wins": 10,
+      "played": 25,
+      "wins": 13,
       "earlyPlayed": 5,
       "earlyWins": 2,
-      "midPlayed": 4,
-      "midWins": 3,
-      "latePlayed": 11,
-      "lateWins": 5
+      "midPlayed": 7,
+      "midWins": 4,
+      "latePlayed": 13,
+      "lateWins": 7
     },
     "adventure_aska_roda": {
-      "played": 26,
-      "wins": 16,
+      "played": 28,
+      "wins": 17,
       "earlyPlayed": 4,
       "earlyWins": 1,
       "midPlayed": 6,
       "midWins": 2,
-      "latePlayed": 16,
-      "lateWins": 13
+      "latePlayed": 18,
+      "lateWins": 14
     },
     "brzegina_shield_for_gold": {
-      "played": 39,
-      "wins": 21,
-      "earlyPlayed": 9,
-      "earlyWins": 3,
+      "played": 43,
+      "wins": 23,
+      "earlyPlayed": 11,
+      "earlyWins": 4,
       "midPlayed": 6,
       "midWins": 5,
-      "latePlayed": 24,
-      "lateWins": 13
+      "latePlayed": 26,
+      "lateWins": 14
     },
     "wisielec_bounce_both": {
-      "played": 23,
-      "wins": 14,
-      "earlyPlayed": 1,
+      "played": 28,
+      "wins": 17,
+      "earlyPlayed": 2,
       "earlyWins": 0,
-      "midPlayed": 7,
-      "midWins": 6,
-      "latePlayed": 15,
-      "lateWins": 8
+      "midPlayed": 9,
+      "midWins": 8,
+      "latePlayed": 17,
+      "lateWins": 9
     },
     "adventure_tryzna": {
-      "played": 20,
-      "wins": 7,
+      "played": 21,
+      "wins": 8,
       "earlyPlayed": 5,
       "earlyWins": 1,
       "midPlayed": 5,
       "midWins": 1,
-      "latePlayed": 10,
-      "lateWins": 5
+      "latePlayed": 11,
+      "lateWins": 6
     },
     "lamia_death_reward": {
-      "played": 28,
-      "wins": 10,
-      "earlyPlayed": 2,
-      "earlyWins": 2,
-      "midPlayed": 10,
+      "played": 32,
+      "wins": 11,
+      "earlyPlayed": 4,
+      "earlyWins": 3,
+      "midPlayed": 11,
       "midWins": 2,
-      "latePlayed": 16,
+      "latePlayed": 17,
       "lateWins": 6
     },
     "adventure_pioro_zarptaka": {
-      "played": 24,
-      "wins": 13,
-      "earlyPlayed": 4,
-      "earlyWins": 4,
-      "midPlayed": 5,
-      "midWins": 3,
+      "played": 27,
+      "wins": 15,
+      "earlyPlayed": 6,
+      "earlyWins": 5,
+      "midPlayed": 6,
+      "midWins": 4,
       "latePlayed": 15,
       "lateWins": 6
     },
     "jaroszek_paralyze": {
-      "played": 35,
-      "wins": 16,
+      "played": 37,
+      "wins": 18,
       "earlyPlayed": 4,
       "earlyWins": 0,
       "midPlayed": 14,
       "midWins": 8,
-      "latePlayed": 17,
-      "lateWins": 8
+      "latePlayed": 19,
+      "lateWins": 10
     },
     "adventure_amulet_z_rozeta": {
-      "played": 23,
-      "wins": 11,
-      "earlyPlayed": 3,
-      "earlyWins": 1,
-      "midPlayed": 8,
-      "midWins": 3,
-      "latePlayed": 12,
+      "played": 27,
+      "wins": 13,
+      "earlyPlayed": 5,
+      "earlyWins": 2,
+      "midPlayed": 9,
+      "midWins": 4,
+      "latePlayed": 13,
       "lateWins": 7
     },
     "szalinc_negate_immunity": {
-      "played": 31,
-      "wins": 11,
-      "earlyPlayed": 8,
+      "played": 35,
+      "wins": 12,
+      "earlyPlayed": 9,
       "earlyWins": 2,
-      "midPlayed": 5,
-      "midWins": 4,
-      "latePlayed": 18,
+      "midPlayed": 7,
+      "midWins": 5,
+      "latePlayed": 19,
       "lateWins": 5
     },
     "szatopierz_discard_for_gold": {
-      "played": 28,
-      "wins": 14,
+      "played": 29,
+      "wins": 15,
       "earlyPlayed": 4,
       "earlyWins": 3,
-      "midPlayed": 8,
-      "midWins": 2,
+      "midPlayed": 9,
+      "midWins": 3,
       "latePlayed": 16,
       "lateWins": 9
     }
@@ -1843,7 +1843,7 @@
       "wins": 1
     },
     "T2:barstuk_ally_regen": {
-      "played": 1,
+      "played": 2,
       "wins": 0
     },
     "T2:bugaj_def_to_atk": {
@@ -1911,7 +1911,7 @@
       "wins": 1
     },
     "T2:adventure_braterstwo_bogatyrow": {
-      "played": 5,
+      "played": 6,
       "wins": 4
     },
     "T2:dziki_mysliwy_return_on_kill+adventure_likantropia": {
@@ -1935,8 +1935,8 @@
       "wins": 0
     },
     "T2:aitwar_steal_hand": {
-      "played": 3,
-      "wins": 0
+      "played": 4,
+      "wins": 1
     },
     "T2:wielkolud_choose_counter+adventure_sobowtór": {
       "played": 1,
@@ -2131,7 +2131,7 @@
       "wins": 1
     },
     "T2:adventure_misjonarze": {
-      "played": 1,
+      "played": 2,
       "wins": 0
     },
     "T2:chmurnik_ground_flying+adventure_tarcza_dobryni_nikiticza": {
@@ -2475,7 +2475,7 @@
       "wins": 1
     },
     "T2:homen_convert_on_death": {
-      "played": 1,
+      "played": 2,
       "wins": 0
     },
     "T2:buka_force_defense+adventure_sledovik": {
@@ -2539,8 +2539,8 @@
       "wins": 1
     },
     "T2:bezkost_atk_drain": {
-      "played": 1,
-      "wins": 0
+      "played": 2,
+      "wins": 1
     },
     "T2:wapierz_invincible_hunger+adventure_kwiat_paproci": {
       "played": 1,
@@ -3007,8 +3007,8 @@
       "wins": 0
     },
     "T2:krol_wezow_always_counter": {
-      "played": 1,
-      "wins": 1
+      "played": 2,
+      "wins": 2
     },
     "T2:szalinc_negate_immunity+adventure_zota_baba": {
       "played": 1,
@@ -3019,6 +3019,166 @@
       "wins": 0
     },
     "T2:grad_magic_element_only": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:brzegina_shield_for_gold+adventure_bezsilnosc": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:latawica_drain_ally+adventure_przebudzenie_stolemow": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:cicha_kill_weak+adventure_twierdza": {
+      "played": 1,
+      "wins": 1
+    },
+    "T1:wij_revive_once": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:niedzwiedzioak_guardian+adventure_wyspa_bujan": {
+      "played": 1,
+      "wins": 0
+    },
+    "T1:wieszczy_spy_burn+adventure_okaleczenie": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:brzegina_shield_for_gold+adventure_nekromancja": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:homen_convert_on_death+adventure_pioro_zarptaka": {
+      "played": 1,
+      "wins": 1
+    },
+    "T1:zerca_welesa_demon_buff": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:wapierz_invincible_hunger+adventure_handel": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:zerca_welesa_demon_buff+adventure_pakt_z_inkluzem": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:lesnica_double_attack+adventure_zertwa": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:bezkost_atk_drain+adventure_ruslan_helmet": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:siemiargl_cleanse+adventure_aska_zorzy": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:junak_double_hit_kill+adventure_srebrna_gaaz": {
+      "played": 1,
+      "wins": 1
+    },
+    "T1:poludnica_kill_weakest+adventure_wyspa_bujan": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:adventure_przebudzenie_stolemow": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:dobroochoczy_no_counter+adventure_aska_swaroga": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:kudlak_conditional_immunity+adventure_aska_swaroga": {
+      "played": 1,
+      "wins": 1
+    },
+    "T1:bugaj_def_to_atk+adventure_obled": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:jedza_remove_buff": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:wodnik_return_on_round_end+adventure_bitwa_nad_tollense": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:bagiennik_cleanse_buff+adventure_przebudzenie_stolemow": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:matoha_anti_magic+adventure_aska_morany": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:zerca_welesa_demon_buff+adventure_swacba": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:zerca_spell_shield+adventure_handel": {
+      "played": 1,
+      "wins": 1
+    },
+    "T1:kikimora_free_attack+adventure_sztandar": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:siemiargl_cleanse+adventure_pioro_zarptaka": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:belt_rearrange+adventure_topor_peruna_amulet": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:cmuch_no_counter_received+adventure_kwiat_paproci": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:czart_shift_stats+adventure_zacmienie_sonca": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:adventure_wygnanie": {
+      "played": 1,
+      "wins": 0
+    },
+    "T1:bies_reverse_damage+adventure_kradzież": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:bogunka_instant_kill_human+adventure_handel": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:rusalka_mirror_attack+adventure_sledovik": {
+      "played": 1,
+      "wins": 0
+    },
+    "T1:baba_bonus_vs_type": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:smocze_jajo_hatch+adventure_aska_swietowida": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:kresnik_choose_buff+adventure_kataklizm": {
+      "played": 1,
+      "wins": 1
+    },
+    "T2:cmuch_no_counter_received+adventure_amulet_z_rozeta": {
+      "played": 1,
+      "wins": 0
+    },
+    "T2:matoha_anti_magic+adventure_gwizd_soowieja": {
       "played": 1,
       "wins": 1
     }
@@ -3121,15 +3281,15 @@
       "coWins": 1
     },
     "adventure_srebrna_gaaz+poludnica_kill_weakest": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_arena+krol_wezow_always_counter": {
       "coPlayed": 2,
       "coWins": 1
     },
     "adventure_aska_swietowida+dydko_strong_immune": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_matecznik+kudlak_conditional_immunity": {
@@ -3185,8 +3345,8 @@
       "coWins": 2
     },
     "adventure_sledovik+belt_rearrange": {
-      "coPlayed": 2,
-      "coWins": 1
+      "coPlayed": 3,
+      "coWins": 2
     },
     "adventure_braterstwo_bogatyrow+smocze_jajo_hatch": {
       "coPlayed": 1,
@@ -3489,8 +3649,8 @@
       "coWins": 0
     },
     "adventure_aska_roda+julki_adventure_immunity": {
-      "coPlayed": 1,
-      "coWins": 1
+      "coPlayed": 2,
+      "coWins": 2
     },
     "adventure_aska_swarozyca+homen_convert_on_death": {
       "coPlayed": 1,
@@ -3877,7 +4037,7 @@
       "coWins": 1
     },
     "adventure_misjonarze+bazyliszek_paralyze": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_sledovik+kikimora_free_attack": {
@@ -4565,8 +4725,8 @@
       "coWins": 0
     },
     "adventure_kuka_marzanny+kresnik_choose_buff": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_arkona+jedza_remove_buff": {
       "coPlayed": 1,
@@ -5081,7 +5241,7 @@
       "coWins": 0
     },
     "adventure_zdrada_popiela+dzicy_ludzie_steal_killed": {
-      "coPlayed": 2,
+      "coPlayed": 3,
       "coWins": 1
     },
     "adventure_arena+wapierz_invincible_hunger": {
@@ -5117,8 +5277,8 @@
       "coWins": 2
     },
     "adventure_tarcza_dobryni_nikiticza+wilkolak_melee_immune": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_twierdza+bogunka_instant_kill_human": {
       "coPlayed": 1,
@@ -5329,7 +5489,7 @@
       "coWins": 1
     },
     "adventure_tarcza_dobryni_nikiticza+dzicy_ludzie_steal_killed": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_zdrada_popiela+szatopierz_discard_for_gold": {
@@ -5405,8 +5565,8 @@
       "coWins": 1
     },
     "adventure_aska_ady+leszy_post_attack_defend": {
-      "coPlayed": 1,
-      "coWins": 1
+      "coPlayed": 2,
+      "coWins": 2
     },
     "adventure_arena+darmopych_friendly_fire": {
       "coPlayed": 1,
@@ -5521,8 +5681,8 @@
       "coWins": 2
     },
     "adventure_przebudzenie_stolemow+zmije_glory_on_empty_field": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_kataklizm+guslarka_bonus_vs_demon": {
       "coPlayed": 1,
@@ -5569,8 +5729,8 @@
       "coWins": 0
     },
     "adventure_aska_swaroga+kudlak_conditional_immunity": {
-      "coPlayed": 1,
-      "coWins": 1
+      "coPlayed": 2,
+      "coWins": 2
     },
     "adventure_sobowtór+wodnik_return_on_round_end": {
       "coPlayed": 1,
@@ -5677,7 +5837,7 @@
       "coWins": 1
     },
     "adventure_poswiecenie_wandy+bogunka_instant_kill_human": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 0
     },
     "adventure_arkona+strela_flash_counter": {
@@ -5893,8 +6053,8 @@
       "coWins": 0
     },
     "adventure_twierdza+zerca_welesa_demon_buff": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_okaleczenie+brzegina_shield_for_gold": {
       "coPlayed": 1,
@@ -5981,7 +6141,7 @@
       "coWins": 0
     },
     "adventure_topor_peruna+dziad_reveal_all": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_sledovik+czarnoksieznik_steal_abilities": {
@@ -6105,8 +6265,8 @@
       "coWins": 1
     },
     "adventure_poswiecenie_wandy+dziki_mysliwy_return_on_kill": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_sza_bitewny+dziki_mysliwy_return_on_kill": {
       "coPlayed": 1,
@@ -6253,8 +6413,8 @@
       "coWins": 0
     },
     "adventure_wygnanie+baba_bonus_vs_type": {
-      "coPlayed": 1,
-      "coWins": 1
+      "coPlayed": 2,
+      "coWins": 2
     },
     "adventure_poswiecenie_wandy+lamia_death_reward": {
       "coPlayed": 1,
@@ -6281,7 +6441,7 @@
       "coWins": 1
     },
     "adventure_kwiat_paproci+wapierz_invincible_hunger": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 0
     },
     "adventure_kataklizm+bies_reverse_damage": {
@@ -6345,7 +6505,7 @@
       "coWins": 1
     },
     "adventure_wyspa_bujan+naczelnik_human_rally": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_trucizna+dobroochoczy_no_counter": {
@@ -6469,8 +6629,8 @@
       "coWins": 1
     },
     "adventure_zdrada_popiela+rybi_krol_pierce_immunity": {
-      "coPlayed": 1,
-      "coWins": 1
+      "coPlayed": 2,
+      "coWins": 2
     },
     "adventure_wygnanie+zupan_no_field_limit": {
       "coPlayed": 1,
@@ -6485,7 +6645,7 @@
       "coWins": 1
     },
     "adventure_handel+wapierz_invincible_hunger": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 0
     },
     "adventure_tarcza_dobryni_nikiticza+leszy_post_attack_defend": {
@@ -6809,7 +6969,7 @@
       "coWins": 0
     },
     "adventure_sledovik+rusalka_mirror_attack": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_przebudzenie_stolemow+junak_double_hit_kill": {
@@ -6861,7 +7021,7 @@
       "coWins": 1
     },
     "adventure_rehtra+baba_jaga_death_growth": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_sza_bitewny+wieszczy_spy_burn": {
@@ -7049,8 +7209,8 @@
       "coWins": 0
     },
     "adventure_handel+gorynych_merge_dragons": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_misjonarze+chmurnik_ground_flying": {
       "coPlayed": 1,
@@ -7149,8 +7309,8 @@
       "coWins": 1
     },
     "adventure_srebrna_gaaz+mroz_immunity_buffs": {
-      "coPlayed": 1,
-      "coWins": 0
+      "coPlayed": 2,
+      "coWins": 1
     },
     "adventure_miecz_kladenet+zmora_grow_sacrifice": {
       "coPlayed": 1,
@@ -7169,8 +7329,8 @@
       "coWins": 0
     },
     "adventure_sza_bitewny+darmopych_friendly_fire": {
-      "coPlayed": 1,
-      "coWins": 1
+      "coPlayed": 2,
+      "coWins": 2
     },
     "adventure_kuka_marzanny+naczelnik_human_rally": {
       "coPlayed": 1,
@@ -7585,7 +7745,7 @@
       "coWins": 0
     },
     "adventure_wyspa_bujan+niedzwiedzioak_guardian": {
-      "coPlayed": 1,
+      "coPlayed": 2,
       "coWins": 1
     },
     "adventure_amulet_z_rozeta+kikimora_free_attack": {
@@ -7941,6 +8101,534 @@
       "coWins": 0
     },
     "adventure_aska_roda+zar_ptak_death_explosion": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_bezsilnosc+brzegina_shield_for_gold": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_przebudzenie_stolemow+latawica_drain_ally": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_braterstwo_bogatyrow+kikimora_free_attack": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_zacmienie_sonca+swiatogor_line_cleave": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_rusalczy_taniec+polnocnica_mass_paralyze": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_twierdza+cicha_kill_weak": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_trucizna+lesnica_double_attack": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_ady+cmentarna_baba_resurrect": {
+      "coPlayed": 2,
+      "coWins": 0
+    },
+    "adventure_aska_swaroga+starszyzna_scry_deck": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sza_bitewny+lapiduch_demon_hunter": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_amulet_z_rozeta+smocze_jajo_hatch": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_gwizd_soowieja+tesknica_block_enhance": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zdrada_popiela+dziwolzona_swap_cards": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_bitwa_nad_tollense+chmurnik_ground_flying": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_twierdza+gryf_double_dmg_on_play_turn": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kwiat_paproci+morowa_dziewica_aoe_all": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_okaleczenie+wieszczy_spy_burn": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_nekromancja+brzegina_shield_for_gold": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_pioro_zarptaka+homen_convert_on_death": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_bezsilnosc+cmentarna_baba_resurrect": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_sobowtór+siemiargl_cleanse": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_zdrada_popiela+kikimora_free_attack": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_misjonarze+azdacha_vanilia": {
+      "coPlayed": 2,
+      "coWins": 1
+    },
+    "adventure_rehtra+julki_adventure_immunity": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_likantropia+czart_shift_stats": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_ady+kosciej_melee_resurrection": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_sledovik+dydko_strong_immune": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_zorzy+wodnik_return_on_round_end": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_pakt_z_inkluzem+zerca_welesa_demon_buff": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zertwa+lesnica_double_attack": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_poswiecenie_wandy+cmuch_no_counter_received": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kwiat_paproci+szalinc_negate_immunity": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_rusalczy_taniec+matoha_anti_magic": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_boskie_wsparcie+szeptunka_damage_reduction": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_swaroga+wieszczy_spy_burn": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_ruslan_helmet+bezkost_atk_drain": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_zorzy+siemiargl_cleanse": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kuka_marzanny+zmije_glory_on_empty_field": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_obled+zerca_spell_shield": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_rusalczy_taniec+bugaj_def_to_atk": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_twierdza+aitwar_steal_hand": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_srebrna_gaaz+junak_double_hit_kill": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_swietowida+swietle_reveal_card": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_swaroga+tur_ranged_magic_immune": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_topor_peruna_amulet+junak_double_hit_kill": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_moc_swiatogora+liczyrzepa_choose_type": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_wyspa_bujan+poludnica_kill_weakest": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_swaroga+dobroochoczy_no_counter": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_moc_swiatogora+licho_block_draw": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_tarcza_dobryni_nikiticza+polnocnica_mass_paralyze": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_alatyr+dzicy_ludzie_steal_killed": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_trucizna+przyloznik_heal_on_zyvi_kill": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zertwa+szalinc_negate_immunity": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_swietowida+kania_chain_kill": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_sztandar+dziewiatko_deathmark": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_obled+bugaj_def_to_atk": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_paszcz_strzyboga+starszyzna_scry_deck": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zota_baba+wieszczy_spy_burn": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_bitwa_nad_tollense+wodnik_return_on_round_end": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_przebudzenie_stolemow+bagiennik_cleanse_buff": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kuka_marzanny+zerca_welesa_demon_buff": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_poswiecenie_wandy+chowaniec_intercept": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_sztandar+czarnoksieznik_steal_abilities": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kuka_marzanny+zerca_spell_shield": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_perena+tesknica_block_enhance": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_wygnanie+liczyrzepa_choose_type": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_zota_baba+zagorkinia_curse_drain": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_laska_welesa+bazyliszek_paralyze": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zota_baba+kikimora_free_attack": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_arkona+zagorkinia_curse_drain": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_przebudzenie_stolemow+lucznik_pin": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_morany+matoha_anti_magic": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_swacba+zerca_welesa_demon_buff": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_ruslan_helmet+przyloznik_heal_on_zyvi_kill": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_tarcza_dobryni_nikiticza+bledny_ognik_bounce": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_handel+zerca_spell_shield": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_miecz_kladenet+bogunka_instant_kill_human": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_przyjazn+szeptunka_damage_reduction": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sobowtór+belt_rearrange": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_swaroga+latawiec_mutual_death": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_moc_swiatogora+tur_ranged_magic_immune": {
+      "coPlayed": 2,
+      "coWins": 2
+    },
+    "adventure_twierdza+waz_tugaryn_cleave": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_ady+bzionek_spell_intercept": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_poswiecenie_wandy+bieda_spy_block_draw": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_srebrna_gaaz+alkonost_redirect_counterattack": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sztandar+kikimora_free_attack": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_pioro_zarptaka+siemiargl_cleanse": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_topor_peruna_amulet+belt_rearrange": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_amulet_z_rozeta+strzyga_lifesteal": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_ady+poroniec_copy_ability": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_nekromancja+azdacha_vanilia": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zdrada_popiela+smocze_jajo_hatch": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kwiat_paproci+cmuch_no_counter_received": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_zacmienie_sonca+czart_shift_stats": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_arkona+guslarka_bonus_vs_demon": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kradzież+bugaj_def_to_atk": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_sledovik+zerca_welesa_demon_buff": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_topor_peruna_amulet+baba_jaga_death_growth": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_gusa+polnocnica_mass_paralyze": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_miecz_kladenet+rusalka_mirror_attack": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_matecznik+bugaj_def_to_atk": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_kradzież+bies_reverse_damage": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_handel+bogunka_instant_kill_human": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_trucizna+belt_rearrange": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_swaroga+baba_bonus_vs_type": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_zota_baba+dobroochoczy_no_counter": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_kradzież+rodzanice_scry": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sledovik+wieszczy_spy_burn": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_srebrna_gaaz+konny_cleave": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sztandar+kudlak_conditional_immunity": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sobowtór+bledny_ognik_bounce": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_aska_swietowida+smocze_jajo_hatch": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_kataklizm+kresnik_choose_buff": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_mlot_swaroga+polnocnica_mass_paralyze": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_roda+stukacz_strong_immune": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_aska_swaroga+dziewiatko_deathmark": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zdrada_popiela+brzegina_shield_for_gold": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_laska_welesa+czarnoksieznik_steal_abilities": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_ruslan_helmet+poludnica_kill_weakest": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_ruslan_helmet+junak_double_hit_kill": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_okaleczenie+lapiduch_demon_hunter": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_kradzież+julki_adventure_immunity": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_sledovik+liczyrzepa_choose_type": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_gwizd_soowieja+zmije_glory_on_empty_field": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_amulet_z_rozeta+cmuch_no_counter_received": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_gwizd_soowieja+matoha_anti_magic": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kataklizm+bazyliszek_paralyze": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sobowtór+swiatogor_line_cleave": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_kuka_marzanny+kudlak_conditional_immunity": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_przyjazn+belt_rearrange": {
+      "coPlayed": 1,
+      "coWins": 1
+    },
+    "adventure_zdrada_popiela+wisielec_bounce_both": {
+      "coPlayed": 1,
+      "coWins": 0
+    },
+    "adventure_sledovik+baba_bonus_vs_type": {
       "coPlayed": 1,
       "coWins": 1
     }

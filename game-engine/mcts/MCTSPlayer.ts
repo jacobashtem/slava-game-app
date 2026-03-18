@@ -26,8 +26,8 @@ import {
 } from './StateAdapter'
 import { determinize } from './Determinizer'
 import { GameEngine } from '../GameEngine'
-import { gameStateToLight, cloneLightState } from './LightweightState'
-import { rolloutLight } from './LightweightSimulator'
+import { gameStateToLight, cloneLightState, evaluateLight } from './LightweightState'
+import { rolloutLight, simulateOneTurn } from './LightweightSimulator'
 import { rollout as rolloutFull } from './RolloutPolicy'
 import type { AIDecision } from '../AIPlayer'
 import { GamePhase, CardPosition, GOLD_EDITION_RULES } from '../constants'
@@ -299,7 +299,56 @@ export class MCTSPlayer {
       return [{ type: 'advance_to_combat' }]
     }
 
+    // V6 Depth 1.5: Check opponent response — does our best move survive?
+    const bestWR = bestChild.visits > 0 ? bestChild.wins / bestChild.visits : 0.5
+    const timeLeft = this.config.timeBudgetMs - (Date.now() - startTime)
+    if (bestWR < 0.8 && timeLeft > 20 && root.children.size >= 2) {
+      const oppCheck = this.checkOpponentResponse(bestChild, root, ourSideNum)
+      if (oppCheck) return oppCheck
+    }
+
     return bestChild.macroSteps
+  }
+
+  /**
+   * V6 Depth 1.5: Simulate 1 opponent turn after our best move.
+   * If opponent's response drops our eval below 0.3, try 2nd-best child.
+   * Returns alternative macroSteps if best move is catastrophic, null otherwise.
+   */
+  private checkOpponentResponse(
+    bestChild: MCTSNode,
+    root: MCTSNode,
+    ourSideNum: number,
+  ): MCTSMove[] | null {
+    try {
+      // Simulate opponent's turn on LightState (cheap — ~2ms)
+      const lightState = cloneLightState(gameStateToLight(bestChild.state))
+      // Opponent plays 1 turn (creature + adventure + combat)
+      simulateOneTurn(lightState)
+
+      // Evaluate from our perspective after opponent's response
+      const evalAfter = evaluateLight(lightState, ourSideNum)
+
+      // If position collapsed (< 0.3), try 2nd-best
+      if (evalAfter < 0.3) {
+        const sorted = [...root.children.values()]
+          .filter(c => c !== bestChild && c.macroSteps && c.macroSteps.length > 0)
+          .sort((a, b) => b.visits - a.visits)
+        if (sorted.length > 0) {
+          const secondBest = sorted[0]!
+          // Check 2nd-best too
+          const light2 = cloneLightState(gameStateToLight(secondBest.state))
+          simulateOneTurn(light2)
+          const eval2 = evaluateLight(light2, ourSideNum)
+          if (eval2 > evalAfter + 0.05) {
+            return secondBest.macroSteps!
+          }
+        }
+      }
+    } catch {
+      // LightweightSimulator import or simulation failed — skip check
+    }
+    return null
   }
 
   // ===== FAZA 3: TREE REUSE =====

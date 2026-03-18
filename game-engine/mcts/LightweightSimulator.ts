@@ -1724,6 +1724,11 @@ export interface LightRolloutResult {
   depth: number
 }
 
+/** V6: Simulate exactly 1 turn (current player). Used by Depth 1.5 opponent response check. */
+export function simulateOneTurn(s: LightState): boolean {
+  return simulateTurn(s)
+}
+
 export function rolloutLight(
   startState: LightState,
   ourSide: number,
