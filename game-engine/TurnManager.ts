@@ -404,6 +404,8 @@ export function playAdventure(
       throw new Error(`[TurnManager] Brak PS. Potrzebujesz ${adventureCost} PS na ulepszony efekt.`)
     }
     currentPlayer[currency] -= adventureCost
+    const sideLabel = newState.currentTurn === 'player1' ? 'Ty' : 'AI'
+    log.push(addLog(newState, `${sideLabel}: Ulepszenie! -${adventureCost} ${currency === 'glory' ? 'Sława' : 'Złoto'} (pozostało: ${currentPlayer[currency]})`, currency === 'glory' ? 'glory' : 'gold'))
   }
   currentPlayer.adventuresPlayedThisTurn += 1
 
@@ -878,13 +880,16 @@ export function processEndPhase(state: GameState): { newState: GameState; log: L
 
   if (hasCreaturesOnField && !anyCreatureAttacked) {
     currentPlayer.consecutivePasses++
+    const sideLabel = currentSide === 'player1' ? 'Ty' : 'AI'
     if (currentPlayer.consecutivePasses >= 3) {
       // -1 PS za pasowanie 3x z rzędu
       const currency = newState.gameMode === 'slava' ? 'glory' : 'gold'
       if (currentPlayer[currency] > 0) {
         currentPlayer[currency]--
-        log.push(addLog(newState, `${currentSide === 'player1' ? 'Ty' : 'AI'}: -1 PS — kara za bierność! (${currentPlayer.consecutivePasses} tur bez ataku)`, 'gold'))
+        log.push(addLog(newState, `${sideLabel}: -1 ${currency === 'glory' ? 'Sława' : 'Złoto'} — kara za bierność! (${currentPlayer.consecutivePasses} tur bez ataku, ${currency}: ${currentPlayer[currency]})`, 'gold'))
       }
+    } else if (currentPlayer.consecutivePasses >= 2) {
+      log.push(addLog(newState, `${sideLabel}: Uwaga! ${currentPlayer.consecutivePasses}/3 pasów — jeszcze ${3 - currentPlayer.consecutivePasses} i stracisz PS!`, 'info'))
     }
   } else {
     currentPlayer.consecutivePasses = 0

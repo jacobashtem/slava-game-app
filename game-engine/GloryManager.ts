@@ -197,7 +197,9 @@ export function performPlunder(state: GameState, attackerSide: PlayerSide): LogE
     if (defender.gold <= 0) return []
     defender.gold = Math.max(0, defender.gold - 1)
     attacker.gold += 1
-    log.push(addLog(state, `${label}: ŁUPIENIE! Wróg bez obrony — kradniesz 1 PS!`, 'gold'))
+    const atkLabel = attackerSide === 'player1' ? 'Gracz' : 'AI'
+    const defLabel = defenderSide === 'player1' ? 'Gracz' : 'AI'
+    log.push(addLog(state, `${label}: ŁUPIENIE! Wróg bez obrony — kradniesz 1 Złoto! (${atkLabel}: ${attacker.gold}, ${defLabel}: ${defender.gold})`, 'gold'))
   }
 
   return log
@@ -248,6 +250,12 @@ export function harvestSoul(state: GameState, killerSide: PlayerSide, killedCard
     ? SLAVA_RULES.SOUL_HARVEST_THRESHOLD
     : GOLD_EDITION_RULES.SOUL_HARVEST_THRESHOLD
 
+  // Log: soul collection (always)
+  log.push(addLog(state,
+    `${label}: +${soulValue} dusz za ${killedCard.cardData.name} (${player.soulPoints}/${threshold})`,
+    'info'
+  ))
+
   // Ile PS zdobyto?
   const psGained = Math.floor(player.soulPoints / threshold)
   const newSoulPoints = player.soulPoints % threshold
@@ -259,10 +267,11 @@ export function harvestSoul(state: GameState, killerSide: PlayerSide, killedCard
     } else {
       player.gold += psGained
     }
-    const currencyLabel = state.gameMode === 'slava' ? 'Sława' : 'PS'
+    const currencyLabel = state.gameMode === 'slava' ? 'Sława' : 'Złoto'
+    const totalPS = state.gameMode === 'slava' ? player.glory : player.gold
     // Osobny log o zdobyciu PS (dla banneru)
     log.push(addLog(state,
-      `${label}: ŻNIWO DUSZ! +${psGained} ${currencyLabel}! (zebrano ${threshold} dusz)`,
+      `${label}: ŻNIWO DUSZ! +${psGained} ${currencyLabel}! (razem: ${totalPS})`,
       state.gameMode === 'slava' ? 'glory' : 'gold'
     ))
   }
