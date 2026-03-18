@@ -189,7 +189,7 @@ export class MCTSPlayer {
 
     // Faza 3: Try to reuse visits from previous tree
     if (this.config.useTreeReuse && this.previousRoot) {
-      this.tryReuseTree(root, childLightStates)
+      try { this.tryReuseTree(root, childLightStates) } catch {}
     }
 
     // Faza 4: Compute experience priors
@@ -292,7 +292,7 @@ export class MCTSPlayer {
     // Faza 3: Save root for reuse
     if (this.config.useTreeReuse) {
       this.previousRoot = root
-      this.previousHash = computeHash(gameStateToLight(rootState))
+      try { this.previousHash = computeHash(gameStateToLight(rootState)) } catch { this.previousHash = null }
     }
 
     if (!bestChild?.macroSteps || bestChild.macroSteps.length === 0) {
