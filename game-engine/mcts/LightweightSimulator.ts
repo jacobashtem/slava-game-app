@@ -31,6 +31,47 @@ const PS_TARGET = GOLD_EDITION_RULES.GLORY_WIN_TARGET
 const MAX_FIELD = GOLD_EDITION_RULES.MAX_FIELD_CREATURES
 
 // ===================================================================
+// V2 SOFTMAX SAMPLING — probabilistic rollout decisions
+// ===================================================================
+
+/** Temperature for rollout softmax (after [0,1] normalization). Lower = more greedy. */
+const ROLLOUT_TEMP = 0.4
+
+/**
+ * Sample index from softmax distribution over normalized scores.
+ * Scores are normalized to [0,1] internally, so temperature is scale-independent.
+ * Returns argmax when items <= 1. ~0.0002ms for 5 items.
+ */
+function softmaxSample(scores: number[]): number {
+  const n = scores.length
+  if (n <= 1) return 0
+
+  // Normalize to [0, 1]
+  let maxS = scores[0]!, minS = scores[0]!
+  for (let i = 1; i < n; i++) {
+    if (scores[i]! > maxS) maxS = scores[i]!
+    if (scores[i]! < minS) minS = scores[i]!
+  }
+  const range = maxS - minS
+  if (range < 0.001) return Math.floor(Math.random() * n) // all equal → random
+
+  // Softmax with temperature
+  let sum = 0
+  const exps = new Array<number>(n)
+  for (let i = 0; i < n; i++) {
+    exps[i] = Math.exp(((scores[i]! - minS) / range) / ROLLOUT_TEMP)
+    sum += exps[i]!
+  }
+
+  let r = Math.random() * sum
+  for (let i = 0; i < n; i++) {
+    r -= exps[i]!
+    if (r <= 0) return i
+  }
+  return n - 1
+}
+
+// ===================================================================
 // CREATURE SCORING (dla rollout AI decisions)
 // ===================================================================
 
@@ -676,12 +717,17 @@ function simulateTurn(s: LightState): boolean {
     const hasNoLimit = hasFieldEffect(s, side, 'zupan_no_field_limit') || hasFieldEffect(s, side, 'adventure_arkona')
     if (fieldCount < MAX_FIELD || hasNoLimit) {
       const hand = s.hands[side]!
-      let bestIdx = -1; let bestScore = -1
+      // V2: Softmax selection — probabilistic creature play for diverse rollouts
+      const creatureIdxs: number[] = []
+      const creatureScores: number[] = []
       for (let i = 0; i < hand.length; i++) {
         if (hand[i]!.cardType !== 0) continue
-        const sc = quickScore(hand[i]!, s.round)
-        if (sc > bestScore) { bestScore = sc; bestIdx = i }
+        creatureIdxs.push(i)
+        creatureScores.push(quickScore(hand[i]!, s.round))
       }
+      const bestIdx = creatureIdxs.length > 0
+        ? creatureIdxs[softmaxSample(creatureScores)]!
+        : -1
       if (bestIdx >= 0) {
         const card = hand[bestIdx]!
         const lineOffset = card.attackType === 2 ? 2 : card.attackType === 3 ? 1 : 0
@@ -772,7 +818,7 @@ function simulateTurn(s: LightState): boolean {
     if (targets.length === 0) continue
 
     // Target scoring with effectThreatTier + priority-kill
-    let bestTarget = targets[0]!; let bestScore = -999
+    const targetScores: number[] = []
     for (const t of targets) {
       let sc = 0
       const dmg = calculateDamage(attacker, t, allCards)
@@ -783,34 +829,35 @@ function simulateTurn(s: LightState): boolean {
       if (canKill && willSurvive) sc += 50
       if (!willSurvive && !canKill) sc -= 80
       sc += t.atk * 2
-      // V5: effectThreatTier bonus for targeting dangerous creatures
       sc += effectThreatTier(t.effectId) * 10
-      // V5: priority-kill bonus (healers/growers)
       sc += priorityKillBonus(t.effectId)
       if (canKill) {
         const after = s.soulPoints[side]! + t.soulValue
         if (after >= SOUL_THRESHOLD) sc += 40
         if (s.ps[side]! + Math.floor(after / SOUL_THRESHOLD) >= PS_TARGET) sc += 200
       }
-      // V5: accept favorable trades — suicide if target is much more valuable
       if (!willSurvive && canKill) {
         const targetKV = t.atk * 1.5 + t.def * 0.5 + effectThreatTier(t.effectId) * 3
         const attackerKV = attacker.atk * 1.5 + attacker.def * 0.5 + effectThreatTier(attacker.effectId) * 3
         if (targetKV > attackerKV * 1.3) sc += 30
       }
-      if (sc > bestScore) { bestScore = sc; bestTarget = t }
+      targetScores.push(sc)
     }
 
-    // V5: Anti-stall — force attacks when consecutive passes are building up
+    // V2: Check if ANY target is worth attacking (threshold on best available)
+    const bestScore = Math.max(...targetScores)
     const forceAttack = s.consecutivePasses[side]! >= 2 || (s.ps[side]! <= 1 && s.consecutivePasses[side]! >= 1)
     if (bestScore < -30 && !isLosing && !forceAttack) continue
+
+    // V2: Softmax target selection — WHICH target is probabilistic
+    const targetIdx = softmaxSample(targetScores)
 
     // === EXECUTE ATTACK ===
     attacker.hasAttacked = true
     didAttack = true
     if (!isFreeAttack) attacksUsed++
 
-    const target = bestTarget
+    const target = targets[targetIdx]!
     const dmg = calculateDamage(attacker, target, allCards)
     target.def -= dmg
 
@@ -1049,14 +1096,12 @@ function playAdventure(s: LightState, side: number): void {
   const myCards = lightFieldCards(s, side)
   const oppCards = lightFieldCards(s, opp)
 
-  // Pick best adventure (simplified scoring)
-  let bestIdx = 0; let bestScore = -1
-  for (let i = 0; i < advs.length; i++) {
-    const sc = scoreAdventure(advs[i]!, s, side)
-    if (sc > bestScore) { bestScore = sc; bestIdx = i }
-  }
-  if (bestScore < 0) return
+  // V2: Softmax adventure selection
+  const advScores = advs.map(a => scoreAdventure(a, s, side))
+  const bestActualScore = Math.max(...advScores)
+  if (bestActualScore < 0) return // no adventure worth playing
 
+  const bestIdx = softmaxSample(advScores)
   const adv = advs[bestIdx]!
 
   // V5: Smart enhanced — use canAffordEnhancedSmart
