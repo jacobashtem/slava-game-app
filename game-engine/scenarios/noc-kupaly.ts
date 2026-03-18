@@ -3,7 +3,7 @@
  * Pelna narracja, prebuilt deck, specjalne zasady.
  */
 
-import type { ScenarioDefinition } from './types'
+import type { ScenarioDefinition, TriggerRule } from './types'
 
 export const NOC_KUPALY: ScenarioDefinition = {
   id: 'noc_kupaly',
@@ -342,25 +342,28 @@ export const NOC_KUPALY: ScenarioDefinition = {
         { line: 1, effectId: 'pies_upior_scenario', position: 'attack', customStats: { atk: 2, def: 1 } },
       ],
       winCondition: 'survive',
-      specialRules: [
+      survivalRounds: 4,
+      triggerRules: [
         {
-          type: 'survival',
-          survivalRounds: 4,
+          id: 'enc6_respawn_mysliwy',
+          condition: { event: 'on_round_start' },
+          actions: [{
+            type: 'respawn_from_graveyard',
+            targetEffectId: 'dziki_mysliwy_return_on_kill',
+            line: 1,
+            position: 'attack',
+          }],
         },
         {
-          type: 'respawn',
-          targetEffectId: 'dziki_mysliwy_return_on_kill',
-          respawnDelay: 1,
-        },
-        {
-          type: 'spawn_per_turn',
-          spawnData: {
-            effectId: 'pies_upior_scenario',
-            name: 'Pies-upior',
-            atk: 2,
-            def: 1,
+          id: 'enc6_spawn_pies',
+          condition: { event: 'on_round_start' },
+          actions: [{
+            type: 'spawn_creature',
+            spawnData: { effectId: 'pies_upior_scenario', name: 'Pies-upior', atk: 2, def: 1 },
+            line: 1,
+            position: 'attack',
             maxOnField: 3,
-          },
+          }],
         },
       ],
       rewards: [
@@ -407,11 +410,15 @@ export const NOC_KUPALY: ScenarioDefinition = {
       ],
       winCondition: 'kill_target',
       winTarget: 'leszy_post_attack_defend',
-      specialRules: [
+      triggerRules: [
         {
-          type: 'immune_while_guard',
-          targetEffectId: 'leszy_post_attack_defend',
-          guardEffectIds: ['bugaj_def_to_atk', 'krol_wezow_always_counter'],
+          id: 'enc7_leszy_immunity',
+          condition: { event: 'on_state_change' },
+          actions: [{
+            type: 'set_immune',
+            targetEffectId: 'leszy_post_attack_defend',
+            guardEffectIds: ['bugaj_def_to_atk', 'krol_wezow_always_counter'],
+          }],
         },
       ],
       rewards: [],

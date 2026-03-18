@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useScenarioStore } from '../../stores/scenarioStore'
 import { useGameStore } from '../../stores/gameStore'
@@ -9,10 +9,15 @@ definePageMeta({ ssr: false })
 const scenario = useScenarioStore()
 const game = useGameStore()
 const gameReady = ref(false)
+const showLoadPrompt = ref(false)
 
 onMounted(async () => {
-  // Start scenario
-  scenario.startScenario('noc_kupaly')
+  // Check for saved campaign
+  if (scenario.hasSave('noc_kupaly')) {
+    showLoadPrompt.value = true
+  } else {
+    startFresh()
+  }
 
   // Preload WebGPU modules + minimum delay
   const minDelay = new Promise(r => setTimeout(r, 1500))
@@ -28,47 +33,39 @@ onUnmounted(() => {
   scenario.reset()
 })
 
-// ===== WATCHERS for game state changes =====
-// state is shallowRef — triggers on every game action (each returns new state clone)
+function startFresh() {
+  showLoadPrompt.value = false
+  scenario.startScenario('noc_kupaly')
+}
 
-// Watch for win condition + Leszy immunity after each state change
+function loadSaved() {
+  showLoadPrompt.value = false
+  if (!scenario.loadCampaign('noc_kupaly')) {
+    // Load failed — start fresh
+    scenario.startScenario('noc_kupaly')
+  }
+}
+
+// Watch for state changes to emit on_state_change events (win condition checks, immunity)
 watch(
   () => game.state,
   (newState) => {
     if (!scenario.isScenarioMode || scenario.phase !== 'combat') return
     if (!newState) return
-
-    // Process Leszy immunity (enc7): restore DEF if guards alive
-    const immuneTriggered = scenario.processLeszyImmunity(newState)
-    if (immuneTriggered) {
-      // Force reactivity: shallowRef won't detect nested mutation
-      game.forceStateUpdate()
-    }
-
-    // Check win condition
-    scenario.checkWinCondition()
+    scenario.processGameEvent('on_state_change')
   },
 )
 
-// Watch round changes for survival counter + spawn rules
-let _lastProcessedRound = 0
-watch(
-  () => game.state?.roundNumber,
-  (newRound) => {
-    if (!scenario.isScenarioMode || scenario.phase !== 'combat') return
-    if (!game.state || !newRound || newRound === _lastProcessedRound) return
-    _lastProcessedRound = newRound
-
-    // Process turn-start special rules (spawns, respawns)
-    const changed = scenario.processTurnStartRules(game.state)
-    if (changed) {
-      game.forceStateUpdate()
-    }
-
-    // Check win after round advance (survival)
-    scenario.checkWinCondition()
-  },
-)
+// Theme CSS variables
+const themeStyles = computed(() => {
+  const theme = scenario.currentTheme
+  if (!theme) return {}
+  const styles: Record<string, string> = {}
+  if (theme.backgroundGradient) styles['--sc-bg'] = theme.backgroundGradient
+  if (theme.ambientColor) styles['--sc-ambient'] = theme.ambientColor
+  if (theme.fogDensity !== undefined) styles['--sc-fog-opacity'] = String(theme.fogDensity)
+  return styles
+})
 
 function goHome() {
   scenario.reset()
@@ -77,12 +74,36 @@ function goHome() {
 </script>
 
 <template>
-  <div class="scenario-page">
+  <div class="scenario-page" :style="themeStyles">
+    <!-- Load prompt -->
+    <div v-if="showLoadPrompt" class="sc-load-prompt-overlay">
+      <div class="sc-load-prompt">
+        <Icon icon="game-icons:campfire" class="sc-load-icon" />
+        <h2 class="sc-load-title">Zapisana kampania</h2>
+        <p class="sc-load-text">Masz zapisany postep. Kontynuowac?</p>
+        <div class="sc-load-btns">
+          <button class="sc-btn-retry" @click="loadSaved">
+            <Icon icon="game-icons:save-arrow" /> Kontynuuj
+          </button>
+          <button class="sc-btn-quit" @click="startFresh">
+            <Icon icon="game-icons:fire" /> Nowa gra
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Narrative overlay -->
     <ScenarioNarrative
-      v-if="scenario.phase === 'narrative' || scenario.phase === 'complete'"
+      v-if="(scenario.phase === 'narrative' || scenario.phase === 'complete') && !showLoadPrompt"
       :lines="scenario.narrative"
       @dismiss="scenario.phase === 'complete' ? goHome() : scenario.dismissNarrative()"
+    />
+
+    <!-- Mid-combat narrative interruption -->
+    <ScenarioNarrative
+      v-if="scenario.narrativeInterruption && scenario.phase === 'combat'"
+      :lines="scenario.narrativeInterruption"
+      @dismiss="scenario.dismissInterruption()"
     />
 
     <!-- Rewards overlay -->
@@ -118,6 +139,10 @@ function goHome() {
         <p>Przygotowywanie...</p>
       </div>
     </div>
+
+    <!-- Theme ambient overlay -->
+    <div v-if="scenario.currentTheme?.ambientColor" class="sc-ambient-overlay" />
+    <div v-if="scenario.currentTheme?.fogDensity" class="sc-fog-overlay" />
   </div>
 </template>
 
@@ -126,7 +151,7 @@ function goHome() {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #04030a;
+  background: var(--sc-bg, #04030a);
   position: relative;
 }
 
@@ -137,6 +162,26 @@ function goHome() {
 
 .sc-board :deep(.game-board) {
   height: 100%;
+}
+
+/* ===== THEME OVERLAYS ===== */
+.sc-ambient-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--sc-ambient, transparent);
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: overlay;
+  opacity: 0.3;
+}
+
+.sc-fog-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(4, 3, 10, 0.8) 100%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: var(--sc-fog-opacity, 0);
 }
 
 /* ===== LOADING ===== */
@@ -159,6 +204,48 @@ function goHome() {
 @keyframes pulse {
   0%, 100% { opacity: 0.3; transform: scale(1); }
   50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+/* ===== LOAD PROMPT ===== */
+.sc-load-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 3, 10, 0.95);
+}
+
+.sc-load-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 36px 44px;
+  text-align: center;
+}
+
+.sc-load-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: rgba(200, 190, 170, 0.7);
+  margin: 0;
+}
+
+.sc-load-text {
+  font-size: 13px;
+  color: rgba(148, 130, 100, 0.5);
+  font-style: italic;
+  font-family: Georgia, serif;
+  margin: 0;
+}
+
+.sc-load-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 /* ===== LOSE OVERLAY ===== */

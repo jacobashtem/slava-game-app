@@ -1078,31 +1078,31 @@ export const useGameStore = defineStore('game', () => {
         if (engine.getCurrentPhase() === GamePhase.COMBAT) {
           let aiDecisions = aiPlayer.planTurn(engine.getState())
 
-          // Fallback: if MCTS returns no attacks, manually generate attack decisions
-          // (common in scenario mode where AI has no hand/deck)
+          // Scenario fallback: if MCTS returns no attacks and AI has no deck/hand,
+          // generate basic attack-all decisions (scenario enemies are field-only)
           const hasAttacks = aiDecisions.some(d => d.type === 'attack')
           if (!hasAttacks && state.value) {
             const s = engine.getState()
-            const aiField = getAllCreaturesOnField(s, 'player2')
-            const playerField = getAllCreaturesOnField(s, 'player1')
-            const fallbackDecisions: typeof aiDecisions = []
-            // First: set all to attack position
-            for (const c of aiField) {
-              if (c.position !== CardPosition.ATTACK && !c.cannotAttack) {
-                fallbackDecisions.push({ type: 'change_position', cardInstanceId: c.instanceId, targetPosition: CardPosition.ATTACK })
-              }
-            }
-            // Then: each attacker targets first valid enemy
-            for (const attacker of aiField) {
-              if (attacker.cannotAttack) continue
-              for (const target of playerField) {
-                if (canAttack(s, attacker, target).valid) {
-                  fallbackDecisions.push({ type: 'attack', cardInstanceId: attacker.instanceId, targetInstanceId: target.instanceId })
-                  break
+            if (s.players.player2.hand.length === 0 && s.players.player2.deck.length === 0) {
+              const aiField = getAllCreaturesOnField(s, 'player2')
+              const playerField = getAllCreaturesOnField(s, 'player1')
+              const fallbackDecisions: typeof aiDecisions = []
+              for (const c of aiField) {
+                if (c.position !== CardPosition.ATTACK && !c.cannotAttack) {
+                  fallbackDecisions.push({ type: 'change_position', cardInstanceId: c.instanceId, targetPosition: CardPosition.ATTACK })
                 }
               }
+              for (const attacker of aiField) {
+                if (attacker.cannotAttack) continue
+                for (const target of playerField) {
+                  if (canAttack(s, attacker, target).valid) {
+                    fallbackDecisions.push({ type: 'attack', cardInstanceId: attacker.instanceId, targetInstanceId: target.instanceId })
+                    break
+                  }
+                }
+              }
+              if (fallbackDecisions.length > 0) aiDecisions = fallbackDecisions
             }
-            if (fallbackDecisions.length > 0) aiDecisions = fallbackDecisions
           }
 
           for (const d of aiDecisions) {
@@ -1136,6 +1136,20 @@ export const useGameStore = defineStore('game', () => {
         if (!state.value?.pendingInteraction || state.value.pendingInteraction.respondingPlayer !== 'player1') {
           await playPoisonVFX('player2')
           try { state.value = engine.aiEndTurn() } catch { try { state.value = engine.forcePlayerTurn() } catch {} }
+        }
+
+        // Scenario event: round start triggers (spawns, respawns, etc.)
+        if (state.value) {
+          try {
+            const { useScenarioStore } = await import('./scenarioStore')
+            const scenarioStore = useScenarioStore()
+            if (scenarioStore.isScenarioMode) {
+              scenarioStore.processGameEvent('on_round_start', { roundNumber: state.value.roundNumber })
+              scenarioStore.processGameEvent('on_state_change')
+              // Wait for narrative interruption if any
+              await scenarioStore.waitForNarrativeDismissal()
+            }
+          } catch {}
         }
       } catch (e) {
         if (import.meta.dev) console.warn('[Arena AI] error:', e)

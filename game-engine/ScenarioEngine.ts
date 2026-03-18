@@ -1,10 +1,17 @@
 /**
  * ScenarioEngine — zarzadza kampania (scenario lifecycle).
- * Setup encounter, persistent deck, win check, rewards.
+ * Setup encounter, persistent deck, win check, rewards, trigger processing.
  * Pure TS, zero zaleznosci Vue.
+ *
+ * V2 — trigger/action system, save/load, themes, named characters.
  */
 
-import type { ScenarioDefinition, EncounterDefinition, NarrativeLine, EncounterReward, SpecialRule } from './scenarios/types'
+import type {
+  ScenarioDefinition, EncounterDefinition, NarrativeLine,
+  EncounterReward, TriggerRule, TriggerAction, TriggerEvent,
+  BattlefieldTheme, NamedCharacter, CampaignSaveState, SerializedCard,
+  SyntheticCreatureData,
+} from './scenarios/types'
 import type { GameState, CardInstance, CreatureCardData, AdventureCardData } from './types'
 import { GamePhase, BattleLine, CardPosition, AttackType, Domain } from './constants'
 import { createInitialGameState, getAllCreaturesOnField } from './GameStateUtils'
@@ -14,6 +21,9 @@ import {
   createAdventureInstance,
 } from './CardFactory'
 
+import { TriggerProcessor, type TriggerEventData } from './scenarios/TriggerProcessor'
+import { ActionExecutor, type ActionResult } from './scenarios/ActionExecutor'
+
 import istotypData from '../data/Slava_Vol2_Istoty.json'
 import przygodyData from '../data/Slava_Vol2_KartyPrzygody.json'
 
@@ -21,10 +31,14 @@ const _factory = new CardFactory()
 _factory.loadCreatures(istotypData as any)
 _factory.loadAdventures(przygodyData as any)
 
-/** Synthetic creature data for scenario-only cards (not in JSON). */
-function createSyntheticCreature(effectId: string, name: string, atk: number, def: number): CreatureCardData {
+// ===== SYNTHETIC CREATURE HELPER =====
+
+let _syntheticIdCounter = 9000
+
+function createSyntheticCreatureData(effectId: string, name: string, atk: number, def: number): CreatureCardData {
+  _syntheticIdCounter++
   return {
-    id: 9000 + Math.floor(Math.random() * 1000),
+    id: _syntheticIdCounter,
     cardType: 'creature',
     domain: Domain.WELES,
     name,
@@ -44,28 +58,74 @@ function createSyntheticCreature(effectId: string, name: string, atk: number, de
   }
 }
 
+// ===== MAIN CLASS =====
+
+export interface GameEventResult {
+  /** Narrative interruptions to show. */
+  narratives: NarrativeLine[][]
+  /** Whether combat should pause for each narrative. */
+  pauseCombat: boolean[]
+  /** If set, encounter ends immediately. */
+  encounterEnded?: 'player_win' | 'player_lose'
+  /** Whether game state was mutated. */
+  stateChanged: boolean
+  /** Immunity changes (effectId → immune). */
+  immunityChanges: Map<string, boolean>
+}
+
 export class ScenarioEngine {
   readonly scenario: ScenarioDefinition
   private _encounterIdx = 0
-  /** Player's persistent deck state (cards not yet drawn). */
   private _playerDeck: CardInstance[] = []
-  /** Player's persistent hand (carried between encounters). */
   private _playerHand: CardInstance[] = []
-  /** Player's persistent graveyard. */
   private _playerGraveyard: CardInstance[] = []
-  /** Persistent buffs: effectId -> stat/value. */
   private _persistentBuffs: Map<string, { stat: 'atk' | 'def'; value: number }> = new Map()
-  /** Tracks whether initial deck was built. */
   private _deckBuilt = false
+
+  private _triggerProcessor: TriggerProcessor
+  private _actionExecutor: ActionExecutor
+
+  /** Runtime-mutable win condition (trigger rules can change it). */
+  private _runtimeWinCondition?: 'kill_all' | 'kill_target' | 'survive'
+  private _runtimeWinTarget?: string
+  private _runtimeSurvivalRounds?: number
 
   constructor(scenario: ScenarioDefinition) {
     this.scenario = scenario
+    this._triggerProcessor = new TriggerProcessor(scenario.globalTriggerRules ?? [])
+    this._actionExecutor = new ActionExecutor()
   }
+
+  // ===== ACCESSORS =====
 
   get encounterIdx(): number { return this._encounterIdx }
   get encounterCount(): number { return this.scenario.encounters.length }
   get currentEncounter(): EncounterDefinition { return this.scenario.encounters[this._encounterIdx]! }
   get playerGraveyard(): CardInstance[] { return this._playerGraveyard }
+
+  /** Get battlefield theme for current encounter (encounter overrides scenario default). */
+  getTheme(): BattlefieldTheme | null {
+    return this.currentEncounter.theme ?? this.scenario.defaultTheme ?? null
+  }
+
+  /** Get named characters for current encounter. */
+  getCharacters(): NamedCharacter[] {
+    return this.currentEncounter.characters ?? []
+  }
+
+  /** Get AI difficulty for current encounter. */
+  getAIDifficulty(): string | undefined {
+    return this.currentEncounter.aiDifficulty
+  }
+
+  /** Get effective win condition (may be overridden by trigger rules at runtime). */
+  getEffectiveWinCondition(): { type: string; target?: string; survivalRounds?: number } {
+    return {
+      type: this._runtimeWinCondition ?? this.currentEncounter.winCondition,
+      target: this._runtimeWinTarget ?? this.currentEncounter.winTarget,
+      survivalRounds: this._runtimeSurvivalRounds ?? this.currentEncounter.survivalRounds,
+    }
+  }
 
   // ===== LIFECYCLE =====
 
@@ -76,7 +136,15 @@ export class ScenarioEngine {
     this._playerGraveyard = []
     this._persistentBuffs = new Map()
     this._deckBuilt = false
+    this._runtimeWinCondition = undefined
+    this._runtimeWinTarget = undefined
+    this._runtimeSurvivalRounds = undefined
+
+    this._triggerProcessor.reset()
+    this._triggerProcessor.setGlobalRules(this.scenario.globalTriggerRules ?? [])
+
     this.buildInitialDeck()
+
     return {
       narrative: this.scenario.prologNarrative,
       encounterIndex: 0,
@@ -92,7 +160,7 @@ export class ScenarioEngine {
     freshState.turnNumber = 1
     freshState.currentTurn = 'player1'
 
-    // Player: no glory win — scenario manages win conditions
+    // No glory win — scenario manages win conditions
     freshState.players.player1.glory = 99
     freshState.players.player2.glory = 99
 
@@ -101,7 +169,7 @@ export class ScenarioEngine {
     freshState.players.player1.deck = [...this._playerDeck]
     freshState.players.player1.graveyard = [...this._playerGraveyard]
 
-    // Apply persistent buffs to hand + deck cards
+    // Apply persistent buffs
     this.applyBuffsToCards(freshState.players.player1.hand)
     this.applyBuffsToCards(freshState.players.player1.deck)
 
@@ -119,15 +187,64 @@ export class ScenarioEngine {
       inst.isRevealed = true
       inst.roundEnteredPlay = 1
       inst.turnsInPlay = 1
+      if (enemy.displayName) {
+        inst.metadata.heroName = enemy.displayName
+      }
       freshState.players.player2.field.lines[line].push(inst)
     }
+
+    // Reset runtime win overrides
+    this._runtimeWinCondition = undefined
+    this._runtimeWinTarget = undefined
+    this._runtimeSurvivalRounds = undefined
+
+    // Load encounter trigger rules
+    this._triggerProcessor.loadEncounter(enc.triggerRules ?? [])
 
     return freshState
   }
 
+  // ===== TRIGGER EVENT PROCESSING =====
+
+  /**
+   * Process a game event through the trigger system.
+   * Called by the store after each game action.
+   */
+  processGameEvent(
+    event: TriggerEvent,
+    state: GameState,
+    data?: TriggerEventData,
+  ): GameEventResult {
+    // Get actions from trigger processor
+    const actions = this._triggerProcessor.processEvent(event, state, data)
+
+    // Handle change_win_condition actions before executing
+    for (const action of actions) {
+      if (action.type === 'change_win_condition') {
+        if (action.winCondition) this._runtimeWinCondition = action.winCondition
+        if (action.winTarget) this._runtimeWinTarget = action.winTarget
+        if (action.survivalRounds) this._runtimeSurvivalRounds = action.survivalRounds
+      }
+    }
+
+    // Execute actions against state
+    const actionResult = this._actionExecutor.execute(actions, state)
+
+    return {
+      narratives: actionResult.narratives,
+      pauseCombat: actionResult.pauseCombat,
+      encounterEnded: actionResult.encounterEnded,
+      stateChanged: actionResult.stateChanged,
+      immunityChanges: actionResult.immunityChanges,
+    }
+  }
+
+  // ===== WIN CONDITION CHECK =====
+
   /** Check encounter win/lose after each state change. */
   checkEncounterWin(state: GameState, roundNumber: number): 'player_win' | 'player_lose' | null {
     const enc = this.currentEncounter
+    const winCondition = this._runtimeWinCondition ?? enc.winCondition
 
     // Player lose: 0 creatures on field + 0 in hand + 0 in deck
     const playerField = getAllCreaturesOnField(state, 'player1')
@@ -137,24 +254,25 @@ export class ScenarioEngine {
       return 'player_lose'
     }
 
-    switch (enc.winCondition) {
+    switch (winCondition) {
       case 'kill_all': {
         const enemyField = getAllCreaturesOnField(state, 'player2')
         if (enemyField.length === 0) return 'player_win'
         break
       }
       case 'kill_target': {
-        if (!enc.winTarget) break
+        const target = this._runtimeWinTarget ?? enc.winTarget
+        if (!target) break
         const enemyField = getAllCreaturesOnField(state, 'player2')
         const targetAlive = enemyField.some(c =>
-          (c.cardData as CreatureCardData).effectId === enc.winTarget
+          (c.cardData as CreatureCardData).effectId === target,
         )
         if (!targetAlive) return 'player_win'
         break
       }
       case 'survive': {
-        const survivalRule = enc.specialRules?.find(r => r.type === 'survival')
-        if (survivalRule && roundNumber > (survivalRule.survivalRounds ?? 4)) {
+        const survRounds = this._runtimeSurvivalRounds ?? enc.survivalRounds
+        if (survRounds && roundNumber > survRounds) {
           return 'player_win'
         }
         break
@@ -163,6 +281,8 @@ export class ScenarioEngine {
 
     return null
   }
+
+  // ===== REWARDS =====
 
   /** Apply rewards after encounter win. Returns modified state. */
   applyRewards(state: GameState, graveyardChoice?: string): GameState {
@@ -192,15 +312,12 @@ export class ScenarioEngine {
           break
         }
         case 'buff_creature': {
-          // This will be applied via UI choice — store the buff persistently
-          // For now, mark it in persistentBuffs if target specified
           if (reward.target) {
             this._persistentBuffs.set(reward.target, {
               stat: reward.stat ?? 'def',
               value: reward.value ?? 2,
             })
           }
-          // If no target, scenarioStore will handle player choice
           break
         }
         case 'recover_graveyard': {
@@ -233,16 +350,14 @@ export class ScenarioEngine {
           break
         }
         case 'narrative_only':
-          // No mechanical effect
           break
       }
     }
     return state
   }
 
-  /** Apply a buff chosen by player (e.g. enc2 +2 DEF to chosen creature). */
+  /** Apply a buff chosen by player. */
   applyBuffChoice(state: GameState, targetInstanceId: string, stat: 'atk' | 'def', value: number): void {
-    // Find creature anywhere (field, hand, deck)
     const allCards = [
       ...getAllCreaturesOnField(state, 'player1'),
       ...state.players.player1.hand,
@@ -259,7 +374,6 @@ export class ScenarioEngine {
       card.currentStats.maxDefense += value
     }
 
-    // Also persist for future encounters
     const effectId = (card.cardData as CreatureCardData).effectId
     const existing = this._persistentBuffs.get(effectId)
     if (existing && existing.stat === stat) {
@@ -269,12 +383,12 @@ export class ScenarioEngine {
     }
   }
 
-  /** Snapshot player state from GameState after encounter (hand/deck/graveyard). */
+  // ===== ENCOUNTER LIFECYCLE =====
+
+  /** Snapshot player state from GameState after encounter. */
   snapshotPlayerState(state: GameState): void {
-    // Field creatures go back to hand (alive ones)
     const fieldCreatures = getAllCreaturesOnField(state, 'player1')
 
-    // Reset combat state for all surviving creatures
     const survivors = [...fieldCreatures, ...state.players.player1.hand]
     for (const c of survivors) {
       c.hasAttackedThisTurn = false
@@ -284,7 +398,6 @@ export class ScenarioEngine {
       c.roundEnteredPlay = 0
       c.activeEffects = []
       c.isRevealed = true
-      // Keep current stats (damage persists between encounters)
     }
 
     this._playerHand = [...state.players.player1.hand, ...fieldCreatures]
@@ -296,7 +409,7 @@ export class ScenarioEngine {
   nextEncounter(): { narrative: NarrativeLine[]; encounterIndex: number } | null {
     this._encounterIdx++
     if (this._encounterIdx >= this.scenario.encounters.length) {
-      return null // Campaign complete — show epilog
+      return null
     }
     return {
       narrative: this.scenario.encounters[this._encounterIdx]!.narrativeIntro,
@@ -319,57 +432,39 @@ export class ScenarioEngine {
     return this.scenario.epilogNarrative
   }
 
-  /** Check if Leszy should be immune (enc7 special rule). */
-  shouldLeszyBeImmune(state: GameState): boolean {
-    const enc = this.currentEncounter
-    const immuneRule = enc.specialRules?.find(r => r.type === 'immune_while_guard')
-    if (!immuneRule) return false
+  // ===== SAVE / LOAD =====
 
-    const enemyField = getAllCreaturesOnField(state, 'player2')
-    const guardsAlive = immuneRule.guardEffectIds?.some(gId =>
-      enemyField.some(c => (c.cardData as CreatureCardData).effectId === gId),
-    )
-    return !!guardsAlive
+  /** Serialize campaign state for save. */
+  serializeState(): CampaignSaveState {
+    return {
+      version: 1,
+      scenarioId: this.scenario.id,
+      encounterIndex: this._encounterIdx,
+      playerHand: this._playerHand.map(serializeCard),
+      playerDeck: this._playerDeck.map(serializeCard),
+      playerGraveyard: this._playerGraveyard.map(serializeCard),
+      persistentBuffs: [...this._persistentBuffs.entries()],
+      firedRuleIds: this._triggerProcessor.getFiredRuleIds(),
+      flags: this._triggerProcessor.getFlags(),
+      timestamp: Date.now(),
+    }
   }
 
-  /** Get special rules for current encounter. */
-  getSpecialRules(): SpecialRule[] {
-    return this.currentEncounter.specialRules ?? []
-  }
+  /** Restore engine from a save. Requires the matching ScenarioDefinition. */
+  static fromSave(save: CampaignSaveState, scenario: ScenarioDefinition): ScenarioEngine {
+    const engine = new ScenarioEngine(scenario)
+    engine._encounterIdx = save.encounterIndex
+    engine._deckBuilt = true
+    engine._persistentBuffs = new Map(save.persistentBuffs)
 
-  /** Check if current encounter has specific rule type. */
-  hasRule(type: SpecialRule['type']): boolean {
-    return this.getSpecialRules().some(r => r.type === type)
-  }
+    engine._playerHand = save.playerHand.map(deserializeCard)
+    engine._playerDeck = save.playerDeck.map(deserializeCard)
+    engine._playerGraveyard = save.playerGraveyard.map(deserializeCard)
 
-  /** Create a synthetic Pies-upior instance for enc6 spawning. */
-  createPiesUpior(): CardInstance {
-    const spawnRule = this.getSpecialRules().find(r => r.type === 'spawn_per_turn')
-    const data = spawnRule?.spawnData
-    const creatureData = createSyntheticCreature(
-      data?.effectId ?? 'pies_upior_scenario',
-      data?.name ?? 'Pies-upior',
-      data?.atk ?? 2,
-      data?.def ?? 1,
-    )
-    const inst = createCreatureInstance(creatureData, 'player2')
-    inst.line = BattleLine.FRONT
-    inst.position = CardPosition.ATTACK
-    inst.isRevealed = true
-    inst.roundEnteredPlay = 0
-    inst.turnsInPlay = 1
-    return inst
-  }
+    engine._triggerProcessor.setGlobalRules(scenario.globalTriggerRules ?? [])
+    engine._triggerProcessor.restoreState(save.firedRuleIds, save.flags)
 
-  /** Check if Pies-upior count is below max. */
-  canSpawnPiesUpior(state: GameState): boolean {
-    const spawnRule = this.getSpecialRules().find(r => r.type === 'spawn_per_turn')
-    if (!spawnRule?.spawnData) return false
-    const max = spawnRule.spawnData.maxOnField
-    const currentCount = getAllCreaturesOnField(state, 'player2').filter(
-      c => (c.cardData as CreatureCardData).effectId === spawnRule.spawnData!.effectId,
-    ).length
-    return currentCount < max
+    return engine
   }
 
   // ===== PRIVATE HELPERS =====
@@ -381,20 +476,17 @@ export class ScenarioEngine {
     const allCreatures = _factory.getAllCreatures()
     const allAdventures = _factory.getAllAdventures()
 
-    // Build creature instances
     for (const entry of this.scenario.playerDeck.creatures) {
       const data = allCreatures.find(c => c.effectId === entry.effectId)
       if (!data) continue
       const inst = createCreatureInstance(data, 'player1')
       inst.isRevealed = true
-      // Named hero? Store name in metadata
       if (entry.name) {
         inst.metadata.heroName = entry.name
       }
       this._playerHand.push(inst)
     }
 
-    // Build adventure instances
     for (const advEffectId of this.scenario.playerDeck.adventures) {
       const data = allAdventures.find(a => a.effectId === advEffectId)
       if (!data) continue
@@ -403,11 +495,9 @@ export class ScenarioEngine {
       this._playerHand.push(inst)
     }
 
-    // Apply starting buffs
     if (this.scenario.startingBuffs) {
       for (const buff of this.scenario.startingBuffs) {
         this._persistentBuffs.set(buff.effectId, { stat: buff.stat, value: buff.value })
-        // Also apply to existing cards in hand
         for (const card of this._playerHand) {
           if ((card.cardData as CreatureCardData).effectId === buff.effectId) {
             if (buff.stat === 'atk') {
@@ -422,7 +512,6 @@ export class ScenarioEngine {
       }
     }
 
-    // Shuffle hand into: 5 in hand, rest in deck
     this.shuffleArray(this._playerHand)
     const startingHandSize = 5
     if (this._playerHand.length > startingHandSize) {
@@ -431,16 +520,17 @@ export class ScenarioEngine {
   }
 
   private createEnemyInstance(effectId: string, customStats?: { atk?: number; def?: number }): CardInstance | null {
-    // Check for synthetic cards first
-    if (effectId === 'pies_upior_scenario') {
-      return this.createPiesUpior()
+    // Check if this is a synthetic creature (not in JSON data)
+    const dataFromJson = _factory.getAllCreatures().find(c => c.effectId === effectId)
+
+    if (!dataFromJson) {
+      // Create synthetic creature
+      const synData = createSyntheticCreatureData(effectId, effectId, customStats?.atk ?? 2, customStats?.def ?? 1)
+      return createCreatureInstance(synData, 'player2')
     }
 
-    const data = _factory.getAllCreatures().find(c => c.effectId === effectId)
-    if (!data) return null
-    const inst = createCreatureInstance(data, 'player2')
+    const inst = createCreatureInstance(dataFromJson, 'player2')
 
-    // Apply custom stats if provided
     if (customStats) {
       if (customStats.atk !== undefined) {
         inst.currentStats.attack = customStats.atk
@@ -460,7 +550,6 @@ export class ScenarioEngine {
       const effectId = (card.cardData as CreatureCardData).effectId
       if (!effectId) continue
       for (const [key, buff] of this._persistentBuffs.entries()) {
-        // Match by effectId (key might be effectId or effectId_stat_timestamp)
         if (key === effectId || key.startsWith(effectId + '_')) {
           if (buff.stat === 'atk') {
             card.currentStats.attack += buff.value
@@ -479,5 +568,50 @@ export class ScenarioEngine {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j]!, arr[i]!]
     }
+  }
+}
+
+// ===== SERIALIZATION HELPERS =====
+
+function serializeCard(card: CardInstance): SerializedCard {
+  return {
+    effectId: (card.cardData as CreatureCardData).effectId ?? (card.cardData as AdventureCardData).effectId,
+    heroName: card.metadata.heroName as string | undefined,
+    currentAtk: card.currentStats.attack,
+    currentDef: card.currentStats.defense,
+    maxAtk: card.currentStats.maxAttack,
+    maxDef: card.currentStats.maxDefense,
+    isCreature: card.cardData.cardType === 'creature',
+  }
+}
+
+function deserializeCard(data: SerializedCard): CardInstance {
+  const allCreatures = _factory.getAllCreatures()
+  const allAdventures = _factory.getAllAdventures()
+
+  if (data.isCreature) {
+    const cardData = allCreatures.find(c => c.effectId === data.effectId)
+    if (!cardData) {
+      // Synthetic creature — recreate
+      const synData = createSyntheticCreatureData(data.effectId, data.effectId, data.currentAtk, data.currentDef)
+      const inst = createCreatureInstance(synData, 'player1')
+      inst.isRevealed = true
+      if (data.heroName) inst.metadata.heroName = data.heroName
+      return inst
+    }
+    const inst = createCreatureInstance(cardData, 'player1')
+    inst.currentStats.attack = data.currentAtk
+    inst.currentStats.defense = data.currentDef
+    inst.currentStats.maxAttack = data.maxAtk
+    inst.currentStats.maxDefense = data.maxDef
+    inst.isRevealed = true
+    if (data.heroName) inst.metadata.heroName = data.heroName
+    return inst
+  } else {
+    const cardData = allAdventures.find(a => a.effectId === data.effectId)
+    if (!cardData) throw new Error(`Adventure not found: ${data.effectId}`)
+    const inst = createAdventureInstance(cardData, 'player1')
+    inst.isRevealed = true
+    return inst
   }
 }
