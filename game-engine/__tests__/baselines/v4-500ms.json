@@ -1,0 +1,34 @@
+{
+  "name": "v4-500ms",
+  "timestamp": "2026-03-18T09:39:24.097Z",
+  "config": {
+    "games": 10,
+    "opponent": "novice",
+    "timeBudgetMs": 500,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 4,
+    "mctsWins": 0,
+    "oppWins": 4,
+    "timeouts": 6,
+    "errors": 0,
+    "winRate": 0,
+    "timeoutRate": 0.6,
+    "avgRounds": 56.9,
+    "avgPSWinner": 2.75,
+    "avgPSLoser": 0,
+    "psWinCount": 0,
+    "elimWinCount": 4
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 5845.098389982111,
+    "avgTreeNodes": 9.313059033989267,
+    "avgRolloutDepth": 8.50431663688357,
+    "avgTimePerDecisionMs": 245.42039355992844,
+    "avgBestMoveWR": 0.5309856711076281,
+    "earlyTerminationRate": 0.43828264758497315,
+    "totalDecisions": 559
+  }
+}

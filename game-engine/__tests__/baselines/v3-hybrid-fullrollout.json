@@ -1,0 +1,34 @@
+{
+  "name": "v3-hybrid-fullrollout",
+  "timestamp": "2026-03-17T17:43:02.772Z",
+  "config": {
+    "games": 20,
+    "opponent": "hard",
+    "timeBudgetMs": 500,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 20,
+    "gamesWithWinner": 12,
+    "mctsWins": 4,
+    "oppWins": 8,
+    "timeouts": 8,
+    "errors": 0,
+    "winRate": 0.3333333333333333,
+    "timeoutRate": 0.4,
+    "avgRounds": 46.55,
+    "avgPSWinner": 5.916666666666667,
+    "avgPSLoser": 0,
+    "psWinCount": 5,
+    "elimWinCount": 7
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 19.65645514223195,
+    "avgTreeNodes": 5.361050328227571,
+    "avgRolloutDepth": 2.7093547908192113,
+    "avgTimePerDecisionMs": 1415.578774617068,
+    "avgBestMoveWR": 0.3366321086254051,
+    "earlyTerminationRate": 0,
+    "totalDecisions": 914
+  }
+}

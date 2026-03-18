@@ -1,0 +1,34 @@
+{
+  "name": "v4-macro",
+  "timestamp": "2026-03-18T08:34:18.289Z",
+  "config": {
+    "games": 10,
+    "opponent": "novice",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 5,
+    "mctsWins": 5,
+    "oppWins": 0,
+    "timeouts": 5,
+    "errors": 0,
+    "winRate": 1,
+    "timeoutRate": 0.5,
+    "avgRounds": 47.2,
+    "avgPSWinner": 4,
+    "avgPSLoser": 0.4,
+    "psWinCount": 2,
+    "elimWinCount": 3
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 32470.605603448275,
+    "avgTreeNodes": 10.239224137931034,
+    "avgRolloutDepth": 9.465365768312008,
+    "avgTimePerDecisionMs": 965.1573275862069,
+    "avgBestMoveWR": 0.6379419072445379,
+    "earlyTerminationRate": 0.9030172413793104,
+    "totalDecisions": 464
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "v4-vs-warrior",
+  "timestamp": "2026-03-18T09:51:36.211Z",
+  "config": {
+    "games": 10,
+    "opponent": "warrior",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 5,
+    "mctsWins": 3,
+    "oppWins": 2,
+    "timeouts": 5,
+    "errors": 0,
+    "winRate": 0.6,
+    "timeoutRate": 0.5,
+    "avgRounds": 53.5,
+    "avgPSWinner": 3.8,
+    "avgPSLoser": 0.6,
+    "psWinCount": 0,
+    "elimWinCount": 5
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 42951.86666666667,
+    "avgTreeNodes": 13.516190476190475,
+    "avgRolloutDepth": 9.472871443487836,
+    "avgTimePerDecisionMs": 1471.6761904761904,
+    "avgBestMoveWR": 0.4733791247899467,
+    "earlyTerminationRate": 0.5371428571428571,
+    "totalDecisions": 525
+  }
+}

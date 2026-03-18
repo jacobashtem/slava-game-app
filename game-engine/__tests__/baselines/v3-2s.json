@@ -1,0 +1,34 @@
+{
+  "name": "v3-2s",
+  "timestamp": "2026-03-17T17:54:22.925Z",
+  "config": {
+    "games": 10,
+    "opponent": "hard",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 6,
+    "mctsWins": 1,
+    "oppWins": 5,
+    "timeouts": 4,
+    "errors": 0,
+    "winRate": 0.16666666666666666,
+    "timeoutRate": 0.4,
+    "avgRounds": 47.6,
+    "avgPSWinner": 4.333333333333333,
+    "avgPSLoser": 0,
+    "psWinCount": 1,
+    "elimWinCount": 5
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 32025.52043010753,
+    "avgTreeNodes": 6.081720430107527,
+    "avgRolloutDepth": 6.711945982811796,
+    "avgTimePerDecisionMs": 365.1720430107527,
+    "avgBestMoveWR": 0.2548794591754513,
+    "earlyTerminationRate": 0.7333333333333333,
+    "totalDecisions": 465
+  }
+}

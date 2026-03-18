@@ -1,0 +1,34 @@
+{
+  "name": "v5-antistall",
+  "timestamp": "2026-03-18T12:05:24.831Z",
+  "config": {
+    "games": 10,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 7,
+    "mctsWins": 4,
+    "oppWins": 3,
+    "timeouts": 3,
+    "errors": 0,
+    "winRate": 0.5714285714285714,
+    "timeoutRate": 0.3,
+    "avgRounds": 38.9,
+    "avgPSWinner": 8.142857142857142,
+    "avgPSLoser": 2.857142857142857,
+    "psWinCount": 3,
+    "elimWinCount": 4
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 10233.478947368421,
+    "avgTreeNodes": 6.4447368421052635,
+    "avgRolloutDepth": 7.180417828226042,
+    "avgTimePerDecisionMs": 144.01052631578946,
+    "avgBestMoveWR": 0.6064383139414355,
+    "earlyTerminationRate": 0.2578947368421053,
+    "totalDecisions": 380
+  }
+}

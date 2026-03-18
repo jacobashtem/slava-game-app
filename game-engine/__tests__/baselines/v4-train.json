@@ -1,0 +1,34 @@
+{
+  "name": "v4-train",
+  "timestamp": "2026-03-18T09:46:03.701Z",
+  "config": {
+    "games": 10,
+    "opponent": "novice",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 3,
+    "mctsWins": 2,
+    "oppWins": 1,
+    "timeouts": 7,
+    "errors": 0,
+    "winRate": 0.6666666666666666,
+    "timeoutRate": 0.7,
+    "avgRounds": 61,
+    "avgPSWinner": 2,
+    "avgPSLoser": 0.3333333333333333,
+    "psWinCount": 0,
+    "elimWinCount": 3
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 21571.821963394344,
+    "avgTreeNodes": 13.317803660565724,
+    "avgRolloutDepth": 9.816817261237667,
+    "avgTimePerDecisionMs": 861.2229617304492,
+    "avgBestMoveWR": 0.48791284951492264,
+    "earlyTerminationRate": 0.4858569051580699,
+    "totalDecisions": 601
+  }
+}

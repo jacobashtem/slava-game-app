@@ -1,0 +1,34 @@
+{
+  "name": "v1-fullturn",
+  "timestamp": "2026-03-17T16:41:16.579Z",
+  "config": {
+    "games": 10,
+    "opponent": "hard",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 2,
+    "mctsWins": 0,
+    "oppWins": 2,
+    "timeouts": 8,
+    "errors": 0,
+    "winRate": 0,
+    "timeoutRate": 0.8,
+    "avgRounds": 65.8,
+    "avgPSWinner": 1.5,
+    "avgPSLoser": 0,
+    "psWinCount": 0,
+    "elimWinCount": 2
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 698.6625577812018,
+    "avgTreeNodes": 208.9337442218798,
+    "avgRolloutDepth": 9.512572242031057,
+    "avgTimePerDecisionMs": 1992.9013867488443,
+    "avgBestMoveWR": 0,
+    "earlyTerminationRate": 0.009244992295839754,
+    "totalDecisions": 649
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "v5-linefix",
+  "timestamp": "2026-03-18T12:11:54.318Z",
+  "config": {
+    "games": 10,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 8,
+    "mctsWins": 4,
+    "oppWins": 4,
+    "timeouts": 2,
+    "errors": 0,
+    "winRate": 0.5,
+    "timeoutRate": 0.2,
+    "avgRounds": 34.9,
+    "avgPSWinner": 6.5,
+    "avgPSLoser": 1.625,
+    "psWinCount": 1,
+    "elimWinCount": 7
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 3490.406432748538,
+    "avgTreeNodes": 4.713450292397661,
+    "avgRolloutDepth": 8.179378675145092,
+    "avgTimePerDecisionMs": 102.10526315789474,
+    "avgBestMoveWR": 0.431071216304757,
+    "earlyTerminationRate": 0.5555555555555556,
+    "totalDecisions": 342
+  }
+}

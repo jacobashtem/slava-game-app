@@ -1,0 +1,34 @@
+{
+  "name": "v5-test",
+  "timestamp": "2026-03-18T11:14:52.831Z",
+  "config": {
+    "games": 5,
+    "opponent": "v5-test",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 5,
+    "gamesWithWinner": 3,
+    "mctsWins": 1,
+    "oppWins": 2,
+    "timeouts": 2,
+    "errors": 0,
+    "winRate": 0.3333333333333333,
+    "timeoutRate": 0.4,
+    "avgRounds": 45.2,
+    "avgPSWinner": 4.666666666666667,
+    "avgPSLoser": 0.3333333333333333,
+    "psWinCount": 1,
+    "elimWinCount": 2
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 40237.09502262443,
+    "avgTreeNodes": 11.850678733031675,
+    "avgRolloutDepth": 7.857312481749441,
+    "avgTimePerDecisionMs": 719.3212669683257,
+    "avgBestMoveWR": 0.5524665084095272,
+    "earlyTerminationRate": 0.6877828054298643,
+    "totalDecisions": 221
+  }
+}
