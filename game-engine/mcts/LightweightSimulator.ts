@@ -22,7 +22,8 @@
 
 import type { LightState, LightCard, LightAdventure } from './LightweightState'
 import { lightFieldCards, lightFieldCount, evaluateLight, hasFieldEffect, forEachFieldCard } from './LightweightState'
-import { GOLD_EDITION_RULES } from '../constants'
+import { GOLD_EDITION_RULES, CardPosition } from '../constants'
+import type { MCTSMove } from './types'
 import { effectThreatTier, phaseBonus, priorityKillBonus, prefersDefense, canAffordEnhancedSmart } from './StrategicPatterns'
 
 const SOUL_THRESHOLD = GOLD_EDITION_RULES.SOUL_HARVEST_THRESHOLD
@@ -1727,6 +1728,154 @@ export interface LightRolloutResult {
 /** V6: Simulate exactly 1 turn (current player). Used by Depth 1.5 opponent response check. */
 export function simulateOneTurn(s: LightState): boolean {
   return simulateTurn(s)
+}
+
+/**
+ * V7: Apply a combat plan to LightState (mutates in-place).
+ * Handles: positioning → Buka → attacks → plunder → turnEnd → anti-stall → turn switch → draw → round++ → poison/paralyze.
+ * After this call, s.currentTurn is the opponent (ready for rollout).
+ */
+export function applyCombatPlanToLight(s: LightState, side: number, steps: MCTSMove[]): void {
+  const opp = 1 - side
+  let didAttack = false
+
+  // 1. Apply position changes
+  for (const step of steps) {
+    if (step.type === 'change_position' && step.cardInstanceId) {
+      const base = side * 3
+      for (let i = 0; i < 3; i++) {
+        const card = s.field[base + i]!.find(c => c.instanceId === step.cardInstanceId)
+        if (card) {
+          card.position = step.targetPosition === CardPosition.ATTACK ? 1 : 0
+          break
+        }
+      }
+    }
+  }
+
+  // 2. Buka: force weak enemies to DEFENSE (matches simulateTurn behavior)
+  if (hasFieldEffect(s, side, 'buka_force_defense')) {
+    let myMaxAtk = 0
+    forEachFieldCard(s, side, c => { if (c.atk > myMaxAtk) myMaxAtk = c.atk })
+    forEachFieldCard(s, opp, c => { if (c.atk < myMaxAtk) c.position = 0 })
+  }
+
+  // 3. Execute attacks
+  const allCards = [...lightFieldCards(s, 0), ...lightFieldCards(s, 1)]
+  for (const step of steps) {
+    if (s.winner !== -1) break
+    if (step.type === 'attack' && step.cardInstanceId && step.targetInstanceId) {
+      let attacker: LightCard | null = null
+      const base = side * 3
+      for (let i = 0; i < 3 && !attacker; i++) {
+        attacker = s.field[base + i]!.find(c => c.instanceId === step.cardInstanceId) ?? null
+      }
+      let target: LightCard | null = null
+      const oppBase = opp * 3
+      for (let i = 0; i < 3 && !target; i++) {
+        target = s.field[oppBase + i]!.find(c => c.instanceId === step.targetInstanceId) ?? null
+      }
+
+      if (attacker && target && target.def > 0 && attacker.def > 0) {
+        attacker.hasAttacked = true
+        didAttack = true
+
+        const dmg = calculateDamage(attacker, target, allCards)
+        target.def -= dmg
+        processOnDamageDealt(s, attacker, target, dmg, side)
+        processOnDamageReceived(s, target, attacker, dmg)
+
+        // Counterattack
+        if (shouldCounterattack(attacker, target, allCards)) {
+          const counterDmg = target.atk
+          attacker.def -= counterDmg
+          if (target.effectId === 'strzyga_lifesteal' && !target.isSilenced && counterDmg > 0) {
+            target.def = Math.min(target.maxDef, target.def + counterDmg)
+          }
+          processOnDamageReceived(s, attacker, target, counterDmg)
+        }
+
+        // Rusalka mirror
+        if (target.effectId === 'rusalka_mirror_attack' && !target.isSilenced && target.position === 1 && dmg > 0) {
+          attacker.def -= Math.floor(dmg / 2)
+        }
+
+        // Leszy: post-attack defend
+        if (hasFieldEffect(s, side, 'leszy_post_attack_defend')) {
+          attacker.position = 0
+        }
+
+        // Death checks
+        if (target.def <= 0) processDeath(s, target, attacker, side)
+        if (attacker.def <= 0) processDeath(s, attacker, target, opp)
+        checkWin(s)
+      }
+    }
+  }
+
+  // 4. Plunder
+  for (const step of steps) {
+    if (step.type === 'plunder') {
+      if (s.round >= 3 && lightFieldCount(s, opp) === 0 && s.ps[opp]! > 0) {
+        s.ps[side]!++; s.ps[opp]!--
+        didAttack = true
+        checkWin(s)
+      }
+      break
+    }
+  }
+
+  if (s.winner !== -1) return
+
+  // 5. Turn-end effects
+  processTurnEnd(s, side)
+
+  // 6. Anti-stall
+  if (lightFieldCount(s, side) > 0 && !didAttack) {
+    s.consecutivePasses[side]!++
+    if (s.consecutivePasses[side]! >= 3 && s.ps[side]! > 0) s.ps[side]!--
+  } else {
+    s.consecutivePasses[side] = 0
+  }
+
+  // 7. Switch turn
+  s.currentTurn = opp
+  s.creaturesPlayed[opp] = 0
+  s.adventuresPlayed[opp] = 0
+  forEachFieldCard(s, opp, c => {
+    c.hasAttacked = false
+    c.turnsInPlay++
+  })
+
+  // 8. Draw
+  if (s.decks[opp]!.length > 0) {
+    const hasLicho = hasFieldEffect(s, side, 'licho_block_draw')
+    const hasBieda = hasFieldEffect(s, side, 'bieda_spy_block_draw')
+    if (!hasLicho && !hasBieda) {
+      const drawn = s.decks[opp]!.pop()!
+      s.hands[opp]!.push(drawn)
+    }
+  }
+  s.deckCount[opp] = s.decks[opp]!.length
+
+  // 9. Round increment after player2's turn
+  if (opp === 0) s.round++
+
+  // 10. Poison/Paralyze tick for next player's creatures
+  for (const c of lightFieldCards(s, opp)) {
+    if (c.poisonRounds >= 0) {
+      c.poisonRounds--
+      if (c.poisonRounds < 0) {
+        c.def = 0
+        processDeath(s, c, null, side)
+      }
+    }
+    if (c.paralyzeRounds >= 0) {
+      c.paralyzeRounds--
+    }
+  }
+
+  checkWin(s)
 }
 
 export function rolloutLight(

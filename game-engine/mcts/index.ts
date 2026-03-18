@@ -13,7 +13,7 @@ export { MCTSPlayer } from './MCTSPlayer'
 export { MCTSNode } from './MCTSNode'
 export { determinize } from './Determinizer'
 export { rollout } from './RolloutPolicy'
-export { rolloutLight } from './LightweightSimulator'
+export { rolloutLight, applyCombatPlanToLight } from './LightweightSimulator'
 export { gameStateToLight, cloneLightState, evaluateLight } from './LightweightState'
 export {
   getAvailableMoves,
@@ -31,9 +31,11 @@ export type {
   MCTSConfig,
   MCTSStats,
   MacroMove,
+  CombatPlan,
 } from './types'
 export { generateMacroMoves } from './MacroMoveGenerator'
 export type { MacroMoveResult } from './MacroMoveGenerator'
+export { generateCombatPlans } from './CombatPlanGenerator'
 export { computeHash } from './StateHash'
 export { TranspositionTable } from './TranspositionTable'
 export type { TTEntry } from './TranspositionTable'

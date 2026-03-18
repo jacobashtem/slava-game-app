@@ -58,6 +58,18 @@ export interface MacroMove {
   heuristicScore: number
 }
 
+// ===== COMBAT PLAN =====
+
+/** Combat plan: positioning + attacks + plunder for MCTS full-turn macros */
+export interface CombatPlan {
+  /** Unikalny klucz planu (e.g. "defend", "atk:X>Y", "plunder") */
+  key: string
+  /** Sekwencja ruchów combatowych (change_position, attack, plunder, end_turn) */
+  steps: MCTSMove[]
+  /** Heurystyczny scoring do pruning */
+  heuristicScore: number
+}
+
 // ===== CONFIGURATION =====
 
 /** Konfiguracja MCTS */

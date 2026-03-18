@@ -27,6 +27,7 @@ import type { GameEngine } from '../GameEngine'
 import { applyMove, scoreMove } from './StateAdapter'
 import { effectThreatTier, assessGameSituation, canAffordEnhancedSmart, hasSynergy } from './StrategicPatterns'
 import { gameStateToLight, lightFieldCount } from './LightweightState'
+import { generateCombatPlans } from './CombatPlanGenerator'
 
 // ===== RESULT TYPE =====
 
@@ -86,6 +87,8 @@ export function generateMacroMoves(
   const maxPrefixGroups = maxMacros <= 8 ? 3 : maxMacros <= 16 ? 4 : 6
   const maxAdvPerGroup = maxMacros <= 8 ? 2 : 3
   const maxActPerAdv = maxMacros <= 16 ? 1 : 2
+  // V7: Combat plans per play macro
+  const maxCombatPlans = maxMacros <= 8 ? 2 : 3
 
   // V5: Game situation for context-aware scoring
   const lightState = gameStateToLight(state)
@@ -342,48 +345,52 @@ export function generateMacroMoves(
         }
       }
 
-      // --- Combine steps → MacroMove (with situation-aware scoring) ---
+      // --- Combine steps → Full-Turn MacroMove (play + combat) ---
       for (const actOpt of actOptions) {
-        const steps: MCTSMove[] = []
+        const playSteps: MCTSMove[] = []
         let totalScore = 0
 
         if (creatureStep) {
-          steps.push(creatureStep)
+          playSteps.push(creatureStep)
           totalScore += creatureScore
         }
         if (advOpt.step) {
-          steps.push(advOpt.step)
+          playSteps.push(advOpt.step)
           totalScore += advOpt.score
         }
         if (actOpt.step) {
-          steps.push(actOpt.step)
+          playSteps.push(actOpt.step)
           totalScore += actOpt.score
         }
 
         // V5: Situation-aware scoring bonus
         if (situation.phase === 'closing' && situation.winPath === 'ps_race') {
-          // In closing/PS-race: penalize heavy spending, boost empty turns
           if (advOpt.step?.useEnhanced) totalScore -= 5
-          if (!creatureStep && !advOpt.step) totalScore += 3 // skip = save PS
+          if (!creatureStep && !advOpt.step) totalScore += 3
         }
         if (situation.posture === 'defensive') {
-          // Defensive: boost high-DEF creatures
           if (creatureStep?.cardInstanceId) {
             const c = player.hand.find(h => h.instanceId === creatureStep!.cardInstanceId)
             if (c && c.currentStats.defense >= 5) totalScore += 4
           }
         }
-        // Smarter skip scoring: skip higher when field is full
         if (!creatureStep && !advOpt.step && !actOpt.step) {
           const myFieldCount = lightFieldCount(lightState, sideNum)
-          if (myFieldCount >= 4) totalScore += 3  // field nearly full, skip is fine
-          if (situation.phase === 'endgame') totalScore += 2  // late game, conserve
+          if (myFieldCount >= 4) totalScore += 3
+          if (situation.phase === 'endgame') totalScore += 2
         }
 
-        steps.push({ type: 'advance_to_combat' })
-        const key = steps.map(s => moveKey(s)).join('>')
-        allMacros.push({ key, steps, heuristicScore: totalScore })
-        stateCache.set(key, actOpt.finalState)
+        // V7: Generate combat plans → full-turn macros
+        const lightForCombat = gameStateToLight(actOpt.finalState)
+        const combatPlans = generateCombatPlans(lightForCombat, sideNum, maxCombatPlans)
+        const playKey = playSteps.map(s => moveKey(s)).join('>')
+
+        for (const cp of combatPlans) {
+          const fullSteps: MCTSMove[] = [...playSteps, { type: 'advance_to_combat' }, ...cp.steps]
+          const fullKey = playKey + '>>' + cp.key
+          allMacros.push({ key: fullKey, steps: fullSteps, heuristicScore: totalScore + cp.heuristicScore })
+          stateCache.set(fullKey, actOpt.finalState)
+        }
       }
     }
   }
