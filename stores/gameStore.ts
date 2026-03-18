@@ -455,6 +455,13 @@ export const useGameStore = defineStore('game', () => {
     gameStarted.value = true
   }
 
+  /** Force reactivity trigger for shallowRef state (scenario special rules mutate in-place). */
+  function forceStateUpdate() {
+    if (state.value) {
+      state.value = { ...state.value }
+    }
+  }
+
   function startTutorial() {
     isArenaMode.value = false
     isTutorialMode.value = true
@@ -1069,7 +1076,35 @@ export const useGameStore = defineStore('game', () => {
           state.value = engine.aiAdvanceToCombat()
         }
         if (engine.getCurrentPhase() === GamePhase.COMBAT) {
-          const aiDecisions = aiPlayer.planTurn(engine.getState())
+          let aiDecisions = aiPlayer.planTurn(engine.getState())
+
+          // Fallback: if MCTS returns no attacks, manually generate attack decisions
+          // (common in scenario mode where AI has no hand/deck)
+          const hasAttacks = aiDecisions.some(d => d.type === 'attack')
+          if (!hasAttacks && state.value) {
+            const s = engine.getState()
+            const aiField = getAllCreaturesOnField(s, 'player2')
+            const playerField = getAllCreaturesOnField(s, 'player1')
+            const fallbackDecisions: typeof aiDecisions = []
+            // First: set all to attack position
+            for (const c of aiField) {
+              if (c.position !== CardPosition.ATTACK && !c.cannotAttack) {
+                fallbackDecisions.push({ type: 'change_position', cardInstanceId: c.instanceId, targetPosition: CardPosition.ATTACK })
+              }
+            }
+            // Then: each attacker targets first valid enemy
+            for (const attacker of aiField) {
+              if (attacker.cannotAttack) continue
+              for (const target of playerField) {
+                if (canAttack(s, attacker, target).valid) {
+                  fallbackDecisions.push({ type: 'attack', cardInstanceId: attacker.instanceId, targetInstanceId: target.instanceId })
+                  break
+                }
+              }
+            }
+            if (fallbackDecisions.length > 0) aiDecisions = fallbackDecisions
+          }
+
           for (const d of aiDecisions) {
             if (d.type === 'change_position' && d.cardInstanceId) {
               try { state.value = engine.aiChangePosition(d.cardInstanceId, CardPosition.ATTACK) } catch {}
@@ -1649,6 +1684,7 @@ export const useGameStore = defineStore('game', () => {
     startAlphaGame,
     startSlavaGame,
     setupArenaMode,
+    forceStateUpdate,
     setDifficulty,
     setDomains,
     setPlayerProfile,

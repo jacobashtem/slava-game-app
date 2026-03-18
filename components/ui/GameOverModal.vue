@@ -5,9 +5,11 @@ import gsap from 'gsap'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { useArenaStore } from '../../stores/arenaStore'
+import { useScenarioStore } from '../../stores/scenarioStore'
 import { useSlavaApi, type MatchReportResult } from '../../composables/useSlavaApi'
 
 const game = useGameStore()
+const scenarioStore = useScenarioStore()
 const ui = useUIStore()
 const arena = useArenaStore()
 const api = useSlavaApi()
@@ -188,7 +190,7 @@ function restart() {
 
 <template>
   <Transition name="modal-fade">
-    <div v-if="game.winner" class="go-overlay">
+    <div v-if="game.winner && !scenarioStore.isScenarioMode" class="go-overlay">
       <!-- Radial glow -->
       <div ref="glowEl" :class="['go-glow', isWin ? 'go-glow-win' : 'go-glow-lose']" />
 

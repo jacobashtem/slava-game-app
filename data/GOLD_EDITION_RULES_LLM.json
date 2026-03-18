@@ -1,0 +1,549 @@
+{
+  "_meta": {
+    "title": "Slava Vol.2 — Gold Edition — Kompletne Zasady Gry",
+    "version": "1.0",
+    "purpose": "Pełna specyfikacja zasad Gold Edition dla modelu LLM. Zawiera WSZYSTKIE mechaniki, zasady, karty i ich efekty.",
+    "language": "pl",
+    "gameMode": "gold"
+  },
+
+  "overview": {
+    "description": "Słowiańska turowa gra karciana 1v1 (gracz vs AI lub gracz vs gracz). Gracze budują talię z 120 istot i 62 kart przygody, wystawiają istoty na 3-liniowe pole bitwy, walczą o Punkty Sławy (PS). Pierwszy gracz z 10 PS wygrywa.",
+    "domains": {
+      "1_PERUN": "Perunowcy — duchy powietrza, burzy, lasu. Kolor: złoty.",
+      "2_ZYVI": "Żywi — ludzie, wojownicy, kapłani. Kolor: zielony.",
+      "3_UNDEAD": "Nieumarli — duchy, upiory, szkielety. Kolor: fioletowy.",
+      "4_WELES": "Welesowcy — demony, smoki, mroczne istoty. Kolor: czerwony."
+    }
+  },
+
+  "startingState": {
+    "deckSize": 30,
+    "deckComposition": "70% istoty, 30% przygody",
+    "startingHand": 5,
+    "startingPS": 5,
+    "handLimit": 5,
+    "maxFieldCreatures": 5,
+    "maxCreaturesPerLine": 3,
+    "creaturesPerTurn": 1,
+    "adventuresPerTurn": "unlimited",
+    "adventureBasicCost": 0,
+    "adventureEnhancedCost": 1,
+    "winTarget": 10,
+    "soulHarvestThreshold": 20,
+    "maxRounds": 40
+  },
+
+  "winConditions": [
+    {"priority": 1, "condition": "Gracz osiąga 10 PS", "description": "Zbierz 10 Punktów Sławy z dowolnego źródła."},
+    {"priority": 2, "condition": "Przeciwnik nie ma istot na polu I jego talia jest pusta", "description": "Wyeliminuj wszystkie istoty wroga gdy nie ma już kart w talii."},
+    {"priority": 3, "condition": "Przeciwnik nie ma istot nigdzie (pole + ręka + talia)", "description": "Totalna eliminacja."},
+    {"priority": 4, "condition": "Tiebreaker po 40 rundach", "description": "Po 40 rundach wygrywa gracz z więcej PS."}
+  ],
+
+  "turnStructure": {
+    "phaseOrder": ["START", "DRAW", "PLAY", "COMBAT", "END"],
+    "roundDefinition": "Runda = 1 tura player1 + 1 tura player2. roundNumber++ po turze player2.",
+
+    "START_PHASE": {
+      "steps": [
+        "Reset flag istot: hasAttackedThisTurn=false, hasMovedThisTurn=false",
+        "Reset liczników: creaturesPlayedThisTurn=0, adventuresPlayedThisTurn=0",
+        "Tick efektów duracyjnych (trucizna, paraliż — odliczanie rund)",
+        "Trigger efektów ON_TURN_START (Cicha, Południca, Domowik, Smocze Jajo, etc.)",
+        "Tick aktywnych zdarzeń i lokacji (roundsRemaining--)"
+      ]
+    },
+
+    "DRAW_PHASE": {
+      "steps": [
+        "Sprawdź Licho: jeśli przeciwnik ma Licho na polu i gracz ma pustą rękę → dobierz 1 kartę",
+        "Sprawdź Biedę: jeśli gracz ma Biedę na SWOIM polu → blokada doboru (pusta ręka = 1 karta)",
+        "Dobierz karty do limitu ręki (domyślnie 5)",
+        "Sprawdź Rehtra+: jeśli wróg ma tę lokację, dobrane karty są widoczne"
+      ]
+    },
+
+    "PLAY_PHASE": {
+      "allowedActions": [
+        "Wystawienie istoty z ręki na pole (max 1 na turę)",
+        "Zagranie karty przygody (bez limitu, podstawowy efekt za 0 PS, wzmocniony za 1 PS)",
+        "Zmiana pozycji istoty (ATAK ↔ OBRONA) — bez limitu, bez cooldownu",
+        "Przeniesienie istoty między liniami (L1/L2/L3)",
+        "Aktywacja zdolności istoty (⚡ button)",
+        "Dobieranie 1 dodatkowej karty (opcjonalne)"
+      ],
+      "creaturePlacement": {
+        "description": "Istota może być wystawiona w dowolnej linii (L1, L2, L3) o ile jest miejsce (max 3 per linia).",
+        "fieldLimit": "Max 5 istot na polu (wyjątki: Arkona lokacja, Żupan karta — znoszą limit).",
+        "turnLimit": "Max 1 istota na turę.",
+        "arenaRestriction": "Jeśli wróg ma aktywną Arenę, nie możesz mieć więcej istot niż on."
+      },
+      "adventureCards": {
+        "basicEffect": "Zagranie za 0 PS — efekt podstawowy.",
+        "enhancedEffect": "Zagranie za 1 PS — efekt wzmocniony (silniejszy).",
+        "blockers": [
+          "Tęsknica: blokuje wzmocnione efekty przygód wroga",
+          "Zlot Czarownic: blokuje 3 kolejne przygody wroga"
+        ],
+        "types": {
+          "EVENT_instant": "Zagranie → efekt → karta na cmentarz.",
+          "EVENT_duration": "Zagranie → efekt trwa N rund → po wygaśnięciu na cmentarz.",
+          "EVENT_permanent": "Zagranie → efekt trwa do końca gry lub zniszczenia.",
+          "EVENT_conditional": "Zagranie → efekt trwa do spełnienia warunku.",
+          "ARTIFACT": "Wyposażenie istoty — trwa dopóki istota żyje. Ginie z istotą.",
+          "LOCATION": "1 lokacja per strona. Nowa lokacja zastępuje starą (stara na cmentarz). Pasywny efekt."
+        }
+      }
+    },
+
+    "COMBAT_PHASE": {
+      "description": "Gracz wybiera istotę w pozycji ATAK i wskazuje cel. Każda istota atakuje max 1 raz na turę (wyjątki: Leśnica 2x, Kikimora nie zużywa slotu, Chłop daje +1 atak).",
+      "attackPrerequisites": [
+        "Atakujący musi być w pozycji ATAK",
+        "Atakujący nie może mieć flagi cannotAttack (paraliż, Biali Ludzie, etc.)",
+        "Atakujący nie może mieć hasAttackedThisTurn=true (wyjątek: Leśnica)",
+        "Nie można atakować własnych istot (wyjątek: Wąpierz)",
+        "Jeśli Błotnik jest w zasięgu — MUSISZ go atakować (taunt)",
+        "Jeśli Arena Enhanced aktywna — zraniona istota MUSI atakować oprawcę"
+      ]
+    },
+
+    "END_PHASE": {
+      "steps": [
+        "Sprawdź pass penalty: jeśli miałeś istoty na polu ale nie zaatakowałeś → consecutivePasses++",
+        "2 consecutive passes: ostrzeżenie",
+        "3+ consecutive passes: -1 PS kara (raz, potem reset)",
+        "Trigger efektów ON_TURN_END",
+        "Przekaż turę przeciwnikowi",
+        "Jeśli tura player2 → roundNumber++"
+      ]
+    }
+  },
+
+  "battleLines": {
+    "L1_FRONT": {
+      "number": 1,
+      "name": "Front / Wręcz",
+      "maxCreatures": 3,
+      "description": "Pierwsza linia. Istoty Wręcz i Żywioł MUSZĄ być tu, żeby atakować."
+    },
+    "L2_RANGED": {
+      "number": 2,
+      "name": "Dystans",
+      "maxCreatures": 3,
+      "description": "Druga linia. Istoty Dystans mogą atakować stąd."
+    },
+    "L3_SUPPORT": {
+      "number": 3,
+      "name": "Magia / Wsparcie",
+      "maxCreatures": 3,
+      "description": "Trzecia linia. Istoty Magia mogą atakować z dowolnej linii."
+    }
+  },
+
+  "positions": {
+    "ATTACK": {
+      "name": "Pozycja Ataku",
+      "description": "Istota może atakować. NIE kontratakuje gdy jest atakowana.",
+      "visualRepresentation": "Karta pionowo."
+    },
+    "DEFENSE": {
+      "name": "Pozycja Obrony",
+      "description": "Istota NIE może atakować aktywnie. KONTRATAKUJE gdy jest atakowana (obrażenia = DEF przed ciosem).",
+      "visualRepresentation": "Karta poziomo."
+    }
+  },
+
+  "attackTypes": {
+    "MELEE": {
+      "id": 0,
+      "name": "Wręcz",
+      "range": "Atakujący MUSI być na L1. Może celować TYLKO w pierwszą ZAJĘTĄ linię wroga (dynamiczny front).",
+      "vsFlying": "NIE może trafić latających istot.",
+      "dynamicFrontRule": "Jeśli L1 wroga pusta → cel przesuwa się na L2. Jeśli L1 i L2 puste → L3."
+    },
+    "ELEMENTAL": {
+      "id": 1,
+      "name": "Żywioł",
+      "range": "Jak Wręcz (L1 only, dynamiczny front). ALE może trafić latające istoty.",
+      "vsFlying": "MOŻE trafić latających."
+    },
+    "MAGIC": {
+      "id": 2,
+      "name": "Magia",
+      "range": "Z DOWOLNEJ linii na DOWOLNĄ linię wroga. Pełna swoboda.",
+      "vsFlying": "MOŻE trafić latających."
+    },
+    "RANGED": {
+      "id": 3,
+      "name": "Dystans",
+      "range": "Z DOWOLNEJ linii na DOWOLNĄ linię wroga. Pełna swoboda.",
+      "vsFlying": "MOŻE trafić latających."
+    }
+  },
+
+  "combatResolution": {
+    "order": [
+      "1. Walidacja zasięgu (range, linia, pozycja, taunt, immunities)",
+      "2. Ujawnienie obu kart (isRevealed = true)",
+      "3. Trigger ON_ATTACK efektów atakującego (Gryf double damage, Rusalka mirror, Szalinc negate immunity, etc.)",
+      "4. Oblicz obrażenia: ATK atakującego (+ modyfikatory: artifacts, buffs, domain bonusy)",
+      "5. First Strike: jeśli obrońca ma First Strike (Junak) → kontratakuje PRZED otrzymaniem obrażeń",
+      "6. Damage Prevention: Brzegina shield, Utopiec half damage, Szeptunka -1, Tarcza Dobryni absorption",
+      "7. Zadaj obrażenia obrońcy: defender.DEF -= damage",
+      "8. Trigger ON_DAMAGE_DEALT (atakujący) i ON_DAMAGE_RECEIVED (obrońca)",
+      "9. Trigger ON_ALLY_ATTACKED (sojusznicy obrońcy — Chowaniec, Niedźwiedziołak, Wielkolud)",
+      "10. Kontratak: jeśli obrońca w DEFENSE i żyje → zadaje obrażenia = swój DEF PRZED atakiem (walka jednoczesna)",
+      "11. Trigger efektów kontrataku",
+      "12. Check Death obu stron: jeśli DEF ≤ 0 → trigger ON_DEATH, ON_KILL, ON_ANY_DEATH",
+      "13. Przenieś martwych na cmentarz",
+      "14. Soul Harvest: akumuluj wartość dusz zabitych istot",
+      "15. Oznacz attacker.hasAttackedThisTurn = true"
+    ],
+
+    "softFail": {
+      "description": "Atak jest 'chybiony' z powodu pasywnej odporności celu (np. Tur, Wilkołak, Matoha).",
+      "effect": "Atakujący zadaje 0 obrażeń, ALE kontratak obrońcy nadal działa (jeśli w DEFENSE).",
+      "reason": "Odporności są pasywne — nie blokują całkowicie interakcji bojowej."
+    },
+
+    "counterattack": {
+      "conditions": [
+        "Obrońca MUSI być w pozycji DEFENSE",
+        "Obrońca MUSI żyć po ataku (DEF > 0)",
+        "Wyjątki blokujące: Topór Peruna (brak kontrataku), Dobroochoczy (nikt nie kontratakuje), Cmuch (nigdy nie dostaje kontrataku)",
+        "Wyjątek odwrotny: Król Wężów kontratakuje NAWET w pozycji ATTACK"
+      ],
+      "damage": "Obrażenia kontrataku = DEF obrońcy PRZED ciosem (walka jednoczesna — nie po stracie HP)"
+    },
+
+    "damageCalculation": {
+      "base": "attacker.currentStats.attack",
+      "modifiers": [
+        "Gryf: ×2 w rundzie wystawienia",
+        "Topór Peruna: ×4 (jednorazowy)",
+        "Młot Swaroga: ×2/×3/×4 (losowy)",
+        "Guślarka: +2 ATK vs Weles",
+        "Żerca Welesa: +1 ATK dla demonów",
+        "Polewik: +1 ATK dla Żywi sąsiadów w L1",
+        "Baba: +4 ATK vs domeny inne niż wybrana",
+        "Sztandar: +2 ATK dla sojuszników",
+        "Twierdza: -3 DMG (redukcja) dla sojuszników",
+        "Szeptunka: -1 DMG dla sojuszników",
+        "Utopiec: ½ DMG (zaokrąglone w dół)",
+        "Znachor: -ATK Znachora od obrażeń sojusznika"
+      ]
+    }
+  },
+
+  "passiveImmunities": {
+    "description": "Pasywne odporności sprawdzane w canAttack(). Atak z immunitetą = softFail (0 DMG, kontratak nadal działa).",
+    "list": [
+      {"effectId": "buka_force_defense", "card": "Buka", "rule": "Wrogowie z ATK < ATK Buki muszą być w DEFENSE (nie mogą atakować)."},
+      {"effectId": "matoha_anti_magic", "card": "Matoha", "rule": "Wrogie istoty typu Magia nie mogą atakować."},
+      {"effectId": "wilkolak_melee_immune", "card": "Wilkołak", "rule": "Odporny na Wręcz gdy ATK atakującego < 7."},
+      {"effectId": "stukacz_strong_immune", "card": "Stukacz", "rule": "Wrogowie z wyższym ATK nie mogą go atakować."},
+      {"effectId": "dydko_strong_immune", "card": "Dydko", "rule": "Wrogowie z ATK ≥ ATK Dydko nie mogą go atakować."},
+      {"effectId": "kudlak_conditional_immunity", "card": "Kudłak", "rule": "Odporny w rundzie gdy zadał obrażenia."},
+      {"effectId": "tur_ranged_magic_immune", "card": "Tur", "rule": "Odporny na ataki Dystans i Magia."},
+      {"effectId": "grad_magic_element_only", "card": "Grad", "rule": "Odporny na Wręcz i Dystans — tylko Magia i Żywioł trafiają."},
+      {"effectId": "mavka_line_shield", "card": "Mavka", "rule": "Sojusznicy w linii Mavki nie mogą być celem ataków."},
+      {"effectId": "blotnik_taunt", "card": "Błotnik", "rule": "Wrogowie w zasięgu MUSZĄ atakować Błotnika (taunt)."},
+      {"effectId": "lapiduch_demon_hunter", "card": "Łapiduch", "rule": "Może atakować TYLKO Weles (demony). Blokuje wystawianie demonów."},
+      {"effectId": "wapierz_invincible_hunger", "card": "Wąpierz", "rule": "Niezniszczalny — odporny na wszelkie obrażenia."},
+      {"effectId": "flying", "card": "Latające istoty", "rule": "Wręcz NIE może trafić latających. Potrzebny Żywioł/Magia/Dystans."},
+      {"effectId": "rybi_krol_pierce_immunity", "card": "Rybi Król (blessing)", "rule": "Pobłogosławiony sojusznik IGNORUJE wszystkie odporności wroga."}
+    ]
+  },
+
+  "psEconomy": {
+    "name": "Punkty Sławy (PS)",
+    "startingAmount": 5,
+    "winTarget": 10,
+    "sources": [
+      {"source": "Żniwa Dusz", "amount": "+1 PS", "condition": "Co 20 punktów dusz zebranych z zabitych wrogów (ATK+DEF zabitego)."},
+      {"source": "Łupienie (plunder)", "amount": "+1 PS (i wróg -1 PS)", "condition": "Od rundy 3: gdy pole wroga puste, zabierasz mu 1 PS."},
+      {"source": "Efekty kart", "amount": "Varies", "condition": "Chasnik (+1 za 2 zabójstwa), Korgorusze (+1 za nie-atakowanie), Żmije (+1 gdy pole wroga puste), Lamia (+1 przy śmierci), Szatopierz (odrzuć 2 karty = +1 PS)."}
+    ],
+    "drains": [
+      {"drain": "Wzmocnione przygody", "amount": "-1 PS", "condition": "Zagranie karty przygody z efektem wzmocnionym."},
+      {"drain": "Pass penalty", "amount": "-1 PS", "condition": "3+ kolejne tury bez ataku (mając istoty na polu)."},
+      {"drain": "Łupienie (plunder)", "amount": "-1 PS", "condition": "Wróg łupi gdy nie masz istot na polu (od rundy 3)."},
+      {"drain": "Aktywacje za PS", "amount": "-1 PS", "condition": "Niektóre zdolności kosztują PS: Aitwar (2+), Brzegina (2+), Belt (2+), Północnica (2+), Wołch, Najemnik, Inkluz."}
+    ]
+  },
+
+  "soulHarvest": {
+    "name": "Żniwa Dusz",
+    "description": "Gdy istota ginie w walce, zabójca zbiera jej 'duszę'. Wartość duszy = bazowy ATK + bazowy DEF zabitego. Co 20 zebranych punktów → +1 PS.",
+    "formula": "soulValue = baseATK + baseDEF zabitej istoty",
+    "threshold": 20,
+    "reward": "+1 PS per 20 soul points",
+    "accumulation": "soulPoints akumulują się. Po konwersji: newSoulPoints = soulPoints % 20.",
+    "trigger": "Automatycznie przy każdej śmierci istoty w walce. Zabójca dostaje punkty.",
+    "example": "Zabijesz Żar-ptaka (10/10) → +20 soul points → natychmiast +1 PS."
+  },
+
+  "plunder": {
+    "name": "Łupienie",
+    "description": "Od rundy 3: gdy przeciwnik nie ma ŻADNYCH istot na polu, aktywny gracz może go złupić.",
+    "condition": "roundNumber ≥ 3 AND enemy field empty (0 creatures)",
+    "effect": "Łupiący: +1 PS. Łupiony: -1 PS (min 0).",
+    "purpose": "Kara za brak istot na polu. Zmusza do aktywnej gry."
+  },
+
+  "passPenalty": {
+    "name": "Kara za pasywność",
+    "condition": "Gracz ma istoty na polu ale nie wykonał żadnego ataku w turze.",
+    "tracking": "consecutivePasses++ każdą turę bez ataku (reset gdy atak wykonany).",
+    "warning": "Przy 2 consecutive passes: ostrzeżenie.",
+    "penalty": "Przy 3+ consecutive passes: -1 PS (jednorazowo, potem reset)."
+  },
+
+  "creatures": [
+    {"id": 1, "name": "Aitwar", "domain": "Perun", "atk": 2, "def": 2, "soul": 4, "attackType": "Wręcz", "flying": true, "effectId": "aitwar_steal_hand", "effect": "[WEJŚCIE] Kradnie 1 kartę z ręki wroga (gratis). [AKCJA] Powtórzenie za 1 PS (raz w grze)."},
+    {"id": 2, "name": "Alkonost", "domain": "Perun", "atk": 2, "def": 5, "soul": 7, "attackType": "Wręcz", "flying": true, "effectId": "alkonost_redirect_counterattack", "effect": "[NATARCIE] Zaatakowana istota hipnotyzowana — atakuje swojego sojusznika."},
+    {"id": 3, "name": "Barstuk", "domain": "Perun", "atk": 1, "def": 4, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "barstuk_ally_regen", "effect": "[AKCJA] Przywraca pełną DEF rannemu Żywi. Raz na turę, gratis."},
+    {"id": 4, "name": "Bałwan", "domain": "Perun", "atk": 0, "def": 8, "soul": 8, "attackType": "Wręcz", "flying": false, "effectId": "balwan_free_divine_favor", "effect": "[AURA] Nie kontratakuje. Odporny na Żywioł. Po 3 rundach ginie — dobierasz 3 karty."},
+    {"id": 5, "name": "Biali ludzie", "domain": "Perun", "atk": 2, "def": 2, "soul": 4, "attackType": "Żywioł", "flying": false, "effectId": "biali_ludzie_wound_disarm", "effect": "[ZRANIENIE] Zraniona istota traci zdolność ataku na 2 rundy."},
+    {"id": 6, "name": "Brzegina", "domain": "Perun", "atk": 3, "def": 3, "soul": 6, "attackType": "Żywioł", "flying": false, "effectId": "brzegina_shield_for_gold", "effect": "[CZUJNOŚĆ] Anuluje atak na sojusznika. 1. użycie gratis, kolejne za 1 PS."},
+    {"id": 7, "name": "Bugaj", "domain": "Perun", "atk": 0, "def": 10, "soul": 10, "attackType": "Żywioł", "flying": false, "effectId": "bugaj_def_to_atk", "effect": "[ODWET] Za każdy stracony punkt DEF zyskuje tyle samo ATK."},
+    {"id": 8, "name": "Błotnik", "domain": "Perun", "atk": 3, "def": 4, "soul": 7, "attackType": "Wręcz", "flying": true, "effectId": "blotnik_taunt", "effect": "[AURA] Taunt — wrogowie w zasięgu MUSZĄ atakować Błotnika."},
+    {"id": 9, "name": "Chmurnik", "domain": "Perun", "atk": 7, "def": 6, "soul": 13, "attackType": "Żywioł", "flying": true, "effectId": "chmurnik_ground_flying", "effect": "[AKCJA] Uziemia wszystkie wrogie latające istoty. Raz na turę, gratis."},
+    {"id": 10, "name": "Chowaniec", "domain": "Perun", "atk": 2, "def": 1, "soul": 3, "attackType": "Wręcz", "flying": false, "effectId": "chowaniec_intercept", "effect": "[CZUJNOŚĆ] Intercepcja — przejmuje atak wymierzony w sojusznika (gracz decyduje)."},
+    {"id": 11, "name": "Dobroochoczy", "domain": "Perun", "atk": 1, "def": 10, "soul": 11, "attackType": "Żywioł", "flying": false, "effectId": "dobroochoczy_no_counter", "effect": "[AURA] Dopóki żyje, ŻADNA istota na polu nie kontratakuje."},
+    {"id": 12, "name": "Dziewiątko", "domain": "Perun", "atk": 2, "def": 2, "soul": 4, "attackType": "Wręcz", "flying": false, "effectId": "dziewiatko_deathmark", "effect": "[AKCJA] Kamikaze: atak dystansowy → trucizna/paraliż na wroga → Dziewiątko ginie. Raz w grze."},
+    {"id": 13, "name": "Dziki Myśliwy", "domain": "Perun", "atk": 3, "def": 3, "soul": 6, "attackType": "Dystans", "flying": false, "effectId": "dziki_mysliwy_return_on_kill", "effect": "[ZABÓJSTWO] Po zabiciu wroga wraca do ręki z zachowanymi premiami i artefaktami."},
+    {"id": 14, "name": "Gryf", "domain": "Perun", "atk": 4, "def": 4, "soul": 8, "attackType": "Wręcz", "flying": true, "effectId": "gryf_double_dmg_on_play_turn", "effect": "[NATARCIE] W rundzie wystawienia zadaje podwójne obrażenia (×2 DMG)."},
+    {"id": 15, "name": "Król wężów", "domain": "Perun", "atk": 3, "def": 6, "soul": 9, "attackType": "Wręcz", "flying": false, "effectId": "krol_wezow_always_counter", "effect": "[AURA] Kontratakuje ZAWSZE — nawet w pozycji ATAK."},
+    {"id": 16, "name": "Leszy", "domain": "Perun", "atk": 5, "def": 8, "soul": 13, "attackType": "Żywioł", "flying": false, "effectId": "leszy_post_attack_defend", "effect": "[AURA] Sojusznicy po ataku mogą natychmiast przejść w pozycję OBRONA."},
+    {"id": 17, "name": "Matoha", "domain": "Perun", "atk": 5, "def": 5, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "matoha_anti_magic", "effect": "[AURA] Wrogie istoty typu Magia nie mogą atakować."},
+    {"id": 18, "name": "Mróz", "domain": "Perun", "atk": 8, "def": 8, "soul": 16, "attackType": "Żywioł", "flying": false, "effectId": "mroz_immunity_buffs", "effect": "[AURA] Odporny na wrogie premie (buffy od przeciwnika nie działają)."},
+    {"id": 19, "name": "Rodzanice", "domain": "Perun", "atk": 3, "def": 3, "soul": 6, "attackType": "Wręcz", "flying": false, "effectId": "rodzanice_scry", "effect": "[AKCJA] Podejrzyj wierzchnią kartę talii rywala. Raz na turę, gratis."},
+    {"id": 20, "name": "Rusałka", "domain": "Perun", "atk": 0, "def": 3, "soul": 3, "attackType": "Magia", "flying": false, "effectId": "rusalka_mirror_attack", "effect": "[NATARCIE] Przejmuje ATK i typ ataku celu (cel 'atakuje sam siebie')."},
+    {"id": 21, "name": "Rybi król", "domain": "Perun", "atk": 2, "def": 3, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "rybi_krol_pierce_immunity", "effect": "[WEJŚCIE] Wybierz sojusznika — jego ataki ignorują WSZYSTKIE odporności wroga."},
+    {"id": 22, "name": "Strela", "domain": "Perun", "atk": 0, "def": 4, "soul": 4, "attackType": "Dystans", "flying": true, "effectId": "strela_flash_counter", "effect": "[INTERRUPT] JEDYNA karta interrupt. Zagrywana z ręki podczas tury PRZECIWNIKA gdy zagrywa kartę — karta rywala nie działa i trafia na spód talii."},
+    {"id": 23, "name": "Szalińc", "domain": "Perun", "atk": 4, "def": 5, "soul": 9, "attackType": "Żywioł", "flying": false, "effectId": "szalinc_negate_immunity", "effect": "[NATARCIE] Jego atak neguje odporność celu."},
+    {"id": 24, "name": "Wiła", "domain": "Perun", "atk": 2, "def": 4, "soul": 6, "attackType": "Żywioł", "flying": false, "effectId": "wila_convert_weak_enemies", "effect": "[AURA] Przejmuje WSZYSTKIE wrogie istoty z ATK ≤ ATK Wiły. Sprawdzane co turę."},
+    {"id": 25, "name": "Wodnik", "domain": "Perun", "atk": 4, "def": 2, "soul": 6, "attackType": "Żywioł", "flying": false, "effectId": "wodnik_return_on_round_end", "effect": "[AURA] Po przeżytej rundzie może wrócić do talii."},
+    {"id": 26, "name": "Korgorusze", "domain": "Perun", "atk": 1, "def": 1, "soul": 2, "attackType": "Wręcz", "flying": false, "effectId": "korgorusze_recover_glory", "effect": "[AURA] Jeśli nie atakowały w turze → +1 PS na koniec tury."},
+    {"id": 27, "name": "Łapiduch", "domain": "Perun", "atk": 7, "def": 5, "soul": 12, "attackType": "Wręcz", "flying": false, "effectId": "lapiduch_demon_hunter", "effect": "[AURA] Atakuje TYLKO demony (Weles). Blokuje wystawianie demonów."},
+    {"id": 28, "name": "Świetle", "domain": "Perun", "atk": 2, "def": 4, "soul": 6, "attackType": "Wręcz", "flying": true, "effectId": "swietle_reveal_card", "effect": "[AURA] Co turę odkrywa 1 ukrytą kartę wroga (ręka lub pole)."},
+    {"id": 29, "name": "Żar-ptak", "domain": "Perun", "atk": 10, "def": 10, "soul": 20, "attackType": "Żywioł", "flying": true, "effectId": "zar_ptak_death_explosion", "effect": "[POŻEGNANIE] Przy śmierci: WSZYSTKIE istoty na polu tracą 4 DEF (obie strony)."},
+    {"id": 30, "name": "Żmije", "domain": "Perun", "atk": 9, "def": 9, "soul": 18, "attackType": "Żywioł", "flying": false, "effectId": "zmije_glory_on_empty_field", "effect": "[AURA] Na koniec tury: +1 PS jeśli pole wroga puste."},
+    {"id": 31, "name": "Baba", "domain": "Żywi", "atk": 2, "def": 4, "soul": 6, "attackType": "Magia", "flying": false, "effectId": "baba_bonus_vs_type", "effect": "[WEJŚCIE] Wybierz domenę do ochrony. +4 ATK vs wszystkich INNYCH domen."},
+    {"id": 32, "name": "Chały / Ały", "domain": "Żywi", "atk": 6, "def": 6, "soul": 12, "attackType": "Dystans", "flying": false, "effectId": "chaly_attack_locations", "effect": "[AKCJA] Może atakować wrogą Lokację. 12 łącznych DMG = zniszczenie Lokacji."},
+    {"id": 33, "name": "Chąśnik", "domain": "Żywi", "atk": 6, "def": 3, "soul": 9, "attackType": "Dystans", "flying": false, "effectId": "chasnik_gold_on_kill", "effect": "[ZABÓJSTWO] Za każdego 2. zabitego wroga → +1 PS."},
+    {"id": 34, "name": "Chłop", "domain": "Żywi", "atk": 1, "def": 1, "soul": 2, "attackType": "Wręcz", "flying": false, "effectId": "chlop_extra_attack", "effect": "[AURA] +1 dodatkowy atak istotą w turze."},
+    {"id": 35, "name": "Czarnoksiężnik", "domain": "Żywi", "atk": 7, "def": 2, "soul": 9, "attackType": "Magia", "flying": false, "effectId": "czarnoksieznik_steal_abilities", "effect": "[ZABÓJSTWO] Przejmuje zdolności zabitego wroga (permanentnie)."},
+    {"id": 36, "name": "Czarownica", "domain": "Żywi", "atk": 4, "def": 4, "soul": 8, "attackType": "Magia", "flying": false, "effectId": "czarownica_redirect_spell", "effect": "[AURA] Może zmienić cel zagranego zaklęcia. 1. raz gratis, kolejne za 1 PS."},
+    {"id": 37, "name": "Dzicy ludzie", "domain": "Żywi", "atk": 4, "def": 3, "soul": 7, "attackType": "Dystans", "flying": false, "effectId": "dzicy_ludzie_steal_killed", "effect": "[ZABÓJSTWO] Zabita istota trafia do ręki zamiast na cmentarz."},
+    {"id": 38, "name": "Guślarka", "domain": "Żywi", "atk": 3, "def": 2, "soul": 5, "attackType": "Magia", "flying": false, "effectId": "guslarka_bonus_vs_demon", "effect": "[AURA] Sojusznicy +2 ATK vs Weles (demony)."},
+    {"id": 39, "name": "Julki", "domain": "Żywi", "atk": 2, "def": 2, "soul": 4, "attackType": "Wręcz", "flying": false, "effectId": "julki_adventure_immunity", "effect": "[AURA] Odporne na karty przygody i zaklęcia."},
+    {"id": 40, "name": "Junak", "domain": "Żywi", "atk": 7, "def": 6, "soul": 13, "attackType": "Dystans", "flying": false, "effectId": "junak_double_hit_kill", "effect": "[AURA] First Strike (kontratakuje PRZED atakiem wroga). Po 2. trafieniu w ten sam cel → cel ginie natychmiast."},
+    {"id": 41, "name": "Jędza", "domain": "Żywi", "atk": 5, "def": 3, "soul": 8, "attackType": "Magia", "flying": false, "effectId": "jedza_remove_buff", "effect": "[AKCJA] Usuń 1 aktywny efekt z dowolnej istoty. Raz na turę, gratis."},
+    {"id": 42, "name": "Konny", "domain": "Żywi", "atk": 7, "def": 6, "soul": 13, "attackType": "Dystans", "flying": false, "effectId": "konny_cleave", "effect": "[ZABÓJSTWO] Nadmiar obrażeń (overflow) przechodzi na następną istotę w linii."},
+    {"id": 43, "name": "Kościej", "domain": "Żywi", "atk": 6, "def": 5, "soul": 11, "attackType": "Magia", "flying": false, "effectId": "kosciej_melee_resurrection", "effect": "[POŻEGNANIE] Gdy ginie od Wręcz → wskrzesza się (1. raz gratis, kolejne za 1 PS)."},
+    {"id": 44, "name": "Naczelnik Plemienia", "domain": "Żywi", "atk": 6, "def": 5, "soul": 11, "attackType": "Dystans", "flying": false, "effectId": "naczelnik_human_rally", "effect": "[NATARCIE] Gdy atakuje → wszyscy sojuszniczy Żywi atakują razem z nim."},
+    {"id": 45, "name": "Najemnik", "domain": "Żywi", "atk": 5, "def": 4, "soul": 9, "attackType": "Dystans", "flying": false, "effectId": "najemnik_mercenary", "effect": "[AKCJA] Wydaj 1 PS → dodatkowy atak. [AURA] Na turę wroga: wróg może zapłacić 1 PS żeby przejąć Najemnika."},
+    {"id": 46, "name": "Rumak", "domain": "Żywi", "atk": 0, "def": 4, "soul": 4, "attackType": "Wręcz", "flying": false, "effectId": "rumak_mount", "effect": "[AKCJA] Łączy się z Żywi sojusznikiem → jeździec rani całą linię wroga. Raz w grze."},
+    {"id": 47, "name": "Starszyzna Plemienna", "domain": "Żywi", "atk": 2, "def": 4, "soul": 6, "attackType": "Wręcz", "flying": false, "effectId": "starszyzna_scry_deck", "effect": "[AURA] Co turę odkrywa 3 górne karty własnej talii."},
+    {"id": 48, "name": "Szeptunka", "domain": "Żywi", "atk": 1, "def": 4, "soul": 5, "attackType": "Magia", "flying": false, "effectId": "szeptunka_damage_reduction", "effect": "[AURA] Wszystkie sojusznicze istoty otrzymują -1 obrażeń z każdego źródła."},
+    {"id": 49, "name": "Wielkolud", "domain": "Żywi", "atk": 8, "def": 8, "soul": 16, "attackType": "Żywioł", "flying": false, "effectId": "wielkolud_choose_counter", "effect": "[CZUJNOŚĆ] Gdy sojusznik atakowany → Wielkolud kontratakuje wybranego wroga w zasięgu."},
+    {"id": 50, "name": "Woj", "domain": "Żywi", "atk": 4, "def": 3, "soul": 7, "attackType": "Wręcz", "flying": false, "effectId": "woj_mass_deploy", "effect": "[WEJŚCIE] Wszystkie inne Woj z ręki wchodzą na pole za darmo."},
+    {"id": 51, "name": "Wołch", "domain": "Żywi", "atk": 3, "def": 4, "soul": 7, "attackType": "Magia", "flying": false, "effectId": "wolch_heal", "effect": "[AKCJA] Ulecz sojusznika w tej samej linii do pełna. Koszt: 1 PS. Raz na turę."},
+    {"id": 52, "name": "Znachor", "domain": "Żywi", "atk": 2, "def": 3, "soul": 5, "attackType": "Magia", "flying": false, "effectId": "znachor_absorb", "effect": "[AURA] Gdy sojusznik przeżyje atak → Znachor redukuje obrażenia o swój ATK."},
+    {"id": 53, "name": "Leśnica", "domain": "Żywi", "atk": 3, "def": 3, "soul": 6, "attackType": "Żywioł", "flying": false, "effectId": "lesnica_double_attack", "effect": "[AURA] Może atakować 2 razy w turze."},
+    {"id": 54, "name": "Polewik", "domain": "Żywi", "atk": 2, "def": 3, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "polewik_buff_neighbors", "effect": "[AURA] Sąsiedzi w L1 będący Żywymi +1 ATK."},
+    {"id": 55, "name": "Tur", "domain": "Żywi", "atk": 3, "def": 6, "soul": 9, "attackType": "Wręcz", "flying": false, "effectId": "tur_ranged_magic_immune", "effect": "[AURA] Odporny na ataki Dystans i Magia."},
+    {"id": 56, "name": "Łucznik", "domain": "Żywi", "atk": 4, "def": 2, "soul": 6, "attackType": "Dystans", "flying": false, "effectId": "lucznik_pin", "effect": "[ZRANIENIE] Trafiony cel nie może zmieniać Pozycji (permanentnie)."},
+    {"id": 57, "name": "Światogor", "domain": "Żywi", "atk": 5, "def": 5, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "swiatogor_line_cleave", "effect": "[NATARCIE] Atak uderza we WSZYSTKICH wrogów w tej samej linii co cel."},
+    {"id": 58, "name": "Żupan", "domain": "Żywi", "atk": 4, "def": 6, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "zupan_no_field_limit", "effect": "[AURA] Znosi limit 5 istot na polu."},
+    {"id": 59, "name": "Żerca", "domain": "Żywi", "atk": 2, "def": 5, "soul": 7, "attackType": "Magia", "flying": false, "effectId": "zerca_spell_shield", "effect": "[WEJŚCIE] Sojusznicy zyskują jednorazową tarczę przed wrogim zaklęciem."},
+    {"id": 60, "name": "Żerca Welesa", "domain": "Żywi", "atk": 7, "def": 3, "soul": 10, "attackType": "Magia", "flying": false, "effectId": "zerca_welesa_demon_buff", "effect": "[AURA] Twoje demony (Weles) +1 ATK."},
+    {"id": 61, "name": "Ażdacha", "domain": "Nieumarli", "atk": 9, "def": 8, "soul": 17, "attackType": "Wręcz", "flying": false, "effectId": "azdacha_vanilia", "effect": "Brak specjalnej zdolności. Vanilla — potężne staty."},
+    {"id": 62, "name": "Bagiennik", "domain": "Nieumarli", "atk": 2, "def": 2, "soul": 4, "attackType": "Wręcz", "flying": false, "effectId": "bagiennik_cleanse_buff", "effect": "[AKCJA] Usuń 1 efekt z dowolnej istoty. Bagiennik podwaja swój ATK i DEF. Raz na turę."},
+    {"id": 63, "name": "Bezkost", "domain": "Nieumarli", "atk": 7, "def": 7, "soul": 14, "attackType": "Wręcz", "flying": false, "effectId": "bezkost_atk_drain", "effect": "[ZRANIENIE] Zadaje obrażenia ATK celu zamiast DEF. Gdy ATK spadnie do 0 → cel ginie."},
+    {"id": 64, "name": "Bzionek", "domain": "Nieumarli", "atk": 1, "def": 1, "soul": 2, "attackType": "Wręcz", "flying": false, "effectId": "bzionek_spell_intercept", "effect": "[AURA] Przechwytuje wrogie zaklęcia celujące w sojusznika — bierze je na siebie."},
+    {"id": 65, "name": "Błędny ognik", "domain": "Nieumarli", "atk": 0, "def": 3, "soul": 3, "attackType": "Żywioł", "flying": true, "effectId": "bledny_ognik_bounce", "effect": "[WEJŚCIE] Wskazana istota wraca na wierzch talii (zachowuje modyfikatory)."},
+    {"id": 66, "name": "Cmentarna baba", "domain": "Nieumarli", "atk": 7, "def": 2, "soul": 9, "attackType": "Wręcz", "flying": false, "effectId": "cmentarna_baba_resurrect", "effect": "[WEJŚCIE] Wskrzesza Nieumarłego z cmentarza (ATK wskrzeszonego ≤ ATK Cmentarnej Baby)."},
+    {"id": 67, "name": "Domowik", "domain": "Nieumarli", "atk": 1, "def": 2, "soul": 3, "attackType": "Wręcz", "flying": false, "effectId": "domowik_hand_size", "effect": "[AURA] ATK = bazowy ATK + liczba kart w ręce właściciela."},
+    {"id": 68, "name": "Dziad", "domain": "Nieumarli", "atk": 3, "def": 1, "soul": 4, "attackType": "Wręcz", "flying": true, "effectId": "dziad_reveal_all", "effect": "[WEJŚCIE] Odkrywa WSZYSTKIE karty wroga (pole + ręka)."},
+    {"id": 69, "name": "Homen", "domain": "Nieumarli", "atk": 4, "def": 4, "soul": 8, "attackType": "Wręcz", "flying": false, "effectId": "homen_convert_on_death", "effect": "[ZRANIENIE] Zraniony wróg po śmierci wskrzesza się jako Homen (4/4) po stronie atakującego."},
+    {"id": 70, "name": "Jaroszek", "domain": "Nieumarli", "atk": 3, "def": 2, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "jaroszek_paralyze", "effect": "[WEJŚCIE] Permanentny paraliż wybranego wroga (nie może atakować, nigdy nie wygasa)."},
+    {"id": 71, "name": "Kikimora", "domain": "Nieumarli", "atk": 2, "def": 2, "soul": 4, "attackType": "Wręcz", "flying": false, "effectId": "kikimora_free_attack", "effect": "[AURA] Jej atak nie zużywa slotu atakowego — możesz atakować inną istotą."},
+    {"id": 72, "name": "Kresnik", "domain": "Nieumarli", "atk": 2, "def": 2, "soul": 4, "attackType": "Magia", "flying": false, "effectId": "kresnik_choose_buff", "effect": "[WEJŚCIE] Wybierz zdolność DOWOLNEJ istoty w grze — Kresnik ją zyskuje permanentnie."},
+    {"id": 73, "name": "Kudłak", "domain": "Nieumarli", "atk": 7, "def": 6, "soul": 13, "attackType": "Wręcz", "flying": false, "effectId": "kudlak_conditional_immunity", "effect": "[AURA] Odporny w rundzie gdy sam zadał obrażenia. Można go zranić TYLKO gdy nie atakował."},
+    {"id": 74, "name": "Latawica", "domain": "Nieumarli", "atk": 1, "def": 2, "soul": 3, "attackType": "Dystans", "flying": false, "effectId": "latawica_drain_ally", "effect": "[AKCJA] Wysysa CAŁY ATK i DEF od sojusznika (zabija go). Raz na turę, gratis."},
+    {"id": 75, "name": "Latawiec", "domain": "Nieumarli", "atk": 2, "def": 2, "soul": 4, "attackType": "Dystans", "flying": false, "effectId": "latawiec_mutual_death", "effect": "[POŻEGNANIE] Zabójca Latawca ginie razem z nim."},
+    {"id": 76, "name": "Morowa dziewica", "domain": "Nieumarli", "atk": 3, "def": 8, "soul": 11, "attackType": "Żywioł", "flying": false, "effectId": "morowa_dziewica_aoe_all", "effect": "[NATARCIE] Jej atak uderza WSZYSTKICH na polu (obie strony, oprócz niej i głównego celu)."},
+    {"id": 77, "name": "Niedźwiedziołak", "domain": "Nieumarli", "atk": 8, "def": 7, "soul": 15, "attackType": "Wręcz", "flying": false, "effectId": "niedzwiedzioak_guardian", "effect": "[CZUJNOŚĆ] Gdy sojusznik atakowany → kontratakuje napastnika (jeśli w zasięgu i OBRONIE)."},
+    {"id": 78, "name": "Poroniec", "domain": "Nieumarli", "atk": 1, "def": 2, "soul": 3, "attackType": "Wręcz", "flying": false, "effectId": "poroniec_copy_ability", "effect": "[AKCJA] Kopiuje zdolność wybranej istoty na polu do końca tury. Raz na turę, gratis."},
+    {"id": 79, "name": "Południca", "domain": "Nieumarli", "atk": 4, "def": 3, "soul": 7, "attackType": "Żywioł", "flying": false, "effectId": "poludnica_kill_weakest", "effect": "[AURA] Co turę najsłabsza istota na polu (obie strony!) ginie (wg ATK)."},
+    {"id": 80, "name": "Północnica", "domain": "Nieumarli", "atk": 3, "def": 5, "soul": 8, "attackType": "Żywioł", "flying": true, "effectId": "polnocnica_mass_paralyze", "effect": "[AKCJA] Paraliż WSZYSTKICH wrogów na 1 rundę. 1. użycie gratis, kolejne za 1 PS. Raz na rundę."},
+    {"id": 81, "name": "Siemiargł", "domain": "Nieumarli", "atk": 3, "def": 3, "soul": 6, "attackType": "Wręcz", "flying": false, "effectId": "siemiargl_cleanse", "effect": "[WEJŚCIE] Usuwa WSZYSTKIE negatywne efekty z sojuszników."},
+    {"id": 82, "name": "Strzyga", "domain": "Nieumarli", "atk": 2, "def": 8, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "strzyga_lifesteal", "effect": "[ZRANIENIE] Lifesteal — regeneruje DEF o tyle ile zadała obrażeń."},
+    {"id": 83, "name": "Stukacz", "domain": "Nieumarli", "atk": 2, "def": 3, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "stukacz_strong_immune", "effect": "[AURA] Wrogowie z wyższym ATK nie mogą go atakować."},
+    {"id": 84, "name": "Tęsknica", "domain": "Nieumarli", "atk": 1, "def": 4, "soul": 5, "attackType": "Wręcz", "flying": true, "effectId": "tesknica_block_enhance", "effect": "[AURA] Wróg nie może ulepszać przygód (blokuje enhanced adventures)."},
+    {"id": 85, "name": "Utopiec", "domain": "Nieumarli", "atk": 4, "def": 4, "soul": 8, "attackType": "Wręcz", "flying": false, "effectId": "utopiec_half_damage", "effect": "[AURA] Otrzymuje ½ obrażeń (zaokrąglone w dół)."},
+    {"id": 86, "name": "Wieszczy", "domain": "Nieumarli", "atk": 4, "def": 4, "soul": 8, "attackType": "Żywioł", "flying": false, "effectId": "wieszczy_spy_burn", "effect": "[SZPIEG] Wystawiany na pole WROGA. Co turę posiadacz spala 1 kartę z talii."},
+    {"id": 87, "name": "Wilkołak", "domain": "Nieumarli", "atk": 7, "def": 4, "soul": 11, "attackType": "Wręcz", "flying": false, "effectId": "wilkolak_melee_immune", "effect": "[AURA] Odporny na Wręcz gdy ATK napastnika < 7."},
+    {"id": 88, "name": "Wisielec", "domain": "Nieumarli", "atk": 3, "def": 4, "soul": 7, "attackType": "Wręcz", "flying": false, "effectId": "wisielec_bounce_both", "effect": "[ZRANIENIE] Kogo Wisielec zrani → wraca na spód talii. Kto zrani Wisielca → też wraca na spód talii."},
+    {"id": 89, "name": "Wąpierz", "domain": "Nieumarli", "atk": 4, "def": 4, "soul": 8, "attackType": "Wręcz", "flying": false, "effectId": "wapierz_invincible_hunger", "effect": "[AURA] Niezniszczalny. Może atakować sojuszników (musi żywić się). Ginie po 2 rundach bez zadania obrażeń."},
+    {"id": 90, "name": "Zmora", "domain": "Nieumarli", "atk": 3, "def": 3, "soul": 6, "attackType": "Wręcz", "flying": false, "effectId": "zmora_grow_sacrifice", "effect": "[ZRANIENIE] +ATK za każdy zadany DMG. [AKCJA] Ginie → przejmij wroga z ATK ≤ 2× ATK Zmory. Raz w grze."},
+    {"id": 91, "name": "Baba Jaga", "domain": "Weles", "atk": 1, "def": 1, "soul": 2, "attackType": "Magia", "flying": false, "effectId": "baba_jaga_death_growth", "effect": "[AURA] +1 ATK i +1 DEF za KAŻDĄ śmierć na polu (sojusznik lub wróg)."},
+    {"id": 92, "name": "Bazyliszek", "domain": "Weles", "atk": 2, "def": 4, "soul": 6, "attackType": "Wręcz", "flying": true, "effectId": "bazyliszek_paralyze", "effect": "[ZRANIENIE] Zraniona istota sparaliżowana na 2 rundy."},
+    {"id": 93, "name": "Bełt", "domain": "Weles", "atk": 3, "def": 2, "soul": 5, "attackType": "Dystans", "flying": false, "effectId": "belt_rearrange", "effect": "[AKCJA] Zmień pozycję/linię wrogiej istoty. 1. raz gratis, kolejne za 1 PS."},
+    {"id": 94, "name": "Bieda", "domain": "Weles", "atk": 0, "def": 8, "soul": 8, "attackType": "Wręcz", "flying": false, "effectId": "bieda_spy_block_draw", "effect": "[SZPIEG] Wystawiany na pole WROGA. Posiadacz nie dobiera kart."},
+    {"id": 95, "name": "Bies", "domain": "Weles", "atk": 8, "def": 2, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "bies_reverse_damage", "effect": "[AURA] Obrażenia redukują ATK Biesa najpierw, dopiero potem DEF."},
+    {"id": 96, "name": "Bogunka", "domain": "Weles", "atk": 4, "def": 4, "soul": 8, "attackType": "Żywioł", "flying": false, "effectId": "bogunka_instant_kill_human", "effect": "[NATARCIE] Zaatakowany Żywi (domena 2) ginie NATYCHMIAST niezależnie od HP."},
+    {"id": 97, "name": "Buka", "domain": "Weles", "atk": 5, "def": 5, "soul": 10, "attackType": "Wręcz", "flying": true, "effectId": "buka_force_defense", "effect": "[AURA] Wrogowie z ATK < ATK Buki muszą być w pozycji OBRONA (nie mogą atakować)."},
+    {"id": 98, "name": "Cicha", "domain": "Weles", "atk": 3, "def": 3, "soul": 6, "attackType": "Wręcz", "flying": false, "effectId": "cicha_kill_weak", "effect": "[AURA] Co turę WSZYSTKIE istoty z DEF < ATK Cichej giną (obie strony!)."},
+    {"id": 99, "name": "Czart", "domain": "Weles", "atk": 6, "def": 6, "soul": 12, "attackType": "Wręcz", "flying": false, "effectId": "czart_shift_stats", "effect": "[AKCJA] Przerzuć DEF na ATK (suwak). Całe DEF = ostatni atak, potem ginie. Raz na turę."},
+    {"id": 100, "name": "Darmopych", "domain": "Weles", "atk": 5, "def": 4, "soul": 9, "attackType": "Wręcz", "flying": false, "effectId": "darmopych_friendly_fire", "effect": "[WEJŚCIE] Wskazany wróg atakuje swojego najsłabszego sojusznika (friendly fire)."},
+    {"id": 101, "name": "Dydko", "domain": "Weles", "atk": 3, "def": 3, "soul": 6, "attackType": "Wręcz", "flying": false, "effectId": "dydko_strong_immune", "effect": "[AURA] Wrogowie z ATK ≥ ATK Dydko nie mogą go atakować."},
+    {"id": 102, "name": "Dziwożona", "domain": "Weles", "atk": 5, "def": 3, "soul": 8, "attackType": "Wręcz", "flying": false, "effectId": "dziwolzona_swap_cards", "effect": "[ZABÓJSTWO] Wymiana — oddaj kartę z ręki wrogowi, ukradnij kartę z talii wroga."},
+    {"id": 103, "name": "Gorynych", "domain": "Weles", "atk": 10, "def": 10, "soul": 20, "attackType": "Żywioł", "flying": true, "effectId": "gorynych_merge_dragons", "effect": "[WEJŚCIE] Wchłania sojusznicze Smoki na polu — sumuje ich staty."},
+    {"id": 104, "name": "Grad", "domain": "Weles", "atk": 1, "def": 1, "soul": 2, "attackType": "Żywioł", "flying": false, "effectId": "grad_magic_element_only", "effect": "[AURA] Odporny na Wręcz i Dystans. Tylko Magia i Żywioł mogą trafić."},
+    {"id": 105, "name": "Inkluz", "domain": "Weles", "atk": 4, "def": 5, "soul": 9, "attackType": "Wręcz", "flying": false, "effectId": "inkluz_steal_buff", "effect": "[AKCJA] Ukradnij premię z dowolnej istoty i przekaż innemu sojusznikowi. Koszt: 1 PS."},
+    {"id": 106, "name": "Kania", "domain": "Weles", "atk": 5, "def": 5, "soul": 10, "attackType": "Dystans", "flying": true, "effectId": "kania_chain_kill", "effect": "[ZABÓJSTWO] Zabicie istoty z niższym ATK nie kończy tury (może atakować ponownie)."},
+    {"id": 107, "name": "Lamia", "domain": "Weles", "atk": 5, "def": 4, "soul": 9, "attackType": "Wręcz", "flying": true, "effectId": "lamia_death_reward", "effect": "[POŻEGNANIE] Przy śmierci: wybierz — +1 PS albo dobierz 5 kart."},
+    {"id": 108, "name": "Licho", "domain": "Weles", "atk": 2, "def": 2, "soul": 4, "attackType": "Wręcz", "flying": false, "effectId": "licho_block_draw", "effect": "[AURA] Wróg nie dobiera kart dopóki Licho żyje. Pusta ręka = wróg może wziąć 1."},
+    {"id": 109, "name": "Liczyrzepa", "domain": "Weles", "atk": 3, "def": 5, "soul": 8, "attackType": "Wręcz", "flying": false, "effectId": "liczyrzepa_choose_type", "effect": "[NATARCIE] Przed atakiem wybiera typ: Wręcz/Żywioł/Magia/Dystans. Może celować w dowolną linię."},
+    {"id": 110, "name": "Mara", "domain": "Weles", "atk": 3, "def": 2, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "mara_sacrifice_takeover", "effect": "[AKCJA] Mara ginie → przejmij wroga z ATK ≤ 2× ATK Mary. Raz w grze."},
+    {"id": 111, "name": "Mavka", "domain": "Weles", "atk": 2, "def": 3, "soul": 5, "attackType": "Dystans", "flying": false, "effectId": "mavka_line_shield", "effect": "[AURA] Sojusznicy w linii Mavki nie mogą być celem ataków wroga."},
+    {"id": 112, "name": "Przyłóżnik", "domain": "Weles", "atk": 4, "def": 6, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "przyloznik_heal_on_zyvi_kill", "effect": "[ZABÓJSTWO] Po zabiciu Żywi → regeneruje się do pełnego DEF."},
+    {"id": 113, "name": "Smocze jajo", "domain": "Weles", "atk": 0, "def": 10, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "smocze_jajo_hatch", "effect": "[AURA] Nie kontratakuje. Blokuje wrogie Żywioły. Po 5 rundach wykluwa się w wybranego Smoka."},
+    {"id": 114, "name": "Szątopierz", "domain": "Weles", "atk": 3, "def": 4, "soul": 7, "attackType": "Wręcz", "flying": true, "effectId": "szatopierz_discard_for_gold", "effect": "[AKCJA] Odrzuć 2 karty z ręki → +1 PS. Raz na turę."},
+    {"id": 115, "name": "Wietrzyca", "domain": "Weles", "atk": 6, "def": 6, "soul": 12, "attackType": "Żywioł", "flying": true, "effectId": "wietrzyca_rearrange_enemy", "effect": "[AKCJA] Przetasuj pozycje wrogich istot między liniami. Raz na turę."},
+    {"id": 116, "name": "Wij", "domain": "Weles", "atk": 9, "def": 9, "soul": 18, "attackType": "Żywioł", "flying": true, "effectId": "wij_revive_once", "effect": "[POŻEGNANIE] Wskrzesza się raz na grę na 1 turę. Potem ginie na zawsze."},
+    {"id": 117, "name": "Wąż Tugaryn", "domain": "Weles", "atk": 8, "def": 8, "soul": 16, "attackType": "Żywioł", "flying": false, "effectId": "waz_tugaryn_cleave", "effect": "[ZABÓJSTWO] Nadmiar obrażeń (overflow) przechodzi na następną istotę w linii."},
+    {"id": 118, "name": "Zagorkinia", "domain": "Weles", "atk": 3, "def": 2, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "zagorkinia_curse_drain", "effect": "[ZRANIENIE] Klątwa — cel traci 1 ATK i 1 DEF co turę (permanentnie)."},
+    {"id": 119, "name": "Ćmuch", "domain": "Weles", "atk": 3, "def": 4, "soul": 7, "attackType": "Wręcz", "flying": true, "effectId": "cmuch_no_counter_received", "effect": "[AURA] Gdy Ćmuch atakuje, obrońca NIGDY nie może kontratakować."},
+    {"id": 120, "name": "Śmierć", "domain": "Weles", "atk": 6, "def": 4, "soul": 10, "attackType": "Magia", "flying": false, "effectId": "smierc_death_growth_save", "effect": "[AURA] +1/+1 za KAŻDĄ śmierć na polu. Gdy ktoś ginie → właściciel może zapłacić 1 PS żeby go uratować (wraca do talii)."}
+  ],
+
+  "adventureCards": [
+    {"name": "Moc Światogora", "persistence": "permanent", "basic": "Podwój ATK i DEF istoty. Jeśli zabije — sama ginie.", "enhanced": "Po 3 rundach wskrzesza się z bazowymi statami.", "enhancedCost": 1},
+    {"name": "Arena", "persistence": "permanent", "basic": "Rywal nie może mieć więcej istot na polu niż Ty.", "enhanced": "Zraniona wroga istota może atakować TYLKO oprawcę.", "enhancedCost": 1},
+    {"name": "Obłęd", "persistence": "instant", "basic": "Zamień ATK z DEF u wybranego stworzenia.", "enhanced": "2 Twoje istoty zamieniają się wzajemnie ATK i DEF.", "enhancedCost": 1},
+    {"name": "Topór Peruna", "persistence": "permanent", "basic": "Jeden atak dystansowy za ×4 DMG, bez kontrataku.", "enhanced": "+ ignoruje odporności.", "enhancedCost": 1},
+    {"name": "Trucizna", "persistence": "instant", "basic": "Cel ginie po 3 rundach.", "enhanced": "Paraliż WSZYSTKICH wrogów na 2 rundy.", "enhancedCost": 1},
+    {"name": "Łaska Welesa", "persistence": "instant", "basic": "Wskrzesza własną istotę z cmentarza.", "enhanced": "Wskrzesza istotę RYWALA — walczy po Twojej stronie.", "enhancedCost": 1},
+    {"name": "Bitwa Nad Tollense", "persistence": "permanent", "basic": "Wszystkie istoty ignorują linie — biją kogo chcą.", "enhanced": "+2 dodatkowe ataki dla Twoich istot w turze zagrania.", "enhancedCost": 1},
+    {"name": "Okaleczenie", "persistence": "instant", "basic": "-½ ATK i DEF wybranej istoty.", "enhanced": "Dodatkowo: usuwa wszystkie premie.", "enhancedCost": 1},
+    {"name": "Wygnanie", "persistence": "instant", "basic": "Cel wraca do talii (wróg na spód).", "enhanced": "Nie-najsilniejszy wróg trwale zmienia stronę.", "enhancedCost": 1},
+    {"name": "Rusałczy Taniec", "persistence": "instant", "basic": "-2 ATK/-2 DEF z wroga → +2/+2 sojusznikowi.", "enhanced": "-1/-1 WSZYSTKIM wrogom → suma idzie do jednej Twojej istoty.", "enhancedCost": 1},
+    {"name": "Kwiat Paproci", "persistence": "permanent", "basic": "Zmień typ ataku istoty na dowolny.", "enhanced": "Nowy typ + odporność na wybrany typ.", "enhancedCost": 1},
+    {"name": "Sobowtór", "persistence": "instant", "basic": "Stwórz kopię wybranej istoty (bez artefaktów i debuffów).", "enhanced": "Kopia niezniszczalna dopóki żyje oryginał.", "enhancedCost": 1},
+    {"name": "Kradzież", "persistence": "instant", "basic": "Ukradnij wrogą Lokację lub aktywne Zdarzenie.", "enhanced": "Zabierz 2 karty z wierzchu talii rywala.", "enhancedCost": 1},
+    {"name": "Arkona", "persistence": "permanent", "type": "LOCATION", "basic": "Brak limitu istot na polu.", "enhanced": "+ najsłabsza istota regeneruje 2 DEF/turę.", "enhancedCost": 1},
+    {"name": "Twierdza", "persistence": "permanent", "type": "LOCATION", "basic": "Twoje istoty +3 Obrony (redukcja DMG).", "enhanced": "+ co turę mury zadają 2 DMG losowemu wrogowi.", "enhancedCost": 1},
+    {"name": "Rehtra", "persistence": "permanent", "type": "LOCATION", "basic": "Podejrzyj kartę rywala (4 użycia gratis).", "enhanced": "Ujawnia WSZYSTKIE karty wroga. Nowe karty też widoczne.", "enhancedCost": 1},
+    {"name": "Zlot Czarownic", "persistence": "duration", "basic": "3 kolejne przygody rywala nie zadziałają.", "enhanced": "+ weź 1 kartę ze stosu zniszczonych wroga.", "enhancedCost": 1},
+    {"name": "Likantropia", "persistence": "permanent", "basic": "Istota po zabiciu przejmuje ATK+DEF ofiary. 2 rundy bez walki = -½ statów.", "enhanced": "Może zabijać własne istoty i przejmować ich staty.", "enhancedCost": 1},
+    {"name": "Sztandar", "persistence": "permanent", "type": "ARTIFACT", "basic": "Nośnik stoi w L1, nie atakuje. Sojusznicy +2 ATK.", "enhanced": "+ gdy nośnik atakowany, losowy sojusznik przejmuje atak.", "enhancedCost": 1},
+    {"name": "Miecz Kladenet", "persistence": "permanent", "type": "ARTIFACT", "basic": "Nośnik atakuje 2 wrogów jednocześnie. Brak kontrataku.", "enhanced": "+ może celować w dowolną linię.", "enhancedCost": 1},
+    {"name": "Młot Swaroga", "persistence": "permanent", "basic": "Szał: 3 ataki z losowym mnożnikiem (×2 OK, ×3 paraliż, ×4 ginie).", "enhanced": "+ żaden atak nie wywołuje kontrataku.", "enhancedCost": 1},
+    {"name": "Matecznik", "persistence": "permanent", "type": "LOCATION", "basic": "Ukryj istotę — chroniona przed wszystkim, nie walczy.", "enhanced": "+ ukryta regeneruje 2 DEF/turę.", "enhancedCost": 1},
+    {"name": "Przyjaźń", "persistence": "permanent", "basic": "Istota A przejmuje obrażenia za istotę B.", "enhanced": "Gdy ochroniarz zginie → chroniony +3 darmowe ataki.", "enhancedCost": 1},
+    {"name": "Boskie Wsparcie", "persistence": "instant", "basic": "+2 ATK i +2 DEF wybranej istocie.", "enhanced": "+ istota zyskuje Lot.", "enhancedCost": 1},
+    {"name": "Pióro Żar-Ptaka", "persistence": "instant", "type": "ARTIFACT", "basic": "Reset ATK/DEF do bazy. Usuwa negatywne efekty.", "enhanced": "Zdejmij WSZYSTKIE premie i atrybuty z istoty.", "enhancedCost": 1},
+    {"name": "Amulet Z Rozetą", "persistence": "permanent", "type": "ARTIFACT", "basic": "Odporność na Magię.", "enhanced": "Odporność na wrogie Karty Przygody.", "enhancedCost": 1},
+    {"name": "Płaszcz Strzybóga", "persistence": "permanent", "type": "ARTIFACT", "basic": "Istota zyskuje Lot.", "enhanced": "Wszyscy wrogowie tracą Lot.", "enhancedCost": 1},
+    {"name": "Tarcza Dobryni Nikiticza", "persistence": "permanent", "type": "ARTIFACT", "basic": "Absorbuje 8 obrażeń.", "enhanced": "+ jednorazowe anulowanie dowolnego ataku.", "enhancedCost": 1},
+    {"name": "Wyspa Bujan", "persistence": "permanent", "type": "LOCATION", "basic": "+3 do limitu kart w ręce.", "enhanced": "+ podejrzyj wierzchnią kartę talii.", "enhancedCost": 1},
+    {"name": "Tryzna", "persistence": "instant", "basic": "Rywal -1 do limitu ręki.", "enhanced": "Rywal może grać max 2 karty na rundę.", "enhancedCost": 1},
+    {"name": "Kukła Marzanny", "persistence": "instant", "basic": "Nieumarli sparaliżowani na 3 rundy.", "enhanced": "Żywi mają ×2 ATK vs Nieumarli na 3 rundy.", "enhancedCost": 1},
+    {"name": "Zdrada Popiela", "persistence": "instant", "basic": "Wrogie istoty nie mogą być w Obronie.", "enhanced": "Odwróć pozycje WSZYSTKICH wrogów.", "enhancedCost": 1},
+    {"name": "Gwizd Sołowieja", "persistence": "instant", "basic": "Wrogowie z ATK > DEF tracą nadwyżkę ATK.", "enhanced": "WSZYSTKIE wrogie istoty nie mogą atakować.", "enhancedCost": 1},
+    {"name": "Kataklizm", "persistence": "instant", "basic": "-½ ATK i DEF WSZYSTKIM istotom na polu.", "enhanced": "Zniszcz wrogą Lokację.", "enhancedCost": 1},
+    {"name": "Pakt Z Inkluzem", "persistence": "instant", "basic": "-1 ATK/-2 DEF WSZYSTKIM wrogom → suma idzie Twojej istocie.", "enhanced": "Zamień stronami najsłabszego sojusznika z najsilniejszym wrogiem.", "enhancedCost": 1},
+    {"name": "Szał Bitewny", "persistence": "instant", "basic": "Wybrany wróg atakuje innego wroga.", "enhanced": "Przejmij wroga — wraca gdy nie zaatakuje w rundzie.", "enhancedCost": 1},
+    {"name": "Żertwa", "persistence": "instant", "basic": "Poświęć istotę → ×2 jej ATK+DEF daj innej istocie.", "enhanced": "Zadaj ×2 ATK+DEF poświęconej jako obrażenia wrogowi.", "enhancedCost": 1},
+    {"name": "Nekromancja", "persistence": "instant", "basic": "Stwórz Nieumarłego 4/4 LUB daj +4/+4 istniejącemu Nieumarłemu.", "enhanced": "×2 staty sojuszniczych Nieumarłych, ÷2 wrogich.", "enhancedCost": 1},
+    {"name": "Bezsilność", "persistence": "duration", "basic": "Wrogie istoty wyciszone na 3 rundy.", "enhanced": "+ wrogi atak ograniczony do Wręcz.", "enhancedCost": 1},
+    {"name": "Handel", "persistence": "instant", "basic": "Odłóż rękę, przetasuj talię, dobierz tyle samo nowych.", "enhanced": "Wymiana rąk z wrogiem.", "enhancedCost": 1},
+    {"name": "Swaćba", "persistence": "duration", "basic": "Wrogie istoty nie mogą atakować przez 3 rundy.", "enhanced": "Wróg nie wystawia nowych istot.", "enhancedCost": 1}
+  ],
+
+  "effectTriggers": {
+    "description": "Typy triggerów efektów — kiedy się aktywują.",
+    "list": {
+      "PASSIVE": "Ciągły efekt, zawsze aktywny",
+      "ON_PLAY": "Gdy istota wchodzi na pole",
+      "ON_ATTACK": "Gdy istota atakuje",
+      "ON_DAMAGE_DEALT": "Gdy istota ZADAJE obrażenia",
+      "ON_DAMAGE_RECEIVED": "Gdy istota OTRZYMUJE obrażenia",
+      "ON_DEATH": "Gdy istota ginie (przed usunięciem z pola)",
+      "ON_KILL": "Gdy istota ZABIJA wroga",
+      "ON_ANY_DEATH": "Gdy DOWOLNA istota na polu ginie",
+      "ON_TURN_START": "Na początku tury właściciela",
+      "ON_TURN_END": "Na końcu tury właściciela",
+      "ON_ALLY_ATTACKED": "Gdy sojusznik jest atakowany",
+      "ON_ALLY_ATTACK": "Gdy sojusznik atakuje",
+      "ON_SPELL_CAST": "Gdy ktokolwiek zagrywa zaklęcie",
+      "ON_ACTIVATE": "Gracz ręcznie aktywuje zdolność (⚡)"
+    }
+  },
+
+  "effectTagsUI": {
+    "[AURA]": "Pasywny efekt, aktywny dopóki istota żyje na polu",
+    "[WEJŚCIE]": "Aktywuje się przy wystawieniu istoty na pole",
+    "[NATARCIE]": "Aktywuje się gdy istota atakuje",
+    "[ZRANIENIE]": "Aktywuje się gdy istota zadaje lub otrzymuje obrażenia",
+    "[ZABÓJSTWO]": "Aktywuje się gdy istota zabije wroga",
+    "[POŻEGNANIE]": "Aktywuje się gdy istota ginie",
+    "[CZUJNOŚĆ]": "Reaguje na ataki przeciwnika (intercepcja, kontratak sojuszników)",
+    "[ODWET]": "Reaguje na otrzymanie obrażeń",
+    "[AKCJA]": "Gracz ręcznie aktywuje zdolność (⚡ button)",
+    "[SZPIEG]": "Istota wystawiana na pole WROGA",
+    "[INTERRUPT]": "Jedyna mechanika przerywania — zagranie karty podczas tury przeciwnika"
+  },
+
+  "specialMechanics": {
+    "dynamicFront": {
+      "description": "Wręcz/Żywioł atakuje TYLKO pierwszą ZAJĘTĄ linię wroga. Jeśli L1 pusta → L2 staje się frontem. Przeliczane KAŻDY atak.",
+      "example": "Wróg ma L1 pustą, L2 z 2 istotami → Twój Wręcz z L1 MUSI celować w L2."
+    },
+    "flying": {
+      "description": "Latające istoty nie mogą być trafione przez Wręcz. Potrzebny Żywioł, Magia lub Dystans.",
+      "grounding": "Chmurnik może uziemić latające istoty (isGrounded=true). Płaszcz Strzybóga+ uziemia wszystkich wrogów."
+    },
+    "spyCards": {
+      "description": "Karty z flagą playOnEnemyField — wystawiane na pole WROGA.",
+      "cards": ["Wieszczy (spala karty wroga co turę)", "Bieda (blokuje dobiór kart wroga)"]
+    },
+    "interrupt": {
+      "description": "Strela to JEDYNA karta interrupt w grze. Można ją zagrać z ręki podczas tury PRZECIWNIKA gdy ten zagrywa kartę.",
+      "effect": "Karta rywala nie wchodzi w życie → trafia na spód talii."
+    },
+    "dragonHatching": {
+      "description": "Smocze Jajo po 5 rundach na polu wykluwa się w wybranego Smoka.",
+      "availableDragons": ["Ażdacha 9/8", "Gorynych 10/10", "Wąż Tugaryn 8/8", "Wij 9/9", "Żar-ptak 10/10", "Żmije 9/9", "Chały 6/6", "Aitwar 2/2", "Król wężów 3/6", "Lamia 5/4"]
+    },
+    "consecutivePassPenalty": {
+      "description": "Jeśli masz istoty na polu i nie atakujesz przez 3+ tury z rzędu → -1 PS.",
+      "reset": "Każdy atak resetuje licznik consecutivePasses."
+    },
+    "plunderMechanic": {
+      "description": "Od rundy 3 gdy wróg nie ma istot na polu → +1 PS dla Ciebie, -1 PS dla wroga."
+    },
+    "pendingInteraction": {
+      "description": "Gdy efekt wymaga decyzji gracza, gra się 'pauzuje' i czeka na wybór. Np. Alkonost (cel hipnozy), Kresnik (wybór zdolności), Czart (suwak DEF→ATK), Lamia (PS czy karty)."
+    }
+  },
+
+  "precedentBook": {
+    "description": "Reguły rozwiązywania konfliktów efektów.",
+    "generalRule": "Immunity > Prevention > Active Modifier > Passive Modifier > Reaction > Cleanup",
+    "specificRules": [
+      "Mróz (immunity_buffs) > wrogie buffy",
+      "Topór Peruna (no_counterattack) > Król Wężów (always_counter) — pierwsza zagrana wygrywa",
+      "Brzegina (prevention) > double damage — tarcza blokuje podwójne obrażenia",
+      "ON_DEATH fires BEFORE resurrection (Kościej, Wij)",
+      "Chmurnik (grounding) vs fly_immunity — odporność na lot wygrywa"
+    ]
+  }
+}

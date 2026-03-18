@@ -268,6 +268,17 @@ const showSettings = ref(false)
               </div>
             </NuxtLink>
           </div>
+
+          <!-- CAMPAIGN -->
+          <NuxtLink to="/scenario" class="mode-card mode-campaign">
+            <div class="mode-glow mode-glow-campaign" />
+            <Icon icon="game-icons:campfire" class="mode-icon" />
+            <div class="mode-text">
+              <span class="mode-name">Kampania: Noc Kupały</span>
+              <span class="mode-desc">7 encounterów, fabuła, prebuilt deck — tryb fabularny</span>
+            </div>
+            <div class="mode-badge">NOWOŚĆ</div>
+          </NuxtLink>
         </div>
 
         <!-- SETTINGS (collapsible) -->
@@ -651,6 +662,28 @@ const showSettings = ref(false)
   font-size: 26px;
   color: rgba(140, 200, 160, 0.7);
   filter: drop-shadow(0 0 6px rgba(100, 160, 120, 0.3));
+}
+
+/* Campaign */
+.mode-campaign {
+  background: linear-gradient(135deg, rgba(200, 120, 40, 0.08) 0%, rgba(160, 80, 20, 0.1) 100%);
+  border: 1px solid rgba(200, 120, 40, 0.2);
+  text-decoration: none;
+  color: #e2e8f0;
+}
+.mode-campaign:hover {
+  border-color: rgba(200, 120, 40, 0.45);
+}
+.mode-campaign .mode-glow-campaign {
+  background: radial-gradient(ellipse at 20% 50%, rgba(200, 120, 40, 0.06), transparent 60%);
+  animation: btn-glow-pulse 3s ease-in-out infinite;
+}
+.mode-campaign .mode-icon {
+  font-size: 30px;
+  color: #d4843a;
+  z-index: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(200, 100, 30, 0.3));
 }
 
 @keyframes btn-glow-pulse {
