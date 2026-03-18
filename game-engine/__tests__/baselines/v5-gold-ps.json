@@ -1,0 +1,34 @@
+{
+  "name": "v5-gold-ps",
+  "timestamp": "2026-03-18T14:13:56.088Z",
+  "config": {
+    "games": 20,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 20,
+    "gamesWithWinner": 20,
+    "mctsWins": 10,
+    "oppWins": 10,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.5,
+    "timeoutRate": 0,
+    "avgRounds": 16.75,
+    "avgPSWinner": 6.9,
+    "avgPSLoser": 0.9,
+    "psWinCount": 4,
+    "elimWinCount": 16
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 6737.092592592592,
+    "avgTreeNodes": 7.2746913580246915,
+    "avgRolloutDepth": 7.052385437728112,
+    "avgTimePerDecisionMs": 178.92283950617283,
+    "avgBestMoveWR": 0.6241649464573366,
+    "earlyTerminationRate": 0.18518518518518517,
+    "totalDecisions": 324
+  }
+}

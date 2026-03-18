@@ -75,7 +75,7 @@ export class GameEngine {
 
   startAlphaGame(playerDomainFilter?: number[]): GameState {
     this.arenaMode = false
-    this.state = createInitialGameState('slava')
+    this.state = createInitialGameState('gold')
 
     // Losowa pora roku startowa (offset 0–3 przesuwa sezon, runda zawsze = 1)
     this.state.seasonOffset = Math.floor(Math.random() * 4)
@@ -1452,7 +1452,79 @@ export class GameEngine {
       }
     }
 
-    // Gold Edition: sprawdź wyczerpanie talii/pola
+    // Gold Edition: PS win conditions
+    if (this.state.gameMode === 'gold') {
+      const p1Gold = this.state.players.player1.gold
+      const p2Gold = this.state.players.player2.gold
+      const target = GOLD_EDITION_RULES.GLORY_WIN_TARGET
+
+      // Gold <= 0 → przegrana
+      if (p1Gold <= 0 && p2Gold > 0) {
+        this.state.winner = 'player2'
+        const log = addLog(this.state, `KONIEC GRY! AI wygrywa — Gracz stracił całe złoto!`, 'system')
+        this.state.actionLog.push(log)
+        this.onLogEntry?.(log)
+        this.notifyStateChange()
+        return
+      }
+      if (p2Gold <= 0 && p1Gold > 0) {
+        this.state.winner = 'player1'
+        const log = addLog(this.state, `KONIEC GRY! Gracz wygrywa — AI stracił całe złoto!`, 'system')
+        this.state.actionLog.push(log)
+        this.onLogEntry?.(log)
+        this.notifyStateChange()
+        return
+      }
+      if (p1Gold <= 0 && p2Gold <= 0) {
+        // Both at 0 — whoever's turn it is loses (they failed to recover)
+        this.state.winner = this.state.currentTurn === 'player1' ? 'player2' : 'player1'
+        const log = addLog(this.state, `KONIEC GRY! Obaj bez złota — przegrywa aktywny gracz!`, 'system')
+        this.state.actionLog.push(log)
+        this.onLogEntry?.(log)
+        this.notifyStateChange()
+        return
+      }
+
+      // Gold >= target → wygrana (ale jeśli obaj >= target, trzeba mieć przewagę 2)
+      const p1Wins = p1Gold >= target
+      const p2Wins = p2Gold >= target
+      if (p1Wins && p2Wins) {
+        // Both at target — need 2-point lead at end of round
+        if (p1Gold >= p2Gold + 2) {
+          this.state.winner = 'player1'
+          const log = addLog(this.state, `KONIEC GRY! Gracz wygrywa z ${p1Gold} złota (przewaga 2+)!`, 'system')
+          this.state.actionLog.push(log)
+          this.onLogEntry?.(log)
+          this.notifyStateChange()
+          return
+        }
+        if (p2Gold >= p1Gold + 2) {
+          this.state.winner = 'player2'
+          const log = addLog(this.state, `KONIEC GRY! AI wygrywa z ${p2Gold} złota (przewaga 2+)!`, 'system')
+          this.state.actionLog.push(log)
+          this.onLogEntry?.(log)
+          this.notifyStateChange()
+          return
+        }
+        // Both >= target but no 2-point lead — game continues
+      } else if (p1Wins) {
+        this.state.winner = 'player1'
+        const log = addLog(this.state, `KONIEC GRY! Gracz zdobywa ${p1Gold} złota! ZWYCIĘSTWO!`, 'system')
+        this.state.actionLog.push(log)
+        this.onLogEntry?.(log)
+        this.notifyStateChange()
+        return
+      } else if (p2Wins) {
+        this.state.winner = 'player2'
+        const log = addLog(this.state, `KONIEC GRY! AI zdobywa ${p2Gold} złota! ZWYCIĘSTWO!`, 'system')
+        this.state.actionLog.push(log)
+        this.onLogEntry?.(log)
+        this.notifyStateChange()
+        return
+      }
+    }
+
+    // Gold Edition: sprawdź wyczerpanie talii/pola (eliminacja)
     const winner = checkWinCondition(this.state)
     if (winner) {
       this.state.winner = winner

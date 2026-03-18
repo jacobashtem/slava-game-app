@@ -54,17 +54,24 @@ function checkWin(s: LightState): void {
   for (let side = 0; side < 2; side++) {
     const opp = 1 - side
 
-    // PS win
-    if (s.ps[side]! >= PS_TARGET) {
-      s.winner = side
+    // PS <= 0 → loss
+    if (s.ps[side]! <= 0 && s.ps[opp]! > 0) {
+      s.winner = opp
       return
     }
 
-    // Tiebreaker: po 40 rundach — kto ma więcej PS wygrywa
-    if (s.round >= 40 && s.ps[side]! > s.ps[opp]!) {
-      s.winner = side
-      return
+    // PS win (with 2-point lead rule when both >= target)
+    if (s.ps[side]! >= PS_TARGET) {
+      if (s.ps[opp]! >= PS_TARGET) {
+        // Both at target — need 2-point lead
+        if (s.ps[side]! >= s.ps[opp]! + 2) { s.winner = side; return }
+      } else {
+        s.winner = side
+        return
+      }
     }
+
+    // No tiebreaker — game resolves naturally via PS or elimination
 
     // Elimination: opponent deck empty + no creatures on field
     const oppFieldCount = lightFieldCount(s, opp)
