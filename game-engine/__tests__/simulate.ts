@@ -17,7 +17,7 @@ import { getAllCreaturesOnField } from '../LineManager'
 
 const args = process.argv.slice(2)
 const GAME_COUNT = parseInt(args[0] || '100', 10)
-const AI_DIFFICULTY = (args[1] || 'hard') as AIDifficulty
+const AI_DIFFICULTY = (args[1] || 'veteran') as AIDifficulty
 const MAX_TURNS = 150
 
 // ---------------------------------------------------------------------------

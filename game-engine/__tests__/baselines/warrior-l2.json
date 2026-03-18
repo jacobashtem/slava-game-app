@@ -1,0 +1,34 @@
+{
+  "name": "warrior-l2",
+  "timestamp": "2026-03-18T18:43:39.708Z",
+  "config": {
+    "games": 30,
+    "opponent": "warrior",
+    "timeBudgetMs": 800,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 30,
+    "gamesWithWinner": 30,
+    "mctsWins": 14,
+    "oppWins": 16,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.4666666666666667,
+    "timeoutRate": 0,
+    "avgRounds": 17.633333333333333,
+    "avgPSWinner": 6.466666666666667,
+    "avgPSLoser": 2.1666666666666665,
+    "psWinCount": 7,
+    "elimWinCount": 23
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 16388.278978388997,
+    "avgTreeNodes": 32.12573673870334,
+    "avgRolloutDepth": 6.404616498862415,
+    "avgTimePerDecisionMs": 600.343811394892,
+    "avgBestMoveWR": 0.49104164572810044,
+    "earlyTerminationRate": 0.3831041257367387,
+    "totalDecisions": 509
+  }
+}

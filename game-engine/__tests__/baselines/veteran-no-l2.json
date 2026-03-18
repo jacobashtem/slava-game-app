@@ -1,0 +1,34 @@
+{
+  "name": "veteran-no-l2",
+  "timestamp": "2026-03-18T18:29:50.445Z",
+  "config": {
+    "games": 30,
+    "opponent": "veteran",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 30,
+    "gamesWithWinner": 30,
+    "mctsWins": 17,
+    "oppWins": 13,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.5666666666666667,
+    "timeoutRate": 0,
+    "avgRounds": 17.7,
+    "avgPSWinner": 5.533333333333333,
+    "avgPSLoser": 1.2,
+    "psWinCount": 6,
+    "elimWinCount": 24
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 24701.77245508982,
+    "avgTreeNodes": 22.32135728542914,
+    "avgRolloutDepth": 7.162626473067672,
+    "avgTimePerDecisionMs": 1469.4950099800399,
+    "avgBestMoveWR": 0.6341893022931884,
+    "earlyTerminationRate": 0.4171656686626746,
+    "totalDecisions": 501
+  }
+}

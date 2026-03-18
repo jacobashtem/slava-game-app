@@ -509,6 +509,12 @@ export function checkWinCondition(state: GameState): PlayerSide | null {
       return side
     }
 
+    // Tiebreaker: po 40 rundach — kto ma więcej PS wygrywa
+    if (state.gameMode === 'gold' && state.roundNumber >= 40
+      && state.players[side].gold > state.players[opponent].gold) {
+      return side
+    }
+
     const deckEmpty = opp.deck.length === 0
     const noCreaturesOnField = getTotalCreatureCount(state, opponent) === 0
     const noCreaturesInHand = opp.hand.filter(c => c.cardData.cardType === 'creature').length === 0

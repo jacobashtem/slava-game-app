@@ -66,8 +66,8 @@ const MAX_TURNS_PER_GAME = 100 // safety valve — prevent infinite games
  * Both sides use AIPlayer with the given difficulties.
  */
 function simulateGame(
-  p1Difficulty: AIDifficulty = 'medium',
-  p2Difficulty: AIDifficulty = 'medium',
+  p1Difficulty: AIDifficulty = 'warrior',
+  p2Difficulty: AIDifficulty = 'warrior',
   mode: 'gold' | 'slava' = 'gold',
 ): GameResult {
   const engine = new GameEngine()
@@ -219,8 +219,8 @@ function simulateGame(
  */
 function runSimulations(
   count: number,
-  p1Diff: AIDifficulty = 'medium',
-  p2Diff: AIDifficulty = 'medium',
+  p1Diff: AIDifficulty = 'warrior',
+  p2Diff: AIDifficulty = 'warrior',
   mode: 'gold' | 'slava' = 'gold',
 ): SimulationStats {
   const results: GameResult[] = []
@@ -257,7 +257,7 @@ function runSimulations(
 
 describe('Balance Simulation — Smoke Tests', () => {
   it('can simulate a single game to completion', { timeout: 30000 }, () => {
-    const result = simulateGame('medium', 'medium', 'gold')
+    const result = simulateGame('warrior', 'warrior', 'gold')
 
     expect(result.error).toBeNull()
     expect(result.turns).toBeGreaterThan(0)
@@ -269,14 +269,14 @@ describe('Balance Simulation — Smoke Tests', () => {
   })
 
   it('game completes or reaches turn limit', { timeout: 30000 }, () => {
-    const result = simulateGame('medium', 'medium', 'gold')
+    const result = simulateGame('warrior', 'warrior', 'gold')
     // Game should produce some turns
     expect(result.turns).toBeGreaterThan(0)
     expect(result.rounds).toBeGreaterThan(0)
   })
 
   it('both sides accumulate kills', { timeout: 30000 }, () => {
-    const result = simulateGame('medium', 'medium', 'gold')
+    const result = simulateGame('warrior', 'warrior', 'gold')
     // At least one side should have killed something
     expect(result.p1Kills + result.p2Kills).toBeGreaterThan(0)
   })
@@ -286,7 +286,7 @@ describe('Balance Simulation — Medium vs Medium (10 games)', () => {
   const GAME_COUNT = 10
 
   it('win rate is roughly balanced (neither side > 80%)', { timeout: 60000 }, () => {
-    const stats = runSimulations(GAME_COUNT, 'medium', 'medium', 'gold')
+    const stats = runSimulations(GAME_COUNT, 'warrior', 'warrior', 'gold')
 
     console.log('\n📊 Medium vs Medium (Gold Edition):')
     console.log(`  Games: ${stats.totalGames}, Errors: ${stats.errors}, Timeouts: ${stats.timeouts}`)
@@ -308,7 +308,7 @@ describe('Balance Simulation — Easy vs Hard (10 games)', () => {
   const GAME_COUNT = 10
 
   it('hard AI wins more often than easy AI', { timeout: 60000 }, () => {
-    const stats = runSimulations(GAME_COUNT, 'easy', 'hard', 'gold')
+    const stats = runSimulations(GAME_COUNT, 'novice', 'veteran', 'gold')
 
     console.log('\n📊 Easy (P1) vs Hard (P2):')
     console.log(`  Games: ${stats.totalGames}, Errors: ${stats.errors}`)
@@ -327,7 +327,7 @@ describe('Balance Simulation — Soul Harvest Stats (10 games)', () => {
   it('soul harvest generates PS over the course of a game', { timeout: 60000 }, () => {
     const results: GameResult[] = []
     for (let i = 0; i < GAME_COUNT; i++) {
-      results.push(simulateGame('medium', 'medium', 'gold'))
+      results.push(simulateGame('warrior', 'warrior', 'gold'))
     }
 
     const completed = results.filter(r => !r.error && !r.timeout)
@@ -353,7 +353,7 @@ describe('Balance Simulation — Soul Harvest Stats (10 games)', () => {
 
 describe.skip('Balance Simulation — Large Scale (100 games)', () => {
   it('100 medium vs medium games — full stats', () => {
-    const stats = runSimulations(100, 'medium', 'medium', 'gold')
+    const stats = runSimulations(100, 'warrior', 'warrior', 'gold')
 
     console.log('\n📊 LARGE SCALE — 100 Medium vs Medium:')
     console.log(`  P1 wins: ${stats.p1Wins} (${(stats.p1Wins / 100 * 100).toFixed(0)}%)`)

@@ -285,11 +285,12 @@ const showSettings = ref(false)
                 <Icon icon="game-icons:brain" />
                 Trudność AI
               </label>
-              <div class="sg-btns">
+              <div class="sg-btns sg-btns--4">
                 <button v-for="d in [
-                  { val: 'easy', label: 'Łatwa', icon: 'game-icons:feather' },
-                  { val: 'medium', label: 'Średnia', icon: 'game-icons:shield-echoes' },
-                  { val: 'hard', label: 'Trudna', icon: 'game-icons:skull-crack' },
+                  { val: 'novice', label: 'Nowicjusz', icon: 'game-icons:feather' },
+                  { val: 'warrior', label: 'Wojownik', icon: 'game-icons:shield-echoes' },
+                  { val: 'veteran', label: 'Weteran', icon: 'game-icons:skull-crack' },
+                  { val: 'legend', label: 'Legenda', icon: 'game-icons:crown' },
                 ]" :key="d.val"
                   :class="['sg-btn', { active: difficulty === d.val }]"
                   @click="difficulty = d.val as AIDifficulty"
@@ -738,6 +739,8 @@ const showSettings = ref(false)
 .sg-hint { font-weight: 400; font-style: italic; text-transform: none; letter-spacing: 0; opacity: 0.6; }
 
 .sg-btns { display: flex; gap: 5px; }
+.sg-btns--4 { flex-wrap: wrap; }
+.sg-btns--4 .sg-btn { flex: 1 1 calc(50% - 3px); min-width: 0; }
 .sg-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
   padding: 7px 8px; border-radius: 6px;

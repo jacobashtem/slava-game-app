@@ -21,8 +21,8 @@ function simulateGame(threshold: number, p1Enhances: boolean, p2Enhances: boolea
   winner: PlayerSide | null; rounds: number; p1Gold: number; p2Gold: number; timeout: boolean
 } {
   const engine = new GameEngine()
-  const ai1 = new AIPlayer('player1', 'hard')
-  const ai2 = new AIPlayer('player2', 'hard')
+  const ai1 = new AIPlayer('player1', 'veteran')
+  const ai2 = new AIPlayer('player2', 'veteran')
   let state = engine.startAlphaGame()
 
   // Override win target (hack: mutate constant for this game)

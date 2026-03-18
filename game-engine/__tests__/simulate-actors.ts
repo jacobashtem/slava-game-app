@@ -97,8 +97,8 @@ interface GameResult {
 
 function simulateGame(s1: Strategy, s2: Strategy): GameResult {
   const engine = new GameEngine()
-  const ai1 = new AIPlayer('player1', 'hard')
-  const ai2 = new AIPlayer('player2', 'hard')
+  const ai1 = new AIPlayer('player1', 'veteran')
+  const ai2 = new AIPlayer('player2', 'veteran')
   let state = engine.startAlphaGame()
   let turnCount = 0
 
