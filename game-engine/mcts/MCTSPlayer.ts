@@ -120,7 +120,10 @@ export class MCTSPlayer {
       if (newState) currentState = newState
     }
 
-    // 2. Combat: heurystyczny planner (deterministyczny, szybki)
+    // 2. Advance to combat phase (required — sideAttack asserts COMBAT phase)
+    decisions.push({ type: 'advance_to_combat' })
+
+    // 3. Combat: heurystyczny planner (deterministyczny, szybki)
     const combat = this.planCombat(currentState)
     decisions.push(...combat)
 
@@ -421,6 +424,10 @@ export class MCTSPlayer {
     const isLosing = situation.posture === 'defensive'
     const isWinning = situation.posture === 'aggressive'
 
+    // === STALEMATE DETECTION: if we've been passing many turns, play more aggressively ===
+    const myPasses = state.players[this.side].consecutivePasses
+    const isStalemate = myPasses >= 5
+
     // === LETHAL CHECK: can we win THIS turn? ===
     const psTarget = GOLD_EDITION_RULES.GLORY_WIN_TARGET
     const soulPts = state.players[this.side].soulPoints
@@ -440,7 +447,6 @@ export class MCTSPlayer {
       state.players[oppSide].hand.filter(c => c.cardData.cardType === 'creature').length === 0
 
     // === PER-CREATURE POSITIONING (Phase 2.4) ===
-    const myPasses = state.players[this.side].consecutivePasses
     const antiStall = myPasses >= 2 || (myPS <= 1 && myPasses >= 1)
 
     const intendedPos = new Map<string, CardPosition>()
@@ -553,8 +559,7 @@ export class MCTSPlayer {
       scored.sort((a, b) => b.sc - a.sc)
 
       // Attack threshold — anti-stall: always attack if consecutive passes or low PS
-      const myPasses = state.players[this.side].consecutivePasses
-      const forceAttack = myPasses >= 2 || (myPS <= 1 && myPasses >= 1)
+      const forceAttack = myPasses >= 2 || (myPS <= 1 && myPasses >= 1) || isStalemate
       const threshold = forceAttack ? -999 : (canLethal || canEliminate) ? -200 : isLosing ? -100 : -70
       if (scored[0]!.sc < threshold) continue
 

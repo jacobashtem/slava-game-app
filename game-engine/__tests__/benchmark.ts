@@ -109,23 +109,15 @@ interface BenchmarkResult {
 
 let experienceDB: ExperienceDB | null = null
 
-// Load existing experience if training
-if (FLAG_TRAIN) {
-  experienceDB = AIPlayer.initExperience()
-  if (fs.existsSync(EXPERIENCE_PATH)) {
-    try {
-      experienceDB.deserialize(fs.readFileSync(EXPERIENCE_PATH, 'utf-8'))
-      process.stderr.write(`📚  Loaded experience: ${experienceDB.gamesPlayed} games\n`)
-    } catch {
-      process.stderr.write(`⚠  Could not load experience, starting fresh\n`)
-    }
-  }
-} else if (fs.existsSync(EXPERIENCE_PATH)) {
-  // Load experience for evaluation (not training)
+// Always load + train experience (every benchmark makes AI smarter)
+experienceDB = AIPlayer.initExperience()
+if (fs.existsSync(EXPERIENCE_PATH)) {
   try {
-    AIPlayer.loadExperience(fs.readFileSync(EXPERIENCE_PATH, 'utf-8'))
-    process.stderr.write(`📚  Using experience DB\n`)
-  } catch {}
+    experienceDB.deserialize(fs.readFileSync(EXPERIENCE_PATH, 'utf-8'))
+    process.stderr.write(`📚  Experience DB: ${experienceDB.gamesPlayed} games loaded\n`)
+  } catch {
+    process.stderr.write(`⚠  Could not load experience, starting fresh\n`)
+  }
 }
 
 // ===== GAME SIMULATION =====
@@ -409,8 +401,8 @@ for (let i = 0; i < GAME_COUNT; i++) {
   process.stderr.write(`  [${i + 1}/${GAME_COUNT}] ${winStr.padEnd(10)} ${result.rounds}r ${result.p1Gold}/${result.p2Gold}PS ${avgIter}iter/dec ${dt}s\n`)
   results.push(result)
 
-  // Train: record game trace to ExperienceDB
-  if (FLAG_TRAIN && experienceDB && result.trace) {
+  // Always record game trace to ExperienceDB
+  if (experienceDB && result.trace) {
     experienceDB.recordGame(result.trace)
   }
 }
@@ -458,8 +450,8 @@ if (FLAG_SAVE) {
   process.stderr.write(`\n💾  Baseline zapisany: ${savePath}\n`)
 }
 
-// Save experience DB if training
-if (FLAG_TRAIN && experienceDB) {
+// Always save experience DB (cumulative learning)
+if (experienceDB) {
   fs.writeFileSync(EXPERIENCE_PATH, experienceDB.serialize())
   process.stderr.write(`📚  Experience saved: ${experienceDB.gamesPlayed} games → ${EXPERIENCE_PATH}\n`)
 }

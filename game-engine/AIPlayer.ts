@@ -31,7 +31,7 @@ export const DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
 }
 
 export interface AIDecision {
-  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'activate_effect' | 'invoke_god' | 'plunder' | 'end_turn'
+  type: 'play_creature' | 'play_adventure' | 'attack' | 'change_position' | 'activate_effect' | 'invoke_god' | 'plunder' | 'advance_to_combat' | 'end_turn'
   cardInstanceId?: string
   targetInstanceId?: string
   targetLine?: BattleLine

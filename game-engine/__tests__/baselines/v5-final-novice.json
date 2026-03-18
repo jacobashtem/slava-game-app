@@ -1,0 +1,34 @@
+{
+  "name": "v5-final-novice",
+  "timestamp": "2026-03-18T13:15:58.186Z",
+  "config": {
+    "games": 20,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 20,
+    "gamesWithWinner": 15,
+    "mctsWins": 10,
+    "oppWins": 5,
+    "timeouts": 5,
+    "errors": 0,
+    "winRate": 0.6666666666666666,
+    "timeoutRate": 0.25,
+    "avgRounds": 38.7,
+    "avgPSWinner": 7,
+    "avgPSLoser": 2.466666666666667,
+    "psWinCount": 7,
+    "elimWinCount": 8
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 3563.920844327177,
+    "avgTreeNodes": 5.770448548812665,
+    "avgRolloutDepth": 7.848857248486229,
+    "avgTimePerDecisionMs": 95.93007915567283,
+    "avgBestMoveWR": 0.511367556444084,
+    "earlyTerminationRate": 0.470976253298153,
+    "totalDecisions": 758
+  }
+}

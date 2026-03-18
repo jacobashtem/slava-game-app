@@ -1,0 +1,34 @@
+{
+  "name": "v5-train30",
+  "timestamp": "2026-03-18T12:55:22.914Z",
+  "config": {
+    "games": 30,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 30,
+    "gamesWithWinner": 24,
+    "mctsWins": 12,
+    "oppWins": 12,
+    "timeouts": 6,
+    "errors": 0,
+    "winRate": 0.5,
+    "timeoutRate": 0.2,
+    "avgRounds": 36.666666666666664,
+    "avgPSWinner": 6.25,
+    "avgPSLoser": 2.2916666666666665,
+    "psWinCount": 9,
+    "elimWinCount": 15
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 4228.022242817424,
+    "avgTreeNodes": 6.633920296570899,
+    "avgRolloutDepth": 6.851459003731915,
+    "avgTimePerDecisionMs": 125.56255792400371,
+    "avgBestMoveWR": 0.6026093468624097,
+    "earlyTerminationRate": 0.3456904541241891,
+    "totalDecisions": 1079
+  }
+}
