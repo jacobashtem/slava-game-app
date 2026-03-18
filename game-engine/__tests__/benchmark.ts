@@ -270,12 +270,19 @@ function simulateGame(): GameResult {
     }
     state = engine.getState()
 
-    // Record trace move
+    // Record trace move (V6: enriched with opponent field + PS + field counts)
     if (turnEffectIds.length > 0) {
+      const oppSide = side === 'player1' ? 'player2' : 'player1'
+      const oppFieldCreatures = getAllCreaturesOnField(state, oppSide)
       traceMoves.push({
         round: state.roundNumber,
         side: sideNum,
         effectIds: turnEffectIds,
+        opponentFieldEffectIds: oppFieldCreatures.map(c => (c.cardData as any).effectId ?? ''),
+        myPS: state.players[side].gold,
+        oppPS: state.players[oppSide].gold,
+        myFieldCount: getAllCreaturesOnField(state, side).length,
+        oppFieldCount: oppFieldCreatures.length,
       })
     }
   }
@@ -298,6 +305,8 @@ function simulateGame(): GameResult {
       winner: state.winner === 'player1' ? 0 : 1,
       rounds: state.roundNumber,
       moves: traceMoves,
+      winMethod: winMethod as 'ps' | 'elimination' | 'gold_loss',
+      finalPS: [state.players.player1.gold, state.players.player2.gold],
     }
   }
 
