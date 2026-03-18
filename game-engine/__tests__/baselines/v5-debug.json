@@ -1,0 +1,34 @@
+{
+  "name": "v5-debug",
+  "timestamp": "2026-03-18T13:36:17.676Z",
+  "config": {
+    "games": 5,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 5,
+    "gamesWithWinner": 5,
+    "mctsWins": 2,
+    "oppWins": 3,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.4,
+    "timeoutRate": 0,
+    "avgRounds": 21.2,
+    "avgPSWinner": 8.4,
+    "avgPSLoser": 2.4,
+    "psWinCount": 4,
+    "elimWinCount": 1
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 7727.107843137255,
+    "avgTreeNodes": 6.578431372549019,
+    "avgRolloutDepth": 8.083377841704872,
+    "avgTimePerDecisionMs": 186.48039215686273,
+    "avgBestMoveWR": 0.5232767073316378,
+    "earlyTerminationRate": 0.14705882352941177,
+    "totalDecisions": 102
+  }
+}

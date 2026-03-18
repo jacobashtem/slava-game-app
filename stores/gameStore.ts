@@ -301,8 +301,8 @@ async function emitCombatVFX(
 export const useGameStore = defineStore('game', () => {
   // ===== STATE =====
   const engine = new GameEngine()
-  let aiPlayer = new AIPlayer('player2', 'medium')
-  const selectedDifficulty = ref<AIDifficulty>('medium')
+  let aiPlayer = new AIPlayer('player2', 'warrior')
+  const selectedDifficulty = ref<AIDifficulty>('warrior')
   const selectedDomains = ref<number[]>([]) // empty = all domains
 
   // Player profile (persisted in localStorage)
@@ -460,7 +460,7 @@ export const useGameStore = defineStore('game', () => {
     isTutorialMode.value = true
     arenaFocusedName.value = ''
     useUIStore().resetAll()
-    aiPlayer = new AIPlayer('player2', 'easy')
+    aiPlayer = new AIPlayer('player2', 'novice')
     state.value = engine.startTutorialGame()
     gameStarted.value = true
     playerTurnLogStart.value = state.value.actionLog.length
@@ -1217,6 +1217,14 @@ export const useGameStore = defineStore('game', () => {
           case 'invoke_god':
             if (decision.godId !== undefined && decision.bidAmount !== undefined) {
               state.value = engine.aiInvokeGod(decision.godId, decision.bidAmount)
+            }
+            break
+          case 'plunder':
+            try { state.value = engine.aiPlunder() } catch {}
+            break
+          case 'advance_to_combat':
+            if (engine.getCurrentPhase() === GamePhase.PLAY) {
+              state.value = engine.aiAdvanceToCombat()
             }
             break
           case 'end_turn':

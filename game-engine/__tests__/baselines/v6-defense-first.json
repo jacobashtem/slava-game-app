@@ -1,0 +1,34 @@
+{
+  "name": "v6-defense-first",
+  "timestamp": "2026-03-18T14:33:58.635Z",
+  "config": {
+    "games": 10,
+    "opponent": "200",
+    "timeBudgetMs": 200,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 10,
+    "gamesWithWinner": 10,
+    "mctsWins": 6,
+    "oppWins": 4,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.6,
+    "timeoutRate": 0,
+    "avgRounds": 15.4,
+    "avgPSWinner": 6.4,
+    "avgPSLoser": 1.8,
+    "psWinCount": 2,
+    "elimWinCount": 8
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 3937.9455782312925,
+    "avgTreeNodes": 7.789115646258503,
+    "avgRolloutDepth": 7.301264816534118,
+    "avgTimePerDecisionMs": 180.8639455782313,
+    "avgBestMoveWR": 0.6046439714925949,
+    "earlyTerminationRate": 0.20408163265306123,
+    "totalDecisions": 147
+  }
+}

@@ -446,53 +446,37 @@ export class MCTSPlayer {
       state.players[oppSide].deck.length === 0 &&
       state.players[oppSide].hand.filter(c => c.cardData.cardType === 'creature').length === 0
 
-    // === PER-CREATURE POSITIONING (Phase 2.4) ===
+    // === V6: DEFENSE-FIRST POSITIONING ===
+    // DEFENSE = kontratak (pełna moc). Strategicznie lepsze. ATTACK tylko dla istoty która atakuje.
+    // Step 1: Put everything in DEFENSE
+    // Step 2: Pick attackers & targets
+    // Step 3: Switch only chosen attackers to ATTACK (before their attack)
+
+    const sideCreatures = getAllCreaturesOnField(state, this.side)
+    const enemies = getAllCreaturesOnField(state, oppSide).filter(c => c.owner !== this.side)
     const antiStall = myPasses >= 2 || (myPS <= 1 && myPasses >= 1)
 
-    const intendedPos = new Map<string, CardPosition>()
-    for (const c of myField) {
-      const eid = (c.cardData as any).effectId ?? ''
-      let pos: CardPosition
+    // Empty enemy field + round >= 3 → plunder mode: need 1 creature in ATTACK
+    const plunderMode = enemyField.length === 0 && state.roundNumber >= 3
 
-      // ATK = 0 → always DEFENSE
-      if (c.currentStats.attack === 0) pos = CardPosition.DEFENSE
-      // Anti-stall: force ATTACK when consecutive passes building up
-      else if (antiStall && c.currentStats.attack > 0) pos = CardPosition.ATTACK
-      // Counter-benefit creatures → DEFENSE (only when not anti-stalling)
-      else if (prefersDefense(eid)) pos = CardPosition.DEFENSE
-      // Lethal mode: maximize attacks
-      else if (canLethal || canEliminate) pos = CardPosition.ATTACK
-      // Can kill something and survive → ATTACK
-      else if (isWinning || c.currentStats.attack >= 3) pos = CardPosition.ATTACK
-      // Defensive posture: protect weak creatures
-      else if (isLosing && c.currentStats.defense <= enemyMaxAtk) pos = CardPosition.DEFENSE
-      else if (c.currentStats.defense <= 1) pos = CardPosition.DEFENSE
-      // Empty enemy field: ATTACK if round >= 3 (plunder)
-      else if (enemyField.length === 0) {
-        pos = state.roundNumber >= 3 ? CardPosition.ATTACK : CardPosition.DEFENSE
+    // Step 1: Ensure all creatures start in DEFENSE (counterattack benefit)
+    for (const c of sideCreatures) {
+      if (plunderMode && c.currentStats.attack > 0) {
+        // Plunder: need at least 1 in ATTACK position — pick strongest
+        // (handled below in plunder section)
+        continue
       }
-      // Closing posture: more aggressive
-      else if (situation.phase === 'closing') pos = CardPosition.ATTACK
-      // Defensive posture: higher threshold for attacking
-      else if (situation.posture === 'defensive' && c.currentStats.attack < 3) pos = CardPosition.DEFENSE
-      else pos = CardPosition.ATTACK
-
-      intendedPos.set(c.instanceId, pos)
-      if (c.position !== pos) {
-        decisions.push({ type: 'change_position', cardInstanceId: c.instanceId, targetPosition: pos })
+      if (c.position !== CardPosition.DEFENSE) {
+        decisions.push({ type: 'change_position', cardInstanceId: c.instanceId, targetPosition: CardPosition.DEFENSE })
       }
     }
 
-    // === MULTI-ATTACKER SEQUENCING (Phase 2.2) ===
-    // CRITICAL FIX: Apply intended positions to state so canAttack() sees ATTACK position.
-    // Save original positions to restore after planning.
+    // Step 2: Temporarily set ALL to ATTACK for canAttack() evaluation (then restore)
     const savedPositions = new Map<string, CardPosition>()
-    const sideCreatures = getAllCreaturesOnField(state, this.side)
     for (const c of sideCreatures) {
-      const intended = intendedPos.get(c.instanceId)
-      if (intended !== undefined && c.position !== intended) {
+      if (c.position !== CardPosition.ATTACK) {
         savedPositions.set(c.instanceId, c.position)
-        c.position = intended  // Temporarily apply intended position
+        c.position = CardPosition.ATTACK
       }
     }
 
@@ -500,15 +484,15 @@ export class MCTSPlayer {
     const maxNormalAttacks = hasChlop ? 2 : 1
     let normalAttacksUsed = 0
 
-    const attackers = sideCreatures
-      .filter(c => {
-        return c.position === CardPosition.ATTACK && !c.hasAttackedThisTurn && !c.cannotAttack
-      })
+    // All potential attackers (sorted by ATK desc)
+    const candidateAttackers = sideCreatures
+      .filter(c => c.currentStats.attack > 0 && !c.hasAttackedThisTurn && !c.cannotAttack)
       .sort((a, b) => b.currentStats.attack - a.currentStats.attack)
-    const enemies = getAllCreaturesOnField(state, oppSide).filter(c => c.owner !== this.side)
-    const attackedTargets = new Set<string>()
 
-    // Score an attack: trade-value based (Phase 2.1)
+    const attackedTargets = new Set<string>()
+    const chosenAttackers = new Set<string>()  // creatures that will actually attack
+
+    // Score an attack: trade-value based
     const scoreAttack = (attacker: CardInstance, t: CardInstance): number => {
       let sc = 0
       const canKill = t.currentStats.defense <= attacker.currentStats.attack
@@ -516,81 +500,82 @@ export class MCTSPlayer {
       const tEid = (t.cardData as any).effectId ?? ''
       const aEid = (attacker.cardData as any).effectId ?? ''
 
-      // Trade-value scoring
-      const targetKV = killValue({
-        atk: t.currentStats.attack, def: t.currentStats.defense,
-        effectId: tEid,
-      } as any)
-      const attackerKV = killValue({
-        atk: attacker.currentStats.attack, def: attacker.currentStats.defense,
-        effectId: aEid,
-      } as any)
+      const targetKV = killValue({ atk: t.currentStats.attack, def: t.currentStats.defense, effectId: tEid } as any)
+      const attackerKV = killValue({ atk: attacker.currentStats.attack, def: attacker.currentStats.defense, effectId: aEid } as any)
 
       if (canKill) {
         sc += 100
-        sc += targetKV * 2  // value of what we kill
-        sc += priorityKillBonus(tEid) // +30 for healers/growers
-        sc += effectThreatTier(tEid) * 10 // extra for high-threat
-
-        // Soul harvest bonus
+        sc += targetKV * 2
+        sc += priorityKillBonus(tEid)
+        sc += effectThreatTier(tEid) * 10
         const sv = (t.cardData as any).stats?.soulValue ?? (t.currentStats.attack + t.currentStats.defense)
         if (soulPts + sv >= soulThreshold) sc += 40
         if (myPS + Math.floor((soulPts + sv) / soulThreshold) >= psTarget) sc += 200
       }
       if (canKill && survive) sc += 50
       if (!survive && !canKill) sc -= 80
-      // Favorable trade: accept suicide if target is much more valuable
       if (!survive && canKill && targetKV > attackerKV * 1.3) sc += 30
-
       sc += t.equippedArtifacts.length * 5
       return sc
     }
 
-    for (const attacker of attackers) {
-      const isFreeAttacker = (attacker.cardData as any).effectId === 'kikimora_free_attack'
-      if (!isFreeAttacker && normalAttacksUsed >= maxNormalAttacks) continue
+    // Step 3: Pick best attacker→target assignments
+    if (enemies.length > 0) {
+      for (const attacker of candidateAttackers) {
+        const isFreeAttacker = (attacker.cardData as any).effectId === 'kikimora_free_attack'
+        if (!isFreeAttacker && normalAttacksUsed >= maxNormalAttacks) continue
 
-      const targets = enemies.filter(e =>
-        canAttack(state, attacker, e).valid && !attackedTargets.has(e.instanceId),
-      )
-      if (targets.length === 0) continue
-
-      const scored = targets.map(t => ({ t, sc: scoreAttack(attacker, t) }))
-      scored.sort((a, b) => b.sc - a.sc)
-
-      // Attack threshold — anti-stall: always attack if consecutive passes or low PS
-      const forceAttack = myPasses >= 2 || (myPS <= 1 && myPasses >= 1) || isStalemate
-      const threshold = forceAttack ? -999 : (canLethal || canEliminate) ? -200 : isLosing ? -100 : -70
-      if (scored[0]!.sc < threshold) continue
-
-      decisions.push({ type: 'attack', cardInstanceId: attacker.instanceId, targetInstanceId: scored[0]!.t.instanceId })
-      attackedTargets.add(scored[0]!.t.instanceId)
-      if (!isFreeAttacker) normalAttacksUsed++
-
-      // Lesnica double attack
-      if ((attacker.cardData as any).effectId === 'lesnica_double_attack') {
-        const secondTargets = enemies.filter(e =>
+        const targets = enemies.filter(e =>
           canAttack(state, attacker, e).valid && !attackedTargets.has(e.instanceId),
         )
-        if (secondTargets.length > 0) {
-          const secondScored = secondTargets.map(t => ({ t, sc: scoreAttack(attacker, t) }))
-          secondScored.sort((a, b) => b.sc - a.sc)
-          if (secondScored[0]!.sc >= -30 || isLosing || canLethal) {
-            decisions.push({ type: 'attack', cardInstanceId: attacker.instanceId, targetInstanceId: secondScored[0]!.t.instanceId })
-            attackedTargets.add(secondScored[0]!.t.instanceId)
+        if (targets.length === 0) continue
+
+        const scored = targets.map(t => ({ t, sc: scoreAttack(attacker, t) }))
+        scored.sort((a, b) => b.sc - a.sc)
+
+        const forceAttack = antiStall || isStalemate
+        const threshold = forceAttack ? -999 : (canLethal || canEliminate) ? -200 : isLosing ? -100 : -70
+        if (scored[0]!.sc < threshold) continue
+
+        // This creature will attack → needs ATTACK position
+        chosenAttackers.add(attacker.instanceId)
+        decisions.push({ type: 'change_position', cardInstanceId: attacker.instanceId, targetPosition: CardPosition.ATTACK })
+        decisions.push({ type: 'attack', cardInstanceId: attacker.instanceId, targetInstanceId: scored[0]!.t.instanceId })
+        attackedTargets.add(scored[0]!.t.instanceId)
+        if (!isFreeAttacker) normalAttacksUsed++
+
+        // Lesnica double attack
+        if ((attacker.cardData as any).effectId === 'lesnica_double_attack') {
+          const secondTargets = enemies.filter(e =>
+            canAttack(state, attacker, e).valid && !attackedTargets.has(e.instanceId),
+          )
+          if (secondTargets.length > 0) {
+            const secondScored = secondTargets.map(t => ({ t, sc: scoreAttack(attacker, t) }))
+            secondScored.sort((a, b) => b.sc - a.sc)
+            if (secondScored[0]!.sc >= -30 || isLosing || canLethal) {
+              decisions.push({ type: 'attack', cardInstanceId: attacker.instanceId, targetInstanceId: secondScored[0]!.t.instanceId })
+              attackedTargets.add(secondScored[0]!.t.instanceId)
+            }
           }
         }
       }
     }
 
-    // Restore original positions (we only temporarily mutated for canAttack checks)
+    // Restore original positions
     for (const [id, origPos] of savedPositions) {
       const creature = sideCreatures.find(c => c.instanceId === id)
       if (creature) creature.position = origPos
     }
 
-    // Plunder
-    if (state.roundNumber >= 3 && getAllCreaturesOnField(state, oppSide).length === 0) {
+    // Plunder (empty enemy field, round >= 3)
+    if (plunderMode) {
+      // Need at least 1 creature in ATTACK for plunder to work
+      const strongest = sideCreatures
+        .filter(c => c.currentStats.attack > 0)
+        .sort((a, b) => b.currentStats.attack - a.currentStats.attack)[0]
+      if (strongest) {
+        decisions.push({ type: 'change_position', cardInstanceId: strongest.instanceId, targetPosition: CardPosition.ATTACK })
+      }
       decisions.push({ type: 'plunder' })
     }
 
