@@ -6,7 +6,22 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
   devtools: { enabled: true },
-  modules: ['@pinia/nuxt', '@nuxthub/core'],
+  modules: ['@pinia/nuxt', '@nuxthub/core', '@nuxtjs/i18n'],
+  i18n: {
+    locales: [
+      { code: 'pl', name: 'Polski', file: 'pl.json' },
+      { code: 'en', name: 'English', file: 'en.json' },
+    ],
+    defaultLocale: 'pl',
+    lazy: true,
+    langDir: 'locales/',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'slava_lang',
+      fallbackLocale: 'pl',
+    },
+  },
   alias: {
     '~': fileURLToPath(new URL('./', import.meta.url)),
     '@': fileURLToPath(new URL('./', import.meta.url)),
