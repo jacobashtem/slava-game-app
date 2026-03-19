@@ -11,6 +11,8 @@ export default defineNuxtConfig({
     locales: [
       { code: 'pl', name: 'Polski', file: 'pl.json' },
       { code: 'en', name: 'English', file: 'en.json' },
+      { code: 'uk', name: 'Українська', file: 'uk.json' },
+      { code: 'ru', name: 'Русский', file: 'ru.json' },
     ],
     defaultLocale: 'pl',
     lazy: true,
