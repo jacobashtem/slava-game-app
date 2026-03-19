@@ -366,6 +366,11 @@ const showSettings = ref(false)
             <span class="nt-label">Kolekcja</span>
             <span class="nt-desc">182 karty</span>
           </NuxtLink>
+          <NuxtLink to="/bestiary" class="nav-tile">
+            <Icon icon="game-icons:creature-mask" class="nt-icon" />
+            <span class="nt-label">Bestiariusz</span>
+            <span class="nt-desc">Kodeks bestii</span>
+          </NuxtLink>
           <NuxtLink to="/rules" class="nav-tile">
             <Icon icon="game-icons:book-cover" class="nt-icon" />
             <span class="nt-label">Zasady</span>
