@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useI18n } from '#imports'
 import gsap from 'gsap'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
@@ -8,6 +9,7 @@ import { useArenaStore } from '../../stores/arenaStore'
 import { useScenarioStore } from '../../stores/scenarioStore'
 import { useSlavaApi, type MatchReportResult } from '../../composables/useSlavaApi'
 
+const { t } = useI18n()
 const game = useGameStore()
 const scenarioStore = useScenarioStore()
 const ui = useUIStore()
@@ -36,8 +38,8 @@ const stats = computed(() => {
   }
 })
 
-const seasonLabel: Record<string, string> = {
-  spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima',
+function seasonLabel(key: string): string {
+  return t(`seasons.${key}`, key)
 }
 
 // Narrative battle summary
@@ -229,7 +231,7 @@ function restart() {
 
         <!-- Title -->
         <h2 ref="titleEl" :class="['go-title', isWin ? 'go-title-win' : 'go-title-lose']">
-          {{ isWin ? 'ZWYCIĘSTWO' : 'PORAŻKA' }}
+          {{ isWin ? $t('gameOver.victory') : $t('gameOver.defeat') }}
         </h2>
 
         <!-- Narrative summary -->

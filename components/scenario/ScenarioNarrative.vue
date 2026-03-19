@@ -87,12 +87,12 @@ onUnmounted(() => {
       <!-- Continue hint -->
       <div class="sn-hint">
         <span v-if="!isLastLine">
-          Kliknij lub nacisnij Enter
+          {{ $t('scenario.clickOrEnter') }}
           <Icon icon="mdi:chevron-right" class="sn-hint-icon" />
         </span>
         <span v-else class="sn-hint-final">
           <Icon icon="game-icons:crossed-swords" class="sn-hint-icon" />
-          Dalej
+          {{ $t('scenario.continue') }}
         </span>
       </div>
     </div>

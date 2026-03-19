@@ -51,7 +51,22 @@
     "login": "Log in",
     "loginPlaceholder": "Hero name...",
     "loginError": "Name must be at least 2 characters.",
-    "guest": "Guest"
+    "loginFailed": "Login failed.",
+    "guest": "Guest",
+    "warriorName": "Warrior name",
+    "coatOfArms": "Coat of arms",
+    "namePlaceholder": "Your name...",
+    "saveProfile": "Save profile",
+    "logout": "Log out",
+    "clickToLogin": "Click to log in",
+    "level": "Lvl",
+    "tagline": "Slavic card game",
+    "recommended": "RECOMMENDED",
+    "goldEditionShort": "Balanced cards, polished effects",
+    "slavaPantheon": "Pantheon of Gods",
+    "learnToPlay": "Learn to play",
+    "domainHint": "(none = random)",
+    "language": "Language"
   },
 
   "difficulty": {

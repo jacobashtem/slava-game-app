@@ -51,7 +51,22 @@
     "login": "Zaloguj się",
     "loginPlaceholder": "Imię bohatera...",
     "loginError": "Imię musi mieć min. 2 znaki.",
-    "guest": "Gość"
+    "loginFailed": "Nie udało się zalogować.",
+    "guest": "Gość",
+    "warriorName": "Imię wojownika",
+    "coatOfArms": "Herb",
+    "namePlaceholder": "Twoje imię...",
+    "saveProfile": "Zapisz profil",
+    "logout": "Wyloguj",
+    "clickToLogin": "Kliknij aby się zalogować",
+    "level": "Poz.",
+    "tagline": "Słowiańska gra karciana",
+    "recommended": "REKOMENDOWANE",
+    "goldEditionShort": "Zbalansowane karty, dopracowane efekty",
+    "slavaPantheon": "Panteon Bogów",
+    "learnToPlay": "Naucz się grać",
+    "domainHint": "(brak = losowa)",
+    "language": "Język"
   },
 
   "difficulty": {
@@ -75,6 +90,7 @@
   "game": {
     "yourTurn": "Twoja tura",
     "aiTurn": "Tura AI",
+    "opponentTurn": "Tura przeciwnika",
     "round": "Runda",
     "turn": "Tura",
     "phase": "Faza",
@@ -84,8 +100,16 @@
     "endTurn": "KONIEC TURY",
     "pass": "PASUJ",
     "plunder": "ZŁUP (1 PS)",
+    "next": "DALEJ",
     "surrender": "Poddaj się",
     "surrenderConfirm": "Na pewno się poddajesz?",
+    "timeUp": "Czas minął!",
+    "timeUpSub": "Tracisz punkt sławy",
+    "plundered": "Zostałeś złupiony!",
+    "plunderedSub": "Straciłeś {currency}",
+    "plunderSuccess": "Złupiłeś wroga!",
+    "plunderSuccessSub": "+1 {currency}",
+    "gloryCurrency": "Punkt Sławy",
     "gold": "Złoto",
     "glory": "Chwała",
     "soulPoints": "Punkty Dusz",
@@ -112,7 +136,15 @@
     "victory": "Zwycięstwo!",
     "defeat": "Porażka",
     "playAgain": "Zagraj ponownie",
-    "backToMenu": "Wróć do menu"
+    "resetArena": "Resetuj Arenę",
+    "backToMenu": "Wróć do menu",
+    "mainMenu": "Menu główne",
+    "roundLabel": "Runda",
+    "enemiesDefeated": "Powaleni wrogowie",
+    "lost": "Straceni",
+    "gloryPoints": "Punkty Sławy",
+    "cardsInDeck": "Karty w talii",
+    "level": "Poziom"
   },
 
   "bestiary": {

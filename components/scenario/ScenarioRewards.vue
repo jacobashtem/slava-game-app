@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useScenarioStore } from '../../stores/scenarioStore'
 
+const { t } = useI18n()
 const scenario = useScenarioStore()
 
 const rewards = computed(() => scenario.currentRewards)
@@ -41,7 +42,7 @@ const rewardIcon = (type: string): string => {
     <div class="sr-content">
       <div class="sr-header">
         <Icon icon="game-icons:laurel-crown" class="sr-crown" />
-        <h2 class="sr-title">Nagroda</h2>
+        <h2 class="sr-title">{{ $t('scenario.reward') }}</h2>
       </div>
 
       <!-- Reward list -->
@@ -55,7 +56,7 @@ const rewardIcon = (type: string): string => {
       <!-- Choice: buff target -->
       <div v-if="pendingChoice?.type === 'buff_creature'" class="sr-choice">
         <p class="sr-choice-prompt">
-          Wybierz istote dla premii +{{ pendingChoice.value }} {{ pendingChoice.stat === 'atk' ? 'ATK' : 'DEF' }}:
+          {{ t('scenario.chooseBuff', { value: pendingChoice.value, stat: pendingChoice.stat === 'atk' ? 'ATK' : 'DEF' }) }}
         </p>
         <div class="sr-candidates">
           <button
@@ -72,7 +73,7 @@ const rewardIcon = (type: string): string => {
 
       <!-- Choice: graveyard recovery -->
       <div v-else-if="pendingChoice?.type === 'recover_graveyard'" class="sr-choice">
-        <p class="sr-choice-prompt">Wybierz istote do odzyskania z cmentarza:</p>
+        <p class="sr-choice-prompt">{{ $t('scenario.chooseGraveyard') }}</p>
         <div class="sr-candidates">
           <button
             v-for="c in pendingChoice.candidates"
@@ -93,7 +94,7 @@ const rewardIcon = (type: string): string => {
         @click="continueWithoutChoice"
       >
         <Icon icon="game-icons:compass" />
-        Dalej
+        {{ $t('scenario.continue') }}
       </button>
     </div>
   </div>

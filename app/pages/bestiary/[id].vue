@@ -5,6 +5,7 @@ import istotypData from '../../../data/Slava_Vol2_Istoty.json'
 
 definePageMeta({ ssr: false })
 
+const { t } = useI18n()
 const route = useRoute()
 const creatures = istotypData as any[]
 const creatureId = computed(() => parseInt(route.params.id as string))
@@ -26,7 +27,7 @@ const creatureImgs = Object.fromEntries(
 
 const creature = computed(() => creatures.find(c => c.id === creatureId.value))
 const imgSrc = computed(() => creatureImgs[creatureId.value] ?? null)
-const domainColor = computed(() => DOMAIN_INFO[creature.value?.idDomain]?.color ?? '#8b7355')
+const domainColor = computed(() => DOMAIN_INFO.value[creature.value?.idDomain]?.color ?? '#8b7355')
 
 // Nav
 const sortedCreatures = computed(() => [...creatures].sort((a, b) => a.name.localeCompare(b.name, 'pl')))
@@ -53,47 +54,47 @@ function handleKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', handleKeydown))
 onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
-const DOMAIN_INFO: Record<number, { name: string; color: string; colorDark: string; icon: string; rune: string; desc: string }> = {
-  1: { name: 'Perun', color: '#b8942e', colorDark: '#3d310f', icon: 'game-icons:lightning-storm', rune: 'ᛈ', desc: 'Bóg burzy, piorunów i wojny. Jego stworzenia biją mocno i szybko.' },
-  2: { name: 'Żywi', color: '#3a7a3a', colorDark: '#1a3a1a', icon: 'game-icons:oak-leaf', rune: 'ᛉ', desc: 'Duchy natury, lasu i wody. Leczą, chronią i wspierają sojuszników.' },
-  3: { name: 'Nieumarli', color: '#7a5a9a', colorDark: '#2a1a3a', icon: 'game-icons:skull-crossed-bones', rune: 'ᚾ', desc: 'Ci, co nie odeszli. Wracają z grobu, kradną życie, sieją strach.' },
-  4: { name: 'Weles', color: '#9a3030', colorDark: '#3a1010', icon: 'game-icons:fire-dash', rune: 'ᚹ', desc: 'Pan zaświatów, bydła i magii. Podstęp, manipulacja, chaos.' },
-}
+const DOMAIN_INFO = computed<Record<number, { name: string; color: string; colorDark: string; icon: string; rune: string; desc: string }>>(() => ({
+  1: { name: 'Perun', color: '#b8942e', colorDark: '#3d310f', icon: 'game-icons:lightning-storm', rune: 'ᛈ', desc: t('domain.perunDesc') },
+  2: { name: 'Żywi', color: '#3a7a3a', colorDark: '#1a3a1a', icon: 'game-icons:oak-leaf', rune: 'ᛉ', desc: t('domain.zyviDesc') },
+  3: { name: 'Nieumarli', color: '#7a5a9a', colorDark: '#2a1a3a', icon: 'game-icons:skull-crossed-bones', rune: 'ᚾ', desc: t('domain.undeadDesc') },
+  4: { name: 'Weles', color: '#9a3030', colorDark: '#3a1010', icon: 'game-icons:fire-dash', rune: 'ᚹ', desc: t('domain.welesDesc') },
+}))
 
-const ATK_TYPE_INFO: Record<number, { label: string; icon: string; desc: string }> = {
-  0: { label: 'Wręcz', icon: 'game-icons:broadsword', desc: 'Atakuje tylko pierwszą linię wroga' },
-  1: { label: 'Żywioł', icon: 'game-icons:fire-ring', desc: 'Jak wręcz, ale trafia też latające' },
-  2: { label: 'Magia', icon: 'game-icons:magic-swirl', desc: 'Atakuje dowolną linię' },
-  3: { label: 'Dystans', icon: 'game-icons:bow-arrow', desc: 'Atakuje dowolną linię' },
-}
+const ATK_TYPE_INFO = computed<Record<number, { label: string; icon: string; desc: string }>>(() => ({
+  0: { label: t('game.melee'), icon: 'game-icons:broadsword', desc: t('game.meleeDesc') },
+  1: { label: t('game.elemental'), icon: 'game-icons:fire-ring', desc: t('game.elementalDesc') },
+  2: { label: t('game.magic'), icon: 'game-icons:magic-swirl', desc: t('game.magicDesc') },
+  3: { label: t('game.ranged'), icon: 'game-icons:bow-arrow', desc: t('game.rangedDesc') },
+}))
 
-const TRIGGER_LABELS: Record<string, { label: string; icon: string }> = {
-  'ON_PLAY': { label: 'Przy wystawieniu', icon: 'game-icons:card-play' },
-  'ON_ATTACK': { label: 'Przy ataku', icon: 'game-icons:sword-clash' },
-  'ON_DEFEND': { label: 'Przy obronie', icon: 'game-icons:shield-reflect' },
-  'ON_DAMAGE_DEALT': { label: 'Przy zadaniu obrażeń', icon: 'game-icons:drop' },
-  'ON_DAMAGE_RECEIVED': { label: 'Przy otrzymaniu obrażeń', icon: 'game-icons:bleeding-wound' },
-  'ON_DEATH': { label: 'Przy śmierci', icon: 'game-icons:death-skull' },
-  'ON_KILL': { label: 'Przy zabiciu', icon: 'game-icons:decapitation' },
-  'ON_ANY_DEATH': { label: 'Przy każdej śmierci', icon: 'game-icons:tombstone' },
-  'ON_TURN_START': { label: 'Początek tury', icon: 'game-icons:sunrise' },
-  'ON_TURN_END': { label: 'Koniec tury', icon: 'game-icons:sunset' },
-  'ON_ROUND_START': { label: 'Początek rundy', icon: 'game-icons:cycle' },
-  'ON_ALLY_ATTACKED': { label: 'Sojusznik zaatakowany', icon: 'game-icons:shield-bash' },
-  'ON_ALLY_DEATH': { label: 'Śmierć sojusznika', icon: 'game-icons:broken-heart' },
-  'ON_ALLY_DAMAGED': { label: 'Sojusznik obrażony', icon: 'game-icons:bleeding-eye' },
-  'ON_ALLY_SURVIVES': { label: 'Sojusznik przetrwał', icon: 'game-icons:heart-plus' },
-  'ON_SPELL_CAST': { label: 'Czar rzucony', icon: 'game-icons:magic-portal' },
-  'ON_GOLD_SPENT': { label: 'Wydanie złota', icon: 'game-icons:two-coins' },
-  'ON_DEFENSE_ZERO': { label: 'Obrona = 0', icon: 'game-icons:cracked-shield' },
-  'ON_COMBAT': { label: 'Faza walki', icon: 'game-icons:battle-gear' },
-  'ON_ENEMY_PLAY': { label: 'Wróg wystawia', icon: 'game-icons:awareness' },
-  'ACTION': { label: 'Akcja', icon: 'game-icons:hand' },
-  'PASSIVE': { label: 'Pasywna', icon: 'game-icons:aura' },
-  'AURA': { label: 'Aura', icon: 'game-icons:magic-shield' },
-  'CZUJNOŚĆ': { label: 'Czujność', icon: 'game-icons:eye-shield' },
-  'REACTION': { label: 'Reakcja', icon: 'game-icons:lightning-frequency' },
-}
+const TRIGGER_LABELS = computed<Record<string, { label: string; icon: string }>>(() => ({
+  'ON_PLAY': { label: t('trigger.onPlay'), icon: 'game-icons:card-play' },
+  'ON_ATTACK': { label: t('trigger.onAttack'), icon: 'game-icons:sword-clash' },
+  'ON_DEFEND': { label: t('trigger.onDefend'), icon: 'game-icons:shield-reflect' },
+  'ON_DAMAGE_DEALT': { label: t('trigger.onDamageDealt'), icon: 'game-icons:drop' },
+  'ON_DAMAGE_RECEIVED': { label: t('trigger.onDamageReceived'), icon: 'game-icons:bleeding-wound' },
+  'ON_DEATH': { label: t('trigger.onDeath'), icon: 'game-icons:death-skull' },
+  'ON_KILL': { label: t('trigger.onKill'), icon: 'game-icons:decapitation' },
+  'ON_ANY_DEATH': { label: t('trigger.onAnyDeath'), icon: 'game-icons:tombstone' },
+  'ON_TURN_START': { label: t('trigger.onTurnStart'), icon: 'game-icons:sunrise' },
+  'ON_TURN_END': { label: t('trigger.onTurnEnd'), icon: 'game-icons:sunset' },
+  'ON_ROUND_START': { label: t('trigger.onRoundStart'), icon: 'game-icons:cycle' },
+  'ON_ALLY_ATTACKED': { label: t('trigger.onAllyAttacked'), icon: 'game-icons:shield-bash' },
+  'ON_ALLY_DEATH': { label: t('trigger.onAllyDeath'), icon: 'game-icons:broken-heart' },
+  'ON_ALLY_DAMAGED': { label: t('trigger.onAllyDamaged'), icon: 'game-icons:bleeding-eye' },
+  'ON_ALLY_SURVIVES': { label: t('trigger.onAllySurvives'), icon: 'game-icons:heart-plus' },
+  'ON_SPELL_CAST': { label: t('trigger.onSpellCast'), icon: 'game-icons:magic-portal' },
+  'ON_GOLD_SPENT': { label: t('trigger.onGoldSpent'), icon: 'game-icons:two-coins' },
+  'ON_DEFENSE_ZERO': { label: t('trigger.onDefenseZero'), icon: 'game-icons:cracked-shield' },
+  'ON_COMBAT': { label: t('trigger.onCombat'), icon: 'game-icons:battle-gear' },
+  'ON_ENEMY_PLAY': { label: t('trigger.onEnemyPlay'), icon: 'game-icons:awareness' },
+  'ACTION': { label: t('trigger.action'), icon: 'game-icons:hand' },
+  'PASSIVE': { label: t('trigger.passive'), icon: 'game-icons:aura' },
+  'AURA': { label: t('trigger.aura'), icon: 'game-icons:magic-shield' },
+  'CZUJNOŚĆ': { label: t('trigger.vigilance'), icon: 'game-icons:eye-shield' },
+  'REACTION': { label: t('trigger.reaction'), icon: 'game-icons:lightning-frequency' },
+}))
 
 function cleanLore(text: string): string {
   return text.replace(/<\/?i>/g, '').replace(/^"|"$/g, '').trim()
@@ -118,7 +119,7 @@ function cleanLore(text: string): string {
       <!-- Nav overlaid on image -->
       <nav class="bp-nav">
         <NuxtLink to="/bestiary" class="bp-nav-back">
-          <Icon icon="mdi:arrow-left" /> Bestiariusz
+          <Icon icon="mdi:arrow-left" /> {{ $t('bestiary.title') }}
         </NuxtLink>
         <div class="bp-nav-arrows">
           <NuxtLink v-if="prevCreature" :to="`/bestiary/${prevCreature.id}`" class="bp-nav-arrow" :title="prevCreature.name">
@@ -154,14 +155,14 @@ function cleanLore(text: string): string {
           <Icon icon="game-icons:crossed-swords" class="bp-stat-icon bp-stat-atk" />
           <div class="bp-stat-right">
             <span class="bp-stat-val bp-stat-atk">{{ creature.stats.attack }}</span>
-            <span class="bp-stat-label">Atak</span>
+            <span class="bp-stat-label">{{ $t('game.atak') }}</span>
           </div>
         </div>
         <div class="bp-stat">
           <Icon icon="game-icons:shield" class="bp-stat-icon bp-stat-def" />
           <div class="bp-stat-right">
             <span class="bp-stat-val bp-stat-def">{{ creature.stats.defense }}</span>
-            <span class="bp-stat-label">Obrona</span>
+            <span class="bp-stat-label">{{ $t('game.defense') }}</span>
           </div>
         </div>
         <div class="bp-stat">
@@ -174,8 +175,8 @@ function cleanLore(text: string): string {
         <div v-if="creature.combat.isFlying" class="bp-stat">
           <Icon icon="game-icons:feathered-wing" class="bp-stat-icon" />
           <div class="bp-stat-right">
-            <span class="bp-stat-val">Latająca</span>
-            <span class="bp-stat-label">Omija naziemne blokery</span>
+            <span class="bp-stat-val">{{ $t('game.flying') }}</span>
+            <span class="bp-stat-label">{{ $t('game.flyingDesc') }}</span>
           </div>
         </div>
       </div>
@@ -187,7 +188,7 @@ function cleanLore(text: string): string {
       <section v-if="creature.lore" class="bp-section">
         <h2 class="bp-section-title">
           <Icon icon="game-icons:scroll-unfurled" />
-          Legenda
+          {{ $t('bestiary.legend') }}
         </h2>
         <blockquote class="bp-lore">{{ cleanLore(creature.lore) }}</blockquote>
       </section>
@@ -196,7 +197,7 @@ function cleanLore(text: string): string {
       <section v-if="creature.abilities?.length" class="bp-section">
         <h2 class="bp-section-title">
           <Icon icon="game-icons:spell-book" />
-          Zdolności
+          {{ $t('bestiary.abilities') }}
         </h2>
         <div class="bp-abilities">
           <div v-for="(ab, i) in creature.abilities" :key="i" class="bp-ability">
@@ -206,8 +207,8 @@ function cleanLore(text: string): string {
               <span v-if="ab.cost" class="bp-ability-cost">
                 <Icon icon="game-icons:two-coins" /> {{ ab.cost }} PS
               </span>
-              <span v-if="ab.limit === 'ONCE_PER_GAME'" class="bp-ability-limit">Raz w grze</span>
-              <span v-else-if="ab.limit === 'ONCE_PER_TURN'" class="bp-ability-limit">Raz na turę</span>
+              <span v-if="ab.limit === 'ONCE_PER_GAME'" class="bp-ability-limit">{{ $t('bestiary.oncePerGame') }}</span>
+              <span v-else-if="ab.limit === 'ONCE_PER_TURN'" class="bp-ability-limit">{{ $t('bestiary.oncePerTurn') }}</span>
             </div>
             <p class="bp-ability-text">{{ ab.text }}</p>
           </div>
@@ -218,13 +219,13 @@ function cleanLore(text: string): string {
       <section class="bp-section">
         <h2 class="bp-section-title">
           <Icon icon="game-icons:gears" />
-          Rola w grze
+          {{ $t('bestiary.gameRole') }}
         </h2>
         <div class="bp-game-box">
           <p class="bp-game-text">{{ creature.effectDescription }}</p>
           <div class="bp-game-soul">
             <Icon icon="game-icons:ghost" />
-            Wartość dusz: <strong>{{ creature.stats.soulValue }}</strong>
+            {{ $t('game.soulValue') }}: <strong>{{ creature.stats.soulValue }}</strong>
           </div>
         </div>
       </section>
@@ -234,14 +235,14 @@ function cleanLore(text: string): string {
         <NuxtLink v-if="prevCreature" :to="`/bestiary/${prevCreature.id}`" class="bp-pn bp-pn-prev">
           <Icon icon="mdi:chevron-left" class="bp-pn-arrow" />
           <div>
-            <span class="bp-pn-label">Poprzednia</span>
+            <span class="bp-pn-label">{{ $t('bestiary.previous') }}</span>
             <span class="bp-pn-name">{{ prevCreature.name }}</span>
           </div>
         </NuxtLink>
         <div v-else />
         <NuxtLink v-if="nextCreature" :to="`/bestiary/${nextCreature.id}`" class="bp-pn bp-pn-next">
           <div style="text-align: right;">
-            <span class="bp-pn-label">Następna</span>
+            <span class="bp-pn-label">{{ $t('bestiary.next') }}</span>
             <span class="bp-pn-name">{{ nextCreature.name }}</span>
           </div>
           <Icon icon="mdi:chevron-right" class="bp-pn-arrow" />
@@ -257,8 +258,8 @@ function cleanLore(text: string): string {
   <!-- 404 -->
   <div v-else class="bp-404">
     <Icon icon="game-icons:dead-eye" style="font-size: 48px; color: #aaa;" />
-    <p>Istota nie znaleziona.</p>
-    <NuxtLink to="/bestiary">← Wróć do Bestiariusza</NuxtLink>
+    <p>{{ $t('bestiary.creatureNotFound') }}</p>
+    <NuxtLink to="/bestiary">← {{ $t('bestiary.backToBestiary') }}</NuxtLink>
   </div>
 </template>
 

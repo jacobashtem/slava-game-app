@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useI18n } from '#imports'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
 import { GamePhase } from '../../game-engine/constants'
 import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 
+const { t } = useI18n()
 const game = useGameStore()
 const ui = useUIStore()
 
@@ -28,7 +30,7 @@ const canPlunder = computed(() => {
   return (enemyCurrency ?? 0) > 0
 })
 
-const plunderLabel = computed(() => 'ZŁUP (1 PS)')
+const plunderLabel = computed(() => t('game.plunder'))
 
 function handlePhase() {
   ui.clearSelection()
@@ -53,16 +55,16 @@ function handlePhase() {
 
 const btnConfig = computed(() => {
   switch (game.currentPhase) {
-    case GamePhase.START:  return { label: 'DOBIERZ',  icon: 'game-icons:card-draw', type: 'next' }
-    case GamePhase.DRAW:   return { label: 'DO BOJU',  icon: 'game-icons:battle-axe', type: 'next' }
+    case GamePhase.START:  return { label: t('game.draw'),    icon: 'game-icons:card-draw', type: 'next' }
+    case GamePhase.DRAW:   return { label: t('game.toBattle'),icon: 'game-icons:battle-axe', type: 'next' }
     case GamePhase.PLAY:
       if (canPlunder.value) return { label: plunderLabel.value,  icon: 'game-icons:treasure-map', type: 'plunder' }
       return skipCombat.value
-        ? { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
-        : { label: 'ATAKUJ',  icon: 'game-icons:sword-clash', type: 'combat' }
-    case GamePhase.COMBAT: return { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
-    case GamePhase.END:    return { label: 'KONIEC TURY', icon: 'game-icons:hourglass', type: 'end' }
-    default:               return { label: 'DALEJ',   icon: 'game-icons:forward', type: 'next' }
+        ? { label: t('game.endTurn'), icon: 'game-icons:hourglass', type: 'end' }
+        : { label: t('game.attack'), icon: 'game-icons:sword-clash', type: 'combat' }
+    case GamePhase.COMBAT: return { label: t('game.endTurn'), icon: 'game-icons:hourglass', type: 'end' }
+    case GamePhase.END:    return { label: t('game.endTurn'), icon: 'game-icons:hourglass', type: 'end' }
+    default:               return { label: t('game.next'),   icon: 'game-icons:forward', type: 'next' }
   }
 })
 </script>
@@ -76,7 +78,7 @@ const btnConfig = computed(() => {
       @click="() => { ui.clearSelection(); game.endTurn() }"
     >
       <Icon icon="mdi:hand-back-left" class="btn-icon" />
-      PASUJ
+      {{ $t('game.pass') }}
     </button>
     <button
       :disabled="!game.isPlayerTurn || !!game.winner"

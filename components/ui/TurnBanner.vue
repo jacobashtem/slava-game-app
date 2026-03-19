@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue'
+import { useI18n } from '#imports'
 import { useGameStore } from '../../stores/gameStore'
 
 import { useUIStore } from '../../stores/uiStore'
 
+const { t } = useI18n()
 const game = useGameStore()
 const ui = useUIStore()
 const showBanner = ref(false)
@@ -53,17 +55,22 @@ watch(() => ui.pendingBanners.length, () => {
   }
 })
 
-const seasonNames: Record<string, string> = {
-  spring: '🌸 Wiosna',
-  summer: '☀ Lato',
-  autumn: '🍂 Jesień',
-  winter: '❄ Zima',
+const seasonEmoji: Record<string, string> = {
+  spring: '🌸',
+  summer: '☀',
+  autumn: '🍂',
+  winter: '❄',
+}
+function seasonName(key: string): string {
+  const emoji = seasonEmoji[key] ?? ''
+  const name = t(`seasons.${key}`, key)
+  return emoji ? `${emoji} ${name}` : name
 }
 
 // Season change announcement
 watch(() => game.season, (season, prevSeason) => {
   if (!prevSeason || season === prevSeason) return
-  showFor(seasonNames[season] ?? season, 'season', 1800)
+  showFor(seasonName(season), 'season', 1800)
 })
 
 // Timeout banner — detect glory loss from timeout in actionLog
@@ -76,8 +83,8 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
   for (const entry of newEntries) {
     if (entry.type === 'glory' && entry.message.includes('CZAS MINĄŁ')) {
       // Show timeout banner, then queue the normal turn banner
-      showFor('Czas minął!', 'timeout', 2200, 'Tracisz punkt sławy')
-      queueBanner('Tura przeciwnika', 'ai', 1200)
+      showFor(t('game.timeUp'), 'timeout', 2200, t('game.timeUpSub'))
+      queueBanner(t('game.opponentTurn'), 'ai', 1200)
       return // skip normal turn announcement for this cycle
     }
   }
@@ -87,7 +94,7 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
 watch(() => game.currentTurn, (turn, prevTurn) => {
   if (!prevTurn || !turn) return
   if (showBanner.value && (bannerType.value === 'season' || bannerType.value === 'timeout')) return
-  queueBanner(turn === 'player1' ? 'Twoja tura' : 'Tura przeciwnika', turn === 'player1' ? 'player' : 'ai', 1400)
+  queueBanner(turn === 'player1' ? t('game.yourTurn') : t('game.opponentTurn'), turn === 'player1' ? 'player' : 'ai', 1400)
 })
 
 // Plunder banner — detect plunder in actionLog
@@ -101,11 +108,11 @@ watch(() => game.state?.actionLog.length ?? 0, (newLen) => {
     if ((entry.type === 'glory' || entry.type === 'gold') && entry.message.includes('ŁUPIENIE')) {
       const isAI = entry.message.startsWith('AI')
       const isSlava = entry.type === 'glory'
-      const currency = 'Punkt Sławy'
+      const currency = t('game.gloryCurrency')
       if (isAI) {
-        showFor('Zostałeś złupiony!', 'plunder', 2200, `Straciłeś ${currency}`)
+        showFor(t('game.plundered'), 'plunder', 2200, t('game.plunderedSub', { currency }))
       } else {
-        showFor('Złupiłeś wroga!', 'plunder', 1800, `+1 ${currency}`)
+        showFor(t('game.plunderSuccess'), 'plunder', 1800, t('game.plunderSuccessSub', { currency }))
       }
     }
   }

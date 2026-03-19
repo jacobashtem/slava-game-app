@@ -15,6 +15,7 @@ function xpForLevel(level: number): number {
 
 const game = useGameStore()
 const api = useSlavaApi()
+const { t, locale, locales } = useI18n()
 
 // ===== PLAYER PROFILE =====
 const PLAYER_ICONS = [
@@ -38,7 +39,7 @@ const profileIcon = ref(game.playerIcon || 'game-icons:viking-helmet')
 const loginLoading = ref(false)
 const loginError = ref<string | null>(null)
 
-const displayName = computed(() => api.currentPlayer.value?.displayName || game.playerName || 'Wojownik')
+const displayName = computed(() => api.currentPlayer.value?.displayName || game.playerName || t('difficulty.warrior'))
 const displayIcon = computed(() => game.playerIcon || 'game-icons:viking-helmet')
 const playerLevel = computed(() => api.currentPlayer.value?.level ?? 1)
 const playerXp = computed(() => api.currentPlayer.value?.xp ?? 0)
@@ -57,7 +58,7 @@ function selectProfileIcon(icon: string) {
 async function saveProfile() {
   const name = profileName.value.trim()
   if (!name || name.length < 2) {
-    loginError.value = 'Imię musi mieć min. 2 znaki.'
+    loginError.value = t('menu.loginError')
     return
   }
   loginLoading.value = true
@@ -67,7 +68,7 @@ async function saveProfile() {
     game.setPlayerProfile(name, profileIcon.value)
     showProfile.value = false
   } catch (e: any) {
-    loginError.value = e.message || 'Nie udało się zalogować.'
+    loginError.value = e.message || t('menu.loginFailed')
   } finally {
     loginLoading.value = false
   }
@@ -97,12 +98,12 @@ function startSlavaMode() {
   navigateTo('/game')
 }
 
-const domains = [
-  { id: Domain.PERUN, name: DOMAIN_NAMES[Domain.PERUN], color: DOMAIN_COLORS[Domain.PERUN], icon: 'game-icons:lightning-storm', desc: 'Wojownicy bogów' },
-  { id: Domain.ZYVI, name: DOMAIN_NAMES[Domain.ZYVI], color: DOMAIN_COLORS[Domain.ZYVI], icon: 'game-icons:oak-leaf', desc: 'Ludzie i natura' },
-  { id: Domain.UNDEAD, name: DOMAIN_NAMES[Domain.UNDEAD], color: DOMAIN_COLORS[Domain.UNDEAD], icon: 'game-icons:skull-crossed-bones', desc: 'Upiory i duchy' },
-  { id: Domain.WELES, name: DOMAIN_NAMES[Domain.WELES], color: DOMAIN_COLORS[Domain.WELES], icon: 'game-icons:fire-dash', desc: 'Demony zaświatów' },
-]
+const domains = computed(() => [
+  { id: Domain.PERUN, name: t('domain.perun'), color: DOMAIN_COLORS[Domain.PERUN], icon: 'game-icons:lightning-storm', desc: t('domain.perunDesc') },
+  { id: Domain.ZYVI, name: t('domain.zyvi'), color: DOMAIN_COLORS[Domain.ZYVI], icon: 'game-icons:oak-leaf', desc: t('domain.zyviDesc') },
+  { id: Domain.UNDEAD, name: t('domain.undead'), color: DOMAIN_COLORS[Domain.UNDEAD], icon: 'game-icons:skull-crossed-bones', desc: t('domain.undeadDesc') },
+  { id: Domain.WELES, name: t('domain.weles'), color: DOMAIN_COLORS[Domain.WELES], icon: 'game-icons:fire-dash', desc: t('domain.welesDesc') },
+])
 
 // ===== PREFETCH HEAVY MODULES =====
 if (typeof window !== 'undefined') {
@@ -164,13 +165,13 @@ const showSettings = ref(false)
           <div class="pb-info">
             <span class="pb-name">{{ displayName }}</span>
             <div v-if="api.isAuthenticated.value" class="pb-level-row">
-              <span class="pb-level">Poz. {{ playerLevel }}</span>
+              <span class="pb-level">{{ $t('menu.level') }} {{ playerLevel }}</span>
               <div class="pb-xp-bar">
                 <div class="pb-xp-fill" :style="{ width: xpProgress + '%' }" />
               </div>
               <span class="pb-xp-text">{{ playerXp }} XP</span>
             </div>
-            <span v-else class="pb-login-hint">Kliknij aby się zalogować</span>
+            <span v-else class="pb-login-hint">{{ $t('menu.clickToLogin') }}</span>
           </div>
           <Icon :icon="showProfile ? 'mdi:chevron-up' : 'mdi:chevron-down'" class="pb-chev" />
         </div>
@@ -179,18 +180,18 @@ const showSettings = ref(false)
         <Transition name="panel-slide">
           <div v-if="showProfile" class="profile-panel">
             <div class="pp-field">
-              <label class="pp-label">Imię wojownika</label>
+              <label class="pp-label">{{ $t('menu.warriorName') }}</label>
               <input
                 v-model="profileName"
                 class="pp-input"
                 type="text"
                 maxlength="20"
-                placeholder="Twoje imię..."
+                :placeholder="$t('menu.namePlaceholder')"
                 @keyup.enter="saveProfile"
               />
             </div>
             <div class="pp-field">
-              <label class="pp-label">Herb</label>
+              <label class="pp-label">{{ $t('menu.coatOfArms') }}</label>
               <div class="pp-icons">
                 <button
                   v-for="ic in PLAYER_ICONS" :key="ic"
@@ -205,11 +206,11 @@ const showSettings = ref(false)
             <button class="pp-save" :disabled="loginLoading" @click="saveProfile">
               <Icon v-if="loginLoading" icon="mdi:loading" class="spin" />
               <Icon v-else icon="game-icons:scroll-quill" />
-              {{ api.isAuthenticated.value ? 'Zapisz profil' : 'Zaloguj się' }}
+              {{ api.isAuthenticated.value ? $t('menu.saveProfile') : $t('menu.login') }}
             </button>
             <button v-if="api.isAuthenticated.value" class="pp-logout" @click="api.logout(); showProfile = false">
               <Icon icon="mdi:logout" />
-              Wyloguj
+              {{ $t('menu.logout') }}
             </button>
           </div>
         </Transition>

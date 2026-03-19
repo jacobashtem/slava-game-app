@@ -14,7 +14,7 @@ const progressText = computed(() => {
   <div v-if="scenario.isScenarioMode && scenario.phase === 'combat'" class="sp-bar">
     <div class="sp-left">
       <Icon icon="game-icons:compass" class="sp-icon" />
-      <span class="sp-encounter">Encounter {{ progressText }}</span>
+      <span class="sp-encounter">{{ $t('scenario.encounter') }} {{ progressText }}</span>
       <span class="sp-sep">—</span>
       <span class="sp-title">{{ scenario.encounterTitle }}</span>
     </div>
@@ -22,7 +22,7 @@ const progressText = computed(() => {
     <!-- Survival counter -->
     <div v-if="scenario.isSurvivalEncounter" class="sp-survival">
       <Icon icon="game-icons:hourglass" class="sp-surv-icon" />
-      <span>Przetrwaj: {{ scenario.survivalRounds }} / {{ scenario.survivalTarget }} rund</span>
+      <span>{{ $t('scenario.survive') }} {{ scenario.survivalRounds }} / {{ scenario.survivalTarget }} {{ $t('scenario.rounds') }}</span>
     </div>
 
     <!-- Progress dots -->

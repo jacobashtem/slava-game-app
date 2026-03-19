@@ -4,6 +4,8 @@ import { Icon } from '@iconify/vue'
 import { useScenarioStore } from '../../stores/scenarioStore'
 import { useGameStore } from '../../stores/gameStore'
 
+const { t } = useI18n()
+
 definePageMeta({ ssr: false })
 
 const scenario = useScenarioStore()
@@ -79,14 +81,14 @@ function goHome() {
     <div v-if="showLoadPrompt" class="sc-load-prompt-overlay">
       <div class="sc-load-prompt">
         <Icon icon="game-icons:campfire" class="sc-load-icon" />
-        <h2 class="sc-load-title">Zapisana kampania</h2>
-        <p class="sc-load-text">Masz zapisany postep. Kontynuowac?</p>
+        <h2 class="sc-load-title">{{ $t('scenario.savedCampaign') }}</h2>
+        <p class="sc-load-text">{{ $t('scenario.savedCampaignText') }}</p>
         <div class="sc-load-btns">
           <button class="sc-btn-retry" @click="loadSaved">
-            <Icon icon="game-icons:save-arrow" /> Kontynuuj
+            <Icon icon="game-icons:save-arrow" /> {{ $t('scenario.continueGame') }}
           </button>
           <button class="sc-btn-quit" @click="startFresh">
-            <Icon icon="game-icons:fire" /> Nowa gra
+            <Icon icon="game-icons:fire" /> {{ $t('scenario.newGame') }}
           </button>
         </div>
       </div>
@@ -115,14 +117,14 @@ function goHome() {
     <div v-if="scenario.encounterResult === 'player_lose'" class="sc-lose-overlay">
       <div class="sc-lose-box">
         <Icon icon="game-icons:skull-crossed-bones" class="sc-lose-icon" />
-        <h2 class="sc-lose-title">Porazka</h2>
-        <p class="sc-lose-text">Druzyna polegla. Las pochlonoł odwaznych.</p>
+        <h2 class="sc-lose-title">{{ $t('scenario.defeat') }}</h2>
+        <p class="sc-lose-text">{{ $t('scenario.defeatText') }}</p>
         <div class="sc-lose-btns">
           <button class="sc-btn-retry" @click="scenario.restartEncounter()">
-            <Icon icon="game-icons:cycle" /> Sprobuj ponownie
+            <Icon icon="game-icons:cycle" /> {{ $t('scenario.retry') }}
           </button>
           <button class="sc-btn-quit" @click="goHome">
-            <Icon icon="game-icons:exit-door" /> Wroc do menu
+            <Icon icon="game-icons:exit-door" /> {{ $t('scenario.backToMenu') }}
           </button>
         </div>
       </div>
@@ -136,7 +138,7 @@ function goHome() {
       <GameBoard v-if="gameReady" />
       <div v-else class="sc-loading">
         <Icon icon="game-icons:hooded-figure" class="sc-load-icon" />
-        <p>Przygotowywanie...</p>
+        <p>{{ $t('scenario.preparing') }}</p>
       </div>
     </div>
 

@@ -60,13 +60,13 @@ const domainCounts = computed(() => {
     <!-- HEADER -->
     <header class="bst-header">
       <NuxtLink to="/" class="bst-back">
-        <Icon icon="game-icons:return-arrow" /> Powrót
+        <Icon icon="game-icons:return-arrow" /> {{ $t('common.back') }}
       </NuxtLink>
 
       <div class="bst-title-group">
         <div class="bst-rune-row">ᛒ ᛖ ᛊ ᛏ ᛁ ᚨ ᚱ ᛁ ᚢ ᛊ ᛉ</div>
-        <h1 class="bst-title">Bestiariusz</h1>
-        <p class="bst-subtitle">Kodeks istot świata Sławy — {{ creatures.length }} bestii</p>
+        <h1 class="bst-title">{{ $t('bestiary.title') }}</h1>
+        <p class="bst-subtitle">{{ $t('bestiary.subtitle', { count: creatures.length }) }}</p>
       </div>
 
       <div class="bst-ornament">
@@ -84,7 +84,7 @@ const domainCounts = computed(() => {
           v-model="searchQuery"
           type="text"
           class="bst-search"
-          placeholder="Szukaj istoty..."
+          :placeholder="$t('bestiary.searchPlaceholder')"
         />
       </div>
 
@@ -93,7 +93,7 @@ const domainCounts = computed(() => {
           :class="['bst-pill', { active: domainFilter === null }]"
           @click="domainFilter = null"
         >
-          Wszystkie
+          {{ $t('common.all') }}
           <span class="bst-pill-count">{{ creatures.length }}</span>
         </button>
         <button
@@ -152,7 +152,7 @@ const domainCounts = computed(() => {
 
       <div v-if="filteredCreatures.length === 0" class="bst-empty">
         <Icon icon="game-icons:dead-eye" class="bst-empty-icon" />
-        <p>Nie znaleziono istot.</p>
+        <p>{{ $t('bestiary.notFound') }}</p>
       </div>
     </main>
   </div>
