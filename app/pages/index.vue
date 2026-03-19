@@ -6,7 +6,7 @@ import { useGameStore } from '../../stores/gameStore'
 import { useSlavaApi } from '../../composables/useSlavaApi'
 import type { AIDifficulty } from '../../game-engine/AIPlayer'
 
-import { Domain, DOMAIN_NAMES, DOMAIN_COLORS } from '../../game-engine/constants'
+import { Domain, DOMAIN_COLORS } from '../../game-engine/constants'
 
 /** Total XP required to reach a given level. */
 function xpForLevel(level: number): number {
@@ -229,8 +229,8 @@ const showSettings = ref(false)
           </div>
 
           <h1 class="title">SŁAWA</h1>
-          <p class="subtitle">Vol. 2 — Złota Edycja</p>
-          <p class="tagline">Słowiańska gra karciana</p>
+          <p class="subtitle">Vol. 2 — {{ $t('menu.goldEdition') }}</p>
+          <p class="tagline">{{ $t('menu.tagline') }}</p>
 
           <div class="orn-row">
             <svg viewBox="0 0 120 8" class="orn-svg"><path d="M0 4 Q15 8 30 4 Q45 0 60 4 Q75 8 90 4 Q105 0 120 4" fill="none" stroke="rgba(200,168,78,0.25)" stroke-width="1"/></svg>
@@ -244,10 +244,10 @@ const showSettings = ref(false)
             <div class="mode-glow" />
             <Icon icon="game-icons:crown-coin" class="mode-icon" />
             <div class="mode-text">
-              <span class="mode-name">Złota Edycja</span>
-              <span class="mode-desc">Zbalansowane karty, dopracowane efekty</span>
+              <span class="mode-name">{{ $t('menu.goldEdition') }}</span>
+              <span class="mode-desc">{{ $t('menu.goldEditionShort') }}</span>
             </div>
-            <div class="mode-badge">REKOMENDOWANE</div>
+            <div class="mode-badge">{{ $t('menu.recommended') }}</div>
           </button>
 
           <!-- SLAVA + TUTORIAL side by side -->
@@ -256,16 +256,16 @@ const showSettings = ref(false)
               <div class="mode-glow mode-glow-red" />
               <Icon icon="game-icons:sword-clash" class="mode-icon" />
               <div class="mode-text">
-                <span class="mode-name">Sława!</span>
-                <span class="mode-desc">Panteon Bogów</span>
+                <span class="mode-name">{{ $t('menu.slava') }}</span>
+                <span class="mode-desc">{{ $t('menu.slavaPantheon') }}</span>
               </div>
             </button>
 
             <NuxtLink to="/tutorial" class="mode-card mode-tutorial">
               <Icon icon="game-icons:hooded-figure" class="mode-icon" />
               <div class="mode-text">
-                <span class="mode-name">Samouczek</span>
-                <span class="mode-desc">Naucz się grać</span>
+                <span class="mode-name">{{ $t('menu.tutorial') }}</span>
+                <span class="mode-desc">{{ $t('menu.learnToPlay') }}</span>
               </div>
             </NuxtLink>
           </div>
@@ -275,17 +275,17 @@ const showSettings = ref(false)
             <div class="mode-glow mode-glow-campaign" />
             <Icon icon="game-icons:campfire" class="mode-icon" />
             <div class="mode-text">
-              <span class="mode-name">Kampania: Noc Kupały</span>
-              <span class="mode-desc">7 encounterów, fabuła, prebuilt deck — tryb fabularny</span>
+              <span class="mode-name">{{ $t('menu.campaign') }}</span>
+              <span class="mode-desc">{{ $t('menu.campaignDesc') }}</span>
             </div>
-            <div class="mode-badge">NOWOŚĆ</div>
+            <div class="mode-badge">{{ $t('menu.new') }}</div>
           </NuxtLink>
         </div>
 
         <!-- SETTINGS (collapsible) -->
         <button class="settings-toggle" @click="showSettings = !showSettings">
           <Icon icon="game-icons:battle-gear" class="st-icon" />
-          <span>Ustawienia bitwy</span>
+          <span>{{ $t('menu.battleSettings') }}</span>
           <Icon :icon="showSettings ? 'mdi:chevron-up' : 'mdi:chevron-down'" class="st-chev" />
         </button>
 
@@ -295,14 +295,14 @@ const showSettings = ref(false)
             <div class="sg">
               <label class="sg-label">
                 <Icon icon="game-icons:brain" />
-                Trudność AI
+                {{ $t('menu.aiDifficulty') }}
               </label>
               <div class="sg-btns sg-btns--4">
                 <button v-for="d in [
-                  { val: 'novice', label: 'Nowicjusz', icon: 'game-icons:feather' },
-                  { val: 'warrior', label: 'Wojownik', icon: 'game-icons:shield-echoes' },
-                  { val: 'veteran', label: 'Weteran', icon: 'game-icons:skull-crack' },
-                  { val: 'legend', label: 'Legenda', icon: 'game-icons:crown' },
+                  { val: 'novice', label: $t('difficulty.novice'), icon: 'game-icons:feather' },
+                  { val: 'warrior', label: $t('difficulty.warrior'), icon: 'game-icons:shield-echoes' },
+                  { val: 'veteran', label: $t('difficulty.veteran'), icon: 'game-icons:skull-crack' },
+                  { val: 'legend', label: $t('difficulty.legend'), icon: 'game-icons:crown' },
                 ]" :key="d.val"
                   :class="['sg-btn', { active: difficulty === d.val }]"
                   @click="difficulty = d.val as AIDifficulty"
@@ -317,7 +317,7 @@ const showSettings = ref(false)
             <div class="sg">
               <label class="sg-label">
                 <Icon icon="game-icons:triquetra" />
-                Twoja domena <span class="sg-hint">(brak = losowa)</span>
+                {{ $t('menu.yourDomains') }} <span class="sg-hint">{{ $t('menu.domainHint') }}</span>
               </label>
               <div class="domain-grid">
                 <button
@@ -339,43 +339,43 @@ const showSettings = ref(false)
         <div class="nav-row">
           <NuxtLink to="/lobby" class="nav-tile nav-mp">
             <Icon icon="game-icons:swords-emblem" class="nt-icon" />
-            <span class="nt-label">Multiplayer</span>
-            <span class="nt-desc">Graj z ludźmi</span>
+            <span class="nt-label">{{ $t('menu.multiplayer') }}</span>
+            <span class="nt-desc">{{ $t('menu.multiplayerDesc') }}</span>
           </NuxtLink>
           <NuxtLink to="/arena" class="nav-tile">
             <Icon icon="game-icons:card-joker" class="nt-icon" />
-            <span class="nt-label">Arena</span>
-            <span class="nt-desc">Testuj karty</span>
+            <span class="nt-label">{{ $t('menu.arena') }}</span>
+            <span class="nt-desc">{{ $t('menu.arenaDesc') }}</span>
           </NuxtLink>
           <NuxtLink to="/vfx-arena" class="nav-tile">
             <Icon icon="game-icons:battle-axe" class="nt-icon" />
-            <span class="nt-label">VFX Arena</span>
-            <span class="nt-desc">Testuj efekty</span>
+            <span class="nt-label">{{ $t('menu.vfxArena') }}</span>
+            <span class="nt-desc">{{ $t('menu.vfxArenaDesc') }}</span>
           </NuxtLink>
           <NuxtLink to="/showcase" class="nav-tile">
             <Icon icon="game-icons:sparkles" class="nt-icon" />
-            <span class="nt-label">Efekty</span>
-            <span class="nt-desc">Pokaz VFX/SFX</span>
+            <span class="nt-label">{{ $t('menu.effects') }}</span>
+            <span class="nt-desc">{{ $t('menu.effectsDesc') }}</span>
           </NuxtLink>
           <NuxtLink to="/ranking" class="nav-tile">
             <Icon icon="game-icons:laurel-crown" class="nt-icon" />
-            <span class="nt-label">Ranking</span>
-            <span class="nt-desc">Najlepsi wojownicy</span>
+            <span class="nt-label">{{ $t('menu.ranking') }}</span>
+            <span class="nt-desc">{{ $t('menu.rankingDesc') }}</span>
           </NuxtLink>
           <NuxtLink to="/gallery" class="nav-tile">
             <Icon icon="game-icons:card-pickup" class="nt-icon" />
-            <span class="nt-label">Kolekcja</span>
-            <span class="nt-desc">182 karty</span>
+            <span class="nt-label">{{ $t('menu.collection') }}</span>
+            <span class="nt-desc">{{ $t('menu.collectionDesc', { count: 182 }) }}</span>
           </NuxtLink>
           <NuxtLink to="/bestiary" class="nav-tile">
             <Icon icon="game-icons:creature-mask" class="nt-icon" />
-            <span class="nt-label">Bestiariusz</span>
-            <span class="nt-desc">Kodeks bestii</span>
+            <span class="nt-label">{{ $t('menu.bestiary') }}</span>
+            <span class="nt-desc">{{ $t('menu.bestiaryDesc') }}</span>
           </NuxtLink>
           <NuxtLink to="/rules" class="nav-tile">
             <Icon icon="game-icons:book-cover" class="nt-icon" />
-            <span class="nt-label">Zasady</span>
-            <span class="nt-desc">Jak grać?</span>
+            <span class="nt-label">{{ $t('menu.rules') }}</span>
+            <span class="nt-desc">{{ $t('menu.rulesDesc') }}</span>
           </NuxtLink>
         </div>
 
@@ -383,7 +383,17 @@ const showSettings = ref(false)
         <div class="footer">
           <div class="footer-badge">
             <Icon icon="game-icons:two-coins" />
-            Złota Edycja — 182 kart — 4 domeny
+            {{ $t('menu.subtitle', { count: 182 }) }}
+          </div>
+          <div class="lang-switcher">
+            <button
+              v-for="loc in locales"
+              :key="loc.code"
+              :class="['lang-btn', { active: locale === loc.code }]"
+              @click="locale = loc.code"
+            >
+              {{ loc.name }}
+            </button>
           </div>
         </div>
       </div>
@@ -398,7 +408,7 @@ const showSettings = ref(false)
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #04030a;
+  background: #f0ebe2;
 }
 
 /* ===== BACKGROUND ===== */
@@ -413,49 +423,50 @@ const showSettings = ref(false)
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 100% 70% at 50% 100%, rgba(120, 40, 15, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(60, 20, 80, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 80% at 80% 40%, rgba(40, 15, 10, 0.1) 0%, transparent 50%);
+    linear-gradient(180deg, #1a1510 0%, #2a2018 40%, #f0ebe2 65%, #f0ebe2 100%);
 }
 
 .bg-fire-glow {
   position: absolute;
-  bottom: -20%;
-  left: 30%;
-  width: 40%;
-  height: 40%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(200, 80, 20, 0.06) 0%, transparent 70%);
+  top: 0;
+  left: 20%;
+  width: 60%;
+  height: 35%;
+  border-radius: 0 0 50% 50%;
+  background: radial-gradient(ellipse at 50% 30%, rgba(200, 80, 20, 0.08) 0%, transparent 70%);
   animation: fire-breathe 6s ease-in-out infinite;
 }
 
 @keyframes fire-breathe {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.15); }
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
 }
 
 .bg-vignette {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.7) 100%);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: radial-gradient(ellipse at 50% 30%, transparent 40%, rgba(20, 15, 10, 0.4) 100%);
 }
 
-/* Rising embers */
+/* Rising embers — subtle on dark header area */
 .ember {
   position: absolute;
-  bottom: -10px;
+  bottom: 60%;
   border-radius: 50%;
-  background: rgba(200, 100, 30, 0.6);
+  background: rgba(200, 130, 50, 0.5);
   animation: ember-rise linear infinite;
   will-change: transform;
 }
 
 @keyframes ember-rise {
   0%   { transform: translateY(0) translateX(0); opacity: 0; }
-  5%   { opacity: 0.8; }
-  50%  { transform: translateY(calc(-50vh)) translateX(10px); opacity: 0.5; }
-  80%  { opacity: 0.2; }
-  100% { transform: translateY(calc(-100vh - 20px)) translateX(-5px); opacity: 0; }
+  5%   { opacity: 0.6; }
+  50%  { transform: translateY(calc(-30vh)) translateX(8px); opacity: 0.3; }
+  80%  { opacity: 0.1; }
+  100% { transform: translateY(calc(-50vh)) translateX(-5px); opacity: 0; }
 }
 
 /* ===== SCROLLABLE CONTENT ===== */
@@ -543,17 +554,17 @@ const showSettings = ref(false)
   font-size: 62px;
   font-weight: 500;
   letter-spacing: 0.28em;
-  color: #ddd6c1;
+  color: #f0ebe2;
   margin: 0;
   text-shadow:
-    0 0 40px rgba(200, 100, 30, 0.25),
-    0 0 80px rgba(200, 80, 20, 0.1),
+    0 0 40px rgba(200, 100, 30, 0.3),
+    0 0 80px rgba(200, 80, 20, 0.15),
     0 2px 12px rgba(0, 0, 0, 0.8);
 }
 
 .subtitle {
   font-size: 12px;
-  color: rgba(200, 168, 78, 0.6);
+  color: rgba(200, 168, 78, 0.7);
   letter-spacing: 0.18em;
   margin: 2px 0 0;
   text-transform: uppercase;
@@ -562,7 +573,7 @@ const showSettings = ref(false)
 
 .tagline {
   font-size: 11px;
-  color: rgba(148, 130, 100, 0.4);
+  color: rgba(200, 180, 150, 0.5);
   margin: 0;
   font-style: italic;
   letter-spacing: 0.08em;
@@ -617,79 +628,82 @@ const showSettings = ref(false)
 
 /* Gold Edition */
 .mode-gold {
-  background: linear-gradient(135deg, rgba(200, 168, 78, 0.08) 0%, rgba(120, 60, 20, 0.1) 100%);
-  border-color: rgba(200, 168, 78, 0.25);
-  color: #e2e8f0;
+  background: #fff;
+  border-color: rgba(180, 150, 60, 0.25);
+  color: #2c2418;
+  box-shadow: 0 2px 8px rgba(44, 36, 24, 0.06);
 }
 .mode-gold:hover {
-  border-color: rgba(200, 168, 78, 0.5);
+  border-color: rgba(180, 150, 60, 0.5);
+  box-shadow: 0 4px 16px rgba(180, 150, 60, 0.12);
 }
 .mode-gold .mode-glow {
-  background: radial-gradient(ellipse at 20% 50%, rgba(200, 168, 78, 0.06), transparent 60%);
-  animation: btn-glow-pulse 3s ease-in-out infinite;
+  background: radial-gradient(ellipse at 10% 50%, rgba(200, 168, 78, 0.06), transparent 50%);
 }
 .mode-gold .mode-icon {
   font-size: 32px;
-  color: #c8a84e;
+  color: #b8942e;
   z-index: 1;
   flex-shrink: 0;
 }
 
 /* Slava! */
 .mode-slava {
-  background: linear-gradient(135deg, rgba(180, 40, 20, 0.08) 0%, rgba(80, 20, 10, 0.1) 100%);
-  border-color: rgba(180, 60, 30, 0.2);
-  color: #e2e8f0;
+  background: #fff;
+  border-color: rgba(180, 60, 30, 0.15);
+  color: #2c2418;
+  box-shadow: 0 2px 8px rgba(44, 36, 24, 0.06);
 }
 .mode-slava:hover {
-  border-color: rgba(200, 80, 40, 0.45);
+  border-color: rgba(180, 60, 30, 0.35);
+  box-shadow: 0 4px 16px rgba(180, 60, 30, 0.1);
 }
 .mode-slava .mode-glow-red {
-  background: radial-gradient(ellipse at 20% 50%, rgba(180, 50, 20, 0.05), transparent 60%);
+  background: radial-gradient(ellipse at 10% 50%, rgba(180, 50, 20, 0.04), transparent 50%);
 }
 .mode-slava .mode-icon {
   font-size: 28px;
-  color: #c45030;
+  color: #b04030;
   z-index: 1;
   flex-shrink: 0;
 }
 
 .mode-tutorial {
-  background: linear-gradient(135deg, rgba(100, 160, 120, 0.06) 0%, rgba(40, 80, 60, 0.08) 100%);
-  border: 1px solid rgba(100, 160, 120, 0.15);
+  background: #fff;
+  border: 1px solid rgba(70, 130, 90, 0.15);
   text-decoration: none;
-  color: #e2e8f0;
+  color: #2c2418;
+  box-shadow: 0 2px 8px rgba(44, 36, 24, 0.06);
 }
 .mode-tutorial:hover {
-  border-color: rgba(120, 180, 140, 0.35);
-  background: linear-gradient(135deg, rgba(100, 160, 120, 0.1) 0%, rgba(40, 80, 60, 0.12) 100%);
+  border-color: rgba(70, 130, 90, 0.35);
+  box-shadow: 0 4px 16px rgba(70, 130, 90, 0.1);
 }
 .mode-tutorial .mode-icon {
   font-size: 26px;
-  color: rgba(140, 200, 160, 0.7);
-  filter: drop-shadow(0 0 6px rgba(100, 160, 120, 0.3));
+  color: #3a7a4a;
 }
 
 /* Campaign */
 .mode-campaign {
-  background: linear-gradient(135deg, rgba(200, 120, 40, 0.08) 0%, rgba(160, 80, 20, 0.1) 100%);
+  background: #fff;
   border: 1px solid rgba(200, 120, 40, 0.2);
   text-decoration: none;
-  color: #e2e8f0;
+  color: #2c2418;
+  box-shadow: 0 2px 8px rgba(44, 36, 24, 0.06);
 }
 .mode-campaign:hover {
   border-color: rgba(200, 120, 40, 0.45);
+  box-shadow: 0 4px 16px rgba(200, 120, 40, 0.1);
 }
 .mode-campaign .mode-glow-campaign {
-  background: radial-gradient(ellipse at 20% 50%, rgba(200, 120, 40, 0.06), transparent 60%);
-  animation: btn-glow-pulse 3s ease-in-out infinite;
+  background: radial-gradient(ellipse at 10% 50%, rgba(200, 120, 40, 0.04), transparent 50%);
 }
 .mode-campaign .mode-icon {
   font-size: 30px;
-  color: #d4843a;
+  color: #c47030;
   z-index: 1;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(200, 100, 30, 0.3));
 }
 
 @keyframes btn-glow-pulse {
@@ -714,7 +728,7 @@ const showSettings = ref(false)
 
 .mode-desc {
   font-size: 11px;
-  color: rgba(148, 163, 184, 0.6);
+  color: #8b7a65;
   line-height: 1.3;
 }
 
@@ -725,10 +739,10 @@ const showSettings = ref(false)
   font-size: 7px;
   font-weight: 800;
   letter-spacing: 0.15em;
-  color: rgba(200, 168, 78, 0.6);
-  background: rgba(200, 168, 78, 0.08);
-  border: 1px solid rgba(200, 168, 78, 0.15);
-  padding: 1px 6px;
+  color: #9a7a2e;
+  background: rgba(180, 150, 60, 0.1);
+  border: 1px solid rgba(180, 150, 60, 0.2);
+  padding: 2px 7px;
   border-radius: 3px;
   z-index: 1;
 }
@@ -741,17 +755,17 @@ const showSettings = ref(false)
   width: 100%;
   padding: 11px 16px;
   border-radius: 8px;
-  border: 1px solid rgba(200, 168, 78, 0.08);
-  background: rgba(200, 168, 78, 0.02);
-  color: rgba(148, 130, 100, 0.5);
+  border: 1px solid rgba(44, 36, 24, 0.08);
+  background: rgba(44, 36, 24, 0.02);
+  color: #8b7a65;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 }
-.settings-toggle:hover { background: rgba(200, 168, 78, 0.05); color: rgba(200, 168, 78, 0.8); border-color: rgba(200, 168, 78, 0.15); }
+.settings-toggle:hover { background: rgba(44, 36, 24, 0.04); color: #5a4a35; border-color: rgba(44, 36, 24, 0.15); }
 .st-icon { font-size: 14px; }
-.st-chev { margin-left: auto; font-size: 16px; opacity: 0.4; }
+.st-chev { margin-left: auto; font-size: 16px; color: #a0937e; }
 
 /* Settings panel transition */
 .panel-slide-enter-active, .panel-slide-leave-active { transition: max-height 0.25s ease, opacity 0.25s ease; overflow: hidden; }
@@ -764,16 +778,17 @@ const showSettings = ref(false)
   gap: 14px;
   width: 100%;
   padding: 16px;
-  background: rgba(14, 10, 20, 0.6);
-  border: 1px solid rgba(200, 168, 78, 0.08);
+  background: #fff;
+  border: 1px solid rgba(44, 36, 24, 0.08);
   border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(44, 36, 24, 0.05);
 }
 
 .sg { display: flex; flex-direction: column; gap: 7px; }
 .sg-label {
   display: flex; align-items: center; gap: 5px;
   font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-  text-transform: uppercase; color: rgba(148, 130, 100, 0.5);
+  text-transform: uppercase; color: #8b7a65;
 }
 .sg-hint { font-weight: 400; font-style: italic; text-transform: none; letter-spacing: 0; opacity: 0.6; }
 
@@ -783,37 +798,37 @@ const showSettings = ref(false)
 .sg-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px;
   padding: 7px 8px; border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.015);
-  color: #475569; font-size: 11px; font-weight: 600;
+  border: 1px solid rgba(44, 36, 24, 0.08);
+  background: rgba(44, 36, 24, 0.02);
+  color: #6b5c4a; font-size: 11px; font-weight: 600;
   cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 .sg-btn.active {
-  border-color: rgba(200, 168, 78, 0.3);
-  color: #c8a84e;
-  background: rgba(200, 168, 78, 0.06);
+  border-color: rgba(160, 130, 40, 0.35);
+  color: #8b6f1e;
+  background: rgba(200, 168, 78, 0.1);
 }
-.sg-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.03); }
+.sg-btn:hover:not(.active) { background: rgba(44, 36, 24, 0.04); }
 
 .domain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .dom-btn {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 8px 6px; border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.015);
-  color: #475569; cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  border: 1px solid rgba(44, 36, 24, 0.06);
+  background: rgba(44, 36, 24, 0.02);
+  color: #6b5c4a; cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s;
   text-align: center;
 }
 .dom-btn.active {
   border-color: color-mix(in srgb, var(--dc) 40%, transparent);
-  background: color-mix(in srgb, var(--dc) 6%, transparent);
+  background: color-mix(in srgb, var(--dc) 8%, transparent);
 }
 .dom-btn.active .dom-icon { color: var(--dc); }
 .dom-btn.active .dom-name { color: var(--dc); }
-.dom-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.03); }
-.dom-icon { font-size: 18px; transition: color 0.15s; }
-.dom-name { font-size: 11px; font-weight: 700; color: #64748b; }
-.dom-desc { font-size: 8px; color: #334155; }
+.dom-btn:hover:not(.active) { background: rgba(44, 36, 24, 0.04); }
+.dom-icon { font-size: 18px; transition: color 0.15s; color: #8b7a65; }
+.dom-name { font-size: 11px; font-weight: 700; color: #5a4a35; }
+.dom-desc { font-size: 8px; color: #8b7a65; }
 
 /* ===== NAVIGATION ===== */
 .nav-row {
@@ -830,28 +845,31 @@ const showSettings = ref(false)
   gap: 4px;
   padding: 14px 6px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(200, 168, 78, 0.06);
-  background: rgba(200, 168, 78, 0.02);
-  color: rgba(148, 130, 100, 0.5);
+  border: 1px solid rgba(44, 36, 24, 0.06);
+  background: #fff;
+  color: #6b5c4a;
   text-decoration: none;
   transition: all 0.2s;
+  box-shadow: 0 1px 4px rgba(44, 36, 24, 0.04);
 }
 .nav-tile:hover {
-  background: rgba(200, 168, 78, 0.06);
-  border-color: rgba(200, 168, 78, 0.2);
-  color: rgba(200, 168, 78, 0.9);
-  transform: translateY(-1px);
+  border-color: rgba(160, 130, 40, 0.25);
+  color: #3d3225;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(44, 36, 24, 0.08);
 }
 
-.nt-icon { font-size: 22px; }
-.nt-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
-.nt-desc { font-size: 9px; opacity: 0.5; }
+.nt-icon { font-size: 22px; color: #8b7355; }
+.nt-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: #3d3225; }
+.nt-desc { font-size: 9px; color: #a0937e; }
 
 /* ===== FOOTER ===== */
 .footer {
   margin-top: 4px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .footer-badge {
@@ -859,8 +877,33 @@ const showSettings = ref(false)
   align-items: center;
   gap: 5px;
   font-size: 9px;
-  color: rgba(148, 130, 100, 0.3);
+  color: #a0937e;
   letter-spacing: 0.06em;
+}
+
+.lang-switcher {
+  display: flex;
+  gap: 4px;
+}
+.lang-btn {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(44, 36, 24, 0.08);
+  background: transparent;
+  color: #a0937e;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lang-btn:hover {
+  color: #5a4a35;
+  border-color: rgba(44, 36, 24, 0.2);
+}
+.lang-btn.active {
+  color: #8b6f1e;
+  border-color: rgba(160, 130, 40, 0.35);
+  background: rgba(200, 168, 78, 0.1);
 }
 
 /* ===== PLAYER BAR ===== */
@@ -871,28 +914,29 @@ const showSettings = ref(false)
   width: 100%;
   padding: 10px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(200, 168, 78, 0.12);
-  background: rgba(200, 168, 78, 0.03);
+  border: 1px solid rgba(44, 36, 24, 0.08);
+  background: #fff;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 1px 4px rgba(44, 36, 24, 0.04);
 }
 .player-bar:hover {
-  background: rgba(200, 168, 78, 0.06);
-  border-color: rgba(200, 168, 78, 0.25);
+  border-color: rgba(160, 130, 40, 0.2);
+  box-shadow: 0 2px 8px rgba(44, 36, 24, 0.08);
 }
 
 .pb-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1.5px solid rgba(200, 168, 78, 0.3);
-  background: rgba(200, 168, 78, 0.06);
+  border: 1.5px solid rgba(160, 130, 40, 0.3);
+  background: rgba(200, 168, 78, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.pb-icon { font-size: 20px; color: #c8a84e; }
+.pb-icon { font-size: 20px; color: #9a7a2e; }
 
 .pb-info {
   flex: 1;
@@ -904,7 +948,7 @@ const showSettings = ref(false)
 .pb-name {
   font-size: 14px;
   font-weight: 600;
-  color: #ddd6c1;
+  color: #2c2418;
   letter-spacing: 0.02em;
   white-space: nowrap;
   overflow: hidden;
@@ -919,36 +963,36 @@ const showSettings = ref(false)
 .pb-level {
   font-size: 10px;
   font-weight: 700;
-  color: rgba(200, 168, 78, 0.7);
+  color: #9a7a2e;
   flex-shrink: 0;
 }
 .pb-xp-bar {
   flex: 1;
   height: 4px;
   border-radius: 2px;
-  background: rgba(200, 168, 78, 0.08);
+  background: rgba(44, 36, 24, 0.06);
   overflow: hidden;
 }
 .pb-xp-fill {
   height: 100%;
-  background: linear-gradient(90deg, rgba(200, 168, 78, 0.5), rgba(200, 100, 30, 0.6));
+  background: linear-gradient(90deg, #c8a84e, #c47030);
   border-radius: 2px;
   transition: width 0.5s ease;
 }
 .pb-xp-text {
   font-size: 9px;
-  color: rgba(148, 130, 100, 0.4);
+  color: #a0937e;
   flex-shrink: 0;
 }
 
 .pb-login-hint {
   font-size: 10px;
-  color: rgba(148, 130, 100, 0.4);
+  color: #a0937e;
   font-style: italic;
 }
 .pb-chev {
   font-size: 16px;
-  color: rgba(148, 130, 100, 0.3);
+  color: #a0937e;
   flex-shrink: 0;
 }
 
@@ -959,9 +1003,10 @@ const showSettings = ref(false)
   gap: 12px;
   width: 100%;
   padding: 16px;
-  background: rgba(14, 10, 20, 0.7);
-  border: 1px solid rgba(200, 168, 78, 0.1);
+  background: #fff;
+  border: 1px solid rgba(44, 36, 24, 0.08);
   border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(44, 36, 24, 0.05);
 }
 
 .pp-field {
@@ -974,21 +1019,21 @@ const showSettings = ref(false)
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(148, 130, 100, 0.5);
+  color: #8b7a65;
 }
 
 .pp-input {
   padding: 8px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(200, 168, 78, 0.15);
-  background: rgba(200, 168, 78, 0.04);
-  color: #ddd6c1;
+  border: 1px solid rgba(44, 36, 24, 0.12);
+  background: #faf7f2;
+  color: #2c2418;
   font-size: 14px;
   outline: none;
   transition: border-color 0.15s;
 }
-.pp-input::placeholder { color: rgba(148, 130, 100, 0.3); }
-.pp-input:focus { border-color: rgba(200, 168, 78, 0.4); }
+.pp-input::placeholder { color: #bfb49a; }
+.pp-input:focus { border-color: rgba(160, 130, 40, 0.4); }
 
 .pp-icons {
   display: grid;
@@ -1001,18 +1046,18 @@ const showSettings = ref(false)
   justify-content: center;
   padding: 8px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.015);
-  color: #475569;
+  border: 1px solid rgba(44, 36, 24, 0.06);
+  background: #faf7f2;
+  color: #8b7a65;
   font-size: 20px;
   cursor: pointer;
   transition: all 0.15s;
 }
-.pp-icon-btn:hover { background: rgba(200, 168, 78, 0.06); color: rgba(200, 168, 78, 0.7); }
+.pp-icon-btn:hover { background: rgba(200, 168, 78, 0.1); color: #9a7a2e; }
 .pp-icon-btn.active {
-  border-color: rgba(200, 168, 78, 0.4);
-  background: rgba(200, 168, 78, 0.08);
-  color: #c8a84e;
+  border-color: rgba(160, 130, 40, 0.4);
+  background: rgba(200, 168, 78, 0.12);
+  color: #9a7a2e;
 }
 
 .pp-error {
@@ -1028,17 +1073,17 @@ const showSettings = ref(false)
   gap: 6px;
   padding: 10px 20px;
   border-radius: 8px;
-  border: 1px solid rgba(200, 168, 78, 0.3);
-  background: linear-gradient(135deg, rgba(200, 100, 30, 0.15), rgba(200, 168, 78, 0.08));
-  color: rgba(200, 168, 78, 0.9);
+  border: 1px solid rgba(160, 130, 40, 0.3);
+  background: linear-gradient(135deg, rgba(200, 168, 78, 0.15), rgba(200, 168, 78, 0.08));
+  color: #8b6f1e;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 .pp-save:hover {
-  background: linear-gradient(135deg, rgba(200, 100, 30, 0.25), rgba(200, 168, 78, 0.12));
-  border-color: rgba(200, 168, 78, 0.5);
+  background: linear-gradient(135deg, rgba(200, 168, 78, 0.25), rgba(200, 168, 78, 0.15));
+  border-color: rgba(160, 130, 40, 0.5);
 }
 .pp-save:disabled {
   opacity: 0.5;
@@ -1052,16 +1097,16 @@ const showSettings = ref(false)
   gap: 5px;
   padding: 6px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(100, 80, 60, 0.1);
+  border: 1px solid rgba(44, 36, 24, 0.08);
   background: transparent;
-  color: rgba(148, 130, 100, 0.3);
+  color: #a0937e;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .pp-logout:hover {
-  color: rgba(200, 100, 80, 0.7);
-  border-color: rgba(200, 100, 80, 0.2);
+  color: #b04030;
+  border-color: rgba(180, 60, 40, 0.2);
 }
 
 .spin { animation: spin 1s linear infinite; }
