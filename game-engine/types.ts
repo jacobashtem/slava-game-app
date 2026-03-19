@@ -292,7 +292,7 @@ export interface EffectResult {
 export interface EffectDefinition {
   id: string
   name: string                    // czytelna nazwa dla debugowania
-  description: string             // opis dla gracza
+  description?: string            // opcjonalny — getEffect() uzupełnia z kart JSON (single source of truth)
   trigger: EffectTrigger | EffectTrigger[]
   priority: EffectPriority
   execute: (ctx: EffectContext) => EffectResult
