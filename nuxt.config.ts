@@ -16,7 +16,7 @@ export default defineNuxtConfig({
     ],
     defaultLocale: 'pl',
     lazy: true,
-    langDir: 'locales/',
+    langDir: fileURLToPath(new URL('./locales', import.meta.url)),
     strategy: 'no_prefix',
     detectBrowserLanguage: {
       useCookie: true,
