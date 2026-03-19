@@ -212,21 +212,29 @@ const btnConfig = computed(() => {
 /* ====== MOBILE ====== */
 @media (max-width: 767px) {
   .phase-controls {
-    gap: 3px;
+    gap: 4px;
   }
   .ctrl-btn {
-    font-size: 9px;
-    padding: 4px 8px;
-    gap: 3px;
+    font-size: 11px;
+    padding: 8px 14px;
+    gap: 5px;
     letter-spacing: 0.06em;
+    border-radius: 6px;
+    /* Ensure minimum touch target 44px (Apple HIG) */
+    min-height: 36px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ctrl-btn:active:not(:disabled) {
+    transform: scale(0.95);
+    transition: transform 0.08s ease;
   }
   .btn-icon {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
   }
   .ctrl-pass {
-    font-size: 9px;
-    padding: 4px 8px;
+    font-size: 10px;
+    padding: 8px 12px;
   }
 }
 </style>

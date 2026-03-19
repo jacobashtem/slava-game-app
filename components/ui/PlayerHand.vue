@@ -661,24 +661,28 @@ const adventureTypeColor = (card: CardInstance) => {
   .player-hand {
     height: auto;
     min-height: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
   .hand-cards {
-    padding: 8px 8px 6px;
-    min-height: 96px;
+    padding: 10px 12px 8px;
+    min-height: 108px;
     gap: 0;
     border-radius: 14px 14px 0 0;
     overflow-x: auto;
     overflow-y: visible;
     justify-content: flex-start;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
   }
   .hand-cards::-webkit-scrollbar { display: none; }
 
-  /* Wyłącz fan layout na mobile — horizontal scroll zamiast */
+  /* Wyłącz fan layout na mobile — horizontal scroll z snap */
   .hand-card-wrap {
-    margin-left: -14px;
+    margin-left: -12px;
     transform: none !important;
     position: relative;
+    scroll-snap-align: center;
   }
   .hand-card-wrap:first-child {
     margin-left: 0;
@@ -686,42 +690,52 @@ const adventureTypeColor = (card: CardInstance) => {
   .hand-card-wrap:hover {
     transform: translateY(-12px) scale(1.08) !important;
   }
+  .hand-card-wrap:active {
+    transform: translateY(-8px) scale(1.05) !important;
+    transition: transform 0.1s ease;
+  }
   .hand-card-wrap.selected {
     transform: translateY(-14px) scale(1.1) !important;
-    box-shadow: 0 0 0 1.5px #818cf8;
+    box-shadow: 0 0 0 2px #818cf8, 0 0 12px rgba(129, 140, 248, 0.3);
   }
   .hand-card-wrap:hover::after {
     inset: -4px;
   }
 
-  /* Mobile info button: small circle in top-right corner */
+  /* Mobile info button: touch-friendly circle */
   .mobile-info-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: -6px;
+    right: -6px;
     z-index: 40;
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: rgba(99, 102, 241, 0.85);
-    border: 1px solid rgba(129, 140, 248, 0.6);
+    background: rgba(99, 102, 241, 0.9);
+    border: 1.5px solid rgba(129, 140, 248, 0.7);
     color: #fff;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     padding: 0;
     cursor: pointer;
     line-height: 1;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s;
+  }
+  .mobile-info-btn:active {
+    transform: scale(0.85);
+    background: rgba(99, 102, 241, 1);
   }
 
   .adventure-card,
   .draw-card {
-    width: 64px;
-    height: 88px;
-    border-radius: 4px;
+    width: 72px;
+    height: 98px;
+    border-radius: 5px;
   }
   .adv-name {
     font-size: 9px;

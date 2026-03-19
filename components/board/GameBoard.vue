@@ -1115,13 +1115,17 @@ const onPlayDescription = computed(() => {
   .game-board {
     height: 100dvh;
     overflow: hidden;
+    /* Safe area for notched devices */
+    padding-top: env(safe-area-inset-top, 0);
   }
 
   /* === TOP BAR: kompaktowy === */
   .top-bar {
-    padding: 2px 6px;
-    gap: 3px;
-    min-height: 26px;
+    padding: 3px 8px;
+    padding-left: max(8px, env(safe-area-inset-left, 0));
+    padding-right: max(8px, env(safe-area-inset-right, 0));
+    gap: 4px;
+    min-height: 30px;
   }
   .turn-badge {
     font-size: 9px;
@@ -1184,18 +1188,24 @@ const onPlayDescription = computed(() => {
     border: 1px solid rgba(34,197,94,0.25);
   }
   .mhud-stat {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: #94a3b8;
     cursor: pointer;
-    padding: 1px 3px;
-    border-radius: 3px;
+    padding: 4px 6px;
+    border-radius: 4px;
     transition: background 0.15s;
     white-space: nowrap;
     line-height: 1;
+    /* Minimum touch target */
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
   }
   .mhud-stat:active {
-    background: rgba(200,168,78,0.12);
+    background: rgba(200,168,78,0.18);
+    transform: scale(0.95);
   }
   .mhud-gold {
     color: #fbbf24;
@@ -1209,23 +1219,25 @@ const onPlayDescription = computed(() => {
     box-shadow: 0 0 6px rgba(251,191,36,0.2);
   }
   .mhud-toggle {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     border: 1px solid rgba(200,168,78,0.2);
     background: rgba(200,168,78,0.06);
     color: rgba(200,168,78,0.5);
-    font-size: 12px;
+    font-size: 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: background-color 0.15s, color 0.15s;
+    transition: background-color 0.1s, color 0.1s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
   }
   .mhud-toggle:active {
-    background: rgba(200,168,78,0.15);
-    color: rgba(200,168,78,0.8);
+    background: rgba(200,168,78,0.2);
+    color: rgba(200,168,78,0.9);
+    transform: scale(0.9);
   }
 
   /* === MOBILE DRAWER: overlay z pełnym info === */
@@ -1264,18 +1276,21 @@ const onPlayDescription = computed(() => {
   }
   .drawer-close {
     align-self: center;
-    padding: 6px 24px;
-    border-radius: 6px;
+    padding: 10px 32px;
+    border-radius: 8px;
     border: 1px solid rgba(200,168,78,0.2);
     background: rgba(200,168,78,0.06);
     color: rgba(200,168,78,0.6);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     cursor: pointer;
     letter-spacing: 0.06em;
+    min-height: 40px;
+    -webkit-tap-highlight-color: transparent;
   }
   .drawer-close:active {
-    background: rgba(200,168,78,0.15);
+    background: rgba(200,168,78,0.2);
+    transform: scale(0.97);
   }
 
   /* Drawer slide animation */

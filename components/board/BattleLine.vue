@@ -678,7 +678,7 @@ function onLineDrop(e: DragEvent) {
     flex-shrink: 0;
   }
 
-  /* Cards row: horizontal scroll, no wrap, no overlap */
+  /* Cards row: horizontal scroll, no wrap, snap */
   .cards-col {
     flex-direction: row;
     flex-wrap: nowrap;
@@ -687,6 +687,7 @@ function onLineDrop(e: DragEvent) {
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
     padding: 2px 0;
     flex: 1;
     min-width: 0;
@@ -694,17 +695,22 @@ function onLineDrop(e: DragEvent) {
   .cards-col::-webkit-scrollbar { display: none; }
 
   .card-wrap {
-    width: 66px;
-    height: 90px;
+    width: 76px;
+    height: 104px;
     flex-shrink: 0;
   }
 
   .slot-empty {
-    width: 66px;
-    height: 90px;
-    border-radius: 3px;
+    width: 76px;
+    height: 104px;
+    border-radius: 4px;
+    /* Stronger touch feedback */
+    -webkit-tap-highlight-color: rgba(200, 168, 78, 0.15);
   }
-  .slot-rune { font-size: 12px; }
+  .slot-active {
+    -webkit-tap-highlight-color: rgba(200, 168, 78, 0.25);
+  }
+  .slot-rune { font-size: 13px; }
 
 }
 
