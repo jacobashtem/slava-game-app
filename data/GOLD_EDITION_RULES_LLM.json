@@ -319,7 +319,7 @@
     {"id": 15, "name": "Król wężów", "domain": "Perun", "atk": 3, "def": 6, "soul": 9, "attackType": "Wręcz", "flying": false, "effectId": "krol_wezow_always_counter", "effect": "[AURA] Kontratakuje ZAWSZE — nawet w pozycji ATAK."},
     {"id": 16, "name": "Leszy", "domain": "Perun", "atk": 5, "def": 8, "soul": 13, "attackType": "Żywioł", "flying": false, "effectId": "leszy_post_attack_defend", "effect": "[AURA] Sojusznicy po ataku mogą natychmiast przejść w pozycję OBRONA."},
     {"id": 17, "name": "Matoha", "domain": "Perun", "atk": 5, "def": 5, "soul": 10, "attackType": "Wręcz", "flying": false, "effectId": "matoha_anti_magic", "effect": "[AURA] Wrogie istoty typu Magia nie mogą atakować."},
-    {"id": 18, "name": "Mróz", "domain": "Perun", "atk": 8, "def": 8, "soul": 16, "attackType": "Żywioł", "flying": false, "effectId": "mroz_immunity_buffs", "effect": "[AURA] Odporny na wrogie premie (buffy od przeciwnika nie działają)."},
+    {"id": 18, "name": "Mróz", "domain": "Perun", "atk": 8, "def": 8, "soul": 16, "attackType": "Żywioł", "flying": false, "effectId": "mroz_immunity_buffs", "effect": "[AURA] Odporny na wrogie akcje wywołane przez [ZRANIENIE] [ODWET] [WEJŚCIE] [AKCJA] [AURA] [CZUJNOŚĆ] [NATARCIE]"},
     {"id": 19, "name": "Rodzanice", "domain": "Perun", "atk": 3, "def": 3, "soul": 6, "attackType": "Wręcz", "flying": false, "effectId": "rodzanice_scry", "effect": "[AKCJA] Podejrzyj wierzchnią kartę talii rywala. Raz na turę, gratis."},
     {"id": 20, "name": "Rusałka", "domain": "Perun", "atk": 0, "def": 3, "soul": 3, "attackType": "Magia", "flying": false, "effectId": "rusalka_mirror_attack", "effect": "[NATARCIE] Przejmuje ATK i typ ataku celu (cel 'atakuje sam siebie')."},
     {"id": 21, "name": "Rybi król", "domain": "Perun", "atk": 2, "def": 3, "soul": 5, "attackType": "Wręcz", "flying": false, "effectId": "rybi_krol_pierce_immunity", "effect": "[WEJŚCIE] Wybierz sojusznika — jego ataki ignorują WSZYSTKIE odporności wroga."},
@@ -539,7 +539,7 @@
     "description": "Reguły rozwiązywania konfliktów efektów.",
     "generalRule": "Immunity > Prevention > Active Modifier > Passive Modifier > Reaction > Cleanup",
     "specificRules": [
-      "Mróz (immunity_buffs) > wrogie buffy",
+      "Mróz (immunity_buffs) > wrogie efekty specjalne (trucizny, klątwy, paraliże, konwersje, AoE triggerowane)",
       "Topór Peruna (no_counterattack) > Król Wężów (always_counter) — pierwsza zagrana wygrywa",
       "Brzegina (prevention) > double damage — tarcza blokuje podwójne obrażenia",
       "ON_DEATH fires BEFORE resurrection (Kościej, Wij)",

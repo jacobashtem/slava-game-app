@@ -376,6 +376,19 @@ export function resolveAttack(
     currentDefender = findCardOnField(newState, defenderInstanceId)
   }
 
+  // Trigger: ON_ALLY_ATTACK — sojusznicy atakującego (np. Leszy — auto-obrona po ataku)
+  if (currentAttacker) {
+    const attackerSideAllies = getAllCreaturesForPlayer(newState, currentAttacker.owner)
+      .filter(c => c.instanceId !== attackerInstanceId && !c.isSilenced)
+    for (const ally of attackerSideAllies) {
+      const allyAtkResult = triggerEffect(newState, ally, EffectTrigger.ON_ALLY_ATTACK, currentAttacker, damageToDefender)
+      newState = allyAtkResult.newState
+      log.push(...allyAtkResult.log)
+    }
+    currentAttacker = findCardOnField(newState, attackerInstanceId)
+    currentDefender = findCardOnField(newState, defenderInstanceId)
+  }
+
   // 7. KONTRATAK
   let damageToAttacker = 0
   let counterattackOccurred = false
@@ -1289,6 +1302,15 @@ function triggerEffect(
 
   const triggers = Array.isArray(effectDef.trigger) ? effectDef.trigger : [effectDef.trigger]
   if (!triggers.includes(trigger)) return { newState: state, log: [] }
+
+  // Centralny guard: odporność (isImmune) blokuje wrogie triggery celujące w odporną istotę
+  // Dotyczy ON_DAMAGE_DEALT i ON_ATTACK — card to wrogi atakujący, target to cel/ofiara
+  if (target && target.isImmune && card.owner !== target.owner
+      && (trigger === EffectTrigger.ON_DAMAGE_DEALT || trigger === EffectTrigger.ON_ATTACK)) {
+    const newState = cloneGameState(state)
+    const log = addLog(newState, `${target.cardData.name}: ODPORNY — ${card.cardData.name} nie wywołuje efektu!`, 'effect')
+    return { newState, log: [log] }
+  }
 
   try {
     const result = effectDef.execute({ state, source: card, target, trigger, value })

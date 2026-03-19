@@ -5,6 +5,7 @@ import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import type { CardInstance } from '../../game-engine/types'
 import { BattleLine, AttackType, Domain } from '../../game-engine/constants'
+import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 import { parseTokens } from '../../composables/useTokenIcons'
 
 import domainImg1 from '~/assets/cards/domain-1.svg'
@@ -98,6 +99,17 @@ const card = computed(() => {
 })
 const data = computed(() => card.value?.cardData as any ?? null)
 const isCreature = computed(() => data.value?.cardType === 'creature')
+
+const matohaBlocker = computed(() => {
+  if (!card.value || !isCreature.value || data.value?.attackType !== AttackType.MAGIC) return null
+  const game = useGameStore()
+  if (!game.state) return null
+  const oppSide = card.value.owner === 'player1' ? 'player2' : 'player1'
+  const blocker = getAllCreaturesOnField(game.state, oppSide).find(c => (c.cardData as any).effectId === 'matoha_anti_magic' && !c.isSilenced)
+  if (!blocker) return null
+  return { name: blocker.cardData.name, domain: (blocker.cardData as any).idDomain ?? (blocker.cardData as any).domain }
+})
+const isMatohaBlocked = computed(() => !!matohaBlocker.value)
 
 const attackTypeInfo = computed(() => {
   const t = data.value?.attackType as AttackType
@@ -270,8 +282,9 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
             <span class="pv-domain-label" :style="{ color: domainInfo.color + 'bb' }">{{ domainInfo.name.toUpperCase() }}</span>
           </div>
 
-          <!-- Name badge (top-right) -->
+          <!-- Name badge (top-right) with domain icon -->
           <div class="pv-name-badge">
+            <img v-if="domainImgs[data.domain]" :src="domainImgs[data.domain]" class="pv-name-domain-icon" />
             <div class="pv-name">{{ data.name.toUpperCase() }}</div>
           </div>
 
@@ -337,10 +350,19 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
                   :style="{ background: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '18', color: ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc', borderColor: (ttTriggerColors[ttTriggerLabels[ab.trigger] ?? ''] ?? '#a5b4fc') + '44' }"
                 >{{ ttTriggerLabels[ab.trigger] ?? ab.trigger }}</span>
                 <span class="pv-ability-text">
-                  <template v-for="(seg, si) in parseTokens(ab.text, data?.attackType)" :key="si">
-                    <span v-if="seg.type === 'text'">{{ seg.value }}</span>
-                    <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
-                    <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+                  <template v-for="(part, pi) in parseTaggedDescription(ab.text)" :key="'ab'+i+'p'+pi">
+                    <span
+                      v-if="part.type === 'tag'"
+                      class="pv-trigger-badge pv-inline-tag"
+                      :style="{ background: part.color + '18', color: part.color, borderColor: part.color + '44' }"
+                    >{{ part.value }}</span>
+                    <template v-else>
+                      <template v-for="(seg, si) in parseTokens(part.value, data?.attackType)" :key="'ab'+i+'s'+si">
+                        <span v-if="seg.type === 'text'">{{ seg.value }}</span>
+                        <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
+                        <Icon v-else-if="seg.iconify" :icon="seg.iconify" :class="['tt-token-icon-svg', seg.value === 'POS_DEF' ? 'tt-token-pos-def' : '', seg.value === 'POS_ATK' ? 'tt-token-pos-atk' : '']" :style="{ color: seg.color }" :title="seg.label" />
+                      </template>
+                    </template>
                   </template>
                   <span v-if="ab.cost" class="pv-ability-cost">({{ ab.cost }} PS)</span>
                   <span v-if="ab.limit === 'ONCE_PER_GAME'" class="pv-ability-limit">raz w grze</span>
@@ -367,7 +389,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
           </div>
 
           <!-- Traits (silenced, immune, etc.) with descriptions -->
-          <div v-if="isCreature && (card.isSilenced || card.isImmune || card.cannotAttack || card.poisonRoundsLeft || card.metadata?.dziewiatkoPoison)" class="pv-traits">
+          <div v-if="isCreature && (card.isSilenced || card.isImmune || card.cannotAttack || isMatohaBlocked || card.poisonRoundsLeft || card.metadata?.dziewiatkoPoison)" class="pv-traits">
             <div v-if="card.isSilenced" class="pv-trait-block">
               <span class="pv-trait pv-trait-bad">Uciszony</span>
               <span class="pv-trait-desc">Zdolność istoty wyłączona.</span>
@@ -385,7 +407,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
                 <template v-for="(seg, si) in parseTokens('{POISON} Traci 3 {DEF} na początku każdej tury. Trwała — działa do śmierci.')" :key="si">
                   <span v-if="seg.type === 'text'">{{ seg.value }}</span>
                   <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
-                  <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+                  <Icon v-else-if="seg.iconify" :icon="seg.iconify" :class="['tt-token-icon-svg', seg.value === 'POS_DEF' ? 'tt-token-pos-def' : '', seg.value === 'POS_ATK' ? 'tt-token-pos-atk' : '']" :style="{ color: seg.color }" :title="seg.label" />
                 </template>
               </span>
             </div>
@@ -395,10 +417,19 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
                 <template v-for="(seg, si) in parseTokens(`{POISON} Traci 1 {DEF} co turę. Pozostało: ${card.poisonRoundsLeft} tur.`)" :key="si">
                   <span v-if="seg.type === 'text'">{{ seg.value }}</span>
                   <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
-                  <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+                  <Icon v-else-if="seg.iconify" :icon="seg.iconify" :class="['tt-token-icon-svg', seg.value === 'POS_DEF' ? 'tt-token-pos-def' : '', seg.value === 'POS_ATK' ? 'tt-token-pos-atk' : '']" :style="{ color: seg.color }" :title="seg.label" />
                 </template>
               </span>
             </div>
+          </div>
+
+          <!-- Matoha block indicator (outside pv-traits to avoid flex-wrap issues) -->
+          <div v-if="isCreature && isMatohaBlocked && !card.cannotAttack" class="pv-matoha-row">
+            <span class="pv-matoha-source">
+              <img v-if="domainImgs[matohaBlocker?.domain]" :src="domainImgs[matohaBlocker?.domain]" class="pv-matoha-domain" />
+              {{ matohaBlocker?.name }}
+            </span>
+            <span class="pv-matoha-text">Wrogie istoty z typem <Icon icon="fa6-solid:wand-sparkles" style="color: #fb923c; width:13px; height:13px; vertical-align: middle;" /> nie mogą <Icon icon="game-icons:sword-clash" style="color: #fbbf24; width:13px; height:13px; vertical-align: middle;" /></span>
           </div>
 
           <!-- STATS BAR -->
@@ -591,6 +622,15 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   border-radius: 8px;
   background: rgba(0,0,0,0.8);
   border: 1px solid color-mix(in srgb, var(--dc) 20%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pv-name-domain-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.8;
+  flex-shrink: 0;
 }
 .pv-name {
   font-family: var(--font-display, Georgia, serif);
@@ -722,7 +762,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   line-height: 1.5;
 }
 .pv-trigger-badge {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -734,7 +774,7 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   white-space: nowrap;
 }
 .pv-ability-text {
-  font-size: 12px;
+  font-size: 14px;
   color: rgba(235,225,215,0.9);
   font-family: Georgia, 'Times New Roman', serif;
   line-height: 1.55;
@@ -755,17 +795,28 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
 /* Token inline icons in tooltip */
 .tt-token-icon {
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   vertical-align: middle;
   margin: -2px 1px;
 }
 .tt-token-icon-svg {
   display: inline;
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   vertical-align: middle;
   margin: -2px 1px;
+}
+.tt-token-pos-atk {
+  width: 12px;
+  height: 17px;
+  border-radius: 1px;
+}
+.tt-token-pos-def {
+  transform: rotate(90deg);
+  width: 12px;
+  height: 17px;
+  border-radius: 1px;
 }
 
 /* Effect description fallback */
@@ -812,6 +863,34 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   color: #f87171;
   border-color: rgba(248,113,113,0.3);
   background: rgba(248,113,113,0.08);
+}
+.pv-matoha-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pv-matoha-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(15,23,42,0.7);
+  border: 1px solid rgba(100,116,139,0.4);
+  border-radius: 4px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pv-matoha-domain {
+  width: 12px;
+  height: 12px;
+  opacity: 0.8;
+}
+.pv-matoha-text {
+  font-size: 12px;
+  color: rgba(200,190,170,0.8);
 }
 .pv-trait-good {
   color: #a78bfa;

@@ -444,8 +444,7 @@ describe('Card Effects', () => {
       expect(attackerAfter!.currentStats.defense).toBe(10) // no counter damage
     })
 
-    it('immune target is not paralyzed', () => {
-      const effect = getEffect('bazyliszek_paralyze')!
+    it('immune target is not paralyzed (centralny guard w triggerEffect)', () => {
       const bazyliszek = placeAttacker(state, {
         name: 'Bazyliszek',
         effectId: 'bazyliszek_paralyze',
@@ -459,18 +458,13 @@ describe('Card Effects', () => {
       })
       immuneTarget.isImmune = true
 
-      const result = effect.execute({
-        state,
-        source: bazyliszek,
-        target: immuneTarget,
-        trigger: EffectTrigger.ON_DAMAGE_DEALT,
-        value: 2,
-      })
+      const { newState, result } = resolveAttack(state, bazyliszek.instanceId, immuneTarget.instanceId)
 
-      // Immune target should NOT have paralysis in the returned state
-      const immuneInState = findOnField(result.newState, immuneTarget.instanceId)
+      // Immune target should NOT have paralysis — blocked by central guard
+      const immuneInState = findOnField(newState, immuneTarget.instanceId)
       expect(immuneInState).not.toBeNull()
       expect(immuneInState!.paralyzeRoundsLeft).toBeNull()
+      expect(result.log.some(l => l.message.includes('ODPORNY'))).toBe(true)
     })
   })
 

@@ -17,6 +17,20 @@ function generateInstanceId(prefix: string, cardId: number): string {
   return `${prefix}-${cardId}-${(++instanceCounter).toString(36)}-${Math.random().toString(36).slice(2, 6)}`
 }
 
+// ===== HELPERS =====
+
+/** Jedno źródło prawdy: abilities[].text → effectDescription (fallback na ręczne pola) */
+function deriveEffectDescription(
+  abilities?: Array<{ trigger: string; text: string }>,
+  effectDescription?: string,
+  effect?: string,
+): string {
+  if (abilities && abilities.length > 0) {
+    return abilities.map(a => a.text).join(' ')
+  }
+  return effectDescription ?? effect ?? ''
+}
+
 // ===== PARSE RAW JSON → TYPED CARD DATA =====
 
 export function parseCreatureCard(raw: RawCreatureCard): CreatureCardData {
@@ -35,7 +49,7 @@ export function parseCreatureCard(raw: RawCreatureCard): CreatureCardData {
     attackType: raw.combat.attackType as AttackType,
     isFlying: raw.combat.isFlying,
     effectId: (raw as any).effectId ?? CREATURE_EFFECT_MAP[raw.id] ?? `creature_${raw.id}_no_effect`,
-    effectDescription: (raw as any).effectDescription ?? raw.effect ?? '',
+    effectDescription: deriveEffectDescription((raw as any).abilities, (raw as any).effectDescription, raw.effect),
     lore: raw.lore,
     abilities: (raw as any).abilities ?? [],
     tags: (raw as any).tags ?? [],
@@ -50,7 +64,7 @@ export function parseAdventureCard(raw: RawAdventureCard): AdventureCardData {
     name: raw.name,
     effectId: (raw as any).effectId ?? ADVENTURE_EFFECT_MAP[raw.id] ?? `adventure_${raw.id}_no_effect`,
     enhancedEffectId: (raw as any).enhancedEffectId ?? `adventure_${raw.id}_enhanced`,
-    effectDescription: (raw as any).effectDescription ?? raw.effect ?? '',
+    effectDescription: deriveEffectDescription((raw as any).abilities, (raw as any).effectDescription, raw.effect),
     enhancedEffectDescription: (raw as any).enhancedEffectDescription ?? raw.enhancedEffect ?? '',
     lore: raw.lore,
     persistence: raw.persistence ?? 'instant',

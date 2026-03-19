@@ -276,7 +276,7 @@ registerEffect({
 
     const newState = cloneGameState(state)
     const targetInState = findCardInState(newState, target.instanceId)
-    if (targetInState && !targetInState.isImmune) {
+    if (targetInState) {
       targetInState.cannotAttack = true
       targetInState.paralyzeRoundsLeft = 2
       const log = addLog(newState, `${source.cardData.name}: Zaraza! ${target.cardData.name} traci zdolność ataku na 2 rundy.`, 'effect')
@@ -488,39 +488,41 @@ registerEffect({
 registerEffect({
   id: 'krol_wezow_always_counter',
   name: 'Jadowity Kontratak',
-  description: '[AURA] Kontratakuje nawet gdy jest w pozycji ataku.',
+  description: '[AURA] Kontratakuje zawsze — nawet w {POS_ATK}.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PASSIVE,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
 })
 
-// ✅ LESZY — Sojusznicy po ataku mogą przejść w pozycję obrony
+// ✅ LESZY — Sojusznicy po ataku automatycznie przechodzą w obronę
 registerEffect({
   id: 'leszy_post_attack_defend',
   name: 'Komenda Leszego',
-  description: '[CZUJNOŚĆ] Sojusznicy Leszego, po wykonaniu ataku, mogą natychmiast przejść w pozycję obrony.',
+  description: '[AURA] Po wykonaniu {COMBAT} sojusznik automatycznie przechodzi w {POS_DEF}.',
   trigger: EffectTrigger.ON_ALLY_ATTACK,
   priority: EffectPriority.REACTION,
   execute: (ctx) => {
     const newState = cloneGameState(ctx.state)
-    // Oznaczamy sojuszników że mogą zmienić pozycję po ataku
-    const owner = newState.players[ctx.source.owner]
-    forEachCreatureOnField(owner, (card) => {
-      if (card.instanceId !== ctx.source.instanceId) {
-        card.metadata.canDefendAfterAttack = true
+    // ctx.target = atakujący sojusznik (przekazany z CombatResolver)
+    if (ctx.target) {
+      const attacker = findCardInState(newState, ctx.target.instanceId)
+      if (attacker && attacker.instanceId !== ctx.source.instanceId && attacker.position === CardPosition.ATTACK) {
+        attacker.position = CardPosition.DEFENSE
+        const log = addLog(newState, `Komenda Leszego! ${attacker.cardData.name} przechodzi w obronę po ataku.`, 'effect')
+        return effectResult(newState, [log])
       }
-    })
+    }
     return effectResult(newState)
   },
 })
 
 // MATOHA — prawdziwy efekt to matoha_anti_magic (linia niżej). Ten stub usunięty.
 
-// ✅ MRÓZ — Odporny na wrogie premie
+// ✅ MRÓZ — Odporność (isImmune flag)
 registerEffect({
   id: 'mroz_immunity_buffs',
   name: 'Odporność Mrozu',
-  description: '[AURA] Odporny na wrogie premie (buffy od przeciwnika nie działają).',
+  description: 'Ustawia isImmune=true → centralny guard w triggerEffect blokuje wrogie triggery',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {
@@ -734,24 +736,33 @@ registerEffect({
     const converted: CardInstance[] = []
 
     // Sprawdź każdą linię przeciwnika
+    const immuneNames: string[] = []
     for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
-      const toConvert = opponent.field.lines[line].filter(c => c.currentStats.attack <= wilaATK)
-      const remaining = opponent.field.lines[line].filter(c => c.currentStats.attack > wilaATK)
+      const toConvert = opponent.field.lines[line].filter(c => c.currentStats.attack <= wilaATK && !c.isImmune)
+      const immune = opponent.field.lines[line].filter(c => c.currentStats.attack <= wilaATK && c.isImmune)
+      const remaining = opponent.field.lines[line].filter(c => c.currentStats.attack > wilaATK || c.isImmune)
       opponent.field.lines[line] = remaining
       converted.push(...toConvert)
+      immuneNames.push(...immune.map(c => c.cardData.name))
     }
 
+    const log: LogEntry[] = []
     for (const card of converted) {
       card.owner = ctx.source.owner
       // Dodaj do odpowiedniej linii właściciela
       owner.field.lines[card.line ?? BattleLine.FRONT].push(card)
     }
 
+    for (const name of immuneNames) {
+      log.push(addLog(newState, `${name}: ODPORNY — Taniec Wiły nie działa!`, 'effect'))
+    }
+
     if (converted.length > 0) {
       const names = converted.map(c => c.cardData.name).join(', ')
-      const log = addLog(ctx.state, `${ctx.source.cardData.name} przejęła: ${names}!`, 'effect')
-      return effectResult(newState, [log])
+      log.push(addLog(newState, `${ctx.source.cardData.name} przejęła: ${names}!`, 'effect'))
+      return effectResult(newState, log)
     }
+    if (log.length > 0) return effectResult(newState, log)
     return effectResult(newState)
   },
 })
@@ -1075,15 +1086,18 @@ registerEffect({
     const opponentSide = (source.owner === 'player1' ? 'player2' : 'player1') as PlayerSide
     const enemies = getAllCreaturesOnField(newState, opponentSide)
     let count = 0
+    const log: LogEntry[] = []
     for (const enemy of enemies) {
-      if (!enemy.isImmune) {
+      if (enemy.isImmune) {
+        log.push(addLog(newState, `${enemy.cardData.name}: ODPORNY — Trucizna+ nie działa!`, 'effect'))
+      } else {
         enemy.cannotAttack = true
         enemy.paralyzeRoundsLeft = 2
         count++
       }
     }
-    const log = addLog(newState, `Trucizna+: ${count} wrogów sparaliżowanych na 2 rundy!`, 'effect')
-    return effectResult(newState, [log])
+    log.push(addLog(newState, `Trucizna+: ${count} wrogów sparaliżowanych na 2 rundy!`, 'effect'))
+    return effectResult(newState, log)
   },
 })
 
@@ -1145,7 +1159,7 @@ registerEffect({
 registerEffect({
   id: 'matoha_anti_magic',
   name: 'Antymagia Matohy',
-  description: '[AURA] Wrogie istoty z typem ataku Magia nie mogą atakować.',
+  description: '[AURA] Wrogie istoty z typem {MAGIC} nie mogą {COMBAT}.',
   trigger: EffectTrigger.PASSIVE,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => effectResult(cloneGameState(ctx.state)),
@@ -1673,7 +1687,7 @@ registerEffect({
     if (!target || !value || value <= 0) return effectResult(cloneGameState(state))
     const newState = cloneGameState(state)
     const targetCard = findCardInState(newState, target.instanceId)
-    if (targetCard && !targetCard.isImmune) {
+    if (targetCard) {
       targetCard.cannotAttack = true
       targetCard.paralyzeRoundsLeft = 2
       const log = addLog(newState, `${source.cardData.name}: Paraliżuje wzrokiem ${target.cardData.name} na 2 rundy!`, 'effect')
@@ -1695,7 +1709,7 @@ registerEffect({
     if (!target || !value || value <= 0) return effectResult(cloneGameState(state))
     const newState = cloneGameState(state)
     const targetCard = findCardInState(newState, target.instanceId)
-    if (targetCard && !targetCard.isImmune) {
+    if (targetCard) {
       targetCard.metadata.homenCurseOwner = source.owner
       targetCard.metadata.homenCardData = (source.cardData as any)
       const log = addLog(newState, `${source.cardData.name}: Nakłada klątwę na ${target.cardData.name} — po śmierci wstanie jako Homen!`, 'effect')
@@ -1717,7 +1731,7 @@ registerEffect({
     if (!target || !value || value <= 0) return effectResult(cloneGameState(state))
     const newState = cloneGameState(state)
     const targetCard = findCardInState(newState, target.instanceId)
-    if (targetCard && !targetCard.isImmune) {
+    if (targetCard) {
       // Oznacz jako przeklętego — tick w processStartPhase
       targetCard.metadata.zagorkiniaCursed = true
       const log = addLog(newState, `${source.cardData.name}: ${target.cardData.name} zostaje przeklęty — traci 1 ATK/DEF co turę.`, 'effect')
@@ -2202,16 +2216,19 @@ registerEffect({
 
     const enemies = getAllCreaturesOnField(newState, ctx.source.owner === 'player1' ? 'player2' : 'player1')
     let count = 0
+    const log: LogEntry[] = []
     for (const enemy of enemies) {
-      if (!enemy.isImmune) {
+      if (enemy.isImmune) {
+        log.push(addLog(newState, `${enemy.cardData.name}: ODPORNY — paraliż Północnicy nie działa!`, 'effect'))
+      } else {
         enemy.cannotAttack = true
         enemy.paralyzeRoundsLeft = 1
         count++
       }
     }
     const costLabel = usedFree ? ' (-1 PS)' : ' (gratis)'
-    const log = addLog(newState, `Północnica paraliżuje ${count} wrogów na 1 rundę!${costLabel}`, 'effect')
-    return effectResult(newState, [log])
+    log.push(addLog(newState, `Północnica paraliżuje ${count} wrogów na 1 rundę!${costLabel}`, 'effect'))
+    return effectResult(newState, log)
   },
 })
 
@@ -2729,7 +2746,7 @@ registerEffect({
     if (!target || !value || value <= 0) return effectResult(cloneGameState(state))
     const newState = cloneGameState(state)
     const targetCard = findCardInState(newState, target.instanceId)
-    if (!targetCard || targetCard.isImmune) return effectResult(newState)
+    if (!targetCard) return effectResult(newState)
 
     // Śledź trafienia w konkretny cel
     const hitKey = `junakHits_${target.instanceId}`
@@ -2787,7 +2804,10 @@ registerEffect({
     const killed: CardInstance[] = []
 
     for (const other of others) {
-      if (other.isImmune) continue
+      if (other.isImmune) {
+        log.push(addLog(newState, `${other.cardData.name}: ODPORNY — Rzeź Linii nie działa!`, 'effect'))
+        continue
+      }
       dealDamage(other, source.currentStats.attack)
       log.push(addLog(newState, `${source.cardData.name} rozcina linię — ${other.cardData.name} otrzymuje ${source.currentStats.attack} obrażeń! (DEF: ${other.currentStats.defense + source.currentStats.attack} → ${other.currentStats.defense})`, 'damage'))
       if (other.currentStats.defense <= 0) {
@@ -2878,7 +2898,10 @@ registerEffect({
     const killed: CardInstance[] = []
 
     for (const victim of aoeTargets) {
-      if (victim.isImmune) continue
+      if (victim.isImmune) {
+        log.push(addLog(newState, `${victim.cardData.name}: ODPORNY — Zaraza ${source.cardData.name} nie działa!`, 'effect'))
+        continue
+      }
       dealDamage(victim, source.currentStats.attack)
       log.push(addLog(newState, `${source.cardData.name}: Zaraza uderza ${victim.cardData.name} za ${source.currentStats.attack}!`, 'damage'))
       if (victim.currentStats.defense <= 0) {
@@ -2910,7 +2933,11 @@ registerEffect({
   execute: (ctx) => {
     const { state, source, target, value, trigger } = ctx
     if (!target || !value || value <= 0) return effectResult(cloneGameState(state))
-    if (target.isImmune) return effectResult(cloneGameState(state))
+    if (target.isImmune) {
+      const newState = cloneGameState(state)
+      const log = addLog(newState, `${target.cardData.name}: ODPORNY — Dotknięcie Śmierci ${source.cardData.name} nie działa!`, 'effect')
+      return effectResult(newState, [log])
+    }
 
     const newState = cloneGameState(state)
 
@@ -3349,7 +3376,7 @@ const HATCHABLE_DRAGONS: { choiceId: string; cardId: number; name: string; atk: 
   { choiceId: 'zmije',       cardId: 30,  name: 'Żmije',         atk: 9,  def: 9,  attackType: AttackType.ELEMENTAL, isFlying: false, domain: 1, effectId: 'zmije_glory_on_empty_field',   desc: 'Pole wroga puste na koniec tury: +1 PS.',               triggerLabel: 'AURA' },
   { choiceId: 'chaly',       cardId: 32,  name: 'Chały / Ały',   atk: 6,  def: 6,  attackType: AttackType.RANGED,    isFlying: false, domain: 2, effectId: 'chaly_attack_locations',      desc: 'Może atakować Lokacje (12 obrażeń = zniszczenie).',     triggerLabel: 'AURA' },
   { choiceId: 'aitwar',      cardId: 1,   name: 'Aitwar',        atk: 2,  def: 2,  attackType: AttackType.MELEE,     isFlying: true,  domain: 1, effectId: 'aitwar_steal_hand',           desc: 'Kradnie 1 kartę z ręki wroga. Powtarzalne za 1 PS.',    triggerLabel: 'WEJŚCIE + AKCJA' },
-  { choiceId: 'krol_wezow',  cardId: 15,  name: 'Król wężów',    atk: 3,  def: 6,  attackType: AttackType.MELEE,     isFlying: false, domain: 1, effectId: 'krol_wezow_always_counter',   desc: 'Kontratakuje ZAWSZE — nawet w Pozycji Ataku.',          triggerLabel: 'AURA' },
+  { choiceId: 'krol_wezow',  cardId: 15,  name: 'Król wężów',    atk: 3,  def: 6,  attackType: AttackType.MELEE,     isFlying: false, domain: 1, effectId: 'krol_wezow_always_counter',   desc: 'Kontratakuje zawsze — nawet w {POS_ATK}.',          triggerLabel: 'AURA' },
   { choiceId: 'lamia',       cardId: 107, name: 'Lamia',         atk: 5,  def: 4,  attackType: AttackType.MELEE,     isFlying: true,  domain: 4, effectId: 'lamia_death_reward',          desc: 'Wybierz: +1 PS albo dociągnij 5 kart.',                 triggerLabel: 'POŻEGNANIE' },
 ]
 
@@ -6449,7 +6476,7 @@ registerEffect({
 registerEffect({
   id: 'adventure_ruslan_helmet',
   name: 'Ruslan Helmet',
-  description: '[ARTEFAKT] Odporność na wrogie premie.',
+  description: '[ARTEFAKT] Odporność — wrogie efekty specjalne nie działają.',
   trigger: EffectTrigger.ON_PLAY,
   priority: EffectPriority.PREVENTION,
   execute: (ctx) => {

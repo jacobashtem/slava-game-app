@@ -422,6 +422,130 @@ describe('Extended Card Effects', () => {
     }
   })
 
+  // =======================================================================
+  // MRÓZ — ODPORNOŚĆ (isImmune)
+  // =======================================================================
+
+  describe('Mróz — Odporność', () => {
+    it('centralny guard: Bazyliszek atakuje Mrozu — DMG przechodzi, paraliż zablokowany', () => {
+      const bazyliszek = placeAttacker(state, {
+        name: 'Bazyliszek', effectId: 'bazyliszek_paralyze',
+        stats: { attack: 4, defense: 6, maxDefense: 6, maxAttack: 4, soulValue: 10 },
+      })
+      const mroz = placeDefender(state, {
+        name: 'Mróz', effectId: 'mroz_immunity_buffs',
+        stats: { attack: 8, defense: 8, maxDefense: 8, maxAttack: 8, soulValue: 16 },
+        attackType: AttackType.ELEMENT,
+      })
+      mroz.isImmune = true
+
+      const { newState, result } = resolveAttack(state, bazyliszek.instanceId, mroz.instanceId)
+      const mrozAfter = findOnField(newState, mroz.instanceId)!
+      // DMG przechodzi
+      expect(mrozAfter.currentStats.defense).toBe(4) // 8 - 4
+      // Paraliż zablokowany przez centralny guard
+      expect(mrozAfter.cannotAttack).toBe(false)
+      expect(mrozAfter.paralyzeRoundsLeft).toBeNull()
+      // Log ODPORNY
+      expect(result.log.some(l => l.message.includes('ODPORNY'))).toBe(true)
+    })
+
+    it('centralny guard: Homen atakuje Mrozu — klątwa konwersji zablokowana', () => {
+      const homen = placeAttacker(state, {
+        name: 'Homen', effectId: 'homen_convert_on_death',
+        stats: { attack: 3, defense: 5, maxDefense: 5, maxAttack: 3, soulValue: 8 },
+      })
+      const mroz = placeDefender(state, {
+        name: 'Mróz', effectId: 'mroz_immunity_buffs',
+        stats: { attack: 8, defense: 8, maxDefense: 8, maxAttack: 8, soulValue: 16 },
+        attackType: AttackType.ELEMENT,
+      })
+      mroz.isImmune = true
+
+      const { newState, result } = resolveAttack(state, homen.instanceId, mroz.instanceId)
+      const mrozAfter = findOnField(newState, mroz.instanceId)!
+      expect(mrozAfter.metadata.homenCurseOwner).toBeUndefined()
+      expect(result.log.some(l => l.message.includes('ODPORNY'))).toBe(true)
+    })
+
+    it('centralny guard: Zagorkinia atakuje Mrozu — klątwa zablokowana', () => {
+      const zagorkinia = placeAttacker(state, {
+        name: 'Zagorkinia', effectId: 'zagorkinia_curse_drain',
+        stats: { attack: 3, defense: 4, maxDefense: 4, maxAttack: 3, soulValue: 7 },
+      })
+      const mroz = placeDefender(state, {
+        name: 'Mróz', effectId: 'mroz_immunity_buffs',
+        stats: { attack: 8, defense: 8, maxDefense: 8, maxAttack: 8, soulValue: 16 },
+        attackType: AttackType.ELEMENT,
+      })
+      mroz.isImmune = true
+
+      const { newState, result } = resolveAttack(state, zagorkinia.instanceId, mroz.instanceId)
+      const mrozAfter = findOnField(newState, mroz.instanceId)!
+      expect(mrozAfter.metadata.zagorkiniaCursed).toBeUndefined()
+      expect(result.log.some(l => l.message.includes('ODPORNY'))).toBe(true)
+    })
+
+    it('centralny guard: Wisielec atakuje Mrozu — bounce zablokowany', () => {
+      const wisielec = placeAttacker(state, {
+        name: 'Wisielec', effectId: 'wisielec_bounce_both',
+        stats: { attack: 3, defense: 3, maxDefense: 3, maxAttack: 3, soulValue: 6 },
+      })
+      const mroz = placeDefender(state, {
+        name: 'Mróz', effectId: 'mroz_immunity_buffs',
+        stats: { attack: 8, defense: 8, maxDefense: 8, maxAttack: 8, soulValue: 16 },
+        attackType: AttackType.ELEMENT,
+      })
+      mroz.isImmune = true
+
+      const { newState, result } = resolveAttack(state, wisielec.instanceId, mroz.instanceId)
+      // Mróz powinien zostać na polu (nie zbounceowany)
+      const mrozAfter = findOnField(newState, mroz.instanceId)
+      expect(mrozAfter).not.toBeNull()
+      expect(result.log.some(l => l.message.includes('ODPORNY'))).toBe(true)
+    })
+
+    it('Mróz blokuje konwersję Wiły (per-effect guard, PASSIVE)', () => {
+      const wila = createFieldCard(state, 'player1', BattleLine.FRONT, CardPosition.DEFENSE, {
+        name: 'Wiła', effectId: 'wila_convert_weak_enemies',
+        stats: { attack: 10, defense: 5, maxDefense: 5, maxAttack: 10, soulValue: 15 },
+      })
+      const mroz = placeDefender(state, {
+        name: 'Mróz', effectId: 'mroz_immunity_buffs',
+        stats: { attack: 8, defense: 8, maxDefense: 8, maxAttack: 8, soulValue: 16 },
+        attackType: AttackType.ELEMENT,
+      })
+      mroz.isImmune = true
+
+      const effect = getEffect('wila_convert_weak_enemies')!
+      const result = effect.execute({
+        state, source: wila, target: wila,
+        trigger: EffectTrigger.PASSIVE,
+      })
+
+      const mrozAfter = findOnField(result.newState, mroz.instanceId)!
+      expect(mrozAfter.owner).toBe('player2')
+      expect(result.log.some(l => l.message.includes('ODPORNY'))).toBe(true)
+    })
+
+    it('Mróz nadal otrzymuje normalny combat damage', () => {
+      const attacker = placeAttacker(state, {
+        name: 'Zwykły Wojownik', effectId: 'no_effect_zw',
+        stats: { attack: 5, defense: 5, maxDefense: 5, maxAttack: 5, soulValue: 10 },
+      })
+      const mroz = placeDefender(state, {
+        name: 'Mróz', effectId: 'mroz_immunity_buffs',
+        stats: { attack: 8, defense: 8, maxDefense: 8, maxAttack: 8, soulValue: 16 },
+        attackType: AttackType.ELEMENT,
+      })
+      mroz.isImmune = true
+
+      const { newState } = resolveAttack(state, attacker.instanceId, mroz.instanceId)
+      const mrozAfter = findOnField(newState, mroz.instanceId)!
+      expect(mrozAfter.currentStats.defense).toBe(3)
+    })
+  })
+
   describe('Effect Registry — trigger types are valid', () => {
     const triggerEffects = [
       { id: 'gryf_double_dmg_on_play_turn', trigger: EffectTrigger.ON_ATTACK },

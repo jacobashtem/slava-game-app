@@ -612,19 +612,25 @@ export class GameEngine {
         }
       }
 
-      // Jeśli cel przeżył — modal trucizna/paraliż
+      // Jeśli cel przeżył — modal trucizna/paraliż (chyba że cel jest odporny)
       const targetStillAlive = getAllCreaturesOnField(this.state, opponentOf(side)).find(c => c.instanceId === targetInstanceId)
       if (targetStillAlive && targetStillAlive.currentStats.defense > 0) {
-        const poisonState = cloneGameState(this.state)
-        poisonState.pendingInteraction = {
-          type: 'dziewiatko_poison',
-          sourceInstanceId: cardInstanceId,
-          respondingPlayer: side,
-          targetInstanceId,
-          availableChoices: ['trucizna', 'paraliz'],
+        if (targetStillAlive.isImmune) {
+          const immuneState = cloneGameState(this.state)
+          addLog(immuneState, `${targetStillAlive.cardData.name}: ODPORNY — trucizna Dziewiątka nie działa!`, 'effect')
+          this.applyStateAndLog(immuneState, [])
+        } else {
+          const poisonState = cloneGameState(this.state)
+          poisonState.pendingInteraction = {
+            type: 'dziewiatko_poison',
+            sourceInstanceId: cardInstanceId,
+            respondingPlayer: side,
+            targetInstanceId,
+            availableChoices: ['trucizna', 'paraliz'],
+          }
+          addLog(poisonState, `Wybierz efekt trucizny na ${targetStillAlive.cardData.name}!`, 'effect')
+          this.applyStateAndLog(poisonState, [])
         }
-        addLog(poisonState, `Wybierz efekt trucizny na ${targetStillAlive.cardData.name}!`, 'effect')
-        this.applyStateAndLog(poisonState, [])
       }
 
       this.checkWinAndNotify()
@@ -754,8 +760,8 @@ export class GameEngine {
 
   sidePlunder(side: PlayerSide): GameState {
     this.assertTurnOf(side)
-    if (this.state.currentPhase !== GamePhase.PLAY && this.state.currentPhase !== GamePhase.COMBAT) {
-      throw new Error('Łupienie możliwe tylko w fazie gry lub walki!')
+    if (this.state.currentPhase !== GamePhase.COMBAT) {
+      throw new Error('Łupienie możliwe tylko w fazie walki!')
     }
     if (this.state.roundNumber < 3) throw new Error('Łupienie dostępne od 3. rundy!')
 
