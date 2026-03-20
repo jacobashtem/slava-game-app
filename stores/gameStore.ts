@@ -158,16 +158,16 @@ async function emitCombatVFX(
     const useElemental = attackVisual === 'elemental' && elemental.ready
     const useMagic = attackVisual === 'magic' && magic.ready
 
-    if (hasDamage && useSlash) {
+    if (useSlash) {
       attackSFX[attackVisual]?.()
       await slash.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
-    } else if (hasDamage && useBow) {
+    } else if (useBow) {
       attackSFX[attackVisual]?.()
       await bow.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
-    } else if (hasDamage && useElemental) {
+    } else if (useElemental) {
       attackSFX[attackVisual]?.()
       await elemental.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
-    } else if (hasDamage && useMagic) {
+    } else if (useMagic) {
       attackSFX[attackVisual]?.()
       await magic.trigger(combat.attacker.instanceId, combat.defender.instanceId, combat.damageToDefender)
     } else {
@@ -706,6 +706,7 @@ export const useGameStore = defineStore('game', () => {
       }
       state.value = newState
       checkHypnosisMode(newState)
+      checkRodzaniceMode(newState)
       // Animacje śmierci jeśli ktoś zginął (np. sojusznik trafiony przez Alkonosta)
       const died1 = newState.players.player1.graveyard.length > prevGrave1
       const died2 = newState.players.player2.graveyard.length > prevGrave2
@@ -1309,8 +1310,8 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    // AI łupienie — gdy wróg (gracz) nie ma istot na polu (od rundy 2, oba tryby)
-    if (state.value && state.value.roundNumber >= 2 && !winner.value) {
+    // AI łupienie — wymaga: faza COMBAT, runda >= 3, puste pole wroga, istota z atakiem
+    if (state.value && state.value.roundNumber >= 3 && !winner.value) {
       try { state.value = engine.aiPlunder() } catch { /* no plunder available */ }
     }
 
@@ -1446,6 +1447,8 @@ export const useGameStore = defineStore('game', () => {
     }
     // Hipnoza Alkonosta — podświetl cele na polu zamiast modalu
     checkHypnosisMode(newState)
+    // Rodzanice — podświetl sojuszników do przekazania zdolności
+    checkRodzaniceMode(newState)
 
     // Wij resurrect VFX — handled by GameBoard watch (ResurrectVFX WebGPU component)
   }
@@ -1457,6 +1460,14 @@ export const useGameStore = defineStore('game', () => {
       ui.enterHypnosisPhase2(pi.attackerInstanceId!, pi.availableTargetIds ?? [])
     } else if (ui.mode === 'hypnosis' && ui.hypnosisPhase === 2) {
       ui.clearHypnosis()
+    }
+  }
+
+  function checkRodzaniceMode(gs: GameState) {
+    const ui = useUIStore()
+    const pi = gs.pendingInteraction
+    if (pi?.type === 'rodzanice_choose_recipient' && pi.respondingPlayer === mySide.value) {
+      ui.enterEffectTargetMode(pi.sourceInstanceId, pi.availableTargetIds ?? [])
     }
   }
 

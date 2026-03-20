@@ -40,6 +40,18 @@ const resurrectVfxRef = ref<InstanceType<typeof ResurrectVFX> | null>(null)
 const game = useGameStore()
 const ui = useUIStore()
 
+// Rodzanice faza 1: aktywna gdy effect_target jest dla rodzanice_steal_buff
+const isRodzanicePhase1 = computed(() => {
+  if (ui.mode !== 'effect_target' || !ui.effectTargetSourceId || !game.state) return false
+  for (const side of ['player1', 'player2'] as const) {
+    for (const creatures of Object.values(game.state.players[side].field.lines)) {
+      const card = (creatures as any[]).find((c: any) => c.instanceId === ui.effectTargetSourceId)
+      if (card && (card.cardData as any).effectId === 'rodzanice_steal_buff') return true
+    }
+  }
+  return false
+})
+
 // Fullscreen toggle
 const isFullscreen = ref(false)
 function toggleFullscreen() {
@@ -517,10 +529,16 @@ const onPlayDescription = computed(() => {
     <!-- Generyczny wybór celu zdolności — info banner -->
     <Transition name="fade">
       <div v-if="ui.mode === 'effect_target'" class="effect-target-banner">
-        <Icon icon="game-icons:on-target" class="effect-target-icon" />
+        <Icon :icon="game.state?.pendingInteraction?.type === 'rodzanice_choose_recipient' ? 'game-icons:fairy-wand' : 'game-icons:on-target'" class="effect-target-icon" />
         <div class="effect-target-text">
-          <strong>Wybierz cel zdolności</strong>
-          <span>Kliknij podświetloną istotę na polu.</span>
+          <template v-if="game.state?.pendingInteraction?.type === 'rodzanice_choose_recipient'">
+            <strong>Wyrok Rodzanic — wybierz drugą kartę</strong>
+            <span>Zdolności obu kart zostaną zamienione. Trwale.</span>
+          </template>
+          <template v-else>
+            <strong>{{ isRodzanicePhase1 ? 'Wyrok Rodzanic — wybierz pierwszą kartę' : 'Wybierz cel zdolności' }}</strong>
+            <span>Kliknij podświetloną istotę na polu.</span>
+          </template>
         </div>
         <button class="effect-target-cancel" @click="ui.clearEffectTarget()">Anuluj</button>
       </div>

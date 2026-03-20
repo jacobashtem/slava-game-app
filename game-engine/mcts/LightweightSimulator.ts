@@ -249,7 +249,10 @@ function processDeath(
   dead: LightCard,
   killer: LightCard | null,
   killerSide: number,
+  _depth = 0,
 ): void {
+  // Guard: prevent infinite recursion (e.g. Konny cleave + Kościej resurrection loop)
+  if (_depth > 10) return
   const deadSide = dead.owner
 
   // Remove from field
@@ -276,8 +279,8 @@ function processDeath(
     }
   }
 
-  // Kościej: resurrect with 1 DEF if killed by melee
-  if (dead.effectId === 'kosciej_melee_resurrection' && !dead.isSilenced && killer) {
+  // Kościej: resurrect with 1 DEF if killed by melee (only on first death, not cleave chain)
+  if (dead.effectId === 'kosciej_melee_resurrection' && !dead.isSilenced && killer && _depth === 0) {
     if (killer.attackType === 0) {
       dead.def = 1; dead.maxDef = Math.max(dead.maxDef, 1)
       dead.hasAttacked = true
@@ -311,7 +314,7 @@ function processDeath(
           const next = nextTargets[0]!
           next.def -= overkill
           if (next.def <= 0) {
-            processDeath(s, next, killer, killerSide)
+            processDeath(s, next, killer, killerSide, _depth + 1)
             s.soulPoints[killerSide]! += next.soulValue
             checkSoulHarvest(s, killerSide)
           }
@@ -903,10 +906,22 @@ function simulateTurn(s: LightState): boolean {
     if (s.winner !== -1) return true
   }
 
-  // === PLUNDER ===
+  // === PLUNDER — requires unused attacker ===
   if (s.round >= 3 && lightFieldCount(s, opp) === 0 && s.ps[opp]! > 0) {
-    s.ps[side]!++; s.ps[opp]!--
-    didAttack = true
+    const base = side * 3
+    for (let i = 0; i < 3; i++) {
+      let found = false
+      for (const c of s.field[base + i]!) {
+        if (c.position === 1 && !c.hasAttacked && !c.cannotAttack) {
+          c.hasAttacked = true
+          s.ps[side]!++; s.ps[opp]!--
+          didAttack = true
+          found = true
+          break
+        }
+      }
+      if (found) break
+    }
   }
 
   checkWin(s)
@@ -998,12 +1013,12 @@ function processTurnStart(s: LightState, side: number): void {
       c.atk = c.maxAtk + s.hands[side]!.length
     }
 
-    // Rodzanice: +1/+1 to weakest ally
-    if (c.effectId === 'rodzanice_swap_buff') {
+    // Rodzanice: steal best enemy ability (simplified: +2/+2 to weakest ally, debuff strongest enemy)
+    if (c.effectId === 'rodzanice_steal_buff') {
       const allies = lightFieldCards(s, side).filter(a => a !== c && a.def > 0)
       if (allies.length > 0) {
         const weakest = allies.reduce((a, b) => a.def < b.def ? a : b)
-        weakest.atk++; weakest.def++; weakest.maxDef++
+        weakest.atk += 2; weakest.def += 2; weakest.maxDef += 2
       }
     }
 
@@ -1858,13 +1873,27 @@ export function applyCombatPlanToLight(s: LightState, side: number, steps: MCTSM
     }
   }
 
-  // 4. Plunder
+  // 4. Plunder — requires creature in ATTACK with unused attack action
   for (const step of steps) {
     if (step.type === 'plunder') {
       if (s.round >= 3 && lightFieldCount(s, opp) === 0 && s.ps[opp]! > 0) {
-        s.ps[side]!++; s.ps[opp]!--
-        didAttack = true
-        checkWin(s)
+        // Find a creature in ATTACK that hasn't attacked yet
+        const base = side * 3
+        let plunderer: LightCard | null = null
+        for (let i = 0; i < 3 && !plunderer; i++) {
+          for (const c of s.field[base + i]!) {
+            if (c.position === 1 && !c.hasAttacked && !c.cannotAttack) {
+              plunderer = c
+              break
+            }
+          }
+        }
+        if (plunderer) {
+          plunderer.hasAttacked = true
+          s.ps[side]!++; s.ps[opp]!--
+          didAttack = true
+          checkWin(s)
+        }
       }
       break
     }

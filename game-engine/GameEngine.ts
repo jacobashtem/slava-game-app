@@ -1331,6 +1331,64 @@ export class GameEngine {
       return cloneGameState(this.state)
     }
 
+    // Rodzanice: gracz wybrał drugą kartę — zamiana zdolności
+    if (interaction.type === 'rodzanice_choose_recipient') {
+      const meta = interaction.metadata ?? {}
+      const firstEffectId = meta.firstEffectId as string
+      const firstName = meta.firstName as string
+      const firstCard = this.findCardInState(newState, interaction.targetInstanceId!)
+      const secondCard = this.findCardInState(newState, choice)
+
+      if (firstCard && secondCard && firstEffectId) {
+        const secondEffectId = (secondCard.cardData as any).effectId as string
+
+        // Zamiana: obie karty tracą natywną zdolność i zyskują zdolność drugiej
+        const getAbilityText = (card: CardInstance) => {
+          const ab = (card.cardData as any).abilities as Array<{ text: string }> | undefined
+          if (ab && ab.length > 0) return ab.map(a => a.text).join(' ')
+          return (card.cardData as any).effectDescription ?? ''
+        }
+        const secondAbilityText = getAbilityText(secondCard)
+        const firstAbilityText = getAbilityText(firstCard)
+
+        firstCard.metadata.rodzaniceStolen = true
+        firstCard.metadata.rodzaniceBonusEffectId = secondEffectId
+        firstCard.metadata.rodzaniceSwappedWith = secondCard.cardData.name
+        firstCard.metadata.rodzaniceSwappedDomain = (secondCard.cardData as any).idDomain ?? (secondCard.cardData as any).domain
+        firstCard.metadata.rodzaniceBonusDesc = secondAbilityText
+
+        secondCard.metadata.rodzaniceStolen = true
+        secondCard.metadata.rodzaniceBonusEffectId = firstEffectId
+        secondCard.metadata.rodzaniceSwappedWith = firstCard.cardData.name
+        secondCard.metadata.rodzaniceSwappedDomain = (firstCard.cardData as any).idDomain ?? (firstCard.cardData as any).domain
+        secondCard.metadata.rodzaniceBonusDesc = firstAbilityText
+
+        // PASSIVE/AURA: natychmiastowa aplikacja na obu kartach
+        for (const [card, bonusId] of [[firstCard, secondEffectId], [secondCard, firstEffectId]] as const) {
+          const bonusDef = getEffect(bonusId)
+          if (bonusDef) {
+            const bonusTriggers = Array.isArray(bonusDef.trigger) ? bonusDef.trigger : [bonusDef.trigger]
+            if (bonusTriggers.includes(EffectTrigger.PASSIVE) || bonusTriggers.includes(EffectTrigger.ON_TURN_START)) {
+              try {
+                const passiveResult = bonusDef.execute({ state: newState, source: card, trigger: EffectTrigger.PASSIVE })
+                Object.assign(newState, passiveResult.newState)
+                this.pushLogs(passiveResult.log)
+              } catch {}
+            }
+          }
+        }
+
+        const log = addLog(newState,
+          `Wyrok Rodzanic! ${firstCard.cardData.name} ↔ ${secondCard.cardData.name} — zdolności zamienione!`,
+          'effect'
+        )
+        this.applyStateAndLog(newState, [log])
+      } else {
+        this.applyStateAndLog(newState, [])
+      }
+      return cloneGameState(this.state)
+    }
+
     // Pozostałe typy — fallback
     this.applyStateAndLog(newState, [])
     return cloneGameState(this.state)

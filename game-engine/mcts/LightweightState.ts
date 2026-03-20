@@ -240,23 +240,23 @@ export function forEachFieldCard(s: LightState, side: number, fn: (c: LightCard)
 }
 
 /**
- * Evaluation V5 — domain-aware with threat-weighted power, tempo, synergy.
- *
- * Weights:
- *   psScore      * 0.30
- *   threatPower  * 0.22
- *   tempo        * 0.07
- *   synergy      * 0.05
- *   threatPenalty* 0.08 (negative — unanswered threats)
- *   creatureScore* 0.08
- *   handScore    * 0.05
- *   soulScore    * 0.08
- */
-/**
- * evaluateLight V6 — multi-turn strategic awareness.
+ * evaluateLight V7 — positional awareness + ability-centric + elimination-focused.
  *
  * V5 signals: threatPower, tempo, synergy, threatPenalty
- * V6 NEW: raceScore, depletionRisk, wallPenalty, harvestProximity, goldZeroRisk
+ * V6 signals: raceScore, depletionRisk, wallPenalty, harvestProximity, goldZeroRisk
+ * V7 NEW:
+ *   1. Positional scoring — MELEE/ELEMENTAL on L2/L3 = stranded (can't attack)
+ *   2. HP-adjusted threat — creature at low HP = discounted ability value
+ *   3. Line dominance — controlling FRONT = initiative
+ *   4. Gentler staleFactor — games avg ~18r, decay starts at R20
+ *   5. Attack-type matching — MELEE-heavy vs backline-only = blocked
+ *   6. Ability value > raw ATK — active abilities weighted 4x tier (was 3x), silenced 1.5x
+ * V7.1 PLUNDER AWARENESS (fix for V7 regression — 63% PS→0 outcomes):
+ *   7. Plunder vulnerability — my field empty + opp has creatures = danger
+ *   8. Plunder opportunity — opp field empty + I have creatures = bonus
+ *   9. Near-plunder — 1 killable creature left = preemptive warning
+ *   10. Strengthened goldZeroRisk — PS≤1 is -0.15 (was -0.08)
+ * Weight balance: PS weight partially restored (0.22), creature focus kept (0.08)
  */
 export function evaluateLight(s: LightState, side: number): number {
   if (s.winner === side) return 1.0
@@ -273,20 +273,31 @@ export function evaluateLight(s: LightState, side: number): number {
   const psProximity = myPS >= psTarget - 1 ? 0.15 : myPS >= psTarget - 2 ? 0.05 : 0
   const oppProximity = oppPS >= psTarget - 1 ? -0.15 : oppPS >= psTarget - 2 ? -0.05 : 0
 
-  // === Field analysis (single pass over both sides) ===
+  // === Per-line field data (V7: positional analysis) ===
+  const myBase = side * 3
+  const oppBase = opp * 3
+  const myFront = s.field[myBase]!
+  const oppFront = s.field[oppBase]!
+
   const myCards = lightFieldCards(s, side)
   const oppCards = lightFieldCards(s, opp)
+
+  // === Field analysis — single pass with V7 enhancements ===
   let myThreat = 0, oppThreat = 0
   let myActiveAtk = 0, myActiveCount = 0
   let oppActiveAtk = 0, oppActiveCount = 0
   let oppUnansweredThreats = 0
-  let myTotalSoulValue = 0   // V6: soul value of my creatures (what opp gains killing them)
-  let oppTotalSoulValue = 0  // V6: soul value of opp creatures (what I gain killing them)
-  let myMaxAtk = 0           // V6: for wall detection
-  let oppMaxDef = 0          // V6: for wall detection
+  let myTotalSoulValue = 0
+  let oppTotalSoulValue = 0
+  let myMaxAtk = 0
+  let oppMaxDef = 0
 
   for (const c of myCards) {
-    myThreat += c.atk * 1.5 + c.def * 0.7 + effectThreatTier(c.effectId) * 3
+    // V7: HP-adjusted ability value — low HP creature's ability is less relevant
+    const hpRatio = c.maxDef > 0 ? Math.max(0.2, c.def / c.maxDef) : 1
+    // V7: active abilities weighted 4x (was 3x), silenced 1.5x (was 3x)
+    const abilityValue = effectThreatTier(c.effectId) * (c.isSilenced ? 1.5 : 4) * hpRatio
+    myThreat += c.atk * 1.5 + c.def * 0.7 + abilityValue
     myTotalSoulValue += c.soulValue
     if (c.atk > myMaxAtk) myMaxAtk = c.atk
     if (c.position === 1 && !c.cannotAttack && c.paralyzeRounds < 0) {
@@ -296,7 +307,9 @@ export function evaluateLight(s: LightState, side: number): number {
   }
   for (const c of oppCards) {
     const tier = effectThreatTier(c.effectId)
-    oppThreat += c.atk * 1.5 + c.def * 0.7 + tier * 3
+    const hpRatio = c.maxDef > 0 ? Math.max(0.2, c.def / c.maxDef) : 1
+    const abilityValue = tier * (c.isSilenced ? 1.5 : 4) * hpRatio
+    oppThreat += c.atk * 1.5 + c.def * 0.7 + abilityValue
     oppTotalSoulValue += c.soulValue
     if (c.def > oppMaxDef) oppMaxDef = c.def
     if (c.position === 1 && !c.cannotAttack && c.paralyzeRounds < 0) {
@@ -322,12 +335,12 @@ export function evaluateLight(s: LightState, side: number): number {
   // === Threat penalty ===
   const threatPenalty = -oppUnansweredThreats * 0.03
 
-  // === Creature count ===
+  // === Creature count (V7: increased weight in final score) ===
   const creatureScore = (myCards.length - oppCards.length) / 10
 
-  // === Hand quality ===
-  const myHandQuality = s.hands[side]!.reduce((sum, c) => sum + 1 + effectThreatTier(c.effectId) * 0.1, 0)
-  const oppHandQuality = s.hands[opp]!.reduce((sum, c) => sum + 1 + effectThreatTier(c.effectId) * 0.1, 0)
+  // === Hand quality (V7: ability weight doubled 0.1→0.2) ===
+  const myHandQuality = s.hands[side]!.reduce((sum, c) => sum + 1 + effectThreatTier(c.effectId) * 0.2, 0)
+  const oppHandQuality = s.hands[opp]!.reduce((sum, c) => sum + 1 + effectThreatTier(c.effectId) * 0.2, 0)
   const handScore = (myHandQuality - oppHandQuality) / 20
 
   // === Soul harvest ===
@@ -337,14 +350,16 @@ export function evaluateLight(s: LightState, side: number): number {
   const oppPartial = (s.soulPoints[opp]! % threshold) / threshold
   const soulScore = ((myHarvest + myPartial * 0.3) - (oppHarvest + oppPartial * 0.3)) / 5
 
-  // === Elimination ===
+  // === Elimination (V7: stronger gradient) ===
   const myTotal = s.deckCount[side]! + s.hands[side]!.length + myCards.length
   const oppTotal = s.deckCount[opp]! + s.hands[opp]!.length + oppCards.length
   let elimScore = 0
   if (s.deckCount[side]! === 0 && myCards.length === 0) elimScore -= 0.30
-  else if (myTotal <= 3) elimScore -= 0.10
+  else if (myTotal <= 2) elimScore -= 0.15
+  else if (myTotal <= 4) elimScore -= 0.06
   if (s.deckCount[opp]! === 0 && oppCards.length === 0) elimScore += 0.30
-  else if (oppTotal <= 3) elimScore += 0.10
+  else if (oppTotal <= 2) elimScore += 0.15
+  else if (oppTotal <= 4) elimScore += 0.06
 
   // === Anti-stall ===
   const passPenalty = s.consecutivePasses[side]! >= 3 ? -0.10
@@ -353,63 +368,157 @@ export function evaluateLight(s: LightState, side: number): number {
     : s.consecutivePasses[opp]! >= 2 ? 0.03 : 0
 
   // =====================================================
-  // V6 NEW SIGNALS — multi-turn strategic awareness
+  // V6 SIGNALS — multi-turn strategic awareness
   // =====================================================
 
-  // 1. TIME-TO-WIN RACE: who wins the PS race?
-  //    harvestRate = how much PS I gain per "clearing opponent's field"
+  // 1. TIME-TO-WIN RACE
   const myHarvestRate = oppTotalSoulValue > 0 ? oppTotalSoulValue / threshold : 0
   const oppHarvestRate = myTotalSoulValue > 0 ? myTotalSoulValue / threshold : 0
   const myTurnsToWin = myHarvestRate > 0.01 ? (psTarget - myPS) / myHarvestRate : 99
   const oppTurnsToWin = oppHarvestRate > 0.01 ? (psTarget - oppPS) / oppHarvestRate : 99
   const raceScore = Math.max(-0.15, Math.min(0.15, (oppTurnsToWin - myTurnsToWin) / 20))
 
-  // 2. DECK DEPLETION RISK: who runs out of creatures first?
+  // 2. DECK DEPLETION RISK
   const myRunway = s.deckCount[side]! + s.hands[side]!.filter(c => c.cardType === 0).length
   const oppRunway = s.deckCount[opp]! + s.hands[opp]!.filter(c => c.cardType === 0).length
   let depletionScore = (myRunway - oppRunway) / 30
-  if (myRunway <= 3 && myCards.length <= 2) depletionScore -= 0.05 // urgency: almost out
+  if (myRunway <= 3 && myCards.length <= 2) depletionScore -= 0.05
 
-  // 3. BOARD WALL DETECTION: can I break through opponent's defense?
+  // 3. BOARD WALL DETECTION
   let wallPenalty = 0
   if (oppCards.length > 0 && myMaxAtk > 0 && oppMaxDef > myMaxAtk * 3) {
-    wallPenalty = -0.05 // opponent has unbreakable wall
+    wallPenalty = -0.05
   }
 
-  // 4. SOUL HARVEST PROXIMITY: how close am I to next harvest?
+  // 4. SOUL HARVEST PROXIMITY
   const mySoulGap = threshold - (s.soulPoints[side]! % threshold)
   const oppSoulGap = threshold - (s.soulPoints[opp]! % threshold)
   const harvestProximity = (oppSoulGap - mySoulGap) / threshold * 0.04
-  // Extra: almost harvesting (< 5 points away)
   const nearHarvestBonus = mySoulGap <= 5 ? 0.03 : 0
   const oppNearHarvestPenalty = oppSoulGap <= 5 ? -0.02 : 0
 
-  // 5. GOLD ZERO RISK: danger of instant loss from 0 gold
-  const goldZeroRisk = myPS <= 1 ? -0.08 : myPS <= 2 ? -0.03 : 0
-  const oppGoldZeroBonus = oppPS <= 1 ? 0.06 : oppPS <= 2 ? 0.02 : 0
+  // 5. GOLD ZERO RISK (V7.1: strengthened — PS→0 is 63% of game outcomes)
+  const goldZeroRisk = myPS <= 1 ? -0.15 : myPS <= 2 ? -0.08 : myPS <= 3 ? -0.03 : 0
+  const oppGoldZeroBonus = oppPS <= 1 ? 0.12 : oppPS <= 2 ? 0.06 : oppPS <= 3 ? 0.02 : 0
 
-  // === Staleness ===
-  const staleFactor = Math.max(0.3, 1 - Math.max(0, s.round - 15) * 0.03)
+  // =====================================================
+  // V7.1 NEW — PLUNDER AWARENESS (root cause of V7 regression)
+  // =====================================================
+  // Plunder: when enemy field empty + round >= 3 → steal 1 PS.
+  // 63% of games end via PS→0. AI must understand plunder dynamics.
 
-  // === FINAL SCORE (V6 weights) ===
+  let plunderScore = 0
+  if (s.round >= 3) {
+    // VULNERABILITY: my field empty, opp has creatures → I WILL be plundered
+    if (myCards.length === 0 && oppCards.length > 0) {
+      plunderScore -= 0.12
+      // Worse the lower my PS — plunder at PS 1 = death
+      if (myPS <= 1) plunderScore -= 0.15
+      else if (myPS <= 2) plunderScore -= 0.08
+      else if (myPS <= 3) plunderScore -= 0.04
+    }
+    // NEAR-VULNERABLE: I have 1 creature that opponent can kill → plunder next turn
+    else if (myCards.length === 1 && oppActiveCount > 0) {
+      const lastCreature = myCards[0]!
+      if (lastCreature.def <= oppActiveAtk) {
+        // My last creature will likely die → plunder incoming
+        plunderScore -= 0.06
+        if (myPS <= 2) plunderScore -= 0.06
+      }
+    }
+
+    // OPPORTUNITY: opp field empty, I have creatures → I CAN plunder
+    if (oppCards.length === 0 && myCards.length > 0) {
+      plunderScore += 0.08
+      if (oppPS <= 1) plunderScore += 0.12  // plunder = kill
+      else if (oppPS <= 2) plunderScore += 0.06
+      else if (oppPS <= 3) plunderScore += 0.03
+    }
+    // NEAR-OPPORTUNITY: opp has 1 creature I can kill → plunder next turn
+    else if (oppCards.length === 1 && myActiveCount > 0) {
+      const lastEnemy = oppCards[0]!
+      if (lastEnemy.def <= myActiveAtk) {
+        plunderScore += 0.04
+        if (oppPS <= 2) plunderScore += 0.05
+      }
+    }
+  }
+
+  // =====================================================
+  // V7 SIGNALS — positional + type awareness
+  // =====================================================
+
+  // V7-1. STRANDED MELEE — MELEE/ELEMENTAL on RANGED(L2)/SUPPORT(L3) = can't attack
+  let myStranded = 0, oppStranded = 0
+  for (let lineOff = 1; lineOff <= 2; lineOff++) {
+    for (const c of s.field[myBase + lineOff]!) {
+      if ((c.attackType === 0 || c.attackType === 1) && !c.cannotAttack) myStranded++
+    }
+    for (const c of s.field[oppBase + lineOff]!) {
+      if ((c.attackType === 0 || c.attackType === 1) && !c.cannotAttack) oppStranded++
+    }
+  }
+  const strandedScore = (oppStranded - myStranded) * 0.04
+
+  // V7-3. LINE DOMINANCE — controlling FRONT = initiative
+  const myFrontCount = myFront.length
+  const oppFrontCount = oppFront.length
+  let lineDominance = 0
+  if (myFrontCount > 0 && oppFrontCount === 0 && oppCards.length > 0) {
+    lineDominance = 0.06  // we hold front, enemy exposed behind
+  } else if (oppFrontCount > 0 && myFrontCount === 0 && myCards.length > 0) {
+    lineDominance = -0.04  // enemy holds front, we're exposed
+  } else if (myFrontCount >= oppFrontCount + 2) {
+    lineDominance = 0.03  // numerical front advantage
+  }
+
+  // V7-5. ATTACK-TYPE MATCHING — MELEE-heavy army vs enemy with empty FRONT
+  let reachPenalty = 0
+  if (oppFrontCount === 0 && oppCards.length > 0) {
+    // Enemy has creatures but NOT on FRONT — my MELEE on FRONT can still reach
+    // first non-empty enemy line, but if I have MELEE on L2/L3 they're useless
+    // (already captured by strandedScore above)
+    // Extra penalty: if ALL my attackers are MELEE and enemy backline is deep
+    let myMeleeTotal = 0, myRangedMagic = 0
+    for (const c of myCards) {
+      if (c.cannotAttack) continue
+      if (c.attackType === 0 || c.attackType === 1) myMeleeTotal++
+      else myRangedMagic++
+    }
+    // Pure MELEE army has limited reach flexibility
+    if (myMeleeTotal > 0 && myRangedMagic === 0 && oppCards.length >= 2) {
+      reachPenalty = -0.04
+    }
+  }
+
+  // === Staleness (V7: gentler — starts at R20, floor 0.5 not 0.3) ===
+  const staleFactor = Math.max(0.5, 1 - Math.max(0, s.round - 20) * 0.02)
+
+  // === FINAL SCORE (V7.1 weights — balanced: creature focus + plunder defense) ===
   const raw = 0.5
-    + psScore * 0.25
+    + psScore * 0.22              // V7.1: 0.20→0.22 (PS defense matters — 63% PS→0 outcomes)
     + threatPowerScore * 0.18
-    + raceScore * 0.08           // V6 NEW
+    + raceScore * 0.06            // V7.1: 0.05→0.06
     + tempoScore * 0.06
     + synergyScore * 0.04
     + threatPenalty * 0.06
-    + depletionScore * 0.05      // V6 NEW
-    + creatureScore * 0.06
+    + depletionScore * 0.07       // V7: 0.05→0.07
+    + creatureScore * 0.08        // V7: 0.06→0.08
     + handScore * 0.04
     + soulScore * 0.06
-    + harvestProximity            // V6 NEW (pre-scaled)
+    + harvestProximity
     + psProximity + oppProximity
     + elimScore
-    + wallPenalty                 // V6 NEW (additive)
-    + goldZeroRisk + oppGoldZeroBonus  // V6 NEW (additive)
-    + nearHarvestBonus + oppNearHarvestPenalty  // V6 NEW (additive)
+    + wallPenalty
+    + goldZeroRisk + oppGoldZeroBonus
+    + nearHarvestBonus + oppNearHarvestPenalty
     + passPenalty + oppPassBonus
+    // V7 positional:
+    + strandedScore
+    + lineDominance
+    + reachPenalty
+    // V7.1 plunder awareness:
+    + plunderScore
 
   return Math.max(0, Math.min(1, 0.5 + (raw - 0.5) * staleFactor))
 }

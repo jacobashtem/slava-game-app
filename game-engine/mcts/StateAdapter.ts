@@ -385,8 +385,7 @@ export function isTerminal(state: GameState): boolean {
 // ===== HEURISTIC EVALUATION =====
 
 /**
- * Ewaluacja heurystyczna V5 — threat-weighted, tempo, synergy.
- * Mirror of evaluateLight() but on full GameState.
+ * Ewaluacja heurystyczna V7 (simplified) — mirror of evaluateLight() on full GameState.
  * Zwraca wartość w [0, 1] z perspektywy `side`.
  */
 export function evaluate(state: GameState, side: PlayerSide): number {
@@ -419,7 +418,9 @@ export function evaluate(state: GameState, side: PlayerSide): number {
 
   for (const c of myCreatures) {
     const eid = (c.cardData as any).effectId ?? ''
-    myThreat += c.currentStats.attack * 1.5 + c.currentStats.defense * 0.7 + effectThreatTier(eid) * 3
+    const hpRatio = c.currentStats.maxDefense > 0 ? Math.max(0.2, c.currentStats.defense / c.currentStats.maxDefense) : 1
+    const abilityValue = effectThreatTier(eid) * (c.isSilenced ? 1.5 : 4) * hpRatio
+    myThreat += c.currentStats.attack * 1.5 + c.currentStats.defense * 0.7 + abilityValue
     if (c.position === CardPosition.ATTACK && !c.cannotAttack && (c.paralyzeRoundsLeft ?? -1) < 0) {
       myActiveAtk += c.currentStats.attack
       myActiveCount++
@@ -428,7 +429,9 @@ export function evaluate(state: GameState, side: PlayerSide): number {
   for (const c of oppCreatures) {
     const eid = (c.cardData as any).effectId ?? ''
     const tier = effectThreatTier(eid)
-    oppThreat += c.currentStats.attack * 1.5 + c.currentStats.defense * 0.7 + tier * 3
+    const hpRatio = c.currentStats.maxDefense > 0 ? Math.max(0.2, c.currentStats.defense / c.currentStats.maxDefense) : 1
+    const abilityValue = tier * (c.isSilenced ? 1.5 : 4) * hpRatio
+    oppThreat += c.currentStats.attack * 1.5 + c.currentStats.defense * 0.7 + abilityValue
     if (c.position === CardPosition.ATTACK && !c.cannotAttack && (c.paralyzeRoundsLeft ?? -1) < 0) {
       oppActiveAtk += c.currentStats.attack
       oppActiveCount++
@@ -499,13 +502,13 @@ export function evaluate(state: GameState, side: PlayerSide): number {
   const depletionScore = (myRunway - oppRunway) / 30
 
   const raw = 0.5
-    + psScore * 0.25
+    + psScore * 0.20
     + threatPowerScore * 0.18
     + tempoScore * 0.06
     + synergyScore * 0.04
     + threatPenalty * 0.06
-    + depletionScore * 0.05
-    + creatureScore * 0.06
+    + depletionScore * 0.08
+    + creatureScore * 0.08
     + handScore * 0.04
     + soulScore * 0.06
     + psProximityBonus

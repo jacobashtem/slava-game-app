@@ -200,6 +200,7 @@ export type PendingInteractionType =
   | 'czart_shift'              // Czart: ile DEF przerzucić na ATK? (suwak)
   | 'dziwolzona_swap'          // Dziwożona ON_KILL: wybierz kartę z ręki do oddania
   | 'najemnik_bribe'           // Najemnik: wróg może zapłacić 1 PS żeby go przejąć
+  | 'rodzanice_choose_recipient' // Rodzanice faza 2: wybierz sojusznika do przekazania zdolności
 
 export interface PendingInteraction {
   type: PendingInteractionType

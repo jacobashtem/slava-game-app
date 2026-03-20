@@ -108,6 +108,10 @@ interface BenchmarkResult {
     avgWinnerCardsLeft: number
     avgLoserCardsLeft: number
     loserTrueEliminated: number  // loser had 0 cards left
+    // Per-win-method round stats
+    avgRoundsByMethod: { ps: number, elim: number, ps0: number }
+    minRounds: number
+    maxRounds: number
   }
   mcts: {
     avgIterationsPerDecision: number
@@ -158,8 +162,9 @@ function simulateGame(): GameResult {
   let winMethod: GameResult['winMethod'] = 'timeout'
   let plunderCount = 0
 
-  // Game trace collection (Faza 4)
+  // Game trace collection (Faza 4 + V7.3)
   const traceMoves: GameTraceMove[] = []
+  const traceDeaths: import('../mcts/ExperienceDB').GameTraceDeath[] = []
 
   function autoResolve() {
     let g = 0
@@ -204,6 +209,7 @@ function simulateGame(): GameResult {
     // Collect trace: extract effectIds of played cards
     const sideNum = side === 'player1' ? 0 : 1
     const turnEffectIds: string[] = []
+    const turnEnhancedIds: string[] = []
 
     const playActions = decisions.filter(d =>
       d.type === 'play_creature' || d.type === 'play_adventure' ||
@@ -214,11 +220,16 @@ function simulateGame(): GameResult {
     for (const d of playActions) {
       if (state.winner) break
 
-      // Extract effectId for trace
+      // Extract effectId for trace + enhanced tracking
       if (d.type === 'play_creature' || d.type === 'play_adventure') {
         if (d.cardInstanceId) {
           const card = state.players[side].hand.find(c => c.instanceId === d.cardInstanceId)
-          if (card) turnEffectIds.push((card.cardData as any).effectId ?? '')
+          if (card) {
+            turnEffectIds.push((card.cardData as any).effectId ?? '')
+            if (d.type === 'play_adventure' && (d as any).useEnhanced) {
+              turnEnhancedIds.push((card.cardData as any).effectId ?? '')
+            }
+          }
         }
       }
 
@@ -252,18 +263,42 @@ function simulateGame(): GameResult {
       } catch (e: any) {
         if (turnCount > MAX_TURNS - 10) process.stderr.write(`    [WARN] advancePhase failed: ${e?.message}\n`)
       }
+      const turnAttacks: import('../mcts/ExperienceDB').GameTraceAttack[] = []
+      const graveBefore = state.players[getOpponentSide(side)].graveyard.length
       for (const d of combatActions) {
         if (state.winner) break
         try {
           if (d.cardInstanceId && d.targetInstanceId) {
+            // Snapshot attacker/target effectIds before attack
+            const atkCard = getAllCreaturesOnField(state, side).find(c => c.instanceId === d.cardInstanceId)
+            const tgtCard = getAllCreaturesOnField(state, getOpponentSide(side)).find(c => c.instanceId === d.targetInstanceId)
+            const atkEid = (atkCard?.cardData as any)?.effectId ?? ''
+            const tgtEid = (tgtCard?.cardData as any)?.effectId ?? ''
+
             state = engine.sideAttack(side, d.cardInstanceId, d.targetInstanceId)
             engine.lastCombatResult = null
+
+            // Check if target died
+            const tgtAlive = getAllCreaturesOnField(state, getOpponentSide(side)).some(c => c.instanceId === d.targetInstanceId)
+            if (atkEid && tgtEid) {
+              turnAttacks.push({ attacker: atkEid, target: tgtEid, damage: 0, killed: !tgtAlive })
+            }
+            // Track deaths
+            if (!tgtAlive && tgtEid) {
+              traceDeaths.push({ effectId: tgtEid, round: state.roundNumber, side: side === 'player1' ? 1 : 0, killerEffectId: atkEid })
+            }
+            // Check if attacker died (counterattack)
+            const atkAlive = getAllCreaturesOnField(state, side).some(c => c.instanceId === d.cardInstanceId)
+            if (!atkAlive && atkEid) {
+              traceDeaths.push({ effectId: atkEid, round: state.roundNumber, side: sideNum, killerEffectId: tgtEid })
+            }
           }
         } catch (e: any) {
           if (turnCount > MAX_TURNS - 10) process.stderr.write(`    [WARN] attack failed: ${e?.message}\n`)
         }
         autoResolve()
       }
+      // Store attacks in current trace move (added later)
     } else if (turnCount > MAX_TURNS - 5 && !state.winner) {
       // Near timeout — log why no combat actions
       const myField = getAllCreaturesOnField(state, side)
@@ -273,6 +308,9 @@ function simulateGame(): GameResult {
 
     if (wantsPlunder && !state.winner) {
       try {
+        // Plunder requires COMBAT phase — advance if still in PLAY
+        if (engine.getCurrentPhase() === GamePhase.PLAY)
+          state = engine.sideAdvancePhase(side)
         const psBefore = state.players[side === 'player1' ? 'player2' : 'player1'].gold
         state = engine.sidePlunder(side)
         const psAfter = state.players[side === 'player1' ? 'player2' : 'player1'].gold
@@ -302,6 +340,8 @@ function simulateGame(): GameResult {
         oppPS: state.players[oppSide].gold,
         myFieldCount: getAllCreaturesOnField(state, side).length,
         oppFieldCount: oppFieldCreatures.length,
+        enhancedIds: turnEnhancedIds.length > 0 ? turnEnhancedIds : undefined,
+        attacks: turnAttacks?.length > 0 ? turnAttacks : undefined,
       })
     }
   }
@@ -325,15 +365,34 @@ function simulateGame(): GameResult {
     }
   } catch { winMethod = 'error' }
 
-  // Build game trace
+  // Build game trace (V7.3: + deaths + survivors)
   let trace: GameTrace | null = null
   if (state.winner) {
+    // Collect survivors (creatures still on field at game end)
+    const survivors: import('../mcts/ExperienceDB').GameTraceSurvivor[] = []
+    for (const s of ['player1', 'player2'] as const) {
+      const sideNum = s === 'player1' ? 0 : 1
+      for (const c of getAllCreaturesOnField(state, s)) {
+        const cd = c.cardData as any
+        survivors.push({
+          effectId: cd.effectId ?? '',
+          side: sideNum,
+          finalAtk: c.currentStats.attack,
+          finalDef: c.currentStats.defense,
+          baseAtk: cd.stats?.attack ?? c.currentStats.maxAttack,
+          baseDef: cd.stats?.defense ?? c.currentStats.maxDefense,
+        })
+      }
+    }
+
     trace = {
       winner: state.winner === 'player1' ? 0 : 1,
       rounds: state.roundNumber,
       moves: traceMoves,
       winMethod: winMethod as 'ps' | 'elimination' | 'ps_zero' | 'gold_loss',
       finalPS: [state.players.player1.gold, state.players.player2.gold],
+      deaths: traceDeaths.length > 0 ? traceDeaths : undefined,
+      survivors: survivors.length > 0 ? survivors : undefined,
     }
   }
 
@@ -372,6 +431,13 @@ function aggregate(results: GameResult[]): BenchmarkResult {
   const avgWinnerCards = withWinner.length > 0 ? withWinner.reduce((s, r) => s + r.winnerCardsLeft, 0) / withWinner.length : 0
   const avgLoserCards = withWinner.length > 0 ? withWinner.reduce((s, r) => s + r.loserCardsLeft, 0) / withWinner.length : 0
   const loserZeroCards = withWinner.filter(r => r.loserCardsLeft === 0).length
+
+  // Per-win-method round averages
+  const psRounds = withWinner.filter(r => r.winMethod === 'ps').map(r => r.rounds)
+  const elimRounds = withWinner.filter(r => r.winMethod === 'elimination').map(r => r.rounds)
+  const ps0Rounds = withWinner.filter(r => r.winMethod === 'ps_zero').map(r => r.rounds)
+  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0
+  const allRounds = results.map(r => r.rounds)
 
   const winnerPS = withWinner.map(r => r.winner === 'player1' ? r.p1Gold : r.p2Gold)
   const loserPS = withWinner.map(r => r.winner === 'player1' ? r.p2Gold : r.p1Gold)
@@ -412,6 +478,13 @@ function aggregate(results: GameResult[]): BenchmarkResult {
       avgWinnerCardsLeft: Math.round(avgWinnerCards * 10) / 10,
       avgLoserCardsLeft: Math.round(avgLoserCards * 10) / 10,
       loserTrueEliminated: loserZeroCards,
+      avgRoundsByMethod: {
+        ps: Math.round(avg(psRounds) * 10) / 10,
+        elim: Math.round(avg(elimRounds) * 10) / 10,
+        ps0: Math.round(avg(ps0Rounds) * 10) / 10,
+      },
+      minRounds: allRounds.length > 0 ? Math.min(...allRounds) : 0,
+      maxRounds: allRounds.length > 0 ? Math.max(...allRounds) : 0,
     },
     mcts: {
       avgIterationsPerDecision: totalDecisions > 0 ? totalIter / totalDecisions : 0,
@@ -452,6 +525,34 @@ function compareBaselines(current: BenchmarkResult, baseline: BenchmarkResult): 
   return lines
 }
 
+// ===== GRACEFUL SHUTDOWN (SIGINT) =====
+
+const FLUSH_INTERVAL = 50  // save experience every N games
+let interrupted = false
+
+function saveProgress() {
+  if (experienceDB) {
+    fs.writeFileSync(EXPERIENCE_PATH, experienceDB.serialize())
+    process.stderr.write(`\n📚  Experience saved: ${experienceDB.gamesPlayed} games → ${EXPERIENCE_PATH}\n`)
+  }
+  if (results.length > 0 && FLAG_SAVE) {
+    const partial = aggregate(results)
+    const saveName = FLAG_NAME || 'latest'
+    const savePath = path.join(BASELINES_DIR, `${saveName}.json`)
+    fs.mkdirSync(BASELINES_DIR, { recursive: true })
+    fs.writeFileSync(savePath, JSON.stringify(partial, null, 2))
+    process.stderr.write(`💾  Baseline (${results.length}/${GAME_COUNT} games): ${savePath}\n`)
+  }
+}
+
+process.on('SIGINT', () => {
+  if (interrupted) process.exit(1) // double Ctrl+C = force quit
+  interrupted = true
+  process.stderr.write(`\n\n⚠  Ctrl+C — saving progress (${results.length}/${GAME_COUNT} games)...\n`)
+  saveProgress()
+  process.exit(0)
+})
+
 // ===== MAIN =====
 
 const startTime = Date.now()
@@ -463,6 +564,8 @@ if (FLAG_TRAIN) process.stderr.write(' | TRAINING')
 process.stderr.write('\n' + '─'.repeat(70) + '\n')
 
 for (let i = 0; i < GAME_COUNT; i++) {
+  if (interrupted) break
+
   const t0 = Date.now()
   const result = simulateGame()
   const dt = ((Date.now() - t0) / 1000).toFixed(1)
@@ -477,6 +580,12 @@ for (let i = 0; i < GAME_COUNT; i++) {
   if (experienceDB && result.trace) {
     experienceDB.recordGame(result.trace)
   }
+
+  // Periodic flush — save experience every N games (survives Ctrl+C between flushes)
+  if (experienceDB && (i + 1) % FLUSH_INTERVAL === 0) {
+    fs.writeFileSync(EXPERIENCE_PATH, experienceDB.serialize())
+    process.stderr.write(`    💾 flush: ${experienceDB.gamesPlayed} games saved\n`)
+  }
 }
 
 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
@@ -490,6 +599,8 @@ process.stderr.write(`  Win Rate:          ${(benchmark.results.winRate * 100).t
 process.stderr.write(`  Timeouts:          ${benchmark.results.timeouts} (${(benchmark.results.timeoutRate * 100).toFixed(0)}%)\n`)
 process.stderr.write(`  Avg Rounds:        ${benchmark.results.avgRounds.toFixed(1)}\n`)
 process.stderr.write(`  Win Methods:       PS≥10: ${benchmark.results.psWinCount} | Elimination: ${benchmark.results.elimWinCount} | PS→0: ${benchmark.results.psZeroCount}\n`)
+const rm = benchmark.results.avgRoundsByMethod
+process.stderr.write(`  Rounds/Method:     PS≥10: ${rm.ps}r | Elim: ${rm.elim}r | PS→0: ${rm.ps0}r | min: ${benchmark.results.minRounds}r | max: ${benchmark.results.maxRounds}r\n`)
 process.stderr.write(`  Avg PS Winner:     ${benchmark.results.avgPSWinner.toFixed(1)} | Loser: ${benchmark.results.avgPSLoser.toFixed(1)}\n`)
 process.stderr.write(`  Cards Left:        Winner avg ${benchmark.results.avgWinnerCardsLeft} | Loser avg ${benchmark.results.avgLoserCardsLeft} | Loser 0 cards: ${benchmark.results.loserTrueEliminated}/${benchmark.results.gamesWithWinner}\n`)
 process.stderr.write(`  Plunders:          ${benchmark.results.totalPlunders} total (${(benchmark.results.totalPlunders / (benchmark.results.gamesPlayed || 1)).toFixed(1)}/game)\n`)

@@ -422,7 +422,7 @@
         "abilities": [
             {
                 "trigger": "AURA",
-                "text": "Po wykonaniu {COMBAT} sojusznik może przejść w pozycję {POS_DEF}."
+                "text": "Po wykonaniu {COMBAT} sojusznik przechodzi w pozycję {POS_DEF}."
             }
         ],
         "effectId": "leszy_post_attack_defend"
@@ -499,10 +499,10 @@
                 "trigger": "ACTION",
                 "cost": 0,
                 "limit": "ONCE_PER_TURN",
-                "text": "Podejrzyj wierzch talii rywala."
+                "text": "Wybierz dwie karty ze zdolnościami na polu — ich zdolności zostają trwale zamienione."
             }
         ],
-        "effectId": "rodzanice_scry"
+        "effectId": "rodzanice_steal_buff"
     },
     {
         "id": 20,

@@ -134,26 +134,32 @@ const SCENARIO_MAP: Record<string, ScenarioConfig> = {
     hint: 'Gryf: w turze wystawienia zadaje PODWÓJNE obrażenia! Wystaw i natychmiast atakuj.',
   },
   'krol_wezow_always_counter': {
-    hint: 'Król Wężów: nawet w pozycji OBRONY zawsze kontratakuje atakującego. Postaw w obronie.',
-    allyL1: ['krol_wezow_always_counter'],
+    hint: 'Król Wężów kontratakuje zawsze — nawet w pozycji ataku. Już stoi na polu. Daj PAS — wróg zaatakuje, a Król odda cios!',
+    startOnField: true,
+    allyL1: ['bugaj_def_to_atk'],
+    aiL1: ['bezkost_atk_drain', 'najemnik_mercenary'],
+    aiL2: ['gryf_double_dmg_on_play_turn'],
   },
   'leszy_post_attack_defend': {
-    hint: 'Leszy: po każdym ataku automatycznie przechodzi do pozycji obrony. Zaatakuj nim.',
-    allyL1: ['leszy_post_attack_defend'],
+    hint: 'Leszy: AURA — sojusznicy po ataku mogą przejść w pozycję obrony. Leszy już stoi na polu z dwoma sojusznikami. Zaatakuj sojusznikami — po walce zobaczysz przełączenie na DEF.',
+    startOnField: true,
+    allyL1: ['bugaj_def_to_atk', 'gryf_double_dmg_on_play_turn'],
+    aiL1: ['bezkost_atk_drain', 'dobroochoczy_no_counter'],
+    aiL2: ['blotnik_taunt'],
   },
   'matoha_anti_magic': {
-    hint: 'Matoha: blokuje WSZYSTKIE ataki Magii (typ 2) na Twoją stronę. AI ma magów!',
-    aiL1: ['rusalka_mirror_attack'],
-    aiL2: ['czarnoksieznik_steal_abilities'],
-    aiL3: ['gryf_double_dmg_on_play_turn'],
-    allyL1: ['dobroochoczy_no_counter'],
+    hint: 'Matoha blokuje wrogie Magii. Jedna jest w polu, druga w ręce. Wrogowie-magicy nie mogą atakować, ale Bezkost (wręcz) może!',
+    startOnField: true,
+    handExtras: ['matoha_anti_magic'],
+    aiL1: ['bezkost_atk_drain', 'rusalka_mirror_attack'],
+    aiL2: ['czarnoksieznik_steal_abilities', 'wolch_heal'],
   },
   'mroz_immunity_buffs': {
     hint: 'Mróz: odporny na wszystkie aktywne buffy. Testuj interakcję z efektami.',
     allyL1: ['dobroochoczy_no_counter', 'blotnik_taunt'],
   },
-  'rodzanice_scry': {
-    hint: 'Rodzanice: raz na turę przenosi artefakt/efekt między sojusznikami tej samej linii. ⚡',
+  'rodzanice_steal_buff': {
+    hint: 'Rodzanice: kradnie zdolność wybranej karty na polu i przekazuje sojusznikowi. Trwałe! ⚡',
     allyL1: ['dobroochoczy_no_counter', 'blotnik_taunt'],
   },
   'rusalka_mirror_attack': {

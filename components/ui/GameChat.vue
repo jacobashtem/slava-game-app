@@ -18,7 +18,7 @@ const mp = useMultiplayer()
 const isMP = computed(() => game.isMultiplayerMode)
 
 // ===== PANEL STATE =====
-const panelOpen = ref(true)
+const panelOpen = ref(false)
 const inputText = ref('')
 const listRef = ref<HTMLElement | null>(null)
 const showProfile = ref(false)

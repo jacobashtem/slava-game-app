@@ -27,6 +27,7 @@ import {
   isHealerEffect, isGrowerEffect, isPSGenEffect,
   assessGameSituation,
 } from './StrategicPatterns'
+import { ExperienceDB } from './ExperienceDB'
 
 const SOUL_THRESHOLD = GOLD_EDITION_RULES.SOUL_HARVEST_THRESHOLD
 const PS_TARGET = GOLD_EDITION_RULES.GLORY_WIN_TARGET
@@ -83,6 +84,10 @@ function canReachTarget(s: LightState, attacker: LightCard, target: LightCard, s
 
 // ===== SCORING =====
 
+// Shared ExperienceDB reference (set by MCTSPlayer)
+let _experienceDB: ExperienceDB | null = null
+export function setCombatExperienceDB(db: ExperienceDB | null): void { _experienceDB = db }
+
 function scoreTarget(attacker: LightCard, target: LightCard, myPS: number, soulPts: number): number {
   let sc = 0
   const canKill = target.def <= attacker.atk
@@ -104,6 +109,15 @@ function scoreTarget(attacker: LightCard, target: LightCard, myPS: number, soulP
     const attackerKV = killValue(attacker)
     if (targetKV > attackerKV * 1.3) sc += 30
   }
+
+  // V7.3: Experience-based bonus — "historycznie atakowanie tego targetu tym attackerem → WR"
+  if (_experienceDB && attacker.effectId && target.effectId) {
+    const wr = _experienceDB.getCombatTargetWR(attacker.effectId, target.effectId)
+    if (wr !== 0.5) {
+      sc += (wr - 0.5) * 40  // ±20 score bonus based on historical WR
+    }
+  }
+
   return sc
 }
 
@@ -413,14 +427,15 @@ export function generateCombatPlans(
 
   // ==============================
   // 6. PLUNDER — when enemy field empty, round >= 3
+  //    Requires: creature with unused attack action (will be set to ATTACK pos)
   // ==============================
   if (enemyCards.length === 0 && s.round >= 3 && s.ps[opp]! > 0) {
-    const strongest = myCards
-      .filter(c => c.atk > 0)
+    const plunderer = myCards
+      .filter(c => c.atk > 0 && !c.hasAttacked && !c.cannotAttack)
       .sort((a, b) => b.atk - a.atk)[0]
 
-    if (strongest) {
-      const attackerIds = new Set([strongest.instanceId])
+    if (plunderer) {
+      const attackerIds = new Set([plunderer.instanceId])
       const posSteps = makePositionSteps(myCards, attackerIds)
       let score = 5 + Math.max(0, PS_TARGET - myPS) * 2
       if (myPS + 1 >= PS_TARGET) score += 50

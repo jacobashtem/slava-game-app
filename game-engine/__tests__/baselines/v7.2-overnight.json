@@ -1,0 +1,46 @@
+{
+  "name": "v7.2-overnight",
+  "timestamp": "2026-03-20T09:16:45.858Z",
+  "config": {
+    "games": 1000,
+    "opponent": "veteran",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 1000,
+    "gamesWithWinner": 998,
+    "mctsWins": 497,
+    "oppWins": 501,
+    "timeouts": 2,
+    "errors": 0,
+    "winRate": 0.49799599198396793,
+    "timeoutRate": 0.002,
+    "avgRounds": 19.716,
+    "avgPSWinner": 5.8086172344689375,
+    "avgPSLoser": 1.5771543086172344,
+    "psWinCount": 228,
+    "elimWinCount": 226,
+    "psZeroCount": 544,
+    "totalPlunders": 1892,
+    "avgWinnerCardsLeft": 13.5,
+    "avgLoserCardsLeft": 10.6,
+    "loserTrueEliminated": 22,
+    "avgRoundsByMethod": {
+      "ps": 16.5,
+      "elim": 25.7,
+      "ps0": 18.4
+    },
+    "minRounds": 4,
+    "maxRounds": 76
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 26152.428979375993,
+    "avgTreeNodes": 74.97482813326282,
+    "avgRolloutDepth": 6.914816003660227,
+    "avgTimePerDecisionMs": 1017.7156530936013,
+    "avgBestMoveWR": 0.626611012839925,
+    "earlyTerminationRate": 0.720095187731359,
+    "totalDecisions": 18910
+  }
+}

@@ -28,8 +28,8 @@ const domainImgs: Record<number, string> = { 1: domainImg1, 2: domainImg2, 3: do
 const game = useGameStore()
 
 const interaction = computed(() => game.state?.pendingInteraction ?? null)
-// Hipnoza Alkonosta jest obsługiwana przez podświetlenie na polu, nie przez modal
-const show = computed(() => !!interaction.value && interaction.value.type !== 'alkonost_target')
+// Hipnoza Alkonosta i Rodzanice faza 2 są obsługiwane przez podświetlenie na polu, nie przez modal
+const show = computed(() => !!interaction.value && interaction.value.type !== 'alkonost_target' && interaction.value.type !== 'rodzanice_choose_recipient')
 
 // Dragon hatch data (from pending interaction metadata)
 const dragonChoices = computed(() => {

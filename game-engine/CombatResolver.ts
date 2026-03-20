@@ -8,7 +8,7 @@ import { CardPosition, AttackType, BattleLine, EffectTrigger } from './constants
 import type { PlayerSide } from './types'
 import { cloneGameState, addLog, moveToGraveyard } from './GameStateUtils'
 import { canAttack, removeFromField, getEnemyFrontLine, getOwnFrontLine } from './LineManager'
-import { getEffect } from './EffectRegistry'
+import { getEffect, hasEffectId } from './EffectRegistry'
 import { trackKill, trackDamageDealt, harvestSoul } from './GloryManager'
 
 // ===================================================================
@@ -1016,7 +1016,7 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
   // Guślarka: sojusznicy atakujący demony (Weles, idDomain=4) zyskują +2 ATK
   const attackerSideField = Object.values(state.players[attacker.owner].field.lines).flat()
   const hasGuslarka = attackerSideField
-    .some(c => (c.cardData as any).effectId === 'guslarka_bonus_vs_demon' && c.instanceId !== attacker.instanceId)
+    .some(c => hasEffectId(c, 'guslarka_bonus_vs_demon') && c.instanceId !== attacker.instanceId)
   if (hasGuslarka && (defender.cardData as any).idDomain === 4) {
     damage += 2
     bonusLog.push(addLog(state, `Guślarka: +2 ATK dla ${attacker.cardData.name} vs demon!`, 'effect'))
@@ -1024,7 +1024,7 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
 
   // Żerca Welesa: sojusznicze demony (Weles, idDomain=4) zyskują +1 ATK
   const hasZercaWelesa = attackerSideField
-    .some(c => (c.cardData as any).effectId === 'zerca_welesa_demon_buff' && c.instanceId !== attacker.instanceId)
+    .some(c => hasEffectId(c, 'zerca_welesa_demon_buff') && c.instanceId !== attacker.instanceId)
   if (hasZercaWelesa && (attacker.cardData as any).idDomain === 4) {
     damage += 1
     bonusLog.push(addLog(state, `Żerca Welesa: +1 ATK dla demona ${attacker.cardData.name}.`, 'effect'))
@@ -1032,7 +1032,7 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
 
   // Polewik: L1 Żywi sąsiedzi +1 ATK
   const hasPolewik = attackerSideField
-    .some(c => (c.cardData as any).effectId === 'polewik_buff_neighbors'
+    .some(c => hasEffectId(c, 'polewik_buff_neighbors')
           && c.line === BattleLine.FRONT
           && c.instanceId !== attacker.instanceId)
   if (hasPolewik && (attacker.cardData as any).idDomain === 2 && attacker.line === BattleLine.FRONT) {
@@ -1041,7 +1041,7 @@ function calculateDamage(state: GameState, attacker: CardInstance, defender: Car
   }
 
   // Baba (#31): +4 ATK vs wszystkich poza wybraną domeną
-  if ((attacker.cardData as any).effectId === 'baba_bonus_vs_type') {
+  if (hasEffectId(attacker, 'baba_bonus_vs_type')) {
     const chosenDomain = (attacker.metadata.babaChosenDomain as number) ?? 4
     const defenderDomain = (defender.cardData as any).idDomain as number
     if (defenderDomain !== chosenDomain) {
@@ -1073,7 +1073,7 @@ function shouldCounterattack(
   // Dobroochoczy: dopóki jest na polu, ŻADNA istota nie kontratakuje (chyba że sparaliżowany/uciszony)
   const allCreatures = getAllCreaturesForPlayer(state, 'player1').concat(getAllCreaturesForPlayer(state, 'player2'))
   const dobroochoczyOnField = allCreatures.some(c =>
-    (c.cardData as any).effectId === 'dobroochoczy_no_counter' &&
+    hasEffectId(c, 'dobroochoczy_no_counter') &&
     !c.isSilenced &&
     !c.metadata?.dziewiatkoParalyze &&
     (c.paralyzeRoundsLeft === null || c.paralyzeRoundsLeft === 0)
@@ -1084,11 +1084,11 @@ function shouldCounterattack(
   if (defender.activeEffects.some(e => e.effectId === 'dobroochoczy_no_counter')) return { canCounter: false }
 
   // Smocze Jajo / Bałwan: nie kontratakuje
-  if ((defender.cardData as any).effectId === 'smocze_jajo_hatch') return { canCounter: false }
-  if ((defender.cardData as any).effectId === 'balwan_free_divine_favor') return { canCounter: false }
+  if (hasEffectId(defender, 'smocze_jajo_hatch')) return { canCounter: false }
+  if (hasEffectId(defender, 'balwan_free_divine_favor')) return { canCounter: false }
 
   // Cmuch (#119): atakujący nie otrzymuje kontrataku
-  if ((attacker.cardData as any).effectId === 'cmuch_no_counter_received') return { canCounter: false, reason: `${attacker.cardData.name}: Ćmuch unika kontrataku!` }
+  if (hasEffectId(attacker, 'cmuch_no_counter_received')) return { canCounter: false, reason: `${attacker.cardData.name}: Ćmuch unika kontrataku!` }
 
   // Miecz Kladenet / Miecz Kladenet+: brak kontrataku dla nośnika
   if (attacker.equippedArtifacts.some(a => ['adventure_miecz_kladenet', 'adventure_miecz_kladenet_enhanced'].includes((a as any).effectId))) return { canCounter: false }
@@ -1297,28 +1297,58 @@ function triggerEffect(
     return { newState: state, log: [] }
   }
 
-  const effectDef = getEffect(card.cardData.effectId)
-  if (!effectDef) return { newState: state, log: [] }
+  let currentState = state
+  let allLog: LogEntry[] = []
 
-  const triggers = Array.isArray(effectDef.trigger) ? effectDef.trigger : [effectDef.trigger]
-  if (!triggers.includes(trigger)) return { newState: state, log: [] }
+  // Rodzanice: zdolność skradziona → pomiń natywny efekt
+  if (!card.metadata.rodzaniceStolen) {
+    const effectDef = getEffect(card.cardData.effectId)
+    if (effectDef) {
+      const triggers = Array.isArray(effectDef.trigger) ? effectDef.trigger : [effectDef.trigger]
+      if (triggers.includes(trigger)) {
+        // Centralny guard: odporność (isImmune) blokuje wrogie triggery celujące w odporną istotę
+        if (target && target.isImmune && card.owner !== target.owner
+            && (trigger === EffectTrigger.ON_DAMAGE_DEALT || trigger === EffectTrigger.ON_ATTACK)) {
+          const ns = cloneGameState(state)
+          const log = addLog(ns, `${target.cardData.name}: ODPORNY — ${card.cardData.name} nie wywołuje efektu!`, 'effect')
+          return { newState: ns, log: [log] }
+        }
 
-  // Centralny guard: odporność (isImmune) blokuje wrogie triggery celujące w odporną istotę
-  // Dotyczy ON_DAMAGE_DEALT i ON_ATTACK — card to wrogi atakujący, target to cel/ofiara
-  if (target && target.isImmune && card.owner !== target.owner
-      && (trigger === EffectTrigger.ON_DAMAGE_DEALT || trigger === EffectTrigger.ON_ATTACK)) {
-    const newState = cloneGameState(state)
-    const log = addLog(newState, `${target.cardData.name}: ODPORNY — ${card.cardData.name} nie wywołuje efektu!`, 'effect')
-    return { newState, log: [log] }
+        try {
+          const result = effectDef.execute({ state: currentState, source: card, target, trigger, value })
+          currentState = result.newState
+          allLog.push(...result.log)
+        } catch (err) {
+          // Effect execution failed — silently fallback to no-op
+        }
+      }
+    }
   }
 
-  try {
-    const result = effectDef.execute({ state, source: card, target, trigger, value })
-    return { newState: result.newState, log: result.log }
-  } catch (err) {
-    // Effect execution failed — silently fallback to no-op
+  // Rodzanice: bonus effect — odpal zdolność otrzymaną od Rodzanic (pomijaj ON_PLAY)
+  const bonusEffectId = card.metadata.rodzaniceBonusEffectId as string | undefined
+  if (bonusEffectId && trigger !== EffectTrigger.ON_PLAY) {
+    const bonusDef = getEffect(bonusEffectId)
+    if (bonusDef) {
+      const bonusTriggers = Array.isArray(bonusDef.trigger) ? bonusDef.trigger : [bonusDef.trigger]
+      if (bonusTriggers.includes(trigger)) {
+        try {
+          const bonusResult = bonusDef.execute({ state: currentState, source: card, target, trigger, value })
+          currentState = bonusResult.newState
+          allLog.push(...bonusResult.log)
+        } catch (err) {
+          // Bonus effect execution failed — silently fallback
+        }
+      }
+    }
+  }
+
+  // Jeśli żaden efekt nie był odpalony, zwróć oryginał
+  if (allLog.length === 0 && currentState === state) {
     return { newState: state, log: [] }
   }
+
+  return { newState: currentState, log: allLog }
 }
 
 function processPoison(state: GameState, log: LogEntry[]): GameState {

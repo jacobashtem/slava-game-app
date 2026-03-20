@@ -27,6 +27,7 @@ import { generateMacroMoves } from './MacroMoveGenerator'
 import { computeHash } from './StateHash'
 import { TranspositionTable } from './TranspositionTable'
 import { ExperienceDB } from './ExperienceDB'
+import { setCombatExperienceDB } from './CombatPlanGenerator'
 import { OpeningBook } from './OpeningBook'
 
 export class MCTSPlayer {
@@ -61,6 +62,7 @@ export class MCTSPlayer {
     MCTSPlayer.experienceDB = new ExperienceDB()
     MCTSPlayer.experienceDB.deserialize(json)
     MCTSPlayer.openingBook = new OpeningBook(MCTSPlayer.experienceDB)
+    setCombatExperienceDB(MCTSPlayer.experienceDB)
   }
 
   /** Get experience DB (for recording games in benchmark). */
@@ -72,6 +74,7 @@ export class MCTSPlayer {
   static initExperience(): ExperienceDB {
     MCTSPlayer.experienceDB = new ExperienceDB()
     MCTSPlayer.openingBook = new OpeningBook(MCTSPlayer.experienceDB)
+    setCombatExperienceDB(MCTSPlayer.experienceDB)
     return MCTSPlayer.experienceDB
   }
 

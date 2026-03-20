@@ -1,0 +1,46 @@
+{
+  "name": "v7.2-full-fix",
+  "timestamp": "2026-03-19T21:02:14.928Z",
+  "config": {
+    "games": 200,
+    "opponent": "veteran",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 200,
+    "gamesWithWinner": 199,
+    "mctsWins": 90,
+    "oppWins": 109,
+    "timeouts": 1,
+    "errors": 0,
+    "winRate": 0.45226130653266333,
+    "timeoutRate": 0.005,
+    "avgRounds": 19.14,
+    "avgPSWinner": 5.874371859296482,
+    "avgPSLoser": 1.5829145728643217,
+    "psWinCount": 45,
+    "elimWinCount": 45,
+    "psZeroCount": 109,
+    "totalPlunders": 391,
+    "avgWinnerCardsLeft": 13.7,
+    "avgLoserCardsLeft": 11.4,
+    "loserTrueEliminated": 7,
+    "avgRoundsByMethod": {
+      "ps": 15.9,
+      "elim": 24.8,
+      "ps0": 17.6
+    },
+    "minRounds": 6,
+    "maxRounds": 76
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 22602.809122997558,
+    "avgTreeNodes": 74.48004344284551,
+    "avgRolloutDepth": 6.881961428316451,
+    "avgTimePerDecisionMs": 1102.6320934021178,
+    "avgBestMoveWR": 0.6045690141907202,
+    "earlyTerminationRate": 0.6462123269074125,
+    "totalDecisions": 3683
+  }
+}

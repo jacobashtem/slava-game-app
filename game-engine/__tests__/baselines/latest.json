@@ -1,34 +1,39 @@
 {
   "name": "latest",
-  "timestamp": "2026-03-17T19:25:07.146Z",
+  "timestamp": "2026-03-19T08:00:37.849Z",
   "config": {
-    "games": 5,
-    "opponent": "500",
-    "timeBudgetMs": 500,
+    "games": 20,
+    "opponent": "veteran",
+    "timeBudgetMs": 2000,
     "maxTurns": 150
   },
   "results": {
-    "gamesPlayed": 5,
-    "gamesWithWinner": 1,
-    "mctsWins": 0,
-    "oppWins": 1,
-    "timeouts": 4,
+    "gamesPlayed": 20,
+    "gamesWithWinner": 20,
+    "mctsWins": 8,
+    "oppWins": 12,
+    "timeouts": 0,
     "errors": 0,
-    "winRate": 0,
-    "timeoutRate": 0.8,
-    "avgRounds": 66.4,
-    "avgPSWinner": 1,
-    "avgPSLoser": 0,
-    "psWinCount": 0,
-    "elimWinCount": 1
+    "winRate": 0.4,
+    "timeoutRate": 0,
+    "avgRounds": 18.7,
+    "avgPSWinner": 5,
+    "avgPSLoser": 1.55,
+    "psWinCount": 3,
+    "elimWinCount": 5,
+    "psZeroCount": 12,
+    "totalPlunders": 36,
+    "avgWinnerCardsLeft": 14.2,
+    "avgLoserCardsLeft": 12.8,
+    "loserTrueEliminated": 1
   },
   "mcts": {
-    "avgIterationsPerDecision": 5730.131901840491,
-    "avgTreeNodes": 5.230061349693251,
-    "avgRolloutDepth": 6.396835494353647,
-    "avgTimePerDecisionMs": 268.57975460122697,
-    "avgBestMoveWR": 0.34219822450578347,
-    "earlyTerminationRate": 0.1901840490797546,
-    "totalDecisions": 326
+    "avgIterationsPerDecision": 28219.87222222222,
+    "avgTreeNodes": 70.18888888888888,
+    "avgRolloutDepth": 6.650946401108991,
+    "avgTimePerDecisionMs": 970.0611111111111,
+    "avgBestMoveWR": 0.5883577389416685,
+    "earlyTerminationRate": 0.7583333333333333,
+    "totalDecisions": 360
   }
 }

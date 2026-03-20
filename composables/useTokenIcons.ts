@@ -34,7 +34,9 @@ const attackTypeImgMap: Record<number, string> = {
 // Token → icon mapping (ATK handled separately based on card context)
 const tokenMap: Record<string, { img?: string; iconify?: string; color: string; label: string }> = {
   DEF:       { iconify: 'game-icons:shield', color: '#3b82f6', label: 'Obrona' },
-  DMG:       { iconify: 'game-icons:battle-axe', color: '#ef4444', label: 'Obrażenia' },
+  // DMG is handled context-sensitively below (like ATK), not in static map
+  POS_ATK:   { iconify: 'mdi:rectangle', color: '#ef4444', label: 'Pozycja Ataku' },
+  POS_DEF:   { iconify: 'mdi:rectangle', color: '#3b82f6', label: 'Pozycja Obrony' },
   FLY:       { iconify: 'game-icons:liberty-wing', color: '#ffffff', label: 'Lot' },
   GOLD:      { iconify: 'game-icons:two-coins', color: '#eab308', label: 'Punkty Sławy' },
   POISON:    { iconify: 'mdi:bottle-tonic', color: '#a3e635', label: 'Trucizna' },
@@ -62,8 +64,14 @@ export function parseTokens(text: string, attackType?: number): TokenSegment[] {
   let lastIndex = 0
   let match: RegExpExecArray | null
 
-  // Resolve ATK icon based on card's attack type
-  const atkImg = attackTypeImgMap[attackType ?? 1] ?? attackTypeImg1
+  // Resolve ATK/DMG icon based on card's attack type (Iconify — matches card footer)
+  const atkIconMap: Record<number, string> = {
+    0: 'game-icons:battle-axe',   // MELEE
+    1: 'bi:fire',                  // ELEMENTAL
+    2: 'fa6-solid:wand-sparkles',  // MAGIC
+    3: 'boxicons:bow-filled',      // RANGED
+  }
+  const atkIconify = atkIconMap[attackType ?? 0] ?? 'game-icons:battle-axe'
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -72,13 +80,13 @@ export function parseTokens(text: string, attackType?: number): TokenSegment[] {
 
     const tokenName = match[1]!
 
-    if (tokenName === 'ATK') {
+    if (tokenName === 'ATK' || tokenName === 'DMG') {
       segments.push({
         type: 'icon',
-        value: 'ATK',
-        img: atkImg,
-        color: '#ef4444',
-        label: 'Atak',
+        value: tokenName,
+        iconify: atkIconify,
+        color: '#fb923c',
+        label: tokenName === 'ATK' ? 'Atak' : 'Obrażenia',
       })
     } else {
       const tokenInfo = tokenMap[tokenName]

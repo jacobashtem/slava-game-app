@@ -50,7 +50,7 @@ const THREAT_TIERS: Record<string, number> = {
   mavka_line_shield: 4,
   blotnik_taunt: 3,
   chasnik_gold_on_kill: 3,
-  rodzanice_swap_buff: 3,
+  rodzanice_steal_buff: 3,
   polewik_buff_neighbors: 3,
   brzegina_shield_for_gold: 3,
   domowik_hand_size: 3,
@@ -107,7 +107,7 @@ const SYNERGY_PAIRS: [string, string][] = [
   ['blotnik_taunt', 'polewik_buff_neighbors'],
   ['chasnik_gold_on_kill', 'kania_chain_kill'],
   ['cicha_kill_weak', 'morowa_dziewica_aoe_all'],
-  ['rodzanice_swap_buff', 'polewik_buff_neighbors'],
+  ['rodzanice_steal_buff', 'polewik_buff_neighbors'],
 ]
 
 const SYNERGY_SET = new Set<string>()
@@ -139,9 +139,11 @@ export function countFieldSynergies(s: LightState, side: number): number {
 // KILL VALUE — trade-value scoring for combat
 // ===================================================================
 
-/** Compute kill value of a creature (how much it's worth to kill/lose). */
+/** Compute kill value of a creature (how much it's worth to kill/lose).
+ *  V7: ability value weighted 4x when active, HP-adjusted. */
 export function killValue(c: LightCard): number {
-  return c.atk * 1.5 + c.def * 0.5 + effectThreatTier(c.effectId) * 3
+  const abilityMult = c.isSilenced ? 1.5 : 4
+  return c.atk * 1.5 + c.def * 0.5 + effectThreatTier(c.effectId) * abilityMult
 }
 
 // ===================================================================
@@ -150,7 +152,7 @@ export function killValue(c: LightCard): number {
 
 /** Healers/regen that negate our damage if left alive. */
 const HEALER_EFFECTS = new Set([
-  'barstuk_ally_regen', 'wolch_heal', 'rodzanice_swap_buff',
+  'barstuk_ally_regen', 'wolch_heal', 'rodzanice_steal_buff',
 ])
 
 /** Snowball growers that become unstoppable if left alive. */
@@ -248,22 +250,22 @@ export function assessGameSituation(s: LightState, side: number): GameSituation 
 
 /**
  * Should we spend PS on enhanced adventure?
- * Returns true only if we have slack — not racing to PS target.
+ * V7.3: Enhanced = "czy stać mnie na opóźnienie wygranej o 1 PS?"
+ * Każdy 1 PS to 10% celu (target = 10). Wydaj TYLKO z komfortowym buforem.
+ * Nie zależy od PS oponenta — to decyzja o MOIM tempie do wygranej.
+ * Oczekiwane: ~1-2 enhanced na grę, nie 5.
  */
 export function canAffordEnhancedSmart(
   myPS: number,
-  oppPS: number,
+  _oppPS: number,
   round: number,
 ): boolean {
-  if (myPS <= 1) return false
-  // Never spend if close to winning
+  // Never in early game — nie masz jeszcze harvestów
+  if (round <= 4) return false
+  // Never when close to winning — nie oddalaj się od celu
   if (myPS >= PS_TARGET - 2) return false
-  // Don't spend if opponent is ahead and we're trailing
-  if (oppPS > myPS + 1 && myPS <= 3) return false
-  // Early game: spend freely if PS >= 3
-  if (round <= 4) return myPS >= 3
-  // Late game: conservative
-  return myPS >= 4
+  // Komfortowy bufor: 6+ PS (po wydaniu zostaje 5 = połowa celu)
+  return myPS >= 6
 }
 
 // ===================================================================

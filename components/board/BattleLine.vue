@@ -155,6 +155,12 @@ function onCardClick(card: CardInstance) {
   // Generyczny wybór celu zdolności — field highlighting
   if (ui.mode === 'effect_target' && ui.effectTargetIds.has(card.instanceId) && ui.effectTargetSourceId) {
     const sourceId = ui.effectTargetSourceId
+    // Rodzanice faza 2: pendingInteraction → resolvePendingInteraction zamiast activateCreatureEffect
+    if (game.state?.pendingInteraction?.type === 'rodzanice_choose_recipient') {
+      ui.clearEffectTarget()
+      game.resolvePendingInteraction(card.instanceId)
+      return
+    }
     ui.clearEffectTarget()
     game.activateCreatureEffect(sourceId, card.instanceId)
     return

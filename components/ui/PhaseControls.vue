@@ -4,7 +4,7 @@ import { Icon } from '@iconify/vue'
 import { useI18n } from '#imports'
 import { useGameStore } from '../../stores/gameStore'
 import { useUIStore } from '../../stores/uiStore'
-import { GamePhase } from '../../game-engine/constants'
+import { GamePhase, CardPosition } from '../../game-engine/constants'
 import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 
 const { t } = useI18n()
@@ -25,8 +25,18 @@ const canPlunder = computed(() => {
   if (!game.state) return false
   const s = game.state
   if (s.roundNumber < 3 || hasEnemiesOnField.value || !game.isPlayerTurn) return false
-  if (s.currentPhase !== GamePhase.PLAY && s.currentPhase !== GamePhase.COMBAT) return false
-  const enemyCurrency = s.gameMode === 'slava' ? s.players.player2.glory : s.players.player2.gold
+  if (s.currentPhase !== GamePhase.COMBAT) return false
+  // Muszę mieć istotę w ATTACK z niewykorzystanym atakiem
+  const mySide = game.mySide ?? 'player1'
+  const myCreatures = getAllCreaturesOnField(s, mySide)
+  const hasAvailableAttacker = myCreatures.some(c =>
+    c.position === CardPosition.ATTACK &&
+    !c.hasAttackedThisTurn &&
+    !c.cannotAttack
+  )
+  if (!hasAvailableAttacker) return false
+  const oppSide = mySide === 'player1' ? 'player2' : 'player1'
+  const enemyCurrency = s.gameMode === 'slava' ? s.players[oppSide].glory : s.players[oppSide].gold
   return (enemyCurrency ?? 0) > 0
 })
 
@@ -35,8 +45,8 @@ const plunderLabel = computed(() => t('game.plunder'))
 function handlePhase() {
   ui.clearSelection()
 
-  // ZŁUP: zamiast normalnej fazy combat — łup i kończ turę
-  if (canPlunder.value && (game.currentPhase === GamePhase.PLAY || game.currentPhase === GamePhase.COMBAT)) {
+  // ZŁUP: w fazie combat gdy wróg nie ma istot
+  if (canPlunder.value && game.currentPhase === GamePhase.COMBAT) {
     game.plunder()
     game.endTurn()
     return

@@ -1,0 +1,46 @@
+{
+  "name": "v7.1-plunder-fix",
+  "timestamp": "2026-03-19T17:42:03.342Z",
+  "config": {
+    "games": 200,
+    "opponent": "veteran",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 200,
+    "gamesWithWinner": 200,
+    "mctsWins": 110,
+    "oppWins": 90,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.55,
+    "timeoutRate": 0,
+    "avgRounds": 20.07,
+    "avgPSWinner": 4.21,
+    "avgPSLoser": 1.425,
+    "psWinCount": 6,
+    "elimWinCount": 67,
+    "psZeroCount": 127,
+    "totalPlunders": 0,
+    "avgWinnerCardsLeft": 12.5,
+    "avgLoserCardsLeft": 10.2,
+    "loserTrueEliminated": 8,
+    "avgRoundsByMethod": {
+      "ps": 21.5,
+      "elim": 24.3,
+      "ps0": 17.8
+    },
+    "minRounds": 5,
+    "maxRounds": 40
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 23488.03792207792,
+    "avgTreeNodes": 74.20077922077922,
+    "avgRolloutDepth": 7.150190575902383,
+    "avgTimePerDecisionMs": 994.8885714285715,
+    "avgBestMoveWR": 0.6279510377046816,
+    "earlyTerminationRate": 0.7093506493506494,
+    "totalDecisions": 3850
+  }
+}

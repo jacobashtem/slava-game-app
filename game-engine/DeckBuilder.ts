@@ -50,7 +50,7 @@ export const ALPHA_CREATURE_EFFECT_IDS = new Set([
   'leszy_post_attack_defend',
   'matoha_anti_magic',
   'mroz_immunity_buffs',
-  'rodzanice_scry',
+  'rodzanice_steal_buff',
   'rusalka_mirror_attack',
   'rybi_krol_pierce_immunity',
   'strela_flash_counter',

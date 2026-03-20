@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slava Menu — Preview</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@iconify/iconify@3/dist/iconify.min.css">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0812;
+    --bg-card: #12101a;
+    --bg-card-hover: #1a1624;
+    --text: #d4cbb8;
+    --text-bright: #ede6d8;
+    --text-muted: #7a7060;
+    --gold: #c8a84e;
+    --gold-bright: #e0c468;
+    --gold-dim: rgba(200, 168, 78, 0.12);
+    --border: rgba(200, 168, 78, 0.1);
+    --border-hover: rgba(200, 168, 78, 0.28);
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .page {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 36px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    position: relative;
+  }
+
+  /* ===== BACKGROUND ===== */
+  .bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .bg-fog {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 100% 60% at 50% 0%, rgba(200, 120, 40, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 70% at 50% 100%, rgba(120, 40, 15, 0.08) 0%, transparent 50%);
+  }
+  .bg-vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.5) 100%);
+  }
+
+  .content { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  /* ===== PLAYER BAR ===== */
+  .player-bar {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 12px 16px; border-radius: 12px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .player-bar:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
+
+  .pb-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 2px solid rgba(200, 168, 78, 0.25);
+    background: rgba(200, 168, 78, 0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pb-avatar iconify-icon { font-size: 22px; color: var(--gold); }
+  .pb-name { font-size: 15px; font-weight: 600; color: var(--text-bright); }
+  .pb-level { font-size: 11px; color: var(--gold); font-weight: 600; }
+  .pb-xp {
+    height: 4px; border-radius: 2px; background: rgba(200,168,78,0.1);
+    overflow: hidden; flex: 1; margin: 0 8px;
+  }
+  .pb-xp-fill { height: 100%; width: 65%; background: linear-gradient(90deg, var(--gold), #c47030); border-radius: 2px; }
+  .pb-sub { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
+
+  /* ===== LOGO ===== */
+  .logo {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 8px 0 0;
+  }
+
+  .ornament {
+    display: flex; align-items: center; gap: 10px; width: 200px;
+  }
+  .orn-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(200,168,78,0.2), transparent); }
+  .orn-icon { color: rgba(200,168,78,0.2); font-size: 14px; }
+
+  .emblem {
+    width: 76px; height: 76px; border-radius: 50%;
+    border: 2px solid rgba(200,168,78,0.2);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; margin: 8px 0;
+  }
+  .emblem::before {
+    content: ''; position: absolute; inset: -6px; border-radius: 50%;
+    border: 1px solid rgba(200,168,78,0.08);
+  }
+  .emblem iconify-icon { font-size: 36px; color: var(--gold); filter: drop-shadow(0 0 12px rgba(200,100,30,0.4)); }
+
+  .title {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 54px; font-weight: 600; letter-spacing: 0.22em;
+    color: var(--text-bright);
+    text-shadow: 0 0 40px rgba(200,100,30,0.2), 0 2px 10px rgba(0,0,0,0.7);
+  }
+
+  .subtitle {
+    font-size: 12px; color: var(--gold); letter-spacing: 0.2em;
+    text-transform: uppercase; font-weight: 700;
+  }
+
+  .tagline {
+    font-size: 12px; color: var(--text-muted); font-style: italic;
+    letter-spacing: 0.06em;
+  }
+
+  /* ===== GAME MODES ===== */
+  .modes { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .modes-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .mode {
+    position: relative; display: flex; align-items: center; gap: 14px;
+    padding: 18px 20px; border-radius: 12px; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.25s; overflow: hidden;
+    text-decoration: none; color: inherit;
+  }
+  .mode:hover { transform: translateY(-2px); }
+
+  .mode-icon { font-size: 30px; flex-shrink: 0; z-index: 1; }
+  .mode-text { display: flex; flex-direction: column; gap: 3px; z-index: 1; flex: 1; }
+  .mode-name { font-family: 'Cinzel', Georgia, serif; font-size: 20px; font-weight: 600; color: var(--text-bright); }
+  .mode-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+  .mode-badge {
+    position: absolute; top: 8px; right: 10px;
+    font-size: 8px; font-weight: 800; letter-spacing: 0.14em;
+    padding: 2px 8px; border-radius: 4px; z-index: 1;
+  }
+
+  /* Gold Edition */
+  .mode-gold {
+    background: linear-gradient(135deg, rgba(200,168,78,0.1) 0%, rgba(120,60,20,0.08) 100%);
+    border-color: rgba(200,168,78,0.2);
+  }
+  .mode-gold:hover { border-color: rgba(200,168,78,0.45); box-shadow: 0 4px 24px rgba(200,168,78,0.08); }
+  .mode-gold .mode-icon { color: var(--gold-bright); }
+  .mode-gold .mode-badge { color: var(--gold); background: rgba(200,168,78,0.1); border: 1px solid rgba(200,168,78,0.2); }
+
+  /* Slava */
+  .mode-slava {
+    background: linear-gradient(135deg, rgba(180,40,20,0.1) 0%, rgba(80,20,10,0.06) 100%);
+    border-color: rgba(180,60,30,0.15);
+  }
+  .mode-slava:hover { border-color: rgba(200,80,40,0.4); box-shadow: 0 4px 24px rgba(180,50,20,0.08); }
+  .mode-slava .mode-icon { color: #e06040; }
+
+  /* Tutorial */
+  .mode-tut {
+    background: linear-gradient(135deg, rgba(100,160,120,0.08) 0%, rgba(40,80,60,0.06) 100%);
+    border-color: rgba(100,160,120,0.12);
+  }
+  .mode-tut:hover { border-color: rgba(120,180,140,0.35); box-shadow: 0 4px 24px rgba(100,160,120,0.06); }
+  .mode-tut .mode-icon { color: #6ac080; }
+
+  /* Campaign */
+  .mode-camp {
+    background: linear-gradient(135deg, rgba(200,120,40,0.1) 0%, rgba(160,80,20,0.06) 100%);
+    border-color: rgba(200,120,40,0.15);
+  }
+  .mode-camp:hover { border-color: rgba(200,120,40,0.4); box-shadow: 0 4px 24px rgba(200,120,40,0.08); }
+  .mode-camp .mode-icon { color: #e8984a; }
+  .mode-camp .mode-badge { color: #e8984a; background: rgba(200,120,40,0.1); border: 1px solid rgba(200,120,40,0.2); }
+
+  .modes-pair .mode { flex-direction: column; text-align: center; padding: 18px 12px; gap: 10px; }
+  .modes-pair .mode-text { align-items: center; }
+  .modes-pair .mode-name { font-size: 17px; }
+  .modes-pair .mode-desc { font-size: 11px; }
+
+  /* ===== SETTINGS ===== */
+  .settings-toggle {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 12px 16px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--text-muted); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .settings-toggle:hover { background: var(--bg-card-hover); color: var(--text); border-color: var(--border-hover); }
+  .st-icon { font-size: 16px; color: var(--gold); opacity: 0.5; }
+  .st-chev { margin-left: auto; font-size: 16px; opacity: 0.4; }
+
+  .settings-panel {
+    width: 100%; padding: 18px; border-radius: 12px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .sg-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .sg-label iconify-icon { font-size: 14px; color: var(--gold); opacity: 0.5; }
+  .sg-hint { font-weight: 400; font-style: italic; text-transform: none; letter-spacing: 0; opacity: 0.7; }
+
+  .sg-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .sg-btn {
+    flex: 1 1 calc(50% - 3px); display: flex; align-items: center; justify-content: center; gap: 5px;
+    padding: 10px 10px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.02);
+    color: #6b6055; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .sg-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+  .sg-btn.active { border-color: rgba(200,168,78,0.3); color: var(--gold); background: var(--gold-dim); }
+
+  /* Domains */
+  .domain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .dom-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 12px 8px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.02);
+    color: #6b6055; cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .dom-btn:hover { background: rgba(255,255,255,0.04); }
+  .dom-btn.active { border-color: var(--dc); background: color-mix(in srgb, var(--dc) 8%, transparent); }
+  .dom-btn.active .dom-icon { color: var(--dc); }
+  .dom-btn.active .dom-name { color: var(--dc); }
+  .dom-icon { font-size: 22px; color: #6b6055; transition: color 0.15s; }
+  .dom-name { font-size: 12px; font-weight: 700; color: #7a7060; }
+  .dom-desc { font-size: 9px; color: #555045; line-height: 1.3; }
+
+  /* ===== NAVIGATION ===== */
+  .nav-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%;
+  }
+
+  .nav-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 16px 6px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--text-muted); text-decoration: none;
+    transition: all 0.2s; cursor: pointer;
+  }
+  .nav-tile:hover {
+    background: var(--bg-card-hover); border-color: var(--border-hover);
+    color: var(--text); transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .nt-icon { font-size: 24px; color: var(--gold); opacity: 0.6; transition: opacity 0.2s; }
+  .nav-tile:hover .nt-icon { opacity: 1; }
+  .nt-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--text); }
+  .nt-desc { font-size: 9px; color: #555045; }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding-top: 8px;
+  }
+  .footer-badge {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; color: var(--text-muted); letter-spacing: 0.06em;
+  }
+  .lang-row { display: flex; gap: 4px; }
+  .lang-btn {
+    padding: 4px 12px; border-radius: 5px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-muted); font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .lang-btn:hover { color: var(--text); border-color: var(--border-hover); }
+  .lang-btn.active { color: var(--gold); border-color: rgba(200,168,78,0.3); background: var(--gold-dim); }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 480px) {
+    .title { font-size: 36px; letter-spacing: 0.18em; }
+    .nav-row { grid-template-columns: repeat(2, 1fr); }
+    .modes-pair .mode-name { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="bg-fog"></div>
+  <div class="bg-vignette"></div>
+</div>
+
+<div class="page">
+<div class="content">
+
+  <!-- PLAYER BAR -->
+  <div class="player-bar">
+    <div class="pb-avatar">
+      <iconify-icon icon="game-icons:viking-helmet"></iconify-icon>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+      <span class="pb-name">Jakub</span>
+      <div class="pb-sub">
+        <span class="pb-level">Poz. 7</span>
+        <div class="pb-xp"><div class="pb-xp-fill"></div></div>
+        <span>1250 XP</span>
+      </div>
+    </div>
+    <iconify-icon icon="mdi:chevron-down" style="font-size:18px; color:var(--text-muted);"></iconify-icon>
+  </div>
+
+  <!-- LOGO -->
+  <div class="logo">
+    <div class="ornament">
+      <span class="orn-line"></span>
+      <iconify-icon icon="game-icons:wolf-head" class="orn-icon"></iconify-icon>
+      <span class="orn-line"></span>
+    </div>
+
+    <div class="emblem">
+      <iconify-icon icon="game-icons:triquetra"></iconify-icon>
+    </div>
+
+    <h1 class="title">SŁAWA</h1>
+    <p class="subtitle">Vol. 2 — Złota Edycja</p>
+    <p class="tagline">Słowiańska gra karciana</p>
+
+    <div class="ornament">
+      <span class="orn-line"></span>
+      <iconify-icon icon="game-icons:ancient-sword" class="orn-icon"></iconify-icon>
+      <span class="orn-line"></span>
+    </div>
+  </div>
+
+  <!-- GAME MODES -->
+  <div class="modes">
+    <div class="mode mode-gold">
+      <iconify-icon icon="game-icons:crown-coin" class="mode-icon"></iconify-icon>
+      <div class="mode-text">
+        <span class="mode-name">Złota Edycja</span>
+        <span class="mode-desc">Zbalansowane karty, dopracowane efekty</span>
+      </div>
+      <div class="mode-badge">REKOMENDOWANE</div>
+    </div>
+
+    <div class="modes-pair">
+      <div class="mode mode-slava">
+        <iconify-icon icon="game-icons:sword-clash" class="mode-icon"></iconify-icon>
+        <div class="mode-text">
+          <span class="mode-name">Sława!</span>
+          <span class="mode-desc">Panteon Bogów</span>
+        </div>
+      </div>
+
+      <div class="mode mode-tut">
+        <iconify-icon icon="game-icons:hooded-figure" class="mode-icon"></iconify-icon>
+        <div class="mode-text">
+          <span class="mode-name">Samouczek</span>
+          <span class="mode-desc">Naucz się grać</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mode mode-camp">
+      <iconify-icon icon="game-icons:campfire" class="mode-icon"></iconify-icon>
+      <div class="mode-text">
+        <span class="mode-name">Kampania: Noc Kupały</span>
+        <span class="mode-desc">7 encounterów, fabuła, prebuilt deck — tryb fabularny</span>
+      </div>
+      <div class="mode-badge">NOWOŚĆ</div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="settings-toggle">
+    <iconify-icon icon="game-icons:battle-gear" class="st-icon"></iconify-icon>
+    <span>Ustawienia bitwy</span>
+    <iconify-icon icon="mdi:chevron-down" class="st-chev"></iconify-icon>
+  </div>
+
+  <div class="settings-panel">
+    <div>
+      <div class="sg-label">
+        <iconify-icon icon="game-icons:brain"></iconify-icon>
+        Trudność AI
+      </div>
+      <div class="sg-btns">
+        <div class="sg-btn"><iconify-icon icon="game-icons:feather"></iconify-icon> Nowicjusz</div>
+        <div class="sg-btn active"><iconify-icon icon="game-icons:shield-echoes"></iconify-icon> Wojownik</div>
+        <div class="sg-btn"><iconify-icon icon="game-icons:skull-crack"></iconify-icon> Weteran</div>
+        <div class="sg-btn"><iconify-icon icon="game-icons:crown"></iconify-icon> Legenda</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sg-label">
+        <iconify-icon icon="game-icons:triquetra"></iconify-icon>
+        Twoje domeny <span class="sg-hint">(brak = losowa)</span>
+      </div>
+      <div class="domain-grid">
+        <div class="dom-btn active" style="--dc: #d4a843;">
+          <iconify-icon icon="game-icons:lightning-storm" class="dom-icon"></iconify-icon>
+          <span class="dom-name">Perun</span>
+          <span class="dom-desc">Burza i wojna</span>
+        </div>
+        <div class="dom-btn" style="--dc: #4a9e4a;">
+          <iconify-icon icon="game-icons:oak-leaf" class="dom-icon"></iconify-icon>
+          <span class="dom-name">Żywi</span>
+          <span class="dom-desc">Natura i leczenie</span>
+        </div>
+        <div class="dom-btn" style="--dc: #9c6fbf;">
+          <iconify-icon icon="game-icons:skull-crossed-bones" class="dom-icon"></iconify-icon>
+          <span class="dom-name">Nieumarli</span>
+          <span class="dom-desc">Grób i strach</span>
+        </div>
+        <div class="dom-btn active" style="--dc: #c44040;">
+          <iconify-icon icon="game-icons:fire-dash" class="dom-icon"></iconify-icon>
+          <span class="dom-name">Weles</span>
+          <span class="dom-desc">Zaświaty i magia</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVIGATION -->
+  <div class="nav-row">
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:swords-emblem" class="nt-icon"></iconify-icon>
+      <span class="nt-label">Multiplayer</span>
+      <span class="nt-desc">Graj z ludźmi</span>
+    </div>
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:card-joker" class="nt-icon"></iconify-icon>
+      <span class="nt-label">Arena</span>
+      <span class="nt-desc">Testuj karty</span>
+    </div>
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:laurel-crown" class="nt-icon"></iconify-icon>
+      <span class="nt-label">Ranking</span>
+      <span class="nt-desc">Najlepsi</span>
+    </div>
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:card-pickup" class="nt-icon"></iconify-icon>
+      <span class="nt-label">Kolekcja</span>
+      <span class="nt-desc">182 karty</span>
+    </div>
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:creature-mask" class="nt-icon"></iconify-icon>
+      <span class="nt-label">Bestiariusz</span>
+      <span class="nt-desc">Kodeks bestii</span>
+    </div>
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:book-cover" class="nt-icon"></iconify-icon>
+      <span class="nt-label">Zasady</span>
+      <span class="nt-desc">Jak grać?</span>
+    </div>
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:sparkles" class="nt-icon"></iconify-icon>
+      <span class="nt-label">Efekty</span>
+      <span class="nt-desc">VFX/SFX</span>
+    </div>
+    <div class="nav-tile">
+      <iconify-icon icon="game-icons:battle-axe" class="nt-icon"></iconify-icon>
+      <span class="nt-label">VFX Arena</span>
+      <span class="nt-desc">Testuj</span>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-badge">
+      <iconify-icon icon="game-icons:two-coins"></iconify-icon>
+      Złota Edycja — 182 kart — 4 domeny
+    </div>
+    <div class="lang-row">
+      <button class="lang-btn active">PL</button>
+      <button class="lang-btn">EN</button>
+      <button class="lang-btn">UK</button>
+      <button class="lang-btn">RU</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>

@@ -324,16 +324,31 @@ if (COMPARE_MODE) {
   }
 
   const variants: [string, Partial<MechanicsResult['config']>][] = [
-    ['BASELINE (PS=10, Soul=20)', {}],
-    ['PS Target = 8', { psTarget: 8 }],
-    ['PS Target = 12', { psTarget: 12 }],
-    ['PS Target = 15', { psTarget: 15 }],
-    ['Soul Threshold = 15', { soulThreshold: 15 }],
-    ['Soul Threshold = 25', { soulThreshold: 25 }],
-    ['No Enhanced', { noEnhanced: true }],
-    ['Enhanced Cost = 2', { enhancedCost: 2 }],
-    ['Starting Gold = 3', { startingGold: 3 }],
-    ['Elimination Only', { eliminationOnly: true }],
+    // === BASELINE ===
+    ['BASELINE (PS=10, Soul=20, Start=5)', {}],
+
+    // === PS TARGET ===
+    ['PS Target = 15 (dluzsza gra)', { psTarget: 15 }],
+    ['PS=15 + Harvest=15 (szybszy income)', { psTarget: 15, soulThreshold: 15 }],
+
+    // === ASYMETRYCZNY BUFOR (game designer pick) ===
+    ['Start=7, PS=12 (bufor anty-plunder)', { startingGold: 7, psTarget: 12 }],
+    ['Start=8, PS=15 (duzy bufor)', { startingGold: 8, psTarget: 15 }],
+
+    // === ENHANCED ADVENTURE COST ===
+    ['Enhanced Cost = 2 (oszczednosc)', { enhancedCost: 2 }],
+    ['No Enhanced (zero wydatkow)', { noEnhanced: true }],
+
+    // === AGRESYWNE ===
+    ['Start=3 (biedny start)', { startingGold: 3 }],
+    ['Soul=15 (szybki harvest)', { soulThreshold: 15 }],
+
+    // === HARDCORE/STRATEGICZNY ===
+    ['Hardcore: PS=15,Soul=25,Enh=2,Start=3', { psTarget: 15, soulThreshold: 25, enhancedCost: 2, startingGold: 3 }],
+
+    // === ELIMINATION ONLY ===
+    ['Elimination Only (brak PS win)', { eliminationOnly: true }],
+    ['Elim Only + No Enhanced', { eliminationOnly: true, noEnhanced: true }],
   ]
 
   console.log(`\n🔬  MECHANICS COMPARISON — ${GAMES} games × ${variants.length} variants | ${BUDGET_MS}ms budget`)

@@ -107,7 +107,7 @@ const matohaBlocker = computed(() => {
   const oppSide = card.value.owner === 'player1' ? 'player2' : 'player1'
   const blocker = getAllCreaturesOnField(game.state, oppSide).find(c => (c.cardData as any).effectId === 'matoha_anti_magic' && !c.isSilenced)
   if (!blocker) return null
-  return { name: blocker.cardData.name, domain: (blocker.cardData as any).idDomain ?? (blocker.cardData as any).domain }
+  return { name: blocker.cardData.name, domain: ((blocker.cardData as any).idDomain ?? (blocker.cardData as any).domain) as number }
 })
 const isMatohaBlocked = computed(() => !!matohaBlocker.value)
 
@@ -365,9 +365,9 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
                     </template>
                   </template>
                   <span v-if="ab.cost" class="pv-ability-cost">({{ ab.cost }} PS)</span>
-                  <span v-if="ab.limit === 'ONCE_PER_GAME'" class="pv-ability-limit">raz w grze</span>
-                  <span v-else-if="ab.limit === 'ONCE_PER_TURN'" class="pv-ability-limit">raz na turę</span>
-                  <span v-else-if="ab.limit === 'ONCE_PER_ROUND'" class="pv-ability-limit">raz na rundę</span>
+                  <span v-if="ab.limit === 'ONCE_PER_GAME'" class="pv-ability-limit pv-limit-once" title="Raz w grze">1x</span>
+                  <span v-else-if="ab.limit === 'ONCE_PER_TURN'" class="pv-ability-limit pv-limit-turn" title="Raz na turę">↻</span>
+                  <span v-else-if="ab.limit === 'ONCE_PER_ROUND'" class="pv-ability-limit pv-limit-turn" title="Raz na rundę">↻</span>
                 </span>
               </div>
             </div>
@@ -386,6 +386,22 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
           <!-- Enhanced effect (adventures) — only if no abilities[] (legacy fallback) -->
           <div v-if="!isCreature && data.enhancedEffectDescription && !(data.abilities && data.abilities.length)" class="pv-enhanced">
             <span class="pv-enhanced-label">Ulepszony:</span> {{ data.enhancedEffectDescription }}
+          </div>
+
+          <!-- Rodzanice: zamiana zdolności (styl Matoha) -->
+          <div v-if="isCreature && card.metadata?.rodzaniceSwappedWith" class="pv-matoha-row">
+            <span class="pv-matoha-source">
+              <img v-if="domainImgs[card.metadata.rodzaniceSwappedDomain]" :src="domainImgs[card.metadata.rodzaniceSwappedDomain]" class="pv-matoha-domain" />
+              Rodzanice
+            </span>
+            <span class="pv-matoha-text">
+              <template v-for="(seg, si) in parseTokens(String(card.metadata.rodzaniceBonusDesc ?? ''))" :key="'rz'+si">
+                <span v-if="seg.type === 'text'">{{ seg.value }}</span>
+                <img v-else-if="seg.img" :src="seg.img" class="tt-token-icon" :title="seg.label" />
+                <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="tt-token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+              </template>
+              ({{ card.metadata.rodzaniceSwappedWith }})
+            </span>
           </div>
 
           <!-- Traits (silenced, immune, etc.) with descriptions -->
@@ -786,10 +802,18 @@ const borderColor = computed(() => isCreature.value ? domainInfo.value.color : '
   margin-left: 4px;
 }
 .pv-ability-limit {
-  font-size: 9px;
-  font-style: italic;
+  font-size: 13px;
+  font-weight: 700;
+  font-style: normal;
   color: rgba(148,163,184,0.7);
-  margin-left: 3px;
+  margin-left: 4px;
+  cursor: help;
+}
+.pv-limit-once {
+  color: rgba(251, 191, 36, 0.8);
+}
+.pv-limit-turn {
+  color: rgba(96, 165, 250, 0.8);
 }
 
 /* Token inline icons in tooltip */

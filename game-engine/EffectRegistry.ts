@@ -90,6 +90,19 @@ export function getAllEffectIds(): string[] {
 }
 
 /**
+ * Sprawdza czy karta posiada dany effectId — uwzględnia kradzież Rodzanic.
+ * Karta ma effectId jeśli:
+ * - cardData.effectId === id I NIE jest okradziona (rodzaniceStolen)
+ * - LUB metadata.rodzaniceBonusEffectId === id (zdolność otrzymana od Rodzanic)
+ */
+export function hasEffectId(card: import('./types').CardInstance, id: string): boolean {
+  const nativeId = (card.cardData as any).effectId
+  if (nativeId === id && !card.metadata.rodzaniceStolen) return true
+  if (card.metadata.rodzaniceBonusEffectId === id) return true
+  return false
+}
+
+/**
  * Sprawdza czy karta może teraz aktywować swoją zdolność (⚡).
  * Uwzględnia: activatable, cooldown, koszt PS, uciszenie.
  */
@@ -98,6 +111,7 @@ export function canActivateEffect(state: import('./types').GameState, card: impo
   if (!effect?.activatable) return false
   if (card.isSilenced) return false
   if (card.paralyzeRoundsLeft !== null && card.paralyzeRoundsLeft !== 0) return false  // Paraliż blokuje zdolności
+  if (card.metadata.rodzaniceStolen) return false  // Zdolność skradziona przez Rodzanice
 
   // Darmowa aktywacja oczekuje (ON_PLAY pominięty) — zezwól bez kosztu i cooldownu
   if (card.metadata.freeActivationPending) return true
@@ -564,56 +578,89 @@ registerEffect({
   },
 })
 
-// ✅ RODZANICE — Raz na turę: zamień jedną wybraną premię między dwoma sojusznikami
-// "Premia" = aktywny efekt (ActiveEffect) lub artefakt (equippedArtifact)
+// ✅ RODZANICE (#19) — Wyrok Rodzanic: zamienia zdolności dwóch kart na polu
+// Faza 1: gracz wybiera pierwszą kartę ze zdolnością → execute tworzy pendingInteraction
+// Faza 2: gracz wybiera drugą kartę ze zdolnością → GameEngine.resolvePendingInteraction zamienia
 registerEffect({
-  id: 'rodzanice_swap_buff',
+  id: 'rodzanice_steal_buff',
   name: 'Wyrok Rodzanic',
-  trigger: EffectTrigger.ON_TURN_START,
-  priority: EffectPriority.MODIFIER,
-  canActivate: (ctx) => ctx.source.metadata.rodzaniceUsedThisTurn !== true,
-  execute: (ctx) => {
-    // Selekcja (sourceCard, targetCard, effectToSwap) odbywa się interaktywnie w UI/AI
-    // Tutaj oznaczamy dostępność — GameEngine wywołuje rodzanice_do_swap gdy gracz wybierze
-    const newState = cloneGameState(ctx.state)
-    const card = findCardInState(newState, ctx.source.instanceId)
-    if (card) card.metadata.rodzaniceUsedThisTurn = false  // reset na początku tury
-    return effectResult(newState)
+  trigger: EffectTrigger.ON_ACTIVATE,
+  priority: EffectPriority.REACTION,
+  activatable: true,
+  activationCost: 0,
+  activationCooldown: 'per_turn',
+  activationRequiresTarget: true,
+  activationTargetFilter: (target: CardInstance, source: CardInstance, state: GameState) => {
+    if (!target.isRevealed) return false
+    const eid = (target.cardData as any).effectId
+    if (!eid || eid === 'no_effect') return false
+    if (target.metadata.rodzaniceStolen) return false
+    return true
   },
-})
-
-// Pomocniczy efekt wykonujący faktyczny swap — wywoływany gdy gracz wybrał cele
-registerEffect({
-  id: 'rodzanice_do_swap',
-  name: 'Wyrok Rodzanic (swap)',
-  trigger: EffectTrigger.ON_PLAY,
-  priority: EffectPriority.MODIFIER,
+  canActivate: (ctx) => {
+    // Musi być co najmniej 2 karty ze zdolnością na polu (żeby było co zamienić)
+    let validCount = 0
+    for (const side of ['player1', 'player2'] as const) {
+      for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+        for (const c of ctx.state.players[side].field.lines[line]) {
+          if (c.instanceId === ctx.source.instanceId) continue
+          if (!c.isRevealed || c.currentStats.defense <= 0) continue
+          const eid = (c.cardData as any).effectId
+          if (!eid || eid === 'no_effect') continue
+          if (c.metadata.rodzaniceStolen) continue
+          validCount++
+          if (validCount >= 2) return true
+        }
+      }
+    }
+    return false
+  },
   execute: (ctx) => {
     const { state, source, target } = ctx
     if (!target) return effectResult(cloneGameState(state))
 
     const newState = cloneGameState(state)
-    const rodzanice = findCardInState(newState, source.instanceId)
-    if (rodzanice) rodzanice.metadata.rodzaniceUsedThisTurn = true
+    const firstCard = findCardInState(newState, target.instanceId)
+    if (!firstCard) return effectResult(newState)
 
-    // metadata.swapEffectId = który activeEffect przenieść
-    const swapEffectId = ctx.metadata?.swapEffectId as string
-    const fromCard = findCardInState(newState, ctx.metadata?.fromInstanceId as string)
-    const toCard = findCardInState(newState, target.instanceId)
+    const firstEffectId = (firstCard.cardData as any).effectId as string
 
-    if (fromCard && toCard && swapEffectId) {
-      const effectIdx = fromCard.activeEffects.findIndex(e => e.effectId === swapEffectId)
-      if (effectIdx !== -1) {
-        const effect = fromCard.activeEffects.splice(effectIdx, 1)[0]!
-        toCard.activeEffects.push(effect)
-        const log = addLog(state,
-          `Rodzanice przenoszą premię "${swapEffectId}" z ${fromCard.cardData.name} na ${toCard.cardData.name}.`,
-          'effect'
-        )
-        return effectResult(newState, [log])
+    // Zbierz cele dla fazy 2: dowolna karta z zdolnością na polu (obie strony), poza firstCard i Rodzanicami
+    const secondTargetIds: string[] = []
+    for (const side of ['player1', 'player2'] as const) {
+      for (const line of [BattleLine.FRONT, BattleLine.RANGED, BattleLine.SUPPORT]) {
+        for (const c of newState.players[side].field.lines[line]) {
+          if (c.instanceId === source.instanceId || c.instanceId === target.instanceId) continue
+          if (c.currentStats.defense <= 0) continue
+          if (!c.isRevealed) continue
+          const eid = (c.cardData as any).effectId
+          if (!eid || eid === 'no_effect') continue
+          if (c.metadata.rodzaniceStolen) continue
+          secondTargetIds.push(c.instanceId)
+        }
       }
     }
-    return effectResult(newState)
+
+    if (secondTargetIds.length === 0) {
+      const log = addLog(newState, `Rodzanice: Brak drugiej karty ze zdolnością do zamiany!`, 'effect')
+      return effectResult(newState, [log])
+    }
+
+    // Utwórz pendingInteraction — faza 2: wybór drugiej karty
+    newState.pendingInteraction = {
+      type: 'rodzanice_choose_recipient',
+      sourceInstanceId: source.instanceId,
+      respondingPlayer: source.owner as PlayerSide,
+      targetInstanceId: target.instanceId,
+      availableTargetIds: secondTargetIds,
+      metadata: {
+        firstEffectId,
+        firstName: firstCard.cardData.name,
+      },
+    }
+
+    const log = addLog(newState, `Rodzanice wybrały ${firstCard.cardData.name} — wybierz drugą kartę do zamiany zdolności!`, 'effect')
+    return effectResult(newState, [log])
   },
 })
 
@@ -1754,27 +1801,7 @@ registerEffect({
   },
 })
 
-// ✅ RODZANICE (#19) — Podejrzyj wierzchnią kartę talii rywala (raz na turę)
-registerEffect({
-  id: 'rodzanice_scry',
-  name: 'Wyrok Rodzanic (Wróżba)',
-  trigger: EffectTrigger.ON_ACTIVATE,
-  priority: EffectPriority.REACTION,
-  activatable: true,
-  activationCost: 0,
-  activationCooldown: 'per_turn',
-  execute: (ctx) => {
-    const newState = cloneGameState(ctx.state)
-    const opponent = newState.players[ctx.source.owner === 'player1' ? 'player2' : 'player1']
-    if (opponent.deck.length === 0) {
-      return effectResult(newState, [addLog(newState, 'Rodzanice: Talia rywala jest pusta.', 'effect')])
-    }
-    const topCard = opponent.deck[0]!
-    topCard.isRevealed = true
-    const log = addLog(newState, `Rodzanice podglądają wierzchnią kartę: "${topCard.cardData.name}".`, 'effect')
-    return effectResult(newState, [log])
-  },
-})
+// rodzanice_scry removed — replaced by rodzanice_steal_buff (above, line ~567)
 
 // ===================================================================
 // WOŁCH — ✅ IMPLEMENTED

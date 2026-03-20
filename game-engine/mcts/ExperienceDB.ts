@@ -45,15 +45,50 @@ export interface PositionalStats {
   wins: number
 }
 
+/** V7.3: Enhanced adventure stats */
+export interface EnhancedStats {
+  played: number
+  wins: number
+  psAtPlay: number[]
+  roundAtPlay: number[]
+}
+
+/** V7.3: Combat target stats — "atakowanie X daje WR Y" */
+export interface CombatTargetStats {
+  attacks: number    // ile razy attacker atakował target
+  wins: number       // ile z tych gier wygrał attacker-side
+}
+
+/** V7.3: Effect power stats — jak mocny jest efekt w praktyce */
+export interface EffectPowerStats {
+  triggered: number  // ile razy efekt się odpalił
+  wins: number       // ile z tych gier wygrało
+  totalGrowth: number // sumaryczny stat growth (ATK+DEF gained)
+}
+
+/** V7.3: Death stats — kiedy istota umiera i kto ją zabija */
+export interface DeathStats {
+  deaths: number       // ile razy umarła
+  avgDeathRound: number // avg runda śmierci (suma / deaths)
+  deathRoundSum: number // suma rund śmierci
+  killedBy: Record<string, number> // effectId killera → count
+  winsWhenSurvived: number  // wygrane gdy przeżyła do końca
+  gamesWhenSurvived: number // gry w których przeżyła
+}
+
 export interface ExperienceData {
   version: number
   gamesPlayed: number
   cardStats: Record<string, CardStats>
   openingStats: Record<string, OpeningStats>
   synergyStats: Record<string, SynergyStats>
-  // V6 NEW:
-  matchupStats: Record<string, MatchupStats>      // "effectA+effectB" → who wins
-  positionalStats: Record<string, PositionalStats> // "diff:+2,round:6-10" → WR
+  matchupStats: Record<string, MatchupStats>
+  positionalStats: Record<string, PositionalStats>
+  enhancedStats: Record<string, EnhancedStats>
+  // V7.3 NEW:
+  combatTargetStats: Record<string, CombatTargetStats>  // "attacker+target" → WR
+  effectPowerStats: Record<string, EffectPowerStats>     // effectId → triggered count + power
+  deathStats: Record<string, DeathStats>                 // effectId → when/how dies
 }
 
 /** Trace jednej gry — zbierany przez benchmark, zapisywany do ExperienceDB */
@@ -61,21 +96,48 @@ export interface GameTrace {
   winner: number  // 0=player1, 1=player2
   rounds: number
   moves: GameTraceMove[]
-  // V6 NEW:
   winMethod?: 'ps' | 'elimination' | 'gold_loss'
   finalPS?: [number, number]
+  // V7.3 NEW:
+  deaths?: GameTraceDeath[]           // wszystkie śmierci w grze
+  survivors?: GameTraceSurvivor[]     // istoty które przeżyły do końca
 }
 
 export interface GameTraceMove {
   round: number
   side: number  // 0 or 1
-  effectIds: string[]  // effectId kart zagranych w tej turze
-  // V6 NEW:
-  opponentFieldEffectIds?: string[]  // co wróg miał na polu
+  effectIds: string[]
+  opponentFieldEffectIds?: string[]
   myPS?: number
   oppPS?: number
   myFieldCount?: number
   oppFieldCount?: number
+  enhancedIds?: string[]
+  // V7.3 NEW:
+  attacks?: GameTraceAttack[]    // kto kogo atakował w tej turze
+}
+
+export interface GameTraceAttack {
+  attacker: string  // effectId
+  target: string    // effectId
+  damage: number
+  killed: boolean
+}
+
+export interface GameTraceDeath {
+  effectId: string
+  round: number
+  side: number       // czyja istota
+  killerEffectId?: string
+}
+
+export interface GameTraceSurvivor {
+  effectId: string
+  side: number
+  finalAtk: number
+  finalDef: number
+  baseAtk: number
+  baseDef: number
 }
 
 // ===== EXPERIENCE DB =====
@@ -92,6 +154,10 @@ export class ExperienceDB {
       synergyStats: {},
       matchupStats: {},
       positionalStats: {},
+      enhancedStats: {},
+      combatTargetStats: {},
+      effectPowerStats: {},
+      deathStats: {},
     }
   }
 
@@ -148,6 +214,54 @@ export class ExperienceDB {
     const stats = this.data.positionalStats?.[key]
     if (!stats || stats.samples < 10) return 0.5
     return stats.wins / stats.samples
+  }
+
+  /** V7.3: Enhanced adventure WR. Returns 0.5 if insufficient data. */
+  getEnhancedWR(effectId: string): number {
+    const stats = this.data.enhancedStats?.[effectId]
+    if (!stats || stats.played < 5) return 0.5
+    return stats.wins / stats.played
+  }
+
+  /** V7.3: Should this specific adventure be enhanced? Data-driven. */
+  shouldEnhance(effectId: string, myPS: number, round: number): boolean | null {
+    const stats = this.data.enhancedStats?.[effectId]
+    if (!stats || stats.played < 10) return null
+    const wr = stats.wins / stats.played
+    return wr >= 0.55
+  }
+
+  /** V7.3: Combat target WR — "atakowanie targetu tym attackerem → WR". */
+  getCombatTargetWR(attackerEffectId: string, targetEffectId: string): number {
+    const key = `${attackerEffectId}>${targetEffectId}`
+    const stats = this.data.combatTargetStats?.[key]
+    if (!stats || stats.attacks < 5) return 0.5
+    return stats.wins / stats.attacks
+  }
+
+  /** V7.3: Effect power — jak skuteczny jest efekt (triggered WR). */
+  getEffectPowerWR(effectId: string): number {
+    const stats = this.data.effectPowerStats?.[effectId]
+    if (!stats || stats.triggered < 10) return 0.5
+    return stats.wins / stats.triggered
+  }
+
+  /** V7.3: Czy istota przeżywa → WR? "Key creature to protect." */
+  getSurvivalWR(effectId: string): number {
+    const stats = this.data.deathStats?.[effectId]
+    if (!stats || stats.gamesWhenSurvived < 5) return 0.5
+    return stats.winsWhenSurvived / stats.gamesWhenSurvived
+  }
+
+  /** V7.3: Kto najczęściej zabija tę istotę? Top killer effectId. */
+  getTopKiller(effectId: string): string | null {
+    const stats = this.data.deathStats?.[effectId]
+    if (!stats || !stats.killedBy) return null
+    let topKiller = '', topCount = 0
+    for (const [kid, count] of Object.entries(stats.killedBy)) {
+      if (count > topCount) { topKiller = kid; topCount = count }
+    }
+    return topCount >= 3 ? topKiller : null
   }
 
   // ===== RECORDING =====
@@ -229,6 +343,87 @@ export class ExperienceDB {
         const s = this.data.positionalStats[key]!
         s.samples++
         if (isWinner) s.wins++
+      }
+
+      // V7.3: Enhanced adventure stats
+      if (move.enhancedIds && move.enhancedIds.length > 0) {
+        if (!this.data.enhancedStats) this.data.enhancedStats = {}
+        for (const eid of move.enhancedIds) {
+          if (!eid) continue
+          if (!this.data.enhancedStats[eid]) {
+            this.data.enhancedStats[eid] = { played: 0, wins: 0, psAtPlay: [], roundAtPlay: [] }
+          }
+          const s = this.data.enhancedStats[eid]!
+          s.played++
+          if (isWinner) s.wins++
+          if (move.myPS !== undefined) s.psAtPlay.push(move.myPS)
+          s.roundAtPlay.push(move.round)
+        }
+      }
+
+      // V7.3: Combat target stats
+      if (move.attacks) {
+        if (!this.data.combatTargetStats) this.data.combatTargetStats = {}
+        for (const atk of move.attacks) {
+          if (!atk.attacker || !atk.target) continue
+          const key = `${atk.attacker}>${atk.target}`
+          if (!this.data.combatTargetStats[key]) {
+            this.data.combatTargetStats[key] = { attacks: 0, wins: 0 }
+          }
+          const s = this.data.combatTargetStats[key]!
+          s.attacks++
+          if (isWinner) s.wins++
+        }
+      }
+    }
+
+    // V7.3: Death stats
+    if (trace.deaths) {
+      if (!this.data.deathStats) this.data.deathStats = {}
+      for (const d of trace.deaths) {
+        if (!this.data.deathStats[d.effectId]) {
+          this.data.deathStats[d.effectId] = {
+            deaths: 0, avgDeathRound: 0, deathRoundSum: 0,
+            killedBy: {}, winsWhenSurvived: 0, gamesWhenSurvived: 0,
+          }
+        }
+        const s = this.data.deathStats[d.effectId]!
+        s.deaths++
+        s.deathRoundSum += d.round
+        s.avgDeathRound = s.deathRoundSum / s.deaths
+        if (d.killerEffectId) {
+          s.killedBy[d.killerEffectId] = (s.killedBy[d.killerEffectId] ?? 0) + 1
+        }
+      }
+    }
+
+    // V7.3: Survivor stats (creatures alive at game end → survival WR)
+    if (trace.survivors) {
+      if (!this.data.deathStats) this.data.deathStats = {}
+      if (!this.data.effectPowerStats) this.data.effectPowerStats = {}
+      for (const surv of trace.survivors) {
+        // Survival tracking
+        if (!this.data.deathStats[surv.effectId]) {
+          this.data.deathStats[surv.effectId] = {
+            deaths: 0, avgDeathRound: 0, deathRoundSum: 0,
+            killedBy: {}, winsWhenSurvived: 0, gamesWhenSurvived: 0,
+          }
+        }
+        const ds = this.data.deathStats[surv.effectId]!
+        ds.gamesWhenSurvived++
+        if (surv.side === won) ds.winsWhenSurvived++
+
+        // Effect power: stat growth = how much the effect contributed
+        const growth = (surv.finalAtk - surv.baseAtk) + (surv.finalDef - surv.baseDef)
+        if (growth > 0) {
+          if (!this.data.effectPowerStats[surv.effectId]) {
+            this.data.effectPowerStats[surv.effectId] = { triggered: 0, wins: 0, totalGrowth: 0 }
+          }
+          const ep = this.data.effectPowerStats[surv.effectId]!
+          ep.triggered++
+          ep.totalGrowth += growth
+          if (surv.side === won) ep.wins++
+        }
       }
     }
 

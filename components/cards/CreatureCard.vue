@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { CardInstance } from '../../game-engine/types'
 import { AttackType, CardPosition } from '../../game-engine/constants'
+import { getAllCreaturesOnField } from '../../game-engine/LineManager'
 import { useUIStore } from '../../stores/uiStore'
 import { useGameStore } from '../../stores/gameStore'
 import { parseTokens } from '../../composables/useTokenIcons'
@@ -118,17 +119,26 @@ const emit = defineEmits<{
 }>()
 
 const ui = useUIStore()
+
+// Efektywny effectId: uwzględnia zamianę Rodzanic
+const activeEffectId = computed(() => {
+  if (props.card.metadata?.rodzaniceStolen && props.card.metadata?.rodzaniceBonusEffectId) {
+    return props.card.metadata.rodzaniceBonusEffectId as string
+  }
+  return (cardData.value as any).effectId
+})
+
 // ===== WSKAŹNIKI STANU (TIER 4 visual indicators) =====
-const isTaunt       = computed(() => !props.inHand && (cardData.value as any).effectId === 'blotnik_taunt' && !props.card.isSilenced)
+const isTaunt       = computed(() => !props.inHand && activeEffectId.value === 'blotnik_taunt' && !props.card.isSilenced)
 const isMatecznik   = computed(() => !props.inHand && !!props.card.metadata?.matecznikHidden)
 const isPrzyjaznGuard    = computed(() => !props.inHand && !!props.card.metadata?.przyjaznGuard)
 const isPrzyjaznProtected = computed(() => !props.inHand && !!props.card.metadata?.przyjaznProtector)
 const isLycan       = computed(() => !props.inHand && !!props.card.metadata?.likantropiaActive)
 const hasDeathMark  = computed(() => !props.inHand && !!props.card.metadata?.dziewiatkoDeathMark)
 const isCursed      = computed(() => !props.inHand && !!props.card.metadata?.zagorkiniaCursed)
-const isInvincible  = computed(() => !props.inHand && (cardData.value as any).effectId === 'wapierz_invincible_hunger')
+const isInvincible  = computed(() => !props.inHand && activeEffectId.value === 'wapierz_invincible_hunger')
 const isWijRevived  = computed(() => !props.inHand && !!props.card.metadata?.wijRevived)
-const isGuardian    = computed(() => !props.inHand && (cardData.value as any).effectId === 'niedzwiedzioak_guardian' && !props.card.isSilenced)
+const isGuardian    = computed(() => !props.inHand && activeEffectId.value === 'niedzwiedzioak_guardian' && !props.card.isSilenced)
 const isRiding      = computed(() => !props.inHand && !!props.card.metadata?.rumakActive)
 const isHomenCursed = computed(() => !props.inHand && !!props.card.metadata?.homenCurseOwner)
 const isHypnotized  = computed(() => !props.inHand && ui.mode === 'hypnosis' && ui.hypnosisAttackerId === props.card.instanceId && ui.hypnosisPhase === 2)
@@ -136,14 +146,25 @@ const isHypnotized  = computed(() => !props.inHand && ui.mode === 'hypnosis' && 
 // ===== P1 VFX STATUSY =====
 const isParalyzed   = computed(() => !props.inHand && props.card.paralyzeRoundsLeft !== null && props.card.paralyzeRoundsLeft !== 0)
 const isDiseased    = computed(() => !props.inHand && !!props.card.cannotAttack && !isParalyzed.value)
-const isLifestealer = computed(() => !props.inHand && ['strzyga_lifesteal', 'bezkost_atk_drain', 'latawica_drain_ally'].includes((cardData.value as any).effectId) && !props.card.isSilenced)
-const isDeathFeeder = computed(() => !props.inHand && ['baba_jaga_death_growth', 'smierc_death_growth_save'].includes((cardData.value as any).effectId) && !props.card.isSilenced)
-const isAoEAura     = computed(() => !props.inHand && ['morowa_dziewica_aoe_all', 'cicha_kill_weak', 'poludnica_kill_weakest'].includes((cardData.value as any).effectId) && !props.card.isSilenced)
+// Matoha aura: enemy magic creatures can't attack (visual indicator even without cannotAttack flag)
+const isMatohaBlocked = computed(() => {
+  if (props.inHand || (cardData.value as any).attackType !== AttackType.MAGIC) return false
+  const game = useGameStore()
+  if (!game.state) return false
+  const oppSide = props.card.owner === 'player1' ? 'player2' : 'player1'
+  return getAllCreaturesOnField(game.state, oppSide).some(c => {
+    const eid = c.metadata?.rodzaniceStolen ? (c.metadata.rodzaniceBonusEffectId as string) : (c.cardData as any).effectId
+    return eid === 'matoha_anti_magic' && !c.isSilenced
+  })
+})
+const isLifestealer = computed(() => !props.inHand && ['strzyga_lifesteal', 'bezkost_atk_drain', 'latawica_drain_ally'].includes(activeEffectId.value) && !props.card.isSilenced)
+const isDeathFeeder = computed(() => !props.inHand && ['baba_jaga_death_growth', 'smierc_death_growth_save'].includes(activeEffectId.value) && !props.card.isSilenced)
+const isAoEAura     = computed(() => !props.inHand && ['morowa_dziewica_aoe_all', 'cicha_kill_weak', 'poludnica_kill_weakest'].includes(activeEffectId.value) && !props.card.isSilenced)
 
 // P2 AURA_RING — persistent aura glow per effect type
 const auraRingClass = computed(() => {
   if (props.inHand || props.card.isSilenced) return ''
-  const eid = (cardData.value as any).effectId
+  const eid = activeEffectId.value
   switch (eid) {
     case 'mroz_immunity_buffs': return 'aura-ring-ice'
     case 'leszy_post_attack_defend': return 'aura-ring-forest'
@@ -348,7 +369,7 @@ const cardClass = computed(() => [
     'is-valid-target': props.isValidTarget,
     'is-dimmed':       props.dimmed,
     'is-silenced':          props.card.isSilenced,
-    'cannot-attack':        props.card.cannotAttack,
+    'cannot-attack':        props.card.cannotAttack || isMatohaBlocked.value,
     'is-hit-shaking':       isShaking.value,
     'is-taunt':             isTaunt.value,
   }
@@ -543,7 +564,7 @@ function onClick() {
           <template v-for="(seg, si) in getTokenSegments(ab.text)" :key="si">
             <span v-if="seg.type === 'text'">{{ seg.value }}</span>
             <img v-else-if="seg.img" :src="seg.img" class="token-icon" :title="seg.label" />
-            <Icon v-else-if="seg.iconify" :icon="seg.iconify" class="token-icon-svg" :style="{ color: seg.color }" :title="seg.label" />
+            <Icon v-else-if="seg.iconify" :icon="seg.iconify" :class="['token-icon-svg', seg.value === 'POS_DEF' ? 'token-pos-def' : '', seg.value === 'POS_ATK' ? 'token-pos-atk' : '']" :style="{ color: seg.color }" :title="seg.label" />
           </template>
         </span>
       </div>
@@ -999,6 +1020,18 @@ function onClick() {
   vertical-align: middle;
   margin: -1px 0;
 }
+/* Position tokens: ATK = vertical rectangle, DEF = horizontal rectangle */
+.token-pos-atk {
+  width: 8px;
+  height: 11px;
+  border-radius: 1px;
+}
+.token-pos-def {
+  transform: rotate(90deg);
+  width: 8px;
+  height: 11px;
+  border-radius: 1px;
+}
 
 /* ===== TAUNT (Świetlik/Błotnik) — intense red glow forcing attacks ===== */
 .is-taunt {
@@ -1128,6 +1161,10 @@ function onClick() {
 }
 
 .cannot-attack .stat.atk { color: #64748b; }
+.cannot-attack .stat.atk .stat-icon,
+.cannot-attack .stat.atk .stat-img {
+  filter: grayscale(1) opacity(0.4);
+}
 
 /* Klikalny badge pozycji */
 .pos-clickable {

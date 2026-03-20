@@ -51,7 +51,7 @@ const SUPPORT_EFFECTS = new Set([
   'zmije_glory_on_empty_field', 'chasnik_gold_on_kill', 'korgorusze_recover_glory',
   'cmentarna_baba_resurrect', 'wij_revive_once', 'homen_convert_on_death',
   'chowaniec_intercept', 'naczelnik_human_rally',
-  'polewik_buff_neighbors', 'kresnik_choose_buff', 'rodzanice_swap_buff',
+  'polewik_buff_neighbors', 'kresnik_choose_buff', 'rodzanice_steal_buff',
 ])
 
 /** Wynik rolloutu */

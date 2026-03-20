@@ -1,0 +1,39 @@
+{
+  "name": "v7-eval",
+  "timestamp": "2026-03-19T13:34:23.238Z",
+  "config": {
+    "games": 500,
+    "opponent": "veteran",
+    "timeBudgetMs": 2000,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 500,
+    "gamesWithWinner": 500,
+    "mctsWins": 239,
+    "oppWins": 261,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.478,
+    "timeoutRate": 0,
+    "avgRounds": 19.764,
+    "avgPSWinner": 4.856,
+    "avgPSLoser": 1.3,
+    "psWinCount": 57,
+    "elimWinCount": 130,
+    "psZeroCount": 313,
+    "totalPlunders": 923,
+    "avgWinnerCardsLeft": 13.2,
+    "avgLoserCardsLeft": 10.2,
+    "loserTrueEliminated": 25
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 25987.786240269303,
+    "avgTreeNodes": 74.95771091941931,
+    "avgRolloutDepth": 6.82462562817665,
+    "avgTimePerDecisionMs": 1018.8267410056807,
+    "avgBestMoveWR": 0.6091192432397169,
+    "earlyTerminationRate": 0.7229118451504313,
+    "totalDecisions": 9506
+  }
+}

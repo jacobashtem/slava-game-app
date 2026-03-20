@@ -247,27 +247,27 @@ function restart() {
         <div v-if="stats" ref="statsEl" class="go-stats">
           <div class="go-stat">
             <span class="go-stat-rune">ᚱ</span>
-            <span class="go-stat-label">Runda</span>
-            <span class="go-stat-val">{{ stats.round }} · {{ seasonLabel[stats.season] ?? stats.season }}</span>
+            <span class="go-stat-label">{{ $t('gameOver.roundLabel') }}</span>
+            <span class="go-stat-val">{{ stats.round }} · {{ seasonLabel(stats.season) }}</span>
           </div>
           <div class="go-stat">
             <span class="go-stat-rune go-rune-kill">ᛏ</span>
-            <span class="go-stat-label">Powaleni wrogowie</span>
+            <span class="go-stat-label">{{ $t('gameOver.enemiesDefeated') }}</span>
             <span class="go-stat-val go-val-kill">{{ stats.playerKills }}</span>
           </div>
           <div class="go-stat">
             <span class="go-stat-rune go-rune-loss">ᛒ</span>
-            <span class="go-stat-label">Straceni</span>
+            <span class="go-stat-label">{{ $t('gameOver.lost') }}</span>
             <span class="go-stat-val go-val-loss">{{ stats.aiKills }}</span>
           </div>
           <div v-if="stats.isSlava" class="go-stat">
             <span class="go-stat-rune go-rune-glory">ᛊ</span>
-            <span class="go-stat-label">Punkty Sławy</span>
+            <span class="go-stat-label">{{ $t('gameOver.gloryPoints') }}</span>
             <span class="go-stat-val go-val-glory">{{ stats.playerGlory }} — {{ stats.aiGlory }}</span>
           </div>
           <div class="go-stat">
             <span class="go-stat-rune">ᚲ</span>
-            <span class="go-stat-label">Karty w talii</span>
+            <span class="go-stat-label">{{ $t('gameOver.cardsInDeck') }}</span>
             <span class="go-stat-val">{{ stats.playerDeck }}</span>
           </div>
         </div>
@@ -280,7 +280,7 @@ function restart() {
           </div>
           <div v-if="matchReport.xp.leveledUp" class="go-level-up">
             <Icon icon="game-icons:laurels" />
-            Poziom {{ matchReport.xp.newLevel }}!
+            {{ $t('gameOver.level') }} {{ matchReport.xp.newLevel }}!
           </div>
           <div v-for="ach in matchReport.achievements" :key="ach.id" class="go-achievement">
             <Icon icon="game-icons:achievement" />
@@ -291,11 +291,11 @@ function restart() {
         <!-- Buttons -->
         <button :class="['go-btn-main', isWin ? 'go-btn-gold' : 'go-btn-ash']" @click="restart">
           <Icon icon="game-icons:crossed-swords" />
-          {{ game.isArenaMode ? 'Resetuj Arenę' : 'Zagraj ponownie' }}
+          {{ game.isArenaMode ? $t('gameOver.resetArena') : $t('gameOver.playAgain') }}
         </button>
         <NuxtLink to="/" class="go-btn-menu">
           <Icon icon="game-icons:exit-door" />
-          Menu główne
+          {{ $t('gameOver.mainMenu') }}
         </NuxtLink>
       </div>
     </div>

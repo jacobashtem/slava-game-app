@@ -1,0 +1,39 @@
+{
+  "name": "v7-eval-warrior",
+  "timestamp": "2026-03-19T14:48:16.782Z",
+  "config": {
+    "games": 200,
+    "opponent": "warrior",
+    "timeBudgetMs": 800,
+    "maxTurns": 150
+  },
+  "results": {
+    "gamesPlayed": 200,
+    "gamesWithWinner": 200,
+    "mctsWins": 89,
+    "oppWins": 111,
+    "timeouts": 0,
+    "errors": 0,
+    "winRate": 0.445,
+    "timeoutRate": 0,
+    "avgRounds": 19.355,
+    "avgPSWinner": 5.45,
+    "avgPSLoser": 1.515,
+    "psWinCount": 25,
+    "elimWinCount": 60,
+    "psZeroCount": 115,
+    "totalPlunders": 375,
+    "avgWinnerCardsLeft": 12.5,
+    "avgLoserCardsLeft": 9.4,
+    "loserTrueEliminated": 10
+  },
+  "mcts": {
+    "avgIterationsPerDecision": 17155.7734375,
+    "avgTreeNodes": 32.71228448275862,
+    "avgRolloutDepth": 6.718513005976243,
+    "avgTimePerDecisionMs": 539.3787715517242,
+    "avgBestMoveWR": 0.607401755013162,
+    "earlyTerminationRate": 0.47898706896551724,
+    "totalDecisions": 3712
+  }
+}

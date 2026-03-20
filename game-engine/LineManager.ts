@@ -128,6 +128,17 @@ export function canAttack(
       return { valid: false, reason: 'Atakujący nie może atakować (efekt statusu).' }
     }
 
+    // Matoha: wrogie istoty MAGIC nie mogą atakować w ogóle
+    const attackType = (attacker.cardData as any).attackType as AttackType
+    if (attackType === AttackType.MAGIC) {
+      const defenderSide: PlayerSide = attacker.owner === 'player1' ? 'player2' : 'player1'
+      const oppHasMatoha = getAllCreaturesOnField(state, defenderSide)
+        .some(c => (c.cardData as any).effectId === 'matoha_anti_magic' && !c.isSilenced)
+      if (oppHasMatoha) {
+        return { valid: false, reason: 'Matoha blokuje ataki istot Magii.' }
+      }
+    }
+
     // Sztandar: nośnik nie może atakować
     if (attacker.equippedArtifacts.some((a: any) => ['adventure_sztandar', 'adventure_sztandar_enhanced'].includes(a.effectId))) {
       return { valid: false, reason: `${attacker.cardData.name} trzyma Sztandar — nie może atakować.` }
@@ -241,12 +252,7 @@ export function canAttack(
     return { valid: false, reason: `${target.cardData.name}: Twoja istota jest za słaba, żeby ją atakować.`, softFail: true }
   }
 
-  // Matoha (#17): wrogie istoty z typem Magia nie mogą atakować (sprawdzone po stronie atakującego)
-  const hasMaToha = getAllCreaturesOnField(state, target.owner)
-    .some(c => (c.cardData as any).effectId === 'matoha_anti_magic')
-  if (hasMaToha && attackType === AttackType.MAGIC) {
-    return { valid: false, reason: 'Matoha blokuje ataki Magii.', softFail: true }
-  }
+  // Matoha check moved to attacker-level validation above (line ~129)
 
   // Wilkołak (#87): odporny na Wręcz < 7
   if (targetEffectId === 'wilkolak_melee_immune' && attackType === AttackType.MELEE && attacker.currentStats.attack < 7) {

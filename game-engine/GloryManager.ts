@@ -5,7 +5,7 @@
  */
 
 import type { GameState, LogEntry, PlayerSide, SlavaState, GodData, HolidayMission, AuctionState, CardInstance, PendingFavor } from './types'
-import { Season, Domain, BattleLine, SLAVA_RULES, GOLD_EDITION_RULES, SEASON_BONUS_DOMAIN, SEASON_PARALYSIS_DOMAIN, SEASON_NAMES, DOMAIN_NAMES } from './constants'
+import { Season, Domain, BattleLine, CardPosition, SLAVA_RULES, GOLD_EDITION_RULES, SEASON_BONUS_DOMAIN, SEASON_PARALYSIS_DOMAIN, SEASON_NAMES, DOMAIN_NAMES } from './constants'
 import { cloneGameState, addLog, getAllCreaturesOnField } from './GameStateUtils'
 
 import panteonData from '../data/Slava_Vol2_Panteon_Normalized.json'
@@ -175,7 +175,9 @@ export function checkBreakthrough(state: GameState, attackerSide: PlayerSide, ta
   return []
 }
 
-/** Złupienie: gdy wróg nie ma istot na polu, zabierz mu 1 walutę (od rundy 3) */
+/** Złupienie: gdy wróg nie ma istot na polu, zabierz mu 1 walutę (od rundy 3).
+ *  Wymaga: faza COMBAT, istota w ATTACK z niewykorzystanym atakiem.
+ *  Zużywa akcję ataku tej istoty (hasAttackedThisTurn = true). */
 export function performPlunder(state: GameState, attackerSide: PlayerSide): LogEntry[] {
   if (state.roundNumber < 3) return []
   const log: LogEntry[] = []
@@ -183,6 +185,18 @@ export function performPlunder(state: GameState, attackerSide: PlayerSide): LogE
   const defenderSide: PlayerSide = attackerSide === 'player1' ? 'player2' : 'player1'
   const defenderCreatures = getAllCreaturesOnField(state, defenderSide)
   if (defenderCreatures.length > 0) return []
+
+  // Musi mieć istotę w ATTACK z niewykorzystanym atakiem
+  const myCreatures = getAllCreaturesOnField(state, attackerSide)
+  const plunderer = myCreatures.find(c =>
+    c.position === CardPosition.ATTACK &&
+    !c.hasAttackedThisTurn &&
+    !c.cannotAttack
+  )
+  if (!plunderer) return []
+
+  // Zużyj akcję ataku
+  plunderer.hasAttackedThisTurn = true
 
   const defender = state.players[defenderSide]
   const attacker = state.players[attackerSide]
